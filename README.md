@@ -1,4 +1,4 @@
-# gemini-tts-narrator
+# tts-narrator
 
 Narrate a text file as an audiobook using Google's Gemini 3.1 Flash TTS
 (`google/gemini-3.1-flash-tts-preview`) — or other OpenRouter TTS models such as

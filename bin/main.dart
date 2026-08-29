@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:gemini_tts_narrator/src/cli/args.dart';
-import 'package:gemini_tts_narrator/src/narration/config.dart';
-import 'package:gemini_tts_narrator/src/narration/narration.dart';
+import 'package:tts_narrator/src/cli/args.dart';
+import 'package:tts_narrator/src/narration/config.dart';
+import 'package:tts_narrator/src/narration/narration.dart';
 
 Future<int> main(List<String> args) async {
   // --help / --version handled before strict parsing.

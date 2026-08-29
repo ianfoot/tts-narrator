@@ -1,5 +1,5 @@
-name: gemini_tts_narrator
-description: "Gemini TTS audiobook narration"
+name: tts_narrator
+description: "OpenRouter TTS audiobook narration (Gemini, Kokoro)"
 publish_to: 'none'
 version: 0.1.0+1
 
