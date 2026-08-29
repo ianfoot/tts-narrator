@@ -2,7 +2,7 @@
 
 Narrate a text file as an audiobook using Google's Gemini 3.1 Flash TTS
 (`google/gemini-3.1-flash-tts-preview`) — or other OpenRouter TTS models such as
-Kokoro (`hexgrad/kokoro-82m`).
+Kokoro (`hexgrad/kokoro-82m`) and Fish Audio (`fish-audio/s2.1-pro-free`).
 
 A Flutter project (macOS scaffold) whose narration core lives in `lib/` with
 no Flutter dependencies, so it runs today as a plain Dart CLI (`bin/main.dart`)
@@ -28,8 +28,8 @@ path to the text to narrate.
 | Flag | Description | Default |
 | --- | --- | --- |
 | `--input <path>` | Path to the text to narrate (required). | — |
-| `--model <alias\|id>` | TTS model: `gemini`, `kokoro`, or a full model id. See "Models". | `gemini` |
-| `--voice <name>` | Model-specific voice name or id. | model default |
+| `--model <alias\|id>` | TTS model: `gemini`, `kokoro`, `fish`, or a full model id. See "Models". | `gemini` |
+| `--voice <name>` | Model-specific voice name or id (free-form for kokoro/fish). | model default |
 | `--accent <text>` | Accent description used in the prompt (Gemini only). | `southern British English, neutral and clear` |
 | `--style <text>` | Style / register description used in the prompt (Gemini only). | `warm, composed, restrained, literary` |
 | `--tags on\|off` | Prepend a `[calm]` style tag to every prompt (Gemini only). | `off` |
@@ -49,6 +49,7 @@ that captures how it differs from Gemini:
 | --- | --- | --- | --- | --- |
 | `gemini` | `google/gemini-3.1-flash-tts-preview` | one of 30 named voices | ✓ (accent/style/`[calm]`) | 24 kHz PCM `.wav` |
 | `kokoro` | `hexgrad/kokoro-82m` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — ignore `--accent`/`--style`/`--tags`) | `.mp3` |
+| `fish` | `fish-audio/s2.1-pro-free` | free-form 32-hex fish.audio id | ✗ (read aloud — ignore `--accent`/`--style`/`--tags`) | `.mp3` (free model) |
 
 Add another model by adding a profile and it becomes selectable via
 `--model <alias>` or the full id. Pass `--model <anything-else>` on the CLI to
@@ -67,6 +68,12 @@ All 30 Gemini voices: `Zephyr`, `Puck`, `Charon`, `Kore`, `Fenrir`, `Leda`,
 British voices (prefix `b`): female `bf_alice`, `bf_emma`, `bf_isabella`,
 `bf_lily`; male `bm_daniel`, `bm_fable`, `bm_george`, `bm_lewis`. Any
 `bf_*`/`bm_*` (or other accent prefixes) id is accepted.
+
+### Fish voices
+
+Voices are free-form 32-hex fish.audio ids (e.g. the default
+`89f41ea230034706881f85a8227d6ab9`). Any id is accepted; a curated British
+voice list lives on the "Text to Speech" Logseq page.
 
 ## Example
 
@@ -87,6 +94,9 @@ fvm dart run bin/main.dart --input story.txt --voice Callirrhoe --tags off
 
 # Kokoro narration (British female voice, MP3 output)
 fvm dart run bin/main.dart --input story.txt --model kokoro --voice bf_emma
+
+# Fish narration (free model, MP3 output, default voice)
+fvm dart run bin/main.dart --input story.txt --model fish
 ```
 
 ## Output
@@ -96,6 +106,7 @@ plus a `manifest.json` describing the run:
 
 - `gemini` → 24 kHz mono 16-bit PCM `.wav`
 - `kokoro` → `.mp3` (raw provider bytes)
+- `fish` → `.mp3` (raw provider bytes)
 
 Manifest contents:
 - `model`, `voice`, `format`, `sample_rate` (`sample_rate` is omitted for MP3)
@@ -104,7 +115,8 @@ Manifest contents:
   reproducibility)
 
 Playback (macOS): `afplay output/callirrhoe_1.wav` (Gemini),
-`afplay output/bf_emma_1.mp3` (Kokoro).
+`afplay output/bf_emma_1.mp3` (Kokoro),
+`afplay output/89f41ea230034706881f85a8227d6ab9_1.mp3` (Fish).
 
 ## How narration text is chunked
 
@@ -133,7 +145,7 @@ lib/
     cli/args.dart           # flag parsing + usage text
     narration/
       config.dart           # NarrationConfig (+ TTS model profile)
-      model_profiles.dart   # per-model profile registry (gemini, kokoro)
+      model_profiles.dart   # per-model profile registry (gemini, kokoro, fish)
       prompt.dart           # per-paragraph prompt template (Gemini only)
       narration.dart        # chunkText: paragraph split, merge, cap; orchestrator
       tts_client.dart       # POST /audio/speech (pcm/mp3), retry on 502
@@ -148,9 +160,9 @@ Note: `output/`, `.dart_tool/`, and `build/` are gitignored.
 - OpenRouter's Gemini model page lists `response_format: mp3` as supported, but
   the provider rejects `mp3` (HTTP 400: *"Gemini TTS only supports
   response_format=pcm"*). This tool always requests `pcm` for Gemini and wraps
-  it in a WAV container. Kokoro is requested as `mp3` directly. There is no MP3
-  encoding or concatenation step — the model emits these formats.
+  it in a WAV container. Kokoro and Fish are requested as `mp3` directly.
+  There is no MP3 encoding or concatenation step — the model emits these formats.
 - Transient `502` (empty audio stream) failures are retried up to 3 times,
-  matching a documented Gemini TTS quirk.
+  matching a documented Gemini TTS quirk. (Fish failures are not billed.)
 - To build the CLI as a standalone native executable, see
   [docs/COMPILING.md](docs/COMPILING.md).

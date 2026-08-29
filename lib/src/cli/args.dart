@@ -137,13 +137,15 @@ Required:
   --input <path>            Path to the text to narrate (no default).
 
 Options:
-  --model <alias|id>        TTS model: gemini (default) or kokoro, or a full
-                            model id. Controls voice set, prompt styling, and
-                            output format.
+  --model <alias|id>        TTS model: gemini (default), kokoro, or fish, or a
+                            full model id. Controls voice set, prompt styling,
+                            and output format.
   --voice <name>            Model-specific voice. For gemini: one of its 30
                             named voices (default: Charon). For kokoro: a
                             provider voice id such as bf_emma or bm_lewis;
-                            any id is accepted (prefix a=_US, b=_British).
+                            any id is accepted (prefix a=_US, b=_British). For
+                            fish: a 32-hex fish.audio id (default:
+                            89f41ea230034706881f85a8227d6ab9).
   --accent <text>           Accent description folded into the prompt
                             (gemini only; ignored by kokoro).
   --style <text>            Style/register description in prompt (gemini only;
@@ -158,8 +160,9 @@ Options:
   --api-key <key>           OpenRouter API key (defaults to OPENROUTER_API_KEY).
 
 Output format follows the model: gemini writes <voice>_<nn>.wav (24 kHz PCM),
-kokoro writes <voice>_<nn>.mp3.
+kokoro and fish write <voice>_<nn>.mp3.
 Example:
   dart run bin/main.dart --input /path/to/text.txt --voice Charon --sample-len 1
   dart run bin/main.dart --input /path/to/text.txt --model kokoro --voice bf_emma
+  dart run bin/main.dart --input /path/to/text.txt --model fish
 ''';
