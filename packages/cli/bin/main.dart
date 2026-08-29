@@ -1,11 +1,6 @@
 import 'dart:io';
 
-import 'package:tts_narrator_core/src/cli/args.dart';
-import 'package:tts_narrator_core/src/cli/voice_config.dart';
-import 'package:tts_narrator_core/src/narration/config.dart';
-import 'package:tts_narrator_core/src/narration/cost.dart';
-import 'package:tts_narrator_core/src/narration/model_profiles.dart';
-import 'package:tts_narrator_core/src/narration/narration.dart';
+import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 Future<int> main(List<String> args) async {
   // --help / --version / --list-voices handled before strict parsing.

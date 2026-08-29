@@ -158,7 +158,29 @@ VoiceConfig loadVoiceConfig(String path) {
   }
 }
 
-/// Thrown when the voice config file exists but is unreadable or malformed.
+/// Writes [config] to [path] as the shared `voice_config.json` schema,
+/// creating parent directories as needed. Round-trips `api_key` and the
+/// per-model voice aliases so the CLI and GUI serialize identically.
+///
+/// Throws a [VoiceConfigError] when the file cannot be written.
+void writeVoiceConfig(String path, VoiceConfig config) {
+  final json = <String, Object?>{
+    if (config.apiKey != null) 'api_key': config.apiKey,
+    if (config.aliases.isNotEmpty) 'voices': config.aliases,
+  };
+  try {
+    File(path).parent.createSync(recursive: true);
+    File(path).writeAsStringSync(
+      const JsonEncoder.withIndent('  ').convert(json),
+      flush: true,
+    );
+  } on FileSystemException catch (e) {
+    throw VoiceConfigError('Cannot write voice config "$path": $e');
+  }
+}
+
+/// Thrown when the voice config file exists but is unreadable or malformed,
+/// or when a write fails.
 class VoiceConfigError implements Exception {
   VoiceConfigError(this.message);
   final String message;

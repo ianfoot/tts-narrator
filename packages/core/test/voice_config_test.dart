@@ -149,6 +149,52 @@ void main() {
     });
   });
 
+  group('writeVoiceConfig', () {
+    late Directory dir;
+
+    setUp(() => dir = Directory.systemTemp.createTempSync('tts_config_test_'));
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    test('round-trips api_key and aliases', () {
+      final path = '${dir.path}/write_test/voice_config.json';
+      writeVoiceConfig(
+        path,
+        VoiceConfig(
+          apiKey: 'sk-or-test',
+          aliases: {
+            'fish': {'Narrator': 'hex1'},
+            'kokoro': {'Emma': 'bf_emma'},
+          },
+        ),
+      );
+      final cfg = loadVoiceConfig(path);
+      expect(cfg.apiKey, 'sk-or-test');
+      expect(cfg.aliases['fish']?['Narrator'], 'hex1');
+      expect(cfg.aliases['kokoro']?['Emma'], 'bf_emma');
+    });
+
+    test('omits empty sections rather than writing nulls', () {
+      final path = '${dir.path}/voice_config.json';
+      writeVoiceConfig(path, const VoiceConfig());
+      expect(File(path).readAsStringSync(), contains('{}'));
+    });
+
+    test('creates missing parent directories', () {
+      final path =
+          '${dir.path}/a/b/c/voice_config.json';
+      writeVoiceConfig(path, const VoiceConfig(apiKey: 'k'));
+      expect(File(path).existsSync(), isTrue);
+    });
+
+    test('throws VoiceConfigError when the path cannot be written', () {
+      final path = '/dev/null/voice_config.json';
+      expect(
+        () => writeVoiceConfig(path, const VoiceConfig(apiKey: 'k')),
+        throwsA(isA<VoiceConfigError>()),
+      );
+    });
+  });
+
   group('defaultConfigPath', () {
     test('always ends with the config filename', () {
       expect(defaultConfigPath(), endsWith('voice_config.json'));

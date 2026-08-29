@@ -99,6 +99,16 @@ typedef NarrationProgress = void Function(
   bool resumed,
 });
 
+/// Completion callback: called once each chunk's audio file is on disk,
+/// with the 0-based [index] and the absolute [filePath] of the written clip
+/// (including resumed chunks). Lets a GUI enable per-chunk playback as soon
+/// as a chunk lands, rather than waiting for the whole run.
+typedef NarrationChunkComplete = void Function(
+  int index,
+  String filePath, {
+  bool resumed,
+});
+
 /// Reads [config.inputPath] and returns the narration chunk plan
 /// (scenes/paragraphs to narrate, after min-word merge and length split).
 List<String> planChunks(NarrationConfig config) {
@@ -140,6 +150,7 @@ String outputDirPath(NarrationConfig config) {
 Future<void> narrate(
   NarrationConfig config, {
   NarrationProgress? onProgress,
+  NarrationChunkComplete? onChunkComplete,
   AbortToken? abort,
 }) async {
   final paragraphs = planChunks(config);
@@ -178,6 +189,11 @@ Future<void> narrate(
     if (prior != null) {
       records.add(prior);
       onProgress?.call(i, count, paragraph, resumed: true);
+      onChunkComplete?.call(
+        i,
+        '$dir${Platform.pathSeparator}${prior['wav']}',
+        resumed: true,
+      );
       _writeManifest(outDir, config, records, paragraphs.length, count, rate);
       continue;
     }
@@ -215,6 +231,7 @@ Future<void> narrate(
           : paragraph,
       'prompt': input,
     });
+    onChunkComplete?.call(i, audioFile);
     _writeManifest(outDir, config, records, paragraphs.length, count, rate);
   }
 

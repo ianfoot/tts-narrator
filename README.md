@@ -212,26 +212,64 @@ consistent narrator.
 
 ## Project layout
 
+A Dart **pub workspace** — `pubspec.yaml` at the repo root lists the members
+and holds the single shared lockfile.
+
 ```
-bin/
-  main.dart                 # CLI entrypoint: parses args, runs narration
-lib/
-  main.dart                 # Flutter entry point (current stub, future GUI)
-  src/
-    cli/args.dart           # flag parsing + usage text
-    cli/voice_config.dart   # voice aliases + api_key JSON config loading
-    narration/
-      config.dart           # NarrationConfig (+ TTS model profile)
-      model_profiles.dart   # per-model profile registry (gemini, kokoro, fish)
-      prompt.dart           # per-paragraph prompt template (Gemini only)
-      narration.dart        # chunkText: paragraph split, merge, cap; orchestrator
-      tts_client.dart       # POST /audio/speech (pcm/mp3), retry on 502
-      wav.dart              # PCM -> WAV header writer
-macos/                      # Flutter macOS platform scaffold
+packages/core/            # tts_narrator_core — pure Dart, no Flutter deps
+  lib/
+    tts_narrator_core.dart # public barrel (both the CLI and GUI import this)
+    src/
+      cli/args.dart           # flag parsing + usage text
+      cli/voice_config.dart   # voice aliases + api_key JSON config load/save
+      narration/
+        abort.dart            # AbortToken for the GUI Cancel button
+        config.dart           # NarrationConfig
+        cost.dart             # duration + cost estimates
+        model_profiles.dart   # per-model profile registry (gemini, kokoro, fish)
+        narration.dart       # chunkText + narration orchestrator
+        prompt.dart           # per-paragraph prompt template (Gemini only)
+        tts_client.dart       # POST /audio/speech (pcm/mp3), retry on 502
+        wav.dart              # PCM -> WAV header writer
+  test/                       # unit tests (dart test)
+packages/cli/               # tts_narrator_cli — depends only on core
+  bin/main.dart               # CLI entrypoint
+app/                        # tts_narrator — Flutter macOS GUI
+  lib/
+    main.dart                 # Flutter entry point
+    src/gui/
+      app.dart                # MaterialApp root
+      config_service.dart     # load/save the shared voice config
+      settings_form.dart      # one-screen settings form
+      run_screen.dart         # dry-run preview, Narrate/Cancel, playback
+  test/widgets/               # widget tests (flutter test)
 voice_config.example.json   # sample voice config: friendly aliases, no api_key
 ```
 
 Note: `output/`, `.dart_tool/`, and `build/` are gitignored.
+
+## GUI (macOS)
+
+A Flutter desktop app (`app/`) wraps the same core the CLI uses. It runs
+narration in-process (no subprocess), with a settings form for model/voice and
+styling, a dry-run estimate, live per-chunk progress, Cancel, and in-app
+playback of finished clips (`audioplayers`).
+
+```
+cd app
+fvm flutter run -d macos            # debug run
+fvm flutter test test               # widget tests
+fvm flutter build macos --debug     # build the .app (SPM-only, no CocoaPods)
+fvm flutter build macos --release
+```
+
+- The sandboxed macOS app needs the **`com.apple.security.network.client`**
+  entitlement to reach the OpenRouter API; it's already present in
+  `app/macos/Runner/DebugProfile.entitlements` and `Release.entitlements`.
+- Linux/Windows are planned but not yet scaffolded (macOS-only for now).
+- The GUI reads/writes the same `~/.config/tts-narrator/voice_config.json` as
+  the CLI, so voice aliases and the api key you save in one are available in
+  the other.
 
 ## Notes / current behaviour
 
