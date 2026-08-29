@@ -67,6 +67,25 @@ class NarrationConfig {
   /// OpenRouter API key. Falls back to the OPENROUTER_API_KEY env var.
   final String? apiKey;
 
+  /// Copy of this config with [inputPath] replaced (used to narrate each file
+  /// in a batch directory through the same single-file pipeline).
+  NarrationConfig copyWith({required String inputPath}) => NarrationConfig(
+        inputPath: inputPath,
+        profile: profile,
+        voice: voice,
+        voiceLabel: voiceLabel,
+        accent: accent,
+        style: style,
+        useCalmTag: useCalmTag,
+        passagePrefix: passagePrefix,
+        minWords: minWords,
+        sampleLen: sampleLen,
+        outDir: outDir,
+        dryRun: dryRun,
+        resume: resume,
+        apiKey: apiKey,
+      );
+
   String get resolvedApiKey {
     final key = apiKey ?? Platform.environment['OPENROUTER_API_KEY'];
     if (key == null || key.trim().isEmpty) {
