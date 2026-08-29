@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import 'package:tts_narrator/src/narration/abort.dart';
-import 'package:tts_narrator/src/narration/tts_client.dart';
+import 'package:tts_narrator_core/src/narration/abort.dart';
+import 'package:tts_narrator_core/src/narration/tts_client.dart';
 
 void main() {
   group('AbortToken', () {

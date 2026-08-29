@@ -1,9 +1,10 @@
-  # Compiling the CLI to a native executable
+# Compiling the CLI to a native executable
 
-The narration CLI is pure Dart (the `bin/` → `lib/src` path only uses
-`dart:io`, `dart:convert`, `dart:typed_data`; it never imports the Flutter
-stub). It can therefore be compiled ahead-of-time into a single, self-contained
-native executable with no Dart runtime installed on the target machine.
+The narration CLI (`packages/cli`) is pure Dart — it depends only on the
+`tts_narrator_core` package and the standard library, never Flutter or any
+native plugin. It can therefore be compiled ahead-of-time into a single,
+self-contained native executable with no Dart runtime installed on the target
+machine.
 
 ## Prerequisites
 
@@ -13,46 +14,56 @@ native executable with no Dart runtime installed on the target machine.
 
 ## Build
 
+Run from the `packages/cli` directory so the workspace resolves
+`tts_narrator_core` correctly:
+
 ```bash
-fvm dart build cli -o build/cli
+cd packages/cli
+fvm dart compile exe bin/main.dart -o ../../build/tts-narrator
 ```
 
-`dart build cli` (Dart 3.13+) compiles the CLI with any native build hooks
-(linker + asset copy) and produces a self-contained bundle:
-`build/cli/<host-triple>/bundle/bin/main` plus any dynamic libraries (e.g.
-`lib/objective_c.dylib`).
+The AOT compiler follows the entrypoint's import graph, so only the CLI and
+`tts_narrator_core` are compiled — the Flutter/GUI package (`app/`) and any
+GUI-only plugins (`audioplayers`, `file_selector`, `objective_c`) are not
+included.
 
-The AOT compiler follows the entrypoint's import graph, so only the CLI and its
-libraries are compiled — the Flutter entry point `lib/main.dart` (and any
-Flutter/dart:ui code) is not included.
-
-> Using `dart compile exe` here currently fails once `audioplayers` (GUI dep) is
-> in the graph, because it transitively brings `objective_c` (a native build-hook
-> package) which `compile exe` cannot run. Keep using `dart build cli`.
-
-`build/` is already in `.gitignore`, so the bundle stays out of version control.
+`build/` is already in `.gitignore`, so the binary stays out of version control.
 
 ## Verify (no API cost)
 
+Run from the repo root so `output/` and `story.txt` resolve as usual:
+
 ```bash
-file build/cli/macos_arm64/bundle/bin/main   # expect: Mach-O 64-bit executable arm64
-build/cli/macos_arm64/bundle/bin/main --help
-build/cli/macos_arm64/bundle/bin/main --input story.txt --voice Callirrhoe --dry-run   # chunk plan only
+file build/tts-narrator      # expect: Mach-O 64-bit executable arm64
+./build/tts-narrator --help
+./build/tts-narrator --input story.txt --voice Callirrhoe --dry-run   # chunk plan only
 ```
 
 ## Platform notes
 
-- **Host-target build:** `dart build cli` targets the host OS/architecture
-  (this repo builds macOS arm64 by default). The bundle is not portable to
-  other OS/CPU combinations; run the link hook on each target (or in CI).
-  Use `--target-os`/`--target-arch` for best-effort cross-builds.
-- The native CLI bundle is only for the **CLI**. A future macOS GUI would
-  instead be built with `flutter build macos`.
+- **Host-target build:** `dart compile exe` targets the host OS/architecture
+  (this repo builds macOS arm64 by default). The output is not portable to
+  other OS/CPU combinations.
+- **Cross-compiling:** `--target-os {android,fuchsia,ios,linux,macos,windows}`
+  and `--target-arch {arm,arm64,x64,...}` are supported for best-effort
+  cross-builds. Realistically, build on each target (or in CI) for distribution.
+- The single-file executable is only for the **CLI**. The macOS GUI is built
+  separately with `cd app && fvm flutter build macos`.
+
+## Why not `dart build cli`
+
+The GUI package (`app/`) pulls in native build-hook packages (`objective_c` via
+`audioplayers`). Those live only in `app/`'s dependency graph, so they no
+longer affect the CLI — `dart compile exe` works here without needing
+`dart build cli` (which produced a `bundle/` with a `.dylib`). If a plugin is
+ever added to the CLI's graph, the build may fail with "does not support build
+hooks"; the fix is to keep the CLI's dependency set pure Dart.
 
 ## Runtime notes
 
 - Prefer the `OPENROUTER_API_KEY` environment variable over `--api-key`:
   command-line arguments are visible in `ps` output.
-- The binary behaves identically to `fvm dart run bin/main.dart -- ...` — all
-  options in `--help` apply. `output/` is still created relative to the current
-  working directory.
+- The binary behaves identically to
+  `cd packages/cli && fvm dart run bin/main.dart -- ...` — all options in
+  `--help` apply. `output/` is still created relative to the current working
+  directory (so run from the repo root as above).

@@ -1,7 +1,7 @@
 import 'package:test/test.dart';
-import 'package:tts_narrator/src/narration/config.dart';
-import 'package:tts_narrator/src/narration/model_profiles.dart';
-import 'package:tts_narrator/src/narration/prompt.dart';
+import 'package:tts_narrator_core/src/narration/config.dart';
+import 'package:tts_narrator_core/src/narration/model_profiles.dart';
+import 'package:tts_narrator_core/src/narration/prompt.dart';
 
 void main() {
   const prefix = 'Narrate this passage for an audiobook.';

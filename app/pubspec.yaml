@@ -1,0 +1,25 @@
+name: tts_narrator
+description: "OpenRouter TTS audiobook narration (macOS GUI)."
+publish_to: 'none'
+version: 0.1.0+1
+
+resolution: workspace
+
+environment:
+  sdk: ^3.13.1
+
+dependencies:
+  audioplayers: ^6.8.1
+  file_selector: ^1.1.0
+  flutter:
+    sdk: flutter
+  tts_narrator_core:
+    path: ../packages/core
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
