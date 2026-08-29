@@ -30,6 +30,7 @@ NarrationConfig parseArgs(List<String> args) {
   var sampleLen = -1;
   var outDir = 'output';
   var dryRun = false;
+  var resume = false;
   String? apiKey;
   String? configPath;
 
@@ -90,6 +91,8 @@ NarrationConfig parseArgs(List<String> args) {
         minWords = n;
       case '--dry-run':
         dryRun = true;
+      case '--resume':
+        resume = true;
       case '--tags':
         final v = take(arg);
         if (v == 'off' || v == 'false' || v == '0') {
@@ -155,6 +158,7 @@ NarrationConfig parseArgs(List<String> args) {
     sampleLen: sampleLen > 0 ? sampleLen : null,
     outDir: outDir,
     dryRun: dryRun,
+    resume: resume,
     apiKey: apiKey,
   );
 }
@@ -186,7 +190,10 @@ Options:
   --min-words <n>           Merge paragraphs shorter than n words into the next
                             (default: 30).
   --sample-len <n>          Narrate only the first n paragraphs.
-  --dry-run                 Print the chunk plan and exit (no API call).
+  --dry-run                 Print the chunk plan + cost estimate and exit
+                            (no API call).
+  --resume                  Skip chunks whose prompt+fingerprint already exist
+                            in the output manifest (re-run safe; no re-billing).
   --out <dir>               Output directory (default: "output/<input>/").
   --config <path>           Voice config JSON (default: ~/.config/tts-narrator/
                             voice_config.json). Friendly voice aliases + api_key.

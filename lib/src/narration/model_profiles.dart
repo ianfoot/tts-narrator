@@ -15,6 +15,7 @@ class TtsModelProfile {
     this.voiceFreeForm = false,
     this.sendsVoiceField = true,
     this.sampleRate,
+    this.pricing = freePricing,
   });
 
   /// Short CLI name used for `--model <alias>`.
@@ -46,7 +47,36 @@ class TtsModelProfile {
 
   /// PCM sample rate used for the WAV header and duration; null for MP3.
   final int? sampleRate;
+
+  /// Pricing (USD) from the OpenRouter model page, for `--dry-run` estimates.
+  final AudioPricing pricing;
 }
+
+/// Cost data used for the `--dry-run` estimate. From the model's OpenRouter
+/// page; any model without pricing is treated as free (estimate prints 0).
+class AudioPricing {
+  const AudioPricing({
+    this.inputUsdPerMTokens,
+    this.outputUsdPerMTokens,
+    this.usdPerMChars,
+  });
+
+  /// USD per 1M input tokens (text tokens — e.g. Gemini).
+  final double? inputUsdPerMTokens;
+
+  /// USD per 1M output audio tokens (Gemini bills audio output by token).
+  final double? outputUsdPerMTokens;
+
+  /// USD per 1M input characters (Kokoro bills by character).
+  final double? usdPerMChars;
+
+  bool get isFree =>
+      (inputUsdPerMTokens ?? 0) == 0 &&
+      (outputUsdPerMTokens ?? 0) == 0 &&
+      (usdPerMChars ?? 0) == 0;
+}
+
+const freePricing = AudioPricing();
 
 /// Gemini 3.1 Flash TTS Preview: prompt-driven styling, named voices, 24 kHz
 /// mono 16-bit PCM.
@@ -64,6 +94,7 @@ const kGeminiProfile = TtsModelProfile(
   promptStyle: true,
   format: 'pcm',
   sampleRate: 24000,
+  pricing: AudioPricing(inputUsdPerMTokens: 1.0, outputUsdPerMTokens: 20.0),
 );
 
 /// Kokoro 82M (hexgrad/kokoro-82m): provider-specific voice ids, no prompt
@@ -81,6 +112,7 @@ const kKokoroProfile = TtsModelProfile(
   promptStyle: false,
   format: 'mp3',
   sampleRate: 24000,
+  pricing: AudioPricing(usdPerMChars: 0.62),
 );
 
 /// Fish Audio S2.1 Pro (free) (fish-audio/s2.1-pro-free): free model routed
@@ -92,7 +124,7 @@ const kFishProfile = TtsModelProfile(
   id: 'fish-audio/s2.1-pro-free',
   defaultVoice: '89f41ea230034706881f85a8227d6ab9',
   voices: [],
-  voiceFreeForm: true,
+voiceFreeForm: true,
   sendsVoiceField: true,
   promptStyle: false,
   format: 'mp3',
