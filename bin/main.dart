@@ -21,11 +21,23 @@ Future<int> main(List<String> args) async {
     return 64; // EX_USAGE
   }
 
+  stdout.writeln('Model:  ${config.profile.alias} (${config.profile.id})');
   stdout.writeln('Voice:  ${config.voice}');
+  stdout.writeln('Format: ${config.profile.format}');
   stdout.writeln('Input:  ${config.inputPath}');
   stdout.writeln(
     'Tags:   ${config.useCalmTag ? 'on ([calm])' : 'off'}',
   );
+  if (!config.profile.promptStyle &&
+      (config.accent.trim().isNotEmpty ||
+          config.style.trim().isNotEmpty ||
+          config.useCalmTag)) {
+    stdout.writeln();
+    stdout.writeln(
+      'Note: ${config.profile.alias} does not support prompt styling — '
+      '--accent/--style/--tags are ignored.',
+    );
+  }
 
   if (config.dryRun) {
     try {
@@ -63,6 +75,9 @@ Future<int> main(List<String> args) async {
   }
 
   stdout.writeln();
-  stdout.writeln('Done. WAVs + manifest.json written to ${config.outDir}/.');
+  final kind = config.profile.format == 'pcm' ? 'WAVs' : 'MP3s';
+  stdout.writeln(
+    'Done. $kind + manifest.json written to ${config.outDir}/.',
+  );
   return 0;
 }
