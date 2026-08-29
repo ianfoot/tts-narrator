@@ -132,6 +132,18 @@ void main() {
       expect(entries.any((e) => e.id == kFishProfile.defaultVoice), isTrue);
     });
 
+    test('labels the default voice with its friendly name', () {
+      final entries =
+          voiceEntries(model: kFishProfile, config: const VoiceConfig());
+      expect(
+        entries.any(
+          (e) => e.id == kFishProfile.defaultVoice &&
+              e.label == 'British Female Narrator',
+        ),
+        isTrue,
+      );
+    });
+
     test('dedupes the default voice when it doubles as an alias', () {
       final cfg = VoiceConfig(aliases: {
         'fish': {'Big Fish': kFishProfile.defaultVoice},

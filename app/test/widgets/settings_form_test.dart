@@ -59,8 +59,8 @@ void main() {
 
     final run = tester.widget<RunScreen>(find.byType(RunScreen));
     expect(run.config.inputPath, input);
-    expect(run.config.profile.alias, 'gemini');
-    expect(run.config.voice, kGeminiProfile.defaultVoice);
+    expect(run.config.profile.alias, 'fish');
+    expect(run.config.voice, kFishProfile.defaultVoice);
     expect(run.config.apiKey, 'sk-test'); // loaded from config, not env
   });
 
@@ -88,7 +88,7 @@ void main() {
     // Select the alias from the voice dropdown -> raw field fills with hex123.
     await tester.tap(find.byKey(const Key('voiceDropdown')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Narrator (alias)').last);
+    await tester.tap(find.text('Narrator').last);
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(
       find.byKey(const Key('voiceRawField')),
@@ -122,4 +122,40 @@ void main() {
     expect(run.config.voice, raw);
     expect(run.config.profile.alias, 'fish');
   });
+
+  testWidgets('cold start preselects the free fish default', (tester) async {
+    await useBigSurface(tester);
+    // No config file at all -> the form starts on fish / British Female Narrator.
+    final configPath = '${dir.path}/nonexistent/voice_config.json';
+
+    await tester.pumpWidget(
+      MaterialApp(home: SettingsScreen(configPath: configPath)),
+    );
+
+    expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('voiceRawField'))).controller!.text,
+      kFishProfile.defaultVoice,
+    );
+
+    final run = await _buildConfigFromForm(tester, configPath);
+    expect(run.profile.alias, 'fish');
+    expect(run.voice, kFishProfile.defaultVoice);
+    expect(run.voiceLabel, 'British Female Narrator');
+  });
+}
+
+/// Fills the source field and taps Narrate, returning the built config.
+Future<NarrationConfig> _buildConfigFromForm(
+  WidgetTester tester,
+  String configPath,
+) async {
+  final input = File('${Directory.systemTemp.createTempSync('tts_fix_').path}/story.txt')
+    ..writeAsStringSync('Hello world. A short free narration test.');
+  await tester.enterText(find.byKey(const Key('inputPathField')), input.path);
+  await tester.ensureVisible(find.byKey(const Key('narrateButton')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('narrateButton')));
+  await tester.pumpAndSettle();
+  return tester.widget<RunScreen>(find.byType(RunScreen)).config;
 }
