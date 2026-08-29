@@ -1,4 +1,4 @@
-# Compiling the CLI to a native executable
+  # Compiling the CLI to a native executable
 
 The narration CLI is pure Dart (the `bin/` → `lib/src` path only uses
 `dart:io`, `dart:convert`, `dart:typed_data`; it never imports the Flutter
@@ -14,32 +14,39 @@ native executable with no Dart runtime installed on the target machine.
 ## Build
 
 ```bash
-fvm dart compile exe bin/main.dart --output build/tts-narrator
+fvm dart build cli -o build/cli
 ```
+
+`dart build cli` (Dart 3.13+) compiles the CLI with any native build hooks
+(linker + asset copy) and produces a self-contained bundle:
+`build/cli/<host-triple>/bundle/bin/main` plus any dynamic libraries (e.g.
+`lib/objective_c.dylib`).
 
 The AOT compiler follows the entrypoint's import graph, so only the CLI and its
 libraries are compiled — the Flutter entry point `lib/main.dart` (and any
 Flutter/dart:ui code) is not included.
 
-`build/` is already in `.gitignore`, so the binary stays out of version control.
+> Using `dart compile exe` here currently fails once `audioplayers` (GUI dep) is
+> in the graph, because it transitively brings `objective_c` (a native build-hook
+> package) which `compile exe` cannot run. Keep using `dart build cli`.
+
+`build/` is already in `.gitignore`, so the bundle stays out of version control.
 
 ## Verify (no API cost)
 
 ```bash
-file build/tts-narrator          # expect: Mach-O 64-bit executable arm64
-build/tts-narrator --help
-build/tts-narrator --input story.txt --voice Callirrhoe --dry-run   # chunk plan only
+file build/cli/macos_arm64/bundle/bin/main   # expect: Mach-O 64-bit executable arm64
+build/cli/macos_arm64/bundle/bin/main --help
+build/cli/macos_arm64/bundle/bin/main --input story.txt --voice Callirrhoe --dry-run   # chunk plan only
 ```
 
 ## Platform notes
 
-- **Host-target build:** `dart compile exe` targets the host OS/architecture
-  (this repo builds macOS arm64 by default). The output is not portable to
-  other OS/CPU combinations.
-- **Cross-compiling:** `--target-os {android,fuchsia,ios,linux,macos,windows}`
-  and `--target-arch {arm,arm64,x64,...}` are supported for best-effort
-  cross-builds. Realistically, build on each target (or in CI) for distribution.
-- The single-file executable is only for the **CLI**. A future macOS GUI would
+- **Host-target build:** `dart build cli` targets the host OS/architecture
+  (this repo builds macOS arm64 by default). The bundle is not portable to
+  other OS/CPU combinations; run the link hook on each target (or in CI).
+  Use `--target-os`/`--target-arch` for best-effort cross-builds.
+- The native CLI bundle is only for the **CLI**. A future macOS GUI would
   instead be built with `flutter build macos`.
 
 ## Runtime notes
