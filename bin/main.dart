@@ -22,7 +22,10 @@ Future<int> main(List<String> args) async {
   }
 
   stdout.writeln('Model:  ${config.profile.alias} (${config.profile.id})');
-  stdout.writeln('Voice:  ${config.voice}');
+  final label = config.voiceLabel != null && config.voiceLabel != config.voice
+      ? '${config.voiceLabel} (${config.voice})'
+      : config.voice;
+  stdout.writeln('Voice:  $label');
   stdout.writeln('Format: ${config.profile.format}');
   stdout.writeln('Input:  ${config.inputPath}');
   stdout.writeln(
@@ -50,6 +53,13 @@ Future<int> main(List<String> args) async {
             : chunks[i];
         stdout.writeln('${i + 1}. ($words words) ${preview.split('\n').first}');
       }
+      final stem = inputStem(config.inputPath);
+      final ext = config.profile.format == 'pcm' ? 'wav' : 'mp3';
+      final pad = chunks.length.toString().length;
+      stdout.writeln(
+        '\nOutput: ${config.outDir}/$stem/${stem}_${'1'.padLeft(pad, '0')}.$ext … '
+        '${stem}_${chunks.length.toString().padLeft(pad, '0')}.$ext + manifest.json',
+      );
     } on Exception catch (e) {
       stderr.writeln('Dry run failed: $e');
       return 1;
@@ -77,7 +87,7 @@ Future<int> main(List<String> args) async {
   stdout.writeln();
   final kind = config.profile.format == 'pcm' ? 'WAVs' : 'MP3s';
   stdout.writeln(
-    'Done. $kind + manifest.json written to ${config.outDir}/.',
+    'Done. $kind + manifest.json written to ${outputDirPath(config)}/.',
   );
   return 0;
 }

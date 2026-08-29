@@ -108,6 +108,27 @@ List<String> planChunks(NarrationConfig config) {
   return paragraphs;
 }
 
+/// Lowercased, file-friendly slug of the input filename without its extension
+/// (e.g. "A Shorts Story Draft 5.txt" -> "a_shorts_story_draft_5").
+String inputStem(String inputPath) {
+  final name = inputPath.split(Platform.pathSeparator).last;
+  final base = name.contains('.') ? name.substring(0, name.lastIndexOf('.')) : name;
+  return base.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+}
+
+/// Last path component of an output directory, for append-avoidance.
+String outDirBasename(String outDir) =>
+    outDir.split(Platform.pathSeparator).last;
+
+/// Final output directory for [config]: the out dir joined with the input
+/// stem unless the stem is already the trailing component.
+String outputDirPath(NarrationConfig config) {
+  final stem = inputStem(config.inputPath);
+  return outDirBasename(config.outDir) == stem
+      ? config.outDir
+      : '${config.outDir}/$stem';
+}
+
 /// Narrates [config.inputPath] paragraph by paragraph, writing WAV files and a
 /// manifest into [config.outDir].
 Future<void> narrate(
@@ -118,11 +139,12 @@ Future<void> narrate(
 
   final count = min(config.sampleLen ?? paragraphs.length, paragraphs.length);
   final client = TtsClient(apiKey: config.apiKey);
-  final outDir = Directory(config.outDir)..createSync(recursive: true);
-  final slug =
-      config.voice.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+  final stem = inputStem(config.inputPath);
+  final dir = outputDirPath(config);
+  final outDir = Directory(dir)..createSync(recursive: true);
   final extension = config.profile.format == 'pcm' ? 'wav' : 'mp3';
   final rate = config.profile.sampleRate;
+  final pad = count.toString().length;
   final records = <Map<String, Object?>>[];
 
   for (var i = 0; i < count; i++) {
@@ -141,7 +163,7 @@ Future<void> narrate(
       input: input,
     );
 
-    final baseName = '${slug}_${i + 1}';
+    final baseName = '${stem}_${(i + 1).toString().padLeft(pad, '0')}';
     final audioFile =
         '${outDir.path}${Platform.pathSeparator}$baseName.$extension';
     if (config.profile.format == 'pcm') {
@@ -173,6 +195,8 @@ Future<void> narrate(
   final manifest = {
     'model': config.profile.id,
     'voice': config.voice,
+    if (config.voiceLabel != null && config.voiceLabel != config.voice)
+      'voice_label': config.voiceLabel,
     'format': config.profile.format,
     'sample_rate': ?rate,
     'max_chunk_length': _maxChunkLength,
