@@ -168,7 +168,7 @@ Future<void> narrate(
 
     // Resume: reuse an identical prior chunk (same index + prompt + file) and
     // carry its fingerprint/bytes across, so a re-run doesn't re-bill it.
-    final prior = _resumeMatch(existing, index, input, dir);
+    final prior = resumeMatch(existing, index, input, dir);
     if (prior != null) {
       records.add(prior);
       onProgress?.call(i, count, paragraph, resumed: true);
@@ -192,7 +192,7 @@ Future<void> narrate(
       File(audioFile).writeAsBytesSync(audio, flush: true);
     }
 
-    final fingerprint = _fingerprint(audio);
+    final fingerprint = fingerprintOf(audio);
     final duration =
         (rate != null && config.profile.format == 'pcm')
             ? audio.length / (rate * 2)
@@ -216,7 +216,7 @@ Future<void> narrate(
 
 /// Returns the prior record for [index] from [existing] when `--resume` can
 /// reuse it: same index, same [input] prompt, and the audio file still exists.
-Map<String, Object?>? _resumeMatch(
+Map<String, Object?>? resumeMatch(
   List<Map<String, Object?>> existing,
   int index,
   String input,
@@ -280,7 +280,7 @@ void _writeManifest(
 }
 
 /// Lightweight content fingerprint (FNV-1a 64-bit) for manifest bookkeeping.
-String _fingerprint(List<int> bytes) {
+String fingerprintOf(List<int> bytes) {
   var h1 = 0x811c9dc5;
   var h2 = 0x1000193;
   for (final b in bytes) {
