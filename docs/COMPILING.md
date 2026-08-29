@@ -14,7 +14,7 @@ native executable with no Dart runtime installed on the target machine.
 ## Build
 
 ```bash
-fvm dart compile exe bin/main.dart --output build/gemini-tts-narrator
+fvm dart compile exe bin/main.dart --output build/tts-narrator
 ```
 
 The AOT compiler follows the entrypoint's import graph, so only the CLI and its
@@ -26,9 +26,9 @@ Flutter/dart:ui code) is not included.
 ## Verify (no API cost)
 
 ```bash
-file build/gemini-tts-narrator          # expect: Mach-O 64-bit executable arm64
-build/gemini-tts-narrator --help
-build/gemini-tts-narrator --input story.txt --voice Callirrhoe --dry-run   # chunk plan only
+file build/tts-narrator          # expect: Mach-O 64-bit executable arm64
+build/tts-narrator --help
+build/tts-narrator --input story.txt --voice Callirrhoe --dry-run   # chunk plan only
 ```
 
 ## Platform notes
