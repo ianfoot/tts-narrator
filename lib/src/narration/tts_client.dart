@@ -23,12 +23,13 @@ class TtsClient {
   /// OpenRouter API key; falls back to OPENROUTER_API_KEY when null.
   final String? apiKey;
 
-  /// Synthesize [input] as PCM audio (16-bit little-endian, 24 kHz mono),
-  /// returning the raw bytes. Retries on transient 5xx / empty-stream
+  /// Synthesize [input] as audio in [responseFormat], optionally choosing a
+  /// [voice], returning the raw bytes. Retries on transient 5xx / empty-stream
   /// failures (a documented Gemini TTS quirk).
   Future<List<int>> synthesize({
     required String model,
-    required String voice,
+    required String responseFormat,
+    String? voice,
     required String input,
     int retries = 3,
   }) async {
@@ -37,18 +38,20 @@ class TtsClient {
       throw StateError('No API key set (OPENROUTER_API_KEY or --api-key).');
     }
 
-    final body =
-        jsonEncode({
-          'model': model,
-          'input': input,
-          'voice': voice,
-          'response_format': 'pcm',
-        });
+    final body = <String, Object?>{
+      'model': model,
+      'input': input,
+      'response_format': responseFormat,
+    };
+    if (voice != null && voice.isNotEmpty) {
+      body['voice'] = voice;
+    }
 
     var attempt = 0;
     while (true) {
       attempt++;
-      final (statusCode, bytes, generationId) = await _post(body, key);
+      final (statusCode, bytes, generationId) =
+          await _post(jsonEncode(body), key);
       if (statusCode >= 200 && statusCode < 300) {
         if (bytes.isEmpty) {
           if (attempt <= retries) {

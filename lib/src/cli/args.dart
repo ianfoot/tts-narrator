@@ -1,13 +1,5 @@
 import '../narration/config.dart';
-
-/// All 30 Gemini TTS voices.
-const kVoices = [
-  'Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir', 'Leda', 'Orus', 'Aoede',
-  'Callirrhoe', 'Autonoe', 'Enceladus', 'Iapetus', 'Umbriel', 'Algieba',
-  'Despina', 'Erinome', 'Algenib', 'Rasalgethi', 'Laomedeia', 'Achernar',
-  'Alnilam', 'Schedar', 'Gacrux', 'Pulcherrima', 'Achird', 'Zubenelgenubi',
-  'Vindemiatrix', 'Sadachbia', 'Sadaltager', 'Sulafat',
-];
+import '../narration/model_profiles.dart';
 
 /// Thrown when the user provides invalid CLI arguments.
 class CliUsageError implements Exception {
@@ -24,7 +16,8 @@ class CliUsageError implements Exception {
 /// values raise [CliUsageError].
 NarrationConfig parseArgs(List<String> args) {
   String? input;
-  var voice = 'Charon';
+  var profile = kGeminiProfile;
+  var voice = kGeminiProfile.defaultVoice;
   var accent = 'southern British English, neutral and clear';
   var style = 'warm, composed, restrained, literary';
   var tags = false;
@@ -50,6 +43,19 @@ NarrationConfig parseArgs(List<String> args) {
     switch (arg) {
       case '--input':
         input = take(arg);
+      case '--model':
+        final v = take(arg);
+        final resolved = profileFor(v);
+        if (resolved == null) {
+          throw CliUsageError(
+            'Unknown model "$v". Available: ${kModelProfiles.values.map((p) => p.alias).join(', ')} '
+            '(or pass a full model id).',
+          );
+        }
+        profile = resolved;
+        if (voice == kGeminiProfile.defaultVoice) {
+          voice = profile.defaultVoice;
+        }
       case '--voice':
         voice = take(arg);
       case '--accent':
@@ -101,14 +107,16 @@ NarrationConfig parseArgs(List<String> args) {
   if (input == null || input.trim().isEmpty) {
     throw CliUsageError('--input <path> is required (no default filename).');
   }
-  if (!kVoices.contains(voice)) {
+  if (!profile.voiceFreeForm && !profile.voices.contains(voice)) {
     throw CliUsageError(
-      'Unknown voice "$voice". Available: ${kVoices.join(', ')}',
+      'Unknown voice "$voice" for ${profile.alias}. Available: '
+      '${profile.voices.join(', ')}',
     );
   }
 
   return NarrationConfig(
     inputPath: input,
+    profile: profile,
     voice: voice,
     accent: accent,
     style: style,
@@ -129,12 +137,18 @@ Required:
   --input <path>            Path to the text to narrate (no default).
 
 Options:
-  --voice <name>            One of the 30 voices (default: Charon).
-  --accent <text>           Accent description in prompt (default: "southern
-                            British English, neutral and clear").
-  --style <text>            Style/register description in prompt (default: "warm,
-                            composed, restrained, literary").
-  --tags on|off             Prepend a [calm] tag (default: off).
+  --model <alias|id>        TTS model: gemini (default) or kokoro, or a full
+                            model id. Controls voice set, prompt styling, and
+                            output format.
+  --voice <name>            Model-specific voice. For gemini: one of its 30
+                            named voices (default: Charon). For kokoro: a
+                            provider voice id such as bf_emma or bm_lewis;
+                            any id is accepted (prefix a=_US, b=_British).
+  --accent <text>           Accent description folded into the prompt
+                            (gemini only; ignored by kokoro).
+  --style <text>            Style/register description in prompt (gemini only;
+                            ignored by kokoro).
+  --tags on|off             Prepend a [calm] tag (gemini only; default: off).
   --passage-prefix <text>   Pooled preamble applied to each paragraph.
   --min-words <n>           Merge paragraphs shorter than n words into the next
                             (default: 30).
@@ -143,7 +157,9 @@ Options:
   --out <dir>               Output directory (default: "output").
   --api-key <key>           OpenRouter API key (defaults to OPENROUTER_API_KEY).
 
-Outputs <voice-slug>_<nn>.wav and manifest.json into <out>.
+Output format follows the model: gemini writes <voice>_<nn>.wav (24 kHz PCM),
+kokoro writes <voice>_<nn>.mp3.
 Example:
   dart run bin/main.dart --input /path/to/text.txt --voice Charon --sample-len 1
+  dart run bin/main.dart --input /path/to/text.txt --model kokoro --voice bf_emma
 ''';

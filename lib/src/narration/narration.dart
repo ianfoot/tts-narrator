@@ -8,9 +8,6 @@ import 'prompt.dart';
 import 'tts_client.dart';
 import 'wav.dart';
 
-const _model = 'google/gemini-3.1-flash-tts-preview';
-const _sampleRate = 24000;
-
 /// Max characters per narration chunk. Scenes (blank-line-separated
 /// paragraphs) are kept whole; only a scene longer than this cap is split at
 /// sentence boundaries. Balances call count vs per-call drift: Google
@@ -124,31 +121,46 @@ Future<void> narrate(
   final outDir = Directory(config.outDir)..createSync(recursive: true);
   final slug =
       config.voice.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+  final extension = config.profile.format == 'pcm' ? 'wav' : 'mp3';
+  final rate = config.profile.sampleRate;
   final records = <Map<String, Object?>>[];
 
   for (var i = 0; i < count; i++) {
     final paragraph = paragraphs[i];
     onProgress?.call(i, count, paragraph);
 
-    final input = buildPrompt(config, paragraph);
-    final pcm = await client.synthesize(
-      model: _model,
-      voice: config.voice,
+    // Gemini understands accent/style/tag directives woven into the text;
+    // other models would read them aloud, so pass the raw passage instead.
+    final input = config.profile.promptStyle
+        ? buildPrompt(config, paragraph)
+        : paragraph;
+    final audio = await client.synthesize(
+      model: config.profile.id,
+      responseFormat: config.profile.format,
+      voice: config.profile.sendsVoiceField ? config.voice : null,
       input: input,
     );
 
     final baseName = '${slug}_${i + 1}';
-    final wavFile = '${outDir.path}${Platform.pathSeparator}$baseName.wav';
-    final bytes = BytesBuilder(copy: false);
-    bytes.add(pcm);
-    writeWav(path: wavFile, bytes: bytes);
+    final audioFile =
+        '${outDir.path}${Platform.pathSeparator}$baseName.$extension';
+    if (config.profile.format == 'pcm') {
+      final bytes = BytesBuilder(copy: false);
+      bytes.add(audio);
+      writeWav(path: audioFile, bytes: bytes, sampleRate: rate ?? 24000);
+    } else {
+      File(audioFile).writeAsBytesSync(audio, flush: true);
+    }
 
-    final fingerprint = _fingerprint(pcm);
-    final duration = pcm.length / (_sampleRate * 2);
+    final fingerprint = _fingerprint(audio);
+    final duration =
+        (rate != null && config.profile.format == 'pcm')
+            ? audio.length / (rate * 2)
+            : null;
     records.add({
       'index': i + 1,
-      'wav': '$baseName.wav',
-      'bytes': pcm.length,
+      'wav': '$baseName.$extension',
+      'bytes': audio.length,
       'duration_seconds': duration,
       'fingerprint': fingerprint,
       'excerpt': paragraph.length > 120
@@ -159,9 +171,10 @@ Future<void> narrate(
   }
 
   final manifest = {
-    'model': _model,
+    'model': config.profile.id,
     'voice': config.voice,
-    'sample_rate': _sampleRate,
+    'format': config.profile.format,
+    'sample_rate': ?rate,
     'max_chunk_length': _maxChunkLength,
     // ignore: avoid_redundant_argument_values
     'paragraphs_total': paragraphs.length,

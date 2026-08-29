@@ -1,10 +1,13 @@
 import 'dart:io';
 
+import 'model_profiles.dart';
+
 /// Configuration for a single narration run.
 class NarrationConfig {
   NarrationConfig({
     required this.inputPath,
-    this.voice = 'Charon',
+    required this.profile,
+    required this.voice,
     this.accent = 'southern British English, neutral and clear',
     this.style = 'warm, composed, restrained, literary',
     this.useCalmTag = false,
@@ -20,7 +23,10 @@ class NarrationConfig {
   /// Path to the source text to narrate (required, no default).
   final String inputPath;
 
-  /// One of the 30 Gemini TTS voices.
+  /// TTS model profile driving the request body, prompt, and output format.
+  final TtsModelProfile profile;
+
+  /// Model-specific voice name or id.
   final String voice;
 
   /// Free-text accent description used in the prompt.
