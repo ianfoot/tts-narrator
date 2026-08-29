@@ -29,7 +29,7 @@ path to the text to narrate.
 | --- | --- | --- |
 | `--input <path>` | Path to the text to narrate (required). | — |
 | `--model <alias\|id>` | TTS model: `gemini`, `kokoro`, `fish`, or a full model id. See "Models". | `gemini` |
-| `--voice <name>` | Model-specific voice name or id (free-form for kokoro/fish). | model default |
+| `--voice <name>` | Model-specific voice name or id (free-form for kokoro/fish). Friendly aliases from the voice config resolve to the raw id. | model default |
 | `--accent <text>` | Accent description used in the prompt (Gemini only). | `southern British English, neutral and clear` |
 | `--style <text>` | Style / register description used in the prompt (Gemini only). | `warm, composed, restrained, literary` |
 | `--tags on\|off` | Prepend a `[calm]` style tag to every prompt (Gemini only). | `off` |
@@ -37,8 +37,33 @@ path to the text to narrate.
 | `--min-words <n>` | Merge paragraphs shorter than `n` words into the next, so tiny fragments don't get an isolated reading. | `30` |
 | `--sample-len <n>` | Narrate only the first `n` chunks (useful for testing). | — |
 | `--dry-run` | Print the chunk plan and exit without calling the API. | `off` |
-| `--out <dir>` | Output directory. | `output` |
-| `--api-key <key>` | OpenRouter API key (overrides the environment variable). | env |
+| `--out <dir>` | Output directory base; the input stem is appended unless it already ends with it. | `output` |
+| `--config <path>` | Voice config JSON (friendly aliases + `api_key`). | `~/.config/tts-narrator/voice_config.json` |
+| `--api-key <key>` | OpenRouter API key (overrides the config file, then the environment). | env |
+
+### Voice configuration
+
+Friendly voice aliases (and an optional `api_key`) live in a single JSON file,
+defaulting to `~/.config/tts-narrator/voice_config.json` (override with
+`--config`). See `voice_config.example.json` in the repo for a fully populated
+example (the fish British voice list, no key):
+
+```json
+{
+  "api_key": "",
+  "voices": {
+    "fish":   { "British Female Narrator (good)": "89f41ea230034706881f85a8227d6ab9", "British War (male)": "2fd511bd06904a21a971c6551dfb853a" },
+    "kokoro": { "Emma": "bf_emma", "Lewis": "bm_lewis" }
+  }
+}
+```
+
+- `--voice <name>` first resolves a friendly alias for the selected model to its
+  raw id; unknown values pass through unchanged (today's behavior). The friendly
+  name is kept for display and recorded in the manifest as `voice_label`.
+- The config file is optional: missing default → no aliases, no key. A
+  `--config` path that doesn't exist or can't be parsed is a hard error.
+- `api_key` precedence: `--api-key` flag > config file > `OPENROUTER_API_KEY` env.
 
 ### Models
 
@@ -73,7 +98,8 @@ British voices (prefix `b`): female `bf_alice`, `bf_emma`, `bf_isabella`,
 
 Voices are free-form 32-hex fish.audio ids (e.g. the default
 `89f41ea230034706881f85a8227d6ab9`). Any id is accepted; a curated British
-voice list lives on the "Text to Speech" Logseq page.
+voice list lives on the "Text to Speech" Logseq page and in
+`voice_config.example.json`.
 
 ## Example
 
@@ -97,26 +123,33 @@ fvm dart run bin/main.dart --input story.txt --model kokoro --voice bf_emma
 
 # Fish narration (free model, MP3 output, default voice)
 fvm dart run bin/main.dart --input story.txt --model fish
+
+# Fish narration using a friendly voice alias from the voice config
+fvm dart run bin/main.dart --input story.txt --model fish \
+  --voice "British Female Narrator (good)"
 ```
 
 ## Output
 
-For each chunk, an audio file is written to `<out>/` as `<voice_slug>_<nn>.<ext>`
-plus a `manifest.json` describing the run:
+Each chunk is written to `output/<input-stem>/` as `<input-stem>_<nn>.<ext>`
+(padded to the width of the chunk count, so files sort numerically), plus a
+`manifest.json` describing the run:
 
 - `gemini` → 24 kHz mono 16-bit PCM `.wav`
 - `kokoro` → `.mp3` (raw provider bytes)
 - `fish` → `.mp3` (raw provider bytes)
 
+So `story.txt` → `output/story/story_01.mp3` … `story_16.mp3`
+
 Manifest contents:
-- `model`, `voice`, `format`, `sample_rate` (`sample_rate` is omitted for MP3)
+- `model`, `voice`, optional `voice_label` (friendly alias if used), `format`,
+  `sample_rate` (`sample_rate` is omitted for MP3)
 - per-chunk `wav`, `bytes`, `duration_seconds` (null for MP3), `fingerprint`,
   `excerpt`, and the exact `input`/`prompt` that produced it (for
   reproducibility)
 
-Playback (macOS): `afplay output/callirrhoe_1.wav` (Gemini),
-`afplay output/bf_emma_1.mp3` (Kokoro),
-`afplay output/89f41ea230034706881f85a8227d6ab9_1.mp3` (Fish).
+Playback (macOS): `afplay output/story/story_1.wav` (Gemini),
+`afplay output/story/story_1.mp3` (Kokoro/Fish).
 
 ## How narration text is chunked
 
@@ -143,6 +176,7 @@ lib/
   main.dart                 # Flutter entry point (current stub, future GUI)
   src/
     cli/args.dart           # flag parsing + usage text
+    cli/voice_config.dart   # voice aliases + api_key JSON config loading
     narration/
       config.dart           # NarrationConfig (+ TTS model profile)
       model_profiles.dart   # per-model profile registry (gemini, kokoro, fish)
@@ -151,6 +185,7 @@ lib/
       tts_client.dart       # POST /audio/speech (pcm/mp3), retry on 502
       wav.dart              # PCM -> WAV header writer
 macos/                      # Flutter macOS platform scaffold
+voice_config.example.json   # sample voice config: friendly aliases, no api_key
 ```
 
 Note: `output/`, `.dart_tool/`, and `build/` are gitignored.

@@ -8,6 +8,7 @@ class NarrationConfig {
     required this.inputPath,
     required this.profile,
     required this.voice,
+    this.voiceLabel,
     this.accent = 'southern British English, neutral and clear',
     this.style = 'warm, composed, restrained, literary',
     this.useCalmTag = false,
@@ -28,6 +29,10 @@ class NarrationConfig {
 
   /// Model-specific voice name or id.
   final String voice;
+
+  /// Human-readable label for [voice]: the friendly alias when one was used,
+  /// otherwise the raw id. Used for display (banner) and the manifest.
+  final String? voiceLabel;
 
   /// Free-text accent description used in the prompt.
   final String accent;

@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import '../narration/config.dart';
 import '../narration/model_profiles.dart';
+import 'voice_config.dart';
 
 /// Thrown when the user provides invalid CLI arguments.
 class CliUsageError implements Exception {
@@ -28,6 +31,7 @@ NarrationConfig parseArgs(List<String> args) {
   var outDir = 'output';
   var dryRun = false;
   String? apiKey;
+  String? configPath;
 
   var i = 0;
   String take(String flag) {
@@ -66,6 +70,8 @@ NarrationConfig parseArgs(List<String> args) {
         prefix = take(arg);
       case '--out':
         outDir = take(arg);
+      case '--config':
+        configPath = take(arg);
       case '--api-key':
         apiKey = take(arg);
       case '--sample-len':
@@ -107,9 +113,31 @@ NarrationConfig parseArgs(List<String> args) {
   if (input == null || input.trim().isEmpty) {
     throw CliUsageError('--input <path> is required (no default filename).');
   }
-  if (!profile.voiceFreeForm && !profile.voices.contains(voice)) {
+
+  // Voice config: friendly-name aliases + optional api_key.
+  final cfgPath = configPath ?? defaultConfigPath();
+  if (configPath != null && !File(cfgPath).existsSync()) {
+    throw CliUsageError('Voice config file not found: "$cfgPath".');
+  }
+  final VoiceConfig voiceConfig;
+  try {
+    voiceConfig = loadVoiceConfig(cfgPath);
+  } on VoiceConfigError catch (e) {
+    throw CliUsageError('$e');
+  }
+
+  // api_key precedence: --api-key flag > config file > OPENROUTER_API_KEY env.
+  final configKey = voiceConfig.apiKey;
+  if (apiKey == null && configKey != null && configKey.trim().isNotEmpty) {
+    apiKey = configKey;
+  }
+
+  // Resolve a friendly voice alias (if any) to the provider voice id.
+  final (voiceId, voiceLabel) =
+      voiceConfig.resolveVoice(profile.alias, voice);
+  if (!profile.voiceFreeForm && !profile.voices.contains(voiceId)) {
     throw CliUsageError(
-      'Unknown voice "$voice" for ${profile.alias}. Available: '
+      'Unknown voice "$voiceId" for ${profile.alias}. Available: '
       '${profile.voices.join(', ')}',
     );
   }
@@ -117,7 +145,8 @@ NarrationConfig parseArgs(List<String> args) {
   return NarrationConfig(
     inputPath: input,
     profile: profile,
-    voice: voice,
+    voice: voiceId,
+    voiceLabel: voiceLabel,
     accent: accent,
     style: style,
     useCalmTag: tags,
@@ -145,7 +174,9 @@ Options:
                             provider voice id such as bf_emma or bm_lewis;
                             any id is accepted (prefix a=_US, b=_British). For
                             fish: a 32-hex fish.audio id (default:
-                            89f41ea230034706881f85a8227d6ab9).
+                            89f41ea230034706881f85a8227d6ab9). Friendly
+                            aliases from the voice config are resolved to the
+                            raw id.
   --accent <text>           Accent description folded into the prompt
                             (gemini only; ignored by kokoro).
   --style <text>            Style/register description in prompt (gemini only;
@@ -156,13 +187,16 @@ Options:
                             (default: 30).
   --sample-len <n>          Narrate only the first n paragraphs.
   --dry-run                 Print the chunk plan and exit (no API call).
-  --out <dir>               Output directory (default: "output").
-  --api-key <key>           OpenRouter API key (defaults to OPENROUTER_API_KEY).
+  --out <dir>               Output directory (default: "output/<input>/").
+  --config <path>           Voice config JSON (default: ~/.config/tts-narrator/
+                            voice_config.json). Friendly voice aliases + api_key.
+  --api-key <key>           OpenRouter API key (defaults to api_key in config,
+                            then OPENROUTER_API_KEY).
 
-Output format follows the model: gemini writes <voice>_<nn>.wav (24 kHz PCM),
-kokoro and fish write <voice>_<nn>.mp3.
+Output goes to <out>/<input-stem>_<nn>.<ext> — gemini writes 24 kHz PCM WAVs,
+kokoro and fish write MP3s.
 Example:
   dart run bin/main.dart --input /path/to/text.txt --voice Charon --sample-len 1
-  dart run bin/main.dart --input /path/to/text.txt --model kokoro --voice bf_emma
+  dart run bin/main.dart --input /path/to/text.txt --model kokoro --voice Emma
   dart run bin/main.dart --input /path/to/text.txt --model fish
 ''';
