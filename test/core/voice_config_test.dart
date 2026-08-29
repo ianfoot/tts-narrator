@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:tts_narrator/src/cli/voice_config.dart';
+import 'package:tts_narrator/src/narration/model_profiles.dart';
 
 void main() {
   group('loadVoiceConfig', () {
@@ -96,6 +97,67 @@ void main() {
       final (id, label) = const VoiceConfig().resolveVoice('fish', 'anything');
       expect(id, 'anything');
       expect(label, 'anything');
+    });
+  });
+
+  group('voiceEntries', () {
+    test('gemini yields its known voices, sorted, no aliases', () {
+      final entries =
+          voiceEntries(model: kGeminiProfile, config: const VoiceConfig());
+      expect(entries, hasLength(kGeminiProfile.voices.length));
+      expect(entries.every((e) => e.model == 'gemini'), isTrue);
+      expect(entries.firstWhere((e) => e.id == 'Charon').isAlias, isFalse);
+      final labels = entries.map((e) => e.label.toLowerCase()).toList();
+      expect(labels, orderedEquals([...labels]..sort()));
+    });
+
+    test('kokoro (free-form) still lists its known voices + default', () {
+      final entries =
+          voiceEntries(model: kKokoroProfile, config: const VoiceConfig());
+      expect(entries.any((e) => e.id == 'bf_emma'), isTrue);
+      expect(entries.any((e) => e.id == 'bm_lewis'), isTrue);
+    });
+
+    test('fish (free-form) includes aliases and its default voice', () {
+      final cfg = VoiceConfig(aliases: {
+        'fish': {'Narrator': 'hex1'},
+      });
+      final entries = voiceEntries(model: kFishProfile, config: cfg);
+      expect(
+        entries.any(
+          (e) => e.id == 'hex1' && e.label == 'Narrator' && e.isAlias,
+        ),
+        isTrue,
+      );
+      expect(entries.any((e) => e.id == kFishProfile.defaultVoice), isTrue);
+    });
+
+    test('dedupes the default voice when it doubles as an alias', () {
+      final cfg = VoiceConfig(aliases: {
+        'fish': {'Big Fish': kFishProfile.defaultVoice},
+      });
+      final entries = voiceEntries(model: kFishProfile, config: cfg);
+      expect(
+        entries.where((e) => e.id == kFishProfile.defaultVoice),
+        hasLength(1),
+      );
+    });
+
+    test('covers all models when none is given', () {
+      final entries = voiceEntries(config: const VoiceConfig());
+      expect(entries.map((e) => e.model).toSet(), {'gemini', 'kokoro', 'fish'});
+    });
+  });
+
+  group('defaultConfigPath', () {
+    test('always ends with the config filename', () {
+      expect(defaultConfigPath(), endsWith('voice_config.json'));
+    });
+
+    test('uses the Unix config dir on non-Windows hosts', () {
+      if (Platform.isWindows) return;
+      final p = defaultConfigPath();
+      expect(p, contains('.config/tts-narrator'));
     });
   });
 }
