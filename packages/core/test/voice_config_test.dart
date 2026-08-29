@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:tts_narrator/src/cli/voice_config.dart';
-import 'package:tts_narrator/src/narration/model_profiles.dart';
+import 'package:tts_narrator_core/src/cli/voice_config.dart';
+import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
 void main() {
   group('loadVoiceConfig', () {

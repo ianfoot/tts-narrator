@@ -221,7 +221,7 @@ String renderVoiceListing({
 }
 
 const usage = '''
-Usage: dart run bin/main.dart --input <path> [options]
+Usage: tts-narrator --input <path> [options]
 
 Required:
   --input <path>            Path to a text file, or a directory of .txt files
@@ -265,7 +265,8 @@ Options:
 Output goes to <out>/<input-stem>_<nn>.<ext> — gemini writes 24 kHz PCM WAVs,
 kokoro and fish write MP3s.
 Example:
-  dart run bin/main.dart --input /path/to/text.txt --voice Charon --sample-len 1
-  dart run bin/main.dart --input /path/to/text.txt --model kokoro --voice Emma
-  dart run bin/main.dart --input /path/to/text.txt --model fish
+  tts-narrator --input /path/to/text.txt --voice Charon --sample-len 1
+  tts-narrator --input /path/to/text.txt --model kokoro --voice Emma
+  tts-narrator --input /path/to/text.txt --model fish
+(From source: cd packages/cli && fvm dart run bin/main.dart -- ...)
 ''';

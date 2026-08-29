@@ -1,0 +1,13 @@
+name: tts_narrator_core
+description: "Pure-Dart core shared by the tts-narrator CLI and GUI (chunking, TTS client, voice config, cost estimates)."
+publish_to: 'none'
+version: 0.1.0+1
+
+resolution: workspace
+
+environment:
+  sdk: ^3.13.1
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.8

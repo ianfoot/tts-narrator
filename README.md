@@ -7,9 +7,16 @@ Kokoro (`hexgrad/kokoro-82m`) and Fish Audio (`fish-audio/s2.1-pro-free`).
 Uses the [OpenRouter text-to-speech endpoint](https://openrouter.ai/docs/guides/overview/multimodal/tts)
 (`POST /api/v1/audio/speech`).
 
-A Flutter project (macOS scaffold) whose narration core lives in `lib/` with
-no Flutter dependencies, so it runs today as a plain Dart CLI (`bin/main.dart`)
-and can later be driven from a GUI without rework.
+A Dart **pub workspace** with three packages:
+- `packages/core` — pure-Dart narration core (chunking, TTS client, voice config,
+  cost estimates), no Flutter or GUI deps.
+- `packages/cli` — the headless CLI (`bin/main.dart`), compiles to a single
+  native executable via `dart compile exe`.
+- `app` — the Flutter macOS scaffold for the future GUI (adds `audioplayers`,
+  `file_selector`; never affects the CLI).
+
+The core has no Flutter dependencies, so the CLI runs standalone and the same
+core can later be driven from the GUI without rework.
 
 ## Requirements
 
@@ -22,8 +29,19 @@ and can later be driven from a GUI without rework.
 
 ## Usage
 
+From source (run from the `packages/cli` directory so the workspace resolves):
+
 ```
+cd packages/cli
 fvm dart run bin/main.dart --input <path> [options]
+```
+
+Or build a native executable once (see
+[docs/COMPILING.md](docs/COMPILING.md)), then run `tts-narrator` from anywhere:
+
+```
+fvm dart compile exe bin/main.dart -o ../../build/tts-narrator   # in packages/cli
+./build/tts-narrator --input <path> [options]                    # from repo root
 ```
 
 `--input` is required and there is **no default filename**. Provide an explicit
@@ -75,7 +93,7 @@ example (the fish British voice list, no key):
 
 ### Models
 
-Each model is described by a profile (see `lib/src/narration/model_profiles.dart`)
+Each model is described by a profile (see `packages/core/lib/src/narration/model_profiles.dart`)
 that captures how it differs from Gemini:
 
 | Model | Id | Voice format | Prompt styling | Output |
@@ -115,10 +133,10 @@ voice list lives on the "Text to Speech" Logseq page and in
 
 ```bash
 # See what the chunk plan looks like without spending credits
-fvm dart run bin/main.dart --input story.txt --voice Callirrhoe --dry-run
+./build/tts-narrator --input story.txt --voice Callirrhoe --dry-run
 
 # Narrate the first paragraph only, as a smoke test
-fvm dart run bin/main.dart --input story.txt \
+./build/tts-narrator --input story.txt \
   --voice Callirrhoe \
   --accent "received pronunciation" \
   --style "warm, composed, restrained, literary" \
@@ -126,24 +144,24 @@ fvm dart run bin/main.dart --input story.txt \
   --sample-len 1
 
 # Full narration
-fvm dart run bin/main.dart --input story.txt --voice Callirrhoe --tags off
+./build/tts-narrator --input story.txt --voice Callirrhoe --tags off
 
 # Kokoro narration (British female voice, MP3 output)
-fvm dart run bin/main.dart --input story.txt --model kokoro --voice bf_emma
+./build/tts-narrator --input story.txt --model kokoro --voice bf_emma
 
 # Fish narration (free model, MP3 output, default voice)
-fvm dart run bin/main.dart --input story.txt --model fish
+./build/tts-narrator --input story.txt --model fish
 
 # Fish narration using a friendly voice alias from the voice config
-fvm dart run bin/main.dart --input story.txt --model fish \
+./build/tts-narrator --input story.txt --model fish \
   --voice "British Female Narrator (good)"
 
 # List available voices + aliases (optionally for one model)
-fvm dart run bin/main.dart --list-voices
-fvm dart run bin/main.dart --list-voices fish
+./build/tts-narrator --list-voices
+./build/tts-narrator --list-voices fish
 
 # Batch: narrate every top-level .txt in a directory
-fvm dart run bin/main.dart --input ./stories/ --model fish --dry-run
+./build/tts-narrator --input ./stories/ --model fish --dry-run
 ```
 
 ## Output

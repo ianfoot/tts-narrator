@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:tts_narrator/src/narration/config.dart';
-import 'package:tts_narrator/src/narration/model_profiles.dart';
-import 'package:tts_narrator/src/narration/narration.dart';
+import 'package:tts_narrator_core/src/narration/config.dart';
+import 'package:tts_narrator_core/src/narration/model_profiles.dart';
+import 'package:tts_narrator_core/src/narration/narration.dart';
 
 void main() {
   group('chunkText', () {

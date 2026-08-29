@@ -1,0 +1,16 @@
+name: tts_narrator_cli
+description: "Headless CLI for OpenRouter TTS audiobook narration."
+publish_to: 'none'
+version: 0.1.0+1
+
+resolution: workspace
+
+environment:
+  sdk: ^3.13.1
+
+dependencies:
+  tts_narrator_core:
+    path: ../core
+
+dev_dependencies:
+  lints: ^6.0.0

@@ -1,22 +1,12 @@
-name: tts_narrator
-description: "OpenRouter TTS audiobook narration"
+name: tts_narrator_workspace
+description: "Pub workspace for the OpenRouter TTS narration CLI + macOS GUI."
 publish_to: 'none'
 version: 0.1.0+1
 
 environment:
   sdk: ^3.13.1
 
-dependencies:
-  audioplayers: ^6.8.1
-  file_selector: ^1.1.0
-  flutter:
-    sdk: flutter
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^6.0.0
-  test: ^1.25.8
-
-flutter:
-  uses-material-design: true
+workspace:
+  - app
+  - packages/core
+  - packages/cli

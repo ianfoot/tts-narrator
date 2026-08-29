@@ -1,10 +1,10 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:tts_narrator/src/cli/args.dart';
-import 'package:tts_narrator/src/cli/voice_config.dart';
-import 'package:tts_narrator/src/narration/config.dart';
-import 'package:tts_narrator/src/narration/model_profiles.dart';
+import 'package:tts_narrator_core/src/cli/args.dart';
+import 'package:tts_narrator_core/src/cli/voice_config.dart';
+import 'package:tts_narrator_core/src/narration/config.dart';
+import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
 void main() {
   late Directory dir;

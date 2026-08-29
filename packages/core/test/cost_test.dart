@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import 'package:tts_narrator/src/narration/cost.dart';
-import 'package:tts_narrator/src/narration/model_profiles.dart';
+import 'package:tts_narrator_core/src/narration/cost.dart';
+import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
 void main() {
   group('estimateMinutes', () {
