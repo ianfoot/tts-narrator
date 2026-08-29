@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'abort.dart';
+
 const _endpoint = 'https://openrouter.ai/api/v1/audio/speech';
 
 /// A generated audio sample with metadata for the manifest.
@@ -26,12 +28,16 @@ class TtsClient {
   /// Synthesize [input] as audio in [responseFormat], optionally choosing a
   /// [voice], returning the raw bytes. Retries on transient 5xx / empty-stream
   /// failures (a documented Gemini TTS quirk).
+  ///
+  /// [abort] is checked between retries (and before the first attempt); an
+  /// already-cancelled token throws [AbortException] without calling the API.
   Future<List<int>> synthesize({
     required String model,
     required String responseFormat,
     String? voice,
     required String input,
     int retries = 3,
+    AbortToken? abort,
   }) async {
     final key = apiKey ?? Platform.environment['OPENROUTER_API_KEY'];
     if (key == null || key.isEmpty) {
@@ -49,9 +55,11 @@ class TtsClient {
 
     var attempt = 0;
     while (true) {
+      abort?.throwIfCancelled();
       attempt++;
       final (statusCode, bytes, generationId) =
           await _post(jsonEncode(body), key);
+      abort?.throwIfCancelled();
       if (statusCode >= 200 && statusCode < 300) {
         if (bytes.isEmpty) {
           if (attempt <= retries) {

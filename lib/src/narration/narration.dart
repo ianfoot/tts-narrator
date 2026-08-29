@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'abort.dart';
 import 'config.dart';
 import 'prompt.dart';
 import 'tts_client.dart';
@@ -133,9 +134,13 @@ String outputDirPath(NarrationConfig config) {
 /// Narrates [config.inputPath] paragraph by paragraph, writing WAV files and a
 /// manifest into [config.outDir]. The manifest is rewritten after every chunk
 /// so a failed run can be resumed via `--resume`.
+///
+/// [abort], when given, is checked before each chunk and thread through to the
+/// HTTP client; cancelling it throws [AbortException] and stops the run.
 Future<void> narrate(
   NarrationConfig config, {
   NarrationProgress? onProgress,
+  AbortToken? abort,
 }) async {
   final paragraphs = planChunks(config);
 
@@ -152,6 +157,7 @@ Future<void> narrate(
       config.resume ? readManifestRecords(outDir) : const <Map<String, Object?>>[];
 
   for (var i = 0; i < count; i++) {
+    abort?.throwIfCancelled();
     final paragraph = paragraphs[i];
     final index = i + 1;
 
@@ -182,6 +188,7 @@ Future<void> narrate(
       responseFormat: config.profile.format,
       voice: config.profile.sendsVoiceField ? config.voice : null,
       input: input,
+      abort: abort,
     );
 
     if (config.profile.format == 'pcm') {

@@ -1,6 +1,30 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../narration/model_profiles.dart';
+
+/// A single selectable voice for the GUI voice picker and CLI listing.
+class VoiceEntry {
+  const VoiceEntry({
+    required this.model,
+    required this.id,
+    required this.label,
+    required this.isAlias,
+  });
+
+  /// Model alias this voice belongs to (e.g. `gemini`, `fish`).
+  final String model;
+
+  /// Provider voice id sent in the request body.
+  final String id;
+
+  /// Human-readable label: the friendly alias when [isAlias], else the raw id.
+  final String label;
+
+  /// Whether [label] is a friendly alias from the config (vs a raw id).
+  final bool isAlias;
+}
+
 /// Friendly-name aliases for TTS voices, loaded from a single JSON file.
 ///
 /// Schema:
@@ -41,8 +65,51 @@ class VoiceConfig {
   }
 }
 
-/// Default config file location: ~/.config/tts-narrator/voice_config.json .
+/// All selectable voices for [model] (or all models when null), combining the
+/// profile's known voices with friendly aliases from [config].
+///
+/// The default voice is always included (deduplicated if it also appears as a
+/// known voice or alias). Free-form models still surface any curated profile
+/// voices — free-form only means the id list is not exhaustive.
+List<VoiceEntry> voiceEntries({
+  TtsModelProfile? model,
+  required VoiceConfig config,
+}) {
+  final profiles = model != null ? [model] : kModelProfiles.values.toList();
+  final entries = <VoiceEntry>[];
+  for (final p in profiles) {
+    final aliases = config.aliases[p.alias] ?? const <String, String>{};
+
+    void add(String id, String label, bool isAlias) {
+      if (entries.any((e) => e.model == p.alias && e.id == id)) return;
+      entries.add(VoiceEntry(model: p.alias, id: id, label: label, isAlias: isAlias));
+    }
+
+    for (final v in p.voices) {
+      add(v, v, false);
+    }
+    aliases.forEach((label, id) => add(id, label, true));
+    add(p.defaultVoice, p.defaultVoice, false);
+  }
+  entries.sort((a, b) {
+    final byModel = a.model.compareTo(b.model);
+    if (byModel != 0) return byModel;
+    return a.label.toLowerCase().compareTo(b.label.toLowerCase());
+  });
+  return entries;
+}
+
+/// Default config file location, shared by the CLI and GUI.
+///
+/// macOS/Linux: `~/.config/tts-narrator/voice_config.json`
+/// Windows:     `%APPDATA%\tts-narrator\voice_config.json`
 String defaultConfigPath() {
+  if (Platform.isWindows) {
+    final appData = Platform.environment['APPDATA'];
+    return appData != null
+        ? '$appData\\tts-narrator\\voice_config.json'
+        : 'voice_config.json';
+  }
   final home = Platform.environment['HOME'];
   final base = home != null ? '$home/.config/tts-narrator' : '.';
   return '$base/voice_config.json';
