@@ -12,6 +12,7 @@ class TtsModelProfile {
     required this.voices,
     required this.promptStyle,
     required this.format,
+    this.defaultVoiceLabel,
     this.voiceFreeForm = false,
     this.sendsVoiceField = true,
     this.sampleRate,
@@ -26,6 +27,10 @@ class TtsModelProfile {
 
   /// Default voice when `--voice` is omitted.
   final String defaultVoice;
+
+  /// Friendly human-readable name for [defaultVoice], when it has one
+  /// (e.g. fish's free default surfaces as "British Female Narrator").
+  final String? defaultVoiceLabel;
 
   /// Known voices for this model. Used to validate `--voice` unless
   /// [voiceFreeForm] is true.
@@ -84,6 +89,7 @@ const kGeminiProfile = TtsModelProfile(
   alias: 'gemini',
   id: 'google/gemini-3.1-flash-tts-preview',
   defaultVoice: 'Charon',
+  defaultVoiceLabel: 'Charon',
   voices: [
     'Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir', 'Leda', 'Orus', 'Aoede',
     'Callirrhoe', 'Autonoe', 'Enceladus', 'Iapetus', 'Umbriel', 'Algieba',
@@ -104,6 +110,7 @@ const kKokoroProfile = TtsModelProfile(
   alias: 'kokoro',
   id: 'hexgrad/kokoro-82m',
   defaultVoice: 'bf_emma',
+  defaultVoiceLabel: 'Emma',
   voices: [
     'bf_alice', 'bf_emma', 'bf_isabella', 'bf_lily',
     'bm_daniel', 'bm_fable', 'bm_george', 'bm_lewis',
@@ -123,6 +130,7 @@ const kFishProfile = TtsModelProfile(
   alias: 'fish',
   id: 'fish-audio/s2.1-pro-free',
   defaultVoice: '89f41ea230034706881f85a8227d6ab9',
+  defaultVoiceLabel: 'British Female Narrator',
   voices: [],
 voiceFreeForm: true,
   sendsVoiceField: true,
@@ -144,4 +152,26 @@ TtsModelProfile? profileFor(String aliasOrId) {
     if (p.id == aliasOrId) return p;
   }
   return null;
+}
+
+/// The app's out-of-the-box default: a free model so first runs cost nothing.
+/// Compiled in because it must exist before any config and be identical for
+/// both the CLI and the GUI (the compiled binary can't read a bundled asset).
+const kFreeDefault = FreeDefault(
+  profile: kFishProfile,
+  voice: '89f41ea230034706881f85a8227d6ab9',
+  voiceLabel: 'British Female Narrator',
+);
+
+/// A single default model + voice to preselect on cold start.
+class FreeDefault {
+  const FreeDefault({
+    required this.profile,
+    required this.voice,
+    required this.voiceLabel,
+  });
+
+  final TtsModelProfile profile;
+  final String voice;
+  final String voiceLabel;
 }

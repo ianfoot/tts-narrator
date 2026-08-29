@@ -89,7 +89,7 @@ List<VoiceEntry> voiceEntries({
       add(v, v, false);
     }
     aliases.forEach((label, id) => add(id, label, true));
-    add(p.defaultVoice, p.defaultVoice, false);
+    add(p.defaultVoice, p.defaultVoiceLabel ?? p.defaultVoice, false);
   }
   entries.sort((a, b) {
     final byModel = a.model.compareTo(b.model);

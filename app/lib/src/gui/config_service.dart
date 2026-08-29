@@ -8,7 +8,9 @@ class ConfigService {
   /// Absolute path of the voice config file.
   final String path;
 
-  /// Reads the current config (empty when the file is absent).
+  /// Reads the current config (empty when the file is absent). The GUI never
+  /// writes this file on startup — it's the user's file, optionally copied
+  /// from `voice_config.example.json`.
   VoiceConfig load() => loadVoiceConfig(path);
 
   /// Persists [config] to [path], throwing [VoiceConfigError] on failure.

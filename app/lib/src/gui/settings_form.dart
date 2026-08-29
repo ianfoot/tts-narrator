@@ -34,8 +34,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _apiKey;
   late final TextEditingController _aliasLabel;
 
-  String _modelAlias = kGeminiProfile.alias;
-  String? _selectedVoiceLabel;
+  // Cold-start default: the free fish model + its friendly voice.
+  String _modelAlias = kFreeDefault.profile.alias;
+  String? _selectedVoiceLabel = kFreeDefault.voiceLabel;
   bool _useCalmTag = false;
   bool _resume = false;
 
@@ -49,14 +50,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     final defaults = NarrationConfig(
       inputPath: '',
-      profile: kGeminiProfile,
-      voice: kGeminiProfile.defaultVoice,
+      profile: kFreeDefault.profile,
+      voice: kFreeDefault.voice,
     );
     _configService = ConfigService(path: widget.configPath);
     _voiceConfig = _configService.load();
     _inputPath = TextEditingController();
     _voiceRaw = TextEditingController(text: defaults.voice);
-    _selectedVoiceLabel = defaults.voice;
     _accent = TextEditingController(text: defaults.accent);
     _style = TextEditingController(text: defaults.style);
     _prefix = TextEditingController(text: defaults.passagePrefix);
@@ -137,8 +137,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _saveConfig() {
     try {
-      _configService.save(_draftConfig());
-      setState(() => _voiceConfig = _configService.load());
+      final saved = _draftConfig();
+      _configService.save(saved);
+      setState(() => _voiceConfig = saved);
       _snack('Voice config saved to ${_configService.path}');
     } on VoiceConfigError catch (e) {
       _snack(e.message);
@@ -153,9 +154,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
     try {
-      _configService.save(_draftConfig(extraAliases: {_modelAlias: {label: raw}}));
+      final saved = _draftConfig(extraAliases: {_modelAlias: {label: raw}});
+      _configService.save(saved);
       setState(() {
-        _voiceConfig = _configService.load();
+        _voiceConfig = saved;
         _aliasLabel.clear();
         _selectedVoiceLabel = label;
       });
@@ -179,11 +181,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final minWords = int.tryParse(_minWords.text.trim()) ?? 30;
     final sampleRaw = _sampleLen.text.trim();
     final keyRaw = _apiKey.text.trim();
+    final effectiveLabel = voiceId == _profile.defaultVoice
+        ? (_profile.defaultVoiceLabel ?? (voiceLabel != voiceId ? voiceLabel : null))
+        : (voiceLabel != voiceId ? voiceLabel : null);
     return NarrationConfig(
       inputPath: inputPath,
       profile: _profile,
       voice: voiceId,
-      voiceLabel: voiceLabel != voiceId ? voiceLabel : null,
+      voiceLabel: effectiveLabel,
       accent: _accent.text,
       style: _style.text,
       useCalmTag: _useCalmTag,
@@ -299,7 +304,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           DropdownMenuItem(
                             value: e.label,
                             child: Text(
-                              e.isAlias ? '${e.label} (alias)' : e.label,
+                              e.label,
                             ),
                           ),
                       ],

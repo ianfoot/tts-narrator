@@ -40,10 +40,11 @@ void main() {
     expect(() => parse(['--input', 's', '--tags', 'maybe']), throwsA(isA<CliUsageError>()));
   });
 
-  test('defaults: gemini profile, Charon code default, env key fallback', () {
+  test('defaults: fish profile (free), British Female Narrator default, env key fallback', () {
     final cfg = parse(['--input', 's']);
-    expect(cfg.profile.alias, 'gemini');
-    expect(cfg.voice, 'Charon');
+    expect(cfg.profile.alias, 'fish');
+    expect(cfg.voice, kFishProfile.defaultVoice);
+    expect(cfg.voiceLabel, 'British Female Narrator');
     expect(cfg.resume, isFalse);
     expect(cfg.dryRun, isFalse);
   });
@@ -63,14 +64,23 @@ void main() {
   });
 
   test('passes through unknown kokoro voice id freely', () {
+    final cfg = parse(['--input', 's', '--model', 'kokoro', '--voice', 'bm_lewis']);
+    expect(cfg.voice, 'bm_lewis');
+    expect(cfg.voiceLabel, 'bm_lewis');
+  });
+
+  test('kokoro default voice carries its friendly label', () {
     final cfg = parse(['--input', 's', '--model', 'kokoro', '--voice', 'bf_emma']);
     expect(cfg.voice, 'bf_emma');
-    expect(cfg.voiceLabel, 'bf_emma');
+    expect(cfg.voiceLabel, 'Emma');
   });
 
   test('gemini validates known voices and rejects unknown ones', () {
-    expect(() => parse(['--input', 's', '--voice', 'NotAVoice']), throwsA(isA<CliUsageError>()));
-    final ok = parse(['--input', 's', '--voice', 'Callirrhoe']);
+    expect(
+      () => parse(['--input', 's', '--model', 'gemini', '--voice', 'NotAVoice']),
+      throwsA(isA<CliUsageError>()),
+    );
+    final ok = parse(['--input', 's', '--model', 'gemini', '--voice', 'Callirrhoe']);
     expect(ok.voice, 'Callirrhoe');
   });
 
@@ -165,6 +175,18 @@ void main() {
       final out = renderVoiceListing(model: kFishProfile, config: cfg);
       expect(out, contains('free-form'));
       expect(out, contains('British Female Narrator → 89f41ea'));
+    });
+
+    test('shows the friendly default voice label', () {
+      final out = renderVoiceListing(
+        model: kFishProfile,
+        config: const VoiceConfig(),
+      );
+      expect(
+        out,
+        contains('default voice:  British Female Narrator '
+            '(89f41ea230034706881f85a8227d6ab9)'),
+      );
     });
   });
 

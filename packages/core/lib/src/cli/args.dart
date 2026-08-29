@@ -19,8 +19,8 @@ class CliUsageError implements Exception {
 /// values raise [CliUsageError].
 NarrationConfig parseArgs(List<String> args) {
   String? input;
-  var profile = kGeminiProfile;
-  var voice = kGeminiProfile.defaultVoice;
+  var profile = kFreeDefault.profile;
+  var voice = kFreeDefault.voice;
   var accent = 'southern British English, neutral and clear';
   var style = 'warm, composed, restrained, literary';
   var tags = false;
@@ -58,7 +58,7 @@ NarrationConfig parseArgs(List<String> args) {
           );
         }
         profile = resolved;
-        if (voice == kGeminiProfile.defaultVoice) {
+        if (voice == kFreeDefault.voice) {
           voice = profile.defaultVoice;
         }
       case '--voice':
@@ -145,11 +145,17 @@ NarrationConfig parseArgs(List<String> args) {
     );
   }
 
+  // When no alias matched and the voice is the model's own default, use the
+  // friendly default label (e.g. fish's free "British Female Narrator").
+  final effectiveLabel = voiceId == profile.defaultVoice
+      ? (profile.defaultVoiceLabel ?? voiceLabel)
+      : voiceLabel;
+
   return NarrationConfig(
     inputPath: input,
     profile: profile,
     voice: voiceId,
-    voiceLabel: voiceLabel,
+    voiceLabel: effectiveLabel,
     accent: accent,
     style: style,
     useCalmTag: tags,
@@ -201,7 +207,10 @@ String renderVoiceListing({
   for (final p in profiles) {
     out.writeln();
     out.writeln('${p.alias} — ${p.id} (${p.format})');
-    out.writeln('  default voice:  ${p.defaultVoice}');
+    final defaultLabel = p.defaultVoiceLabel;
+    out.writeln(
+      '  default voice:  ${defaultLabel != null ? '$defaultLabel (${p.defaultVoice})' : p.defaultVoice}',
+    );
     final aliases = config.aliases[p.alias] ?? const <String, String>{};
     if (p.voiceFreeForm) {
       out.write('  voices:         free-form provider ids');
@@ -232,15 +241,15 @@ Options:
   --list-voices [model]     List voices/aliases for a model (optional; default
                             lists all models) and exit. Also honors --model and
                             --config.
-  --model <alias|id>        TTS model: gemini (default), kokoro, or fish, or a
-                            full model id. Controls voice set, prompt styling,
-                            and output format.
-  --voice <name>            Model-specific voice. For gemini: one of its 30
-                            named voices (default: Charon). For kokoro: a
-                            provider voice id such as bf_emma or bm_lewis;
-                            any id is accepted (prefix a=_US, b=_British). For
-                            fish: a 32-hex fish.audio id (default:
-                            89f41ea230034706881f85a8227d6ab9). Friendly
+  --model <alias|id>        TTS model: fish (default, free), gemini, or kokoro,
+                            or a full model id. Controls voice set, prompt
+                            styling, and output format.
+  --voice <name>            Model-specific voice. For fish: a 32-hex fish.audio
+                            id (default: 89f41ea2... = "British Female
+                            Narrator", free). For gemini: one of its 30 named
+                            voices (default: Charon). For kokoro: a provider
+                            voice id such as bf_emma or bm_lewis; any id is
+                            accepted (prefix a=_US, b=_British). Friendly
                             aliases from the voice config are resolved to the
                             raw id.
   --accent <text>           Accent description folded into the prompt
