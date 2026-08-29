@@ -83,9 +83,25 @@ const kKokoroProfile = TtsModelProfile(
   sampleRate: 24000,
 );
 
+/// Fish Audio S2.1 Pro (free) (fish-audio/s2.1-pro-free): free model routed
+/// by OpenRouter. Voices are 32-hex fish.audio ids (curated British list lives
+/// on the "Text to Speech" Logseq page). No prompt styling — inline brackets
+/// read aloud. MP3 output. Transient 502s are not billed.
+const kFishProfile = TtsModelProfile(
+  alias: 'fish',
+  id: 'fish-audio/s2.1-pro-free',
+  defaultVoice: '89f41ea230034706881f85a8227d6ab9',
+  voices: [],
+  voiceFreeForm: true,
+  sendsVoiceField: true,
+  promptStyle: false,
+  format: 'mp3',
+);
+
 /// All known model profiles, keyed by [TtsModelProfile.alias].
 final kModelProfiles = <String, TtsModelProfile>{
-  for (final p in [kGeminiProfile, kKokoroProfile]) p.alias: p,
+  for (final p in [kGeminiProfile, kKokoroProfile, kFishProfile])
+    p.alias: p,
 };
 
 /// Resolves a `--model` value by alias or full id, or null if unknown.
