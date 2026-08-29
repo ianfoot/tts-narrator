@@ -18,6 +18,7 @@ class NarrationConfig {
     this.sampleLen,
     this.outDir = 'output',
     this.dryRun = false,
+    this.resume = false,
     this.apiKey,
   });
 
@@ -58,6 +59,10 @@ class NarrationConfig {
 
   /// If true, print the narration plan and exit without calling the API.
   final bool dryRun;
+
+  /// If true, skip chunks already produced in a compatible existing manifest
+  /// (matching index + fingerprint) and keep their records.
+  final bool resume;
 
   /// OpenRouter API key. Falls back to the OPENROUTER_API_KEY env var.
   final String? apiKey;

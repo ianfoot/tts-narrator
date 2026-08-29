@@ -94,8 +94,9 @@ List<String> _splitLongParagraph(String paragraph) {
 typedef NarrationProgress = void Function(
   int index,
   int total,
-  String paragraph,
-);
+  String paragraph, {
+  bool resumed,
+});
 
 /// Reads [config.inputPath] and returns the narration chunk plan
 /// (scenes/paragraphs to narrate, after min-word merge and length split).
@@ -130,7 +131,8 @@ String outputDirPath(NarrationConfig config) {
 }
 
 /// Narrates [config.inputPath] paragraph by paragraph, writing WAV files and a
-/// manifest into [config.outDir].
+/// manifest into [config.outDir]. The manifest is rewritten after every chunk
+/// so a failed run can be resumed via `--resume`.
 Future<void> narrate(
   NarrationConfig config, {
   NarrationProgress? onProgress,
@@ -144,18 +146,37 @@ Future<void> narrate(
   final outDir = Directory(dir)..createSync(recursive: true);
   final extension = config.profile.format == 'pcm' ? 'wav' : 'mp3';
   final rate = config.profile.sampleRate;
-  final pad = count.toString().length;
   final records = <Map<String, Object?>>[];
+
+  final existing =
+      config.resume ? readManifestRecords(outDir) : const <Map<String, Object?>>[];
 
   for (var i = 0; i < count; i++) {
     final paragraph = paragraphs[i];
-    onProgress?.call(i, count, paragraph);
+    final index = i + 1;
 
     // Gemini understands accent/style/tag directives woven into the text;
     // other models would read them aloud, so pass the raw passage instead.
     final input = config.profile.promptStyle
         ? buildPrompt(config, paragraph)
         : paragraph;
+
+    final padWidth = count.toString().length;
+    final baseName = '${stem}_${index.toString().padLeft(padWidth, '0')}';
+    final audioFile =
+        '${outDir.path}${Platform.pathSeparator}$baseName.$extension';
+
+    // Resume: reuse an identical prior chunk (same index + prompt + file) and
+    // carry its fingerprint/bytes across, so a re-run doesn't re-bill it.
+    final prior = _resumeMatch(existing, index, input, dir);
+    if (prior != null) {
+      records.add(prior);
+      onProgress?.call(i, count, paragraph, resumed: true);
+      _writeManifest(outDir, config, records, paragraphs.length, count, rate);
+      continue;
+    }
+
+    onProgress?.call(i, count, paragraph);
     final audio = await client.synthesize(
       model: config.profile.id,
       responseFormat: config.profile.format,
@@ -163,9 +184,6 @@ Future<void> narrate(
       input: input,
     );
 
-    final baseName = '${stem}_${(i + 1).toString().padLeft(pad, '0')}';
-    final audioFile =
-        '${outDir.path}${Platform.pathSeparator}$baseName.$extension';
     if (config.profile.format == 'pcm') {
       final bytes = BytesBuilder(copy: false);
       bytes.add(audio);
@@ -180,7 +198,7 @@ Future<void> narrate(
             ? audio.length / (rate * 2)
             : null;
     records.add({
-      'index': i + 1,
+      'index': index,
       'wav': '$baseName.$extension',
       'bytes': audio.length,
       'duration_seconds': duration,
@@ -190,8 +208,60 @@ Future<void> narrate(
           : paragraph,
       'prompt': input,
     });
+    _writeManifest(outDir, config, records, paragraphs.length, count, rate);
   }
 
+  _writeManifest(outDir, config, records, paragraphs.length, count, rate);
+}
+
+/// Returns the prior record for [index] from [existing] when `--resume` can
+/// reuse it: same index, same [input] prompt, and the audio file still exists.
+Map<String, Object?>? _resumeMatch(
+  List<Map<String, Object?>> existing,
+  int index,
+  String input,
+  String dir,
+) {
+  for (final r in existing) {
+    if (r['index'] == index && r['prompt'] == input) {
+      final wav = r['wav'];
+      if (wav is String && File('$dir${Platform.pathSeparator}$wav').existsSync()) {
+        return r;
+      }
+    }
+  }
+  return null;
+}
+
+/// Loads per-chunk records from a prior run's manifest, or empty when none.
+List<Map<String, Object?>> readManifestRecords(Directory outDir) {
+  final manifestFile = File(
+    '${outDir.path}${Platform.pathSeparator}manifest.json',
+  );
+  if (!manifestFile.existsSync()) return const [];
+  try {
+    final raw = jsonDecode(manifestFile.readAsStringSync());
+    final paragraphs = (raw as Map<String, dynamic>)['paragraphs'];
+    if (paragraphs is List) {
+      return paragraphs
+          .whereType<Map<String, dynamic>>()
+          .cast<Map<String, Object?>>()
+          .toList();
+    }
+  } on Exception {
+    // Unreadable/stale manifest is not fatal — resume simply re-narrates.
+  }
+  return const [];
+}
+
+void _writeManifest(
+  Directory outDir,
+  NarrationConfig config,
+  List<Map<String, Object?>> records,
+  int paragraphsTotal,
+  int count,
+  int? rate,
+) {
   final manifest = {
     'model': config.profile.id,
     'voice': config.voice,
@@ -201,8 +271,8 @@ Future<void> narrate(
     'sample_rate': ?rate,
     'max_chunk_length': _maxChunkLength,
     // ignore: avoid_redundant_argument_values
-    'paragraphs_total': paragraphs.length,
-    'paragraphs_narrated': count,
+    'paragraphs_total': paragraphsTotal,
+    'paragraphs_narrated': records.length,
     'paragraphs': records,
   };
   File('${outDir.path}${Platform.pathSeparator}manifest.json')

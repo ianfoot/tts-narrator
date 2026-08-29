@@ -42,7 +42,8 @@ path to the text to narrate.
 | `--passage-prefix <text>` | Pooled preamble prepended to every paragraph prompt. | `Narrate this passage for an audiobook. You are a warm, composed female narrator.` |
 | `--min-words <n>` | Merge paragraphs shorter than `n` words into the next, so tiny fragments don't get an isolated reading. | `30` |
 | `--sample-len <n>` | Narrate only the first `n` chunks (useful for testing). | — |
-| `--dry-run` | Print the chunk plan and exit without calling the API. | `off` |
+| `--dry-run` | Print the chunk plan + estimated duration/cost and exit without calling the API. | `off` |
+| `--resume` | Skip chunks already present in the output manifest (same prompt + file), so a re-run doesn't re-bill finished paragraphs. | `off` |
 | `--out <dir>` | Output directory base; the input stem is appended unless it already ends with it. | `output` |
 | `--config <path>` | Voice config JSON (friendly aliases + `api_key`). | `~/.config/tts-narrator/voice_config.json` |
 | `--api-key <key>` | OpenRouter API key (overrides the config file, then the environment). | env |
@@ -149,6 +150,9 @@ Each chunk is written to `output/<input-stem>/` as `<input-stem>_<nn>.<ext>`
 
 So `story.txt` → `output/story/story_01.mp3` … `story_16.mp3`
 
+The manifest is rewritten after every chunk, so an interrupted run can be
+picked up with `--resume` (finished paragraphs are skipped — no re-billing).
+
 Manifest contents:
 - `model`, `voice`, optional `voice_label` (friendly alias if used), `format`,
   `sample_rate` (`sample_rate` is omitted for MP3)
@@ -207,5 +211,9 @@ Note: `output/`, `.dart_tool/`, and `build/` are gitignored.
   There is no MP3 encoding or concatenation step — the model emits these formats.
 - Transient `502` (empty audio stream) failures are retried up to 3 times,
   matching a documented Gemini TTS quirk. (Fish failures are not billed.)
+- `--dry-run` and the run header print an estimated cost + duration. Estimates
+  are approximate: pricing comes from each model's OpenRouter page (gemini
+  `$1/$20` per 1M text/audio tokens, kokoro `$0.62/M` chars, fish free);
+  duration assumes ~160 words/min and Gemini audio billed at ~160 tokens/sec.
 - To build the CLI as a standalone native executable, see
   [docs/COMPILING.md](docs/COMPILING.md).

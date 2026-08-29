@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:tts_narrator/src/cli/args.dart';
+import 'package:tts_narrator/src/narration/cost.dart';
 import 'package:tts_narrator/src/narration/config.dart';
 import 'package:tts_narrator/src/narration/narration.dart';
 
@@ -31,6 +32,9 @@ Future<int> main(List<String> args) async {
   stdout.writeln(
     'Tags:   ${config.useCalmTag ? 'on ([calm])' : 'off'}',
   );
+  if (config.resume) {
+    stdout.writeln('Resume: on (skips chunks matching the existing manifest)');
+  }
   if (!config.profile.promptStyle &&
       (config.accent.trim().isNotEmpty ||
           config.style.trim().isNotEmpty ||
@@ -53,6 +57,13 @@ Future<int> main(List<String> args) async {
             : chunks[i];
         stdout.writeln('${i + 1}. ($words words) ${preview.split('\n').first}');
       }
+      final estimate = estimateCostUsd(config.profile, chunks);
+      final minutes = estimateMinutes(chunks);
+      stdout.writeln(
+        '\nEstimated duration: ${minutes.toStringAsFixed(1)} min '
+        '(~${(minutes * 60).round()} s). '
+        'Estimated cost: ${formatCostUsd(estimate)}.',
+      );
       final stem = inputStem(config.inputPath);
       final ext = config.profile.format == 'pcm' ? 'wav' : 'mp3';
       final pad = chunks.length.toString().length;
@@ -68,14 +79,22 @@ Future<int> main(List<String> args) async {
   }
 
   try {
+    final chunks = planChunks(config);
+    final estimate = estimateCostUsd(config.profile, chunks);
+    final minutes = estimateMinutes(chunks);
+    stdout.writeln(
+      '\nEstimated duration: ${minutes.toStringAsFixed(1)} min. '
+      'Estimated cost: ${formatCostUsd(estimate)}.',
+    );
     await narrate(
       config,
-      onProgress: (index, total, paragraph) {
+      onProgress: (index, total, paragraph, {bool resumed = false}) {
         final preview = paragraph.length > 60
             ? '${paragraph.substring(0, 60)}…'
             : paragraph;
         stdout.writeln(
-          '[${index + 1}/$total] ${preview.split('\n').first}',
+          '[${index + 1}/$total]${resumed ? ' (resumed)' : ''} '
+          '${preview.split('\n').first}',
         );
       },
     );
