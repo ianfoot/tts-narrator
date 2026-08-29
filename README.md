@@ -33,7 +33,7 @@ path to the text to narrate.
 
 | Flag | Description | Default |
 | --- | --- | --- |
-| `--input <path>` | Path to the text to narrate (required). | — |
+| `--input <path>` | Path to the text to narrate, or a directory of `.txt` files to narrate as a batch (top-level only, sorted, hidden skipped). | — |
 | `--model <alias\|id>` | TTS model: `gemini`, `kokoro`, `fish`, or a full model id. See "Models". | `gemini` |
 | `--voice <name>` | Model-specific voice name or id (free-form for kokoro/fish). Friendly aliases from the voice config resolve to the raw id. | model default |
 | `--accent <text>` | Accent description used in the prompt (Gemini only). | `southern British English, neutral and clear` |
@@ -47,6 +47,7 @@ path to the text to narrate.
 | `--out <dir>` | Output directory base; the input stem is appended unless it already ends with it. | `output` |
 | `--config <path>` | Voice config JSON (friendly aliases + `api_key`). | `~/.config/tts-narrator/voice_config.json` |
 | `--api-key <key>` | OpenRouter API key (overrides the config file, then the environment). | env |
+| `--list-voices [model]` | Print available voices (and friendly aliases from the config) for a model, or all models when omitted, then exit. Also honors `--model` / `--config`. | all models |
 
 ### Voice configuration
 
@@ -136,6 +137,13 @@ fvm dart run bin/main.dart --input story.txt --model fish
 # Fish narration using a friendly voice alias from the voice config
 fvm dart run bin/main.dart --input story.txt --model fish \
   --voice "British Female Narrator (good)"
+
+# List available voices + aliases (optionally for one model)
+fvm dart run bin/main.dart --list-voices
+fvm dart run bin/main.dart --list-voices fish
+
+# Batch: narrate every top-level .txt in a directory
+fvm dart run bin/main.dart --input ./stories/ --model fish --dry-run
 ```
 
 ## Output
@@ -149,6 +157,11 @@ Each chunk is written to `output/<input-stem>/` as `<input-stem>_<nn>.<ext>`
 - `fish` → `.mp3` (raw provider bytes)
 
 So `story.txt` → `output/story/story_01.mp3` … `story_16.mp3`
+
+Batch narration (`--input <directory>`) narrates each top-level `.txt` with
+the same model/voice/options; every file gets its own
+`output/<file-stem>/` directory, so outputs never collide. Use `--dry-run`
+first to see all files' chunk plans and one combined time/cost estimate.
 
 The manifest is rewritten after every chunk, so an interrupted run can be
 picked up with `--resume` (finished paragraphs are skipped — no re-billing).

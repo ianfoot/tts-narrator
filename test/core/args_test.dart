@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:tts_narrator/src/cli/args.dart';
+import 'package:tts_narrator/src/cli/voice_config.dart';
 import 'package:tts_narrator/src/narration/config.dart';
+import 'package:tts_narrator/src/narration/model_profiles.dart';
 
 void main() {
   late Directory dir;
@@ -105,5 +107,77 @@ void main() {
       () => parseArgs(['--input', 's', '--config', '${dir.path}/missing.json']),
       throwsA(isA<CliUsageError>()),
     );
+  });
+
+  group('expandInputFiles', () {
+    test('a plain file yields itself', () {
+      final f = File('${dir.path}/a.txt')..writeAsStringSync('x');
+      expect(expandInputFiles(f.path), [f.path]);
+    });
+
+    test('a directory yields sorted top-level .txt files, hiding dots', () {
+      File('${dir.path}/b.txt').writeAsStringSync('x');
+      File('${dir.path}/a.txt').writeAsStringSync('x');
+      File('${dir.path}/.hidden.txt').writeAsStringSync('x');
+      File('${dir.path}/notes.txt~').writeAsStringSync('x');
+      File('${dir.path}/readme.md').writeAsStringSync('x');
+      final files = expandInputFiles(dir.path);
+      expect(files, hasLength(2));
+      expect(files[0].split(Platform.pathSeparator).last, 'a.txt');
+      expect(files[1].split(Platform.pathSeparator).last, 'b.txt');
+    });
+
+    test('a directory with no .txt files errors', () {
+      File('${dir.path}/only.md').writeAsStringSync('x');
+      expect(() => expandInputFiles(dir.path), throwsA(isA<CliUsageError>()));
+    });
+
+    test('a missing path errors', () {
+      expect(
+        () => expandInputFiles('${dir.path}/does-not-exist.txt'),
+        throwsA(isA<CliUsageError>()),
+      );
+    });
+  });
+
+  group('renderVoiceListing', () {
+    test('lists all models when no model is given', () {
+      final out = renderVoiceListing(config: const VoiceConfig());
+      expect(out, contains('gemini —'));
+      expect(out, contains('kokoro —'));
+      expect(out, contains('fish —'));
+    });
+
+    test('lists a single model containing its known voices', () {
+      final out = renderVoiceListing(
+        model: kGeminiProfile,
+        config: const VoiceConfig(),
+      );
+      expect(out, contains('google/gemini-3.1-flash-tts-preview'));
+      expect(out.toLowerCase(), contains('callirrhoe'));
+      expect(out, isNot(contains('kokoro —')));
+    });
+
+    test('annotates free-form models and shows friendly aliases', () {
+      final cfg = VoiceConfig(aliases: {
+        'fish': {'British Female Narrator': '89f41ea'},
+      });
+      final out = renderVoiceListing(model: kFishProfile, config: cfg);
+      expect(out, contains('free-form'));
+      expect(out, contains('British Female Narrator → 89f41ea'));
+    });
+  });
+
+  group('NarrationConfig.copyWith', () {
+    test('replaces inputPath and keeps everything else', () {
+      final base = parse(['--input', 's', '--model', 'fish', '--out', '/tmp/x']);
+      final copy = base.copyWith(inputPath: '/other.txt');
+      expect(copy.inputPath, '/other.txt');
+      expect(copy.profile, base.profile);
+      expect(copy.voice, base.voice);
+      expect(copy.outDir, base.outDir);
+      expect(copy.resume, base.resume);
+      expect(copy.apiKey, base.apiKey);
+    });
   });
 }

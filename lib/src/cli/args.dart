@@ -163,13 +163,75 @@ NarrationConfig parseArgs(List<String> args) {
   );
 }
 
+/// Expands a single `--input` value into one or more `.txt` files to narrate.
+///
+/// A regular file yields itself. A directory yields its top-level `*.txt`
+/// files, sorted and excluding hidden files. Throws a [CliUsageError] when the
+/// path is missing or yields no files.
+List<String> expandInputFiles(String inputPath) {
+  if (!Directory(inputPath).existsSync() && !File(inputPath).existsSync()) {
+    throw CliUsageError('Input not found: "$inputPath".');
+  }
+  if (!Directory(inputPath).existsSync()) {
+    return [inputPath];
+  }
+  final files = Directory(inputPath)
+      .listSync()
+      .whereType<File>()
+      .where((f) =>
+          f.path.toLowerCase().endsWith('.txt') &&
+          !f.path.split(Platform.pathSeparator).last.startsWith('.'))
+      .map((f) => f.path)
+      .toList()
+    ..sort();
+  if (files.isEmpty) {
+    throw CliUsageError('No .txt files found in "$inputPath".');
+  }
+  return files;
+}
+
+/// Renders a voice listing for [model] (or all models when null), including
+/// friendly aliases resolved from [config].
+String renderVoiceListing({
+  TtsModelProfile? model,
+  required VoiceConfig config,
+}) {
+  final profiles = model != null ? [model] : kModelProfiles.values.toList();
+  final out = StringBuffer();
+  for (final p in profiles) {
+    out.writeln();
+    out.writeln('${p.alias} — ${p.id} (${p.format})');
+    out.writeln('  default voice:  ${p.defaultVoice}');
+    final aliases = config.aliases[p.alias] ?? const <String, String>{};
+    if (p.voiceFreeForm) {
+      out.write('  voices:         free-form provider ids');
+      if (aliases.isEmpty) {
+        out.writeln();
+      } else {
+        out.writeln(' (friendly aliases below)');
+      }
+    } else {
+      out.writeln('  voices:         ${p.voices.join(', ')}');
+    }
+    if (aliases.isNotEmpty) {
+      out.writeln('  aliases:        ${aliases.entries.map((e) => '${e.key} → ${e.value}').join(', ')}');
+    }
+  }
+  return out.toString();
+}
+
 const usage = '''
 Usage: dart run bin/main.dart --input <path> [options]
 
 Required:
-  --input <path>            Path to the text to narrate (no default).
+  --input <path>            Path to a text file, or a directory of .txt files
+                            (top-level, sorted, hidden files skipped) to narrate
+                            as a batch.
 
 Options:
+  --list-voices [model]     List voices/aliases for a model (optional; default
+                            lists all models) and exit. Also honors --model and
+                            --config.
   --model <alias|id>        TTS model: gemini (default), kokoro, or fish, or a
                             full model id. Controls voice set, prompt styling,
                             and output format.
