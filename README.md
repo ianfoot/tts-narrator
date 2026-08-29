@@ -4,6 +4,9 @@ Narrate a text file as an audiobook using Google's Gemini 3.1 Flash TTS
 (`google/gemini-3.1-flash-tts-preview`) — or other OpenRouter TTS models such as
 Kokoro (`hexgrad/kokoro-82m`) and Fish Audio (`fish-audio/s2.1-pro-free`).
 
+Uses the [OpenRouter text-to-speech endpoint](https://openrouter.ai/docs/guides/overview/multimodal/tts)
+(`POST /api/v1/audio/speech`).
+
 A Flutter project (macOS scaffold) whose narration core lives in `lib/` with
 no Flutter dependencies, so it runs today as a plain Dart CLI (`bin/main.dart`)
 and can later be driven from a GUI without rework.
@@ -11,8 +14,11 @@ and can later be driven from a GUI without rework.
 ## Requirements
 
 - Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.1`, Dart 3.13.1).
-- An OpenRouter API key. Set it as the `OPENROUTER_API_KEY` environment
-  variable, or pass `--api-key`.
+- An OpenRouter API key, from any of (resolved in this order): `--api-key`,
+  the `api_key` field in the [voice config](#voice-configuration), or the
+  `OPENROUTER_API_KEY` environment variable. Prefer the environment variable
+  or config file over `--api-key` — command-line arguments are visible in
+  `ps` output.
 
 ## Usage
 
@@ -72,9 +78,11 @@ that captures how it differs from Gemini:
 
 | Model | Id | Voice format | Prompt styling | Output |
 | --- | --- | --- | --- | --- |
-| `gemini` | `google/gemini-3.1-flash-tts-preview` | one of 30 named voices | ✓ (accent/style/`[calm]`) | 24 kHz PCM `.wav` |
-| `kokoro` | `hexgrad/kokoro-82m` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — ignore `--accent`/`--style`/`--tags`) | `.mp3` |
-| `fish` | `fish-audio/s2.1-pro-free` | free-form 32-hex fish.audio id | ✗ (read aloud — ignore `--accent`/`--style`/`--tags`) | `.mp3` (free model) |
+| `gemini` | [`google/gemini-3.1-flash-tts-preview`](https://openrouter.ai/google/gemini-3.1-flash-tts-preview) | one of 30 named voices | ✓ (accent/style/`[calm]`) | 24 kHz PCM `.wav` |
+| `kokoro` | [`hexgrad/kokoro-82m`](https://openrouter.ai/hexgrad/kokoro-82m) | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — ignore `--accent`/`--style`/`--tags`) | `.mp3` |
+| `fish` | [`fish-audio/s2.1-pro-free`](https://openrouter.ai/fish-audio/s2.1-pro-free:free#playground) | free-form 32-hex fish.audio id | ✗ (read aloud — ignore `--accent`/`--style`/`--tags`) | `.mp3` (free model) |
+
+Default voice per model: `gemini`=Charon, `kokoro`=`bf_emma`, `fish`=`89f41ea230034706881f85a8227d6ab9`; `--voice` overrides.
 
 Add another model by adding a profile and it becomes selectable via
 `--model <alias>` or the full id. Pass `--model <anything-else>` on the CLI to
