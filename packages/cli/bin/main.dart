@@ -1,8 +1,17 @@
 import 'dart:io';
 
 import 'package:tts_narrator_core/tts_narrator_core.dart';
+import 'package:tts_narrator_openrouter/openrouter_tts_provider.dart';
+
+/// sysexits.h `EX_USAGE` (64): bad command-line usage.
+const _exitUsage = 64;
+
+/// Generic operational failure (dry-run or narration threw).
+const _exitFailure = 1;
 
 Future<int> main(List<String> args) async {
+  ttsProviderRegistry.register('openrouter', OpenRouterTtsProvider.new);
+
   // --help / --version / --list-voices handled before strict parsing.
   if (args.contains('--help') || args.contains('-h')) {
     stdout.writeln(usage);
@@ -19,7 +28,8 @@ Future<int> main(List<String> args) async {
     stderr.writeln('Error: $e');
     stderr.writeln();
     stderr.writeln(usage);
-    return 64; // EX_USAGE
+    exitCode = _exitUsage;
+    return _exitUsage;
   }
 
   List<String> inputs;
@@ -29,7 +39,8 @@ Future<int> main(List<String> args) async {
     stderr.writeln('Error: $e');
     stderr.writeln();
     stderr.writeln(usage);
-    return 64; // EX_USAGE
+    exitCode = _exitUsage;
+    return _exitUsage;
   }
 
   stdout.writeln('Model:  ${config.profile.alias} (${config.profile.id})');
@@ -37,6 +48,7 @@ Future<int> main(List<String> args) async {
       ? '${config.voiceLabel} (${config.voice})'
       : config.voice;
   stdout.writeln('Voice:  $label');
+  stdout.writeln('Provider: ${config.profile.provider}');
   stdout.writeln('Format: ${config.profile.format}');
   stdout.writeln('Input:  ${inputs.length == 1 ? inputs.first : '${inputs.length} files (${config.inputPath})'}');
   stdout.writeln(
@@ -92,9 +104,14 @@ Future<int> main(List<String> args) async {
         '(~${(totalMinutes * 60).round()} s). '
         'Estimated cost: ${formatCostUsd(totalCost)}.',
       );
+    } on StateError catch (e) {
+      stderr.writeln('Dry run failed: $e');
+      exitCode = _exitUsage;
+      return _exitUsage;
     } on Exception catch (e) {
       stderr.writeln('Dry run failed: $e');
-      return 1;
+      exitCode = _exitFailure;
+      return _exitFailure;
     }
     return 0;
   }
@@ -127,9 +144,14 @@ Future<int> main(List<String> args) async {
         '  Done. $kind + manifest.json written to ${outputDirPath(fileConfig)}/.',
       );
     }
+  } on StateError catch (e) {
+    stderr.writeln('Narration failed: $e');
+    exitCode = _exitUsage;
+    return _exitUsage;
   } on Exception catch (e) {
     stderr.writeln('Narration failed: $e');
-    return 1;
+    exitCode = _exitFailure;
+    return _exitFailure;
   }
 
   stdout.writeln();
@@ -163,7 +185,8 @@ int _runListVoices(List<String> args) {
     voiceConfig = loadVoiceConfig(configPath ?? defaultConfigPath());
   } on VoiceConfigError catch (e) {
     stderr.writeln('Error: $e');
-    return 64;
+    exitCode = _exitUsage;
+    return _exitUsage;
   }
 
   TtsModelProfile? model;
@@ -174,7 +197,8 @@ int _runListVoices(List<String> args) {
         'Unknown model "$modelArg". Available: '
         '${effectiveModels(voiceConfig).map((p) => p.alias).join(', ')}.',
       );
-      return 64;
+      exitCode = _exitUsage;
+      return _exitUsage;
     }
   }
 

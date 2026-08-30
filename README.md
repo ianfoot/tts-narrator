@@ -1,33 +1,37 @@
 # tts-narrator
 
-Narrate a text file as an audiobook via OpenRouter TTS models. The default
-model is **fish** (`fish-audio/s2.1-pro-free`) — free — so a first run costs
-nothing, with a friendly "British Female Narrator" voice out of the box.
-Other models: Gemini (`google/gemini-3.1-flash-tts-preview`) and Kokoro
-(`hexgrad/kokoro-82m`).
+Narrate a text file as an audiobook via TTS providers (the OpenRouter
+provider ships with this repo). The default model is **fish**
+(`fish-audio/s2.1-pro-free`) — free — so a first run costs nothing, with a
+friendly "British Female Narrator" voice out of the box. Other models: Gemini
+(`google/gemini-3.1-flash-tts-preview`) and Kokoro (`hexgrad/kokoro-82m`).
 
 Uses the [OpenRouter text-to-speech endpoint](https://openrouter.ai/docs/guides/overview/multimodal/tts)
-(`POST /api/v1/audio/speech`).
+(`POST /api/v1/audio/speech`) through the OpenRouter provider.
 
-A Dart **pub workspace** with three packages:
-- `packages/core` — pure-Dart narration core (chunking, TTS client, voice config,
-  cost estimates), no Flutter or GUI deps.
+A Dart **pub workspace** with four packages:
+- `packages/core` — pure-Dart narration core (chunking, provider-agnostic TTS
+  dispatch, voice config, cost estimates), no Flutter or GUI deps.
 - `packages/cli` — the headless CLI (`bin/main.dart`), compiles to a single
   native executable via `dart compile exe`.
-- `app` — the Flutter macOS scaffold for the future GUI (adds `audioplayers`,
-  `file_selector`; never affects the CLI).
+- `packages/providers/openrouter` — the OpenRouter TTS provider, registered by
+  the CLI and GUI at startup.
+- `app` — the Flutter macOS GUI (adds `audioplayers`, `file_selector`; never
+  affects the CLI).
 
-The core has no Flutter dependencies, so the CLI runs standalone and the same
-core can later be driven from the GUI without rework.
+The core has no Flutter dependencies and no provider-specific logic, so the CLI
+runs standalone and the same core can be driven from the GUI (or new providers)
+without rework.
 
 ## Requirements
 
 - Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.1`, Dart 3.13.1).
 - An OpenRouter API key, from any of (resolved in this order): `--api-key`,
-  the `api_key` field in the [voice config](#voice-configuration), or the
-  `OPENROUTER_API_KEY` environment variable. Prefer the environment variable
-  or config file over `--api-key` — command-line arguments are visible in
-  `ps` output.
+  the `providers.openrouter` block in the [voice config](#voice-configuration)
+  (a literal value or a runtime-`${ENV}` reference), or the
+  `OPENROUTER_API_KEY` environment variable. Prefer the environment
+  variable or config file over `--api-key` — command-line arguments are
+  visible in `ps` output.
 
 ## Usage
 
@@ -55,6 +59,7 @@ path to the text to narrate.
 | --- | --- | --- |
 | `--input <path>` | Path to the text to narrate, or a directory of `.txt` files to narrate as a batch (top-level only, sorted, hidden skipped). | — |
 | `--model <alias\|id>` | TTS model: `fish`, `gemini`, `kokoro`, or a full model id. See "Models". | `fish` (free) |
+| `--provider <id>` | Override the provider serving the model. Unknown ids list the registered providers. | model / `default_provider` |
 | `--voice <name>` | Model-specific voice name or id (free-form for kokoro/fish). Friendly aliases from the voice config resolve to the raw id. | model default |
 | `--accent <text>` | Accent description used in the prompt (Gemini only). | `southern British English, neutral and clear` |
 | `--style <text>` | Style / register description used in the prompt (Gemini only). | `warm, composed, restrained, literary` |
@@ -65,27 +70,30 @@ path to the text to narrate.
 | `--dry-run` | Print the chunk plan + estimated duration/cost and exit without calling the API. | `off` |
 | `--resume` | Skip chunks already present in the output manifest (same prompt + file), so a re-run doesn't re-bill finished paragraphs. | `off` |
 | `--out <dir>` | Output directory base; the input stem is appended unless it already ends with it. | `output` |
-| `--config <path>` | Voice config JSON (friendly aliases + `api_key`). | `~/.config/tts-narrator/voice_config.json` |
-| `--api-key <key>` | OpenRouter API key (overrides the config file, then the environment). | env |
+| `--config <path>` | Voice config JSON (models, voices, defaults, pricing, the per-provider settings block). | `~/.config/tts-narrator/voice_config.json` |
+| `--api-key <key>` | Opaque `api_key` setting merged into the selected provider's settings (overrides the config). | — |
 | `--list-voices [model]` | Print available voices (and friendly aliases from the config) for a model, or all models when omitted, then exit. Also honors `--model` / `--config`. | all models |
 
 ## Voice configuration
 
-Everything user-facing — models, per-model default voices, prices, and friendly
-voice aliases — plus an optional `api_key`, lives in a single JSON file,
-defaulting to `~/.config/tts-narrator/voice_config.json` (override with
-`--config`). Copy the repo's `voice_config.example.json` to that path as a
-starting point — it's the paste-template; the file under `~/.config` is the
-live one the tools read:
+Everything user-facing — models, per-model default voices, the default
+provider, per-provider settings, prices, and friendly voice aliases — lives in
+a single JSON file, defaulting to `~/.config/tts-narrator/voice_config.json`
+(override with `--config`). Copy the repo's `voice_config.example.json` to
+that path as a starting point — it's the paste-template; the file under
+`~/.config` is the live one the tools read:
 
 ```json
 {
-  "api_key": "",
+  "default_provider": "openrouter",
+  "providers": {
+    "openrouter": { "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}" }
+  },
   "models": {
-    "fish": { "id": "fish-audio/s2.1-pro-free", "format": "mp3" },
-    "kokoro": { "id": "hexgrad/kokoro-82m", "format": "mp3" },
-    "gemini": { "id": "google/gemini-3.1-flash-tts-preview", "format": "pcm",
-                "sample_rate": 24000, "prompt_style": true }
+    "fish":   { "provider": "openrouter", "id": "fish-audio/s2.1-pro-free", "format": "mp3" },
+    "kokoro": { "provider": "openrouter", "id": "hexgrad/kokoro-82m", "format": "mp3" },
+    "gemini": { "provider": "openrouter", "id": "google/gemini-3.1-flash-tts-preview",
+                "format": "pcm", "sample_rate": 24000, "prompt_style": true }
   },
   "defaults": { "fish": "British Female Narrator", "kokoro": "Emma", "gemini": "Charon" },
   "pricing": {
@@ -98,6 +106,11 @@ live one the tools read:
   }
 }
 ```
+
+- **Provider routing**: each `models` entry may name the provider that serves it
+  (`"provider": "<id>"`); otherwise the model uses `default_provider`, falling
+  back to the compiled `'openrouter'` default when neither is set. See
+  [Providers](#providers).
 
 - **Models**: each entry maps an alias to its model id and request wiring. Add a
   model or swap an id (e.g. replace the gemini preview) by editing the file —
@@ -118,7 +131,10 @@ live one the tools read:
   `89f41ea2...` ("British Female Narrator"), so the very first run costs
   nothing. Both the CLI and the GUI use this default.
 - A `--config` path that doesn't exist or can't be parsed is a hard error.
-- `api_key` precedence: `--api-key` flag > config file > `OPENROUTER_API_KEY` env.
+- API key precedence: `--api-key` flag > `providers.<id>.api_key` in the config
+  > the provider's own env fallback (`OPENROUTER_API_KEY`). A `providers.<id>`
+  value can be a literal secret or a runtime-`${ENV}` reference (see
+  [Providers](#providers)).
 
 ### Models
 
@@ -139,6 +155,31 @@ Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma`
 Add or swap a model by adding/editing a `models` entry; it then becomes
 selectable via `--model <alias>` or the full id. Pass `--model <anything-else>`
 on the CLI to list the registered models.
+
+### Providers
+
+The narration layer is provider-agnostic: **core** (`packages/core`) defines a
+`TtsProvider` interface — `synthesize(model, voice, input, responseFormat,
+settings)` → `ProviderAudio` — and a `TtsProviderRegistry` that maps a provider
+id to a factory function. Core ships **no** provider; concrete providers live
+in their own workspace packages and are `register()`ed by the CLI and GUI at
+startup.
+
+- **The built-in provider**: `packages/providers/openrouter` implements the
+  interface for OpenRouter's `/audio/speech` endpoint — Bearer auth from the
+  resolved settings, retry/backoff on transient failures, and
+  `X-Generation-Id` mapped onto `ProviderAudio.generationId`.
+- **Adding a provider** = a workspace package implementing `TtsProvider`,
+  registered at both entrypoints, plus a `providers.<id>` block in the voice
+  config for its secrets. Route models to it with `"provider": "<id>"`.
+- **Secrets**: `providers.<id>` is an opaque string→string map. A value of the
+  form `${ENV_NAME}` reads that environment variable once at run-config build
+  time (a missing or empty variable is an error naming it); any other value is
+  used literally. The rule is generic — core never interprets the keys, and
+  each provider keeps its own key names.
+- **Selection precedence**: `--provider <id>` > the model's `provider` >
+  `default_provider` > the compiled `'openrouter'` fallback. An unknown
+  `--provider` lists the registered ids.
 
 ### Gemini voices
 
@@ -183,6 +224,9 @@ page and in `voice_config.example.json`.
 
 # Fish narration (free model, MP3 output, default voice)
 ./build/tts-narrator --input story.txt --model fish
+
+# Explicitly route the model through the OpenRouter provider
+./build/tts-narrator --input story.txt --provider openrouter
 
 # Fish narration using a friendly voice alias from the voice config
 ./build/tts-narrator --input story.txt --model fish \
@@ -253,7 +297,7 @@ packages/core/            # tts_narrator_core — pure Dart, no Flutter deps
     tts_narrator_core.dart # public barrel (both the CLI and GUI import this)
     src/
       cli/args.dart           # flag parsing + usage text
-      cli/voice_config.dart   # models/voices/defaults/pricing + api_key JSON config load/save
+      cli/voice_config.dart   # models/voices/defaults/pricing/providers JSON load/save
       narration/
         abort.dart            # AbortToken for the GUI Cancel button
         config.dart           # NarrationConfig
@@ -261,21 +305,23 @@ packages/core/            # tts_narrator_core — pure Dart, no Flutter deps
         model_profiles.dart   # request wiring + compiled fish bootstrap (kDefaultProfile)
         narration.dart       # chunkText + narration orchestrator
         prompt.dart           # per-paragraph prompt template (Gemini only)
-        tts_client.dart       # POST /audio/speech (pcm/mp3), retry on 502
+        tts_provider.dart     # TtsProvider interface, registry, resolveSettings
         wav.dart              # PCM -> WAV header writer
   test/                       # unit tests (dart test)
 packages/cli/               # tts_narrator_cli — depends only on core
-  bin/main.dart               # CLI entrypoint
+  bin/main.dart               # CLI entrypoint (registers the OpenRouter provider)
+packages/providers/openrouter/  # tts_narrator_openrouter — OpenRouter TtsProvider
+  lib/openrouter_tts_provider.dart
 app/                        # tts_narrator — Flutter macOS GUI
   lib/
-    main.dart                 # Flutter entry point
+    main.dart                 # Flutter entry point (registers the OpenRouter provider)
     src/gui/
       app.dart                # MaterialApp root
       config_service.dart     # load/save the shared voice config
       settings_form.dart      # one-screen settings form
       run_screen.dart         # dry-run preview, Narrate/Cancel, playback
   test/widgets/               # widget tests (flutter test)
-voice_config.example.json   # sample voice config: friendly aliases, no api_key
+voice_config.example.json   # sample voice config: providers/${ENV} refs, no secrets
 ```
 
 Note: `output/`, `.dart_tool/`, and `build/` are gitignored.
@@ -300,11 +346,13 @@ fvm flutter build macos --release
   `app/macos/Runner/DebugProfile.entitlements` and `Release.entitlements`.
 - Linux/Windows are planned but not yet scaffolded (macOS-only for now).
 - The GUI reads the same `~/.config/tts-narrator/voice_config.json` as the CLI
-  for voice aliases and the optional `api_key`, but never writes it — edit that
-  file directly (or via the CLI). It has no API-key field; authentication uses
-  the config's `api_key`, falling back to the `OPENROUTER_API_KEY` environment
-  variable. Note: a GUI app launched from the Finder doesn't inherit a shell's
-  environment, so for double-click use set `api_key` in the config file.
+  for voice aliases and the per-provider settings block, but never writes it —
+  edit that file directly (or via the CLI). It has no secret-key field; each
+  provider's key comes from its `providers.<id>` block. The GUI resolves
+  `${ENV}` references from its own environment at run-config build time. Note:
+  a GUI app launched from the Finder doesn't inherit a shell's environment, so
+  for double-click use write a literal key in `providers.openrouter` instead of
+  a `${OPENROUTER_API_KEY}` reference.
 
 ## Notes / current behaviour
 

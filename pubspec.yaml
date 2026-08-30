@@ -10,3 +10,4 @@ workspace:
   - app
   - packages/core
   - packages/cli
+  - packages/providers/openrouter

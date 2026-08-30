@@ -1,6 +1,6 @@
 /// Cooperative cancellation token for long-running narration.
 ///
-/// Threaded through [TtsClient.synthesize] and `narrate()` so the GUI's Cancel
+/// Threaded through [TtsProvider.synthesize] and `narrate()` so the GUI's Cancel
 /// button can stop a run. The CLI never passes one, so behavior there is
 /// unchanged (a null token is a no-op).
 class AbortToken {

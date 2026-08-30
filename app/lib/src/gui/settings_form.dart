@@ -164,6 +164,13 @@ void initState() {
     }
     final minWords = int.tryParse(_minWords.text.trim()) ?? 30;
     final sampleRaw = _sampleLen.text.trim();
+    // Provider settings resolved once at config build: the selected provider's
+    // block from the shared config (read-only; the GUI never writes it), with
+    // `${ENV}` references expanded from the runtime environment.
+    final providerSettings = resolveSettings(
+      _voiceConfig.providers[_profile.provider] ?? const {},
+      env: Platform.environment,
+    );
     return NarrationConfig(
       inputPath: inputPath,
       profile: _profile,
@@ -177,9 +184,7 @@ void initState() {
       sampleLen: sampleRaw.isEmpty ? null : int.tryParse(sampleRaw),
       outDir: _outDir.text.trim().isEmpty ? 'output' : _outDir.text.trim(),
       resume: _resume,
-      // Read-only use of the shared config's api_key (the GUI never writes it);
-      // absent there, TtsClient falls back to OPENROUTER_API_KEY.
-      apiKey: _voiceConfig.apiKey,
+      providerSettings: providerSettings,
       pricing: _voiceConfig.pricingFor(_profile.alias),
     );
   }
@@ -198,6 +203,9 @@ void initState() {
     try {
       config = _buildConfig();
     } on FormatException catch (e) {
+      _snack(e.message);
+      return;
+    } on StateError catch (e) {
       _snack(e.message);
       return;
     }

@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'abort.dart';
 import 'config.dart';
 import 'prompt.dart';
-import 'tts_client.dart';
+import 'tts_provider.dart';
 import 'wav.dart';
 
 /// Max characters per narration chunk. Scenes (blank-line-separated
@@ -73,7 +73,9 @@ List<String> _splitLongParagraph(String paragraph) {
   final chunks = <String>[];
   final buffer = StringBuffer();
   for (final sentence in sentences) {
-    final wouldBe = buffer.isEmpty ? sentence : '${buffer.toString()} $sentence';
+    final wouldBe = buffer.isEmpty
+        ? sentence
+        : '${buffer.toString()} $sentence';
     if (wouldBe.length <= _maxChunkLength || buffer.isEmpty) {
       buffer
         ..clear()
@@ -124,7 +126,9 @@ List<String> planChunks(NarrationConfig config) {
 /// (e.g. "A Shorts Story Draft 5.txt" -> "a_shorts_story_draft_5").
 String inputStem(String inputPath) {
   final name = inputPath.split(Platform.pathSeparator).last;
-  final base = name.contains('.') ? name.substring(0, name.lastIndexOf('.')) : name;
+  final base = name.contains('.')
+      ? name.substring(0, name.lastIndexOf('.'))
+      : name;
   return base.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
 }
 
@@ -156,7 +160,7 @@ Future<void> narrate(
   final paragraphs = planChunks(config);
 
   final count = min(config.sampleLen ?? paragraphs.length, paragraphs.length);
-  final client = TtsClient(apiKey: config.apiKey);
+  final provider = ttsProviderRegistry.resolve(config.profile.provider);
   final stem = inputStem(config.inputPath);
   final dir = outputDirPath(config);
   final outDir = Directory(dir)..createSync(recursive: true);
@@ -164,8 +168,9 @@ Future<void> narrate(
   final rate = config.profile.sampleRate;
   final records = <Map<String, Object?>>[];
 
-  final existing =
-      config.resume ? readManifestRecords(outDir) : const <Map<String, Object?>>[];
+  final existing = config.resume
+      ? readManifestRecords(outDir)
+      : const <Map<String, Object?>>[];
 
   for (var i = 0; i < count; i++) {
     abort?.throwIfCancelled();
@@ -199,31 +204,31 @@ Future<void> narrate(
     }
 
     onProgress?.call(i, count, paragraph);
-    final audio = await client.synthesize(
+    final audio = await provider.synthesize(
       model: config.profile.id,
-      responseFormat: config.profile.format,
       voice: config.profile.sendsVoiceField ? config.voice : null,
+      responseFormat: config.profile.format,
+      settings: config.providerSettings,
       input: input,
       abort: abort,
     );
 
     if (config.profile.format == 'pcm') {
       final bytes = BytesBuilder(copy: false);
-      bytes.add(audio);
+      bytes.add(audio.bytes);
       writeWav(path: audioFile, bytes: bytes, sampleRate: rate ?? 24000);
     } else {
-      File(audioFile).writeAsBytesSync(audio, flush: true);
+      File(audioFile).writeAsBytesSync(audio.bytes, flush: true);
     }
 
-    final fingerprint = fingerprintOf(audio);
-    final duration =
-        (rate != null && config.profile.format == 'pcm')
-            ? audio.length / (rate * 2)
-            : null;
+    final fingerprint = fingerprintOf(audio.bytes);
+    final duration = (rate != null && config.profile.format == 'pcm')
+        ? audio.bytes.length / (rate * 2)
+        : null;
     records.add({
       'index': index,
       'wav': '$baseName.$extension',
-      'bytes': audio.length,
+      'bytes': audio.bytes.length,
       'duration_seconds': duration,
       'fingerprint': fingerprint,
       'excerpt': paragraph.length > 120
@@ -249,7 +254,8 @@ Map<String, Object?>? resumeMatch(
   for (final r in existing) {
     if (r['index'] == index && r['prompt'] == input) {
       final wav = r['wav'];
-      if (wav is String && File('$dir${Platform.pathSeparator}$wav').existsSync()) {
+      if (wav is String &&
+          File('$dir${Platform.pathSeparator}$wav').existsSync()) {
         return r;
       }
     }

@@ -42,7 +42,9 @@ void main() {
     await useBigSurface(tester);
     final input = writeInput();
     await writeConfig({
-      'api_key': 'sk-test',
+      'providers': {
+        'openrouter': {'api_key': 'sk-test'},
+      },
       'voices': {
         'fish': {'Narrator': 'hex123'},
       },
@@ -61,8 +63,9 @@ void main() {
     expect(run.config.inputPath, input);
     expect(run.config.profile.alias, 'fish');
     expect(run.config.voice, kDefaultProfile.voice);
-    // The GUI uses the shared config's api_key read-only (never writes it).
-    expect(run.config.apiKey, 'sk-test');
+    // The GUI uses the shared config's provider settings read-only (never
+    // writes it); the providers block's api_key rides through as a literal.
+    expect(run.config.providerSettings['api_key'], 'sk-test');
   });
 
   testWidgets('selecting a voice alias fills the raw id field', (tester) async {
@@ -143,8 +146,9 @@ void main() {
     expect(run.profile.alias, 'fish');
     expect(run.voice, kDefaultProfile.voice);
     expect(run.voiceLabel, 'British Female Narrator');
-    // No config file -> no key from config; TtsClient falls back to env.
-    expect(run.apiKey, isNull);
+    // No config file -> no provider settings (key can only come from config or
+    // the OPenRouter env fallback inside the provider).
+    expect(run.providerSettings, isEmpty);
   });
 }
 
