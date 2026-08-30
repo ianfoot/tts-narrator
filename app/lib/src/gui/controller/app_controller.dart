@@ -69,6 +69,10 @@ class AppController extends ChangeNotifier {
       final def = _defaultVoiceFor(next);
       _voice = def?.$1 ?? '';
       _voiceLabel = def?.$2;
+    } else {
+      // A user-set raw voice survives the switch; the previous model's
+      // friendly label no longer describes that id, so drop it.
+      _voiceLabel = null;
     }
     _modelAlias = alias;
     notifyListeners();
@@ -357,14 +361,21 @@ class AppController extends ChangeNotifier {
     }
     _resetRunState();
     runConfig = config;
+    // narrate() processes only min(sampleLen, paragraphs.length) chunks; build
+    // chunks from the same count so progress reaches 100% and no phantom
+    // pending tiles linger past a sampled run.
+    final sampleLen = config.sampleLen;
+    final runCount = sampleLen == null
+        ? paragraphs.length
+        : (sampleLen < paragraphs.length ? sampleLen : paragraphs.length);
     runChunks = [
-      for (var i = 0; i < paragraphs.length; i++)
+      for (var i = 0; i < runCount; i++)
         NarrationRunChunk(index: i, paragraph: paragraphs[i]),
     ];
     _narrating = true;
     _abort = AbortToken();
     notifyListeners();
-    _narrate(config, paragraphs);
+    _narrate(config);
   }
 
   void _resetRunState() {
@@ -378,7 +389,7 @@ class AppController extends ChangeNotifier {
     _abort = null;
   }
 
-  Future<void> _narrate(NarrationConfig config, List<String> paragraphs) async {
+  Future<void> _narrate(NarrationConfig config) async {
     final token = _abort!;
     try {
       try {
@@ -409,7 +420,11 @@ class AppController extends ChangeNotifier {
       }
     } finally {
       // Unwind unconditionally: even a non-Exception failure must not leave
-      // the controller "already running" forever.
+      // the controller "already running" forever. Also stop any in-flight
+      // chunk spinner so the run view shows a clean stopped/failed state.
+      for (final chunk in runChunks) {
+        chunk.running = false;
+      }
       _narrating = false;
       _abort = null;
       notifyListeners();

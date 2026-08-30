@@ -187,6 +187,36 @@ void main() {
       expect(c.voice, 'my_custom_voice');
     });
 
+    test('a preserved raw voice drops the previous model label on switch', () {
+      writeConfig({
+        'models': {
+          'gemini': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'format': 'pcm',
+            'sample_rate': 24000,
+            'prompt_style': true,
+          },
+        },
+        'defaults': {
+          'gemini': 'Charon',
+        },
+        'voices': {
+          'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
+          'fish': {'Narrator': 'hex123'},
+        },
+      });
+      final c = makeController();
+      c.applyVoiceLabel('Narrator'); // fish alias -> hex123, label Narrator.
+      expect(c.voice, 'hex123');
+      expect(c.voiceLabel, 'Narrator');
+      // gemini's default differs, so the raw voice survives; the fish label
+      // must not ride along to a foreign id.
+      c.changeModel('gemini');
+      expect(c.modelAlias, 'gemini');
+      expect(c.voice, 'hex123');
+      expect(c.voiceLabel, isNull);
+    });
+
     test('resolveVoice wires a friendly alias to its raw id', () {
       writeConfig({
         'voices': {
@@ -233,6 +263,46 @@ void main() {
       expect(c.onNarrate, isNull);
       expect(c.onCancel, isNull);
       expect(c.onPreferences, isNull);
+    });
+  });
+
+  group('run state', () {
+    test('sampleLen sizes the chunk plan so progress completes at 100%', () async {
+      final c = makeController();
+      c.setText(
+        'First paragraph with enough words to become its own chunk and then '
+        'carry on a little longer to cross the minimum.\n\n'
+        'Second paragraph with enough words to become its own chunk as well '
+        'and then carry on a little longer to cross the minimum.',
+      );
+      final fake = FakeTtsProvider()..register();
+      c.sampleLen = 1;
+      c.outDir = dir.path;
+      c.startRun();
+      expect(c.totalChunks, 1);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.runFinished, isTrue);
+      expect(c.runDoneCount, 1);
+      expect(c.runProgress, 1.0);
+      expect(fake.callCount, 1);
+    });
+
+    test('cancelling a run clears the in-flight chunk spinner', () async {
+      final c = makeController();
+      c.setText(
+        'First paragraph with enough words to become its own chunk and then '
+        'carry on a little longer to cross the minimum.\n\n'
+        'Second paragraph with enough words to become its own chunk as well '
+        'and then carry on a little longer to cross the minimum.',
+      );
+      FakeTtsProvider().register();
+      c.outDir = dir.path;
+      c.startRun();
+      c.cancelRun();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.runStopped, isTrue);
+      expect(c.narrating, isFalse);
+      expect(c.runChunks.every((chunk) => !chunk.running), isTrue);
     });
   });
 

@@ -59,7 +59,7 @@ void main() {
     expect(find.textContaining('Narrate — untitled.txt'), findsOneWidget);
     expect(find.byKey(const Key('runBannerModelVoice')), findsOneWidget);
     expect(find.textContaining('chunks · '), findsOneWidget);
-    expect(find.byType(ListTile), findsNWidgets(2));
+    expect(find.byType(ListTile), findsNWidgets(1));
     expect(find.byKey(const Key('runBackButton')), findsOneWidget);
 
     // Let the single chunk land; then Cancel disappears and chunks are done.
@@ -67,6 +67,10 @@ void main() {
     expect(find.byKey(const Key('runCancelButton')), findsNothing);
     expect(find.textContaining('Narration complete.'), findsOneWidget);
     expect(fake.callCount, 1);
+    // Only the sampled count becomes chunks, so progress completes at 100%.
+    expect(c.totalChunks, 1);
+    expect(c.runDoneCount, 1);
+    expect(c.runProgress, 1.0);
   });
 
   testWidgets('empty-text plan failure renders the plan-error banner', (
@@ -146,7 +150,7 @@ testWidgets('Back preserves the document in the controller', (tester) async {
     // The macOS path must render the run with platform (Cupertino) tiles and
     // no Material-required widget crashing.
     expect(find.byKey(const Key('runBannerModelVoice')), findsOneWidget);
-    expect(find.byType(PlatformListTile), findsNWidgets(2));
+    expect(find.byType(PlatformListTile), findsNWidgets(1));
     expect(find.byKey(const Key('runProgressBar')), findsOneWidget);
     expect(find.byKey(const Key('runBackButton')), findsOneWidget);
     expect(tester.takeException(), isNull);
