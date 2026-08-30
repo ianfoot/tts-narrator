@@ -1,22 +1,24 @@
-/// Per-model notification profiles.
+/// Per-model request profiles.
 ///
 /// Every TTS model served by OpenRouter exposes the same `/audio/speech`
-/// endpoint and auth, but they differ in the request body, the voice
-/// identifiers, and the output format. This table captures those differences
-/// so the pipeline can stay model-agnostic.
+/// endpoint and auth, but they differ in the request body, the output format,
+/// and how voices work. A [TtsModelProfile] captures the *wiring* needed to
+/// build a request for a given model.
+///
+/// Most profiles are NOT compiled here. Models come from the user's
+/// `voice_config.json` (`"models"` block) so the user can point at a
+/// different or newer model id (e.g. swap the gemini preview for a GA id)
+/// without a rebuild. Only the out-of-box fish bootstrap lives in code, as the
+/// app's default until any config overrides it. Voices and pricing are also
+/// user data and live in the same config (see `voice_config.dart`).
 class TtsModelProfile {
   const TtsModelProfile({
     required this.alias,
     required this.id,
-    required this.defaultVoice,
-    required this.voices,
-    required this.promptStyle,
-    required this.format,
-    this.defaultVoiceLabel,
-    this.voiceFreeForm = false,
+    this.format = 'mp3',
+    this.promptStyle = false,
     this.sendsVoiceField = true,
     this.sampleRate,
-    this.pricing = freePricing,
   });
 
   /// Short CLI name used for `--model <alias>`.
@@ -25,147 +27,47 @@ class TtsModelProfile {
   /// Full model identifier sent in the request body.
   final String id;
 
-  /// Default voice when `--voice` is omitted.
-  final String defaultVoice;
-
-  /// Friendly human-readable name for [defaultVoice], when it has one
-  /// (e.g. fish's free default surfaces as "British Female Narrator").
-  final String? defaultVoiceLabel;
-
-  /// Known voices for this model. Used to validate `--voice` unless
-  /// [voiceFreeForm] is true.
-  final List<String> voices;
-
-  /// When false, the accepted list is not authoritative: `--voice` is a raw
-  /// provider-specific identifier and is passed through unvalidated.
-  final bool voiceFreeForm;
-
-  /// Whether to include a `voice` field in the request body.
-  final bool sendsVoiceField;
+  /// Output encoding: `'pcm'` (wrapped in a WAV header) or `'mp3'` (raw).
+  final String format;
 
   /// Whether accent/style/[calm] directives are woven into the input text.
   /// Gemini understands these; models like Kokoro would read them aloud.
   final bool promptStyle;
 
-  /// Output encoding: `'pcm'` (wrapped in a WAV header) or `'mp3'` (raw).
-  final String format;
+  /// Whether to include a `voice` field in the request body.
+  final bool sendsVoiceField;
 
   /// PCM sample rate used for the WAV header and duration; null for MP3.
   final int? sampleRate;
 
-  /// Pricing (USD) from the OpenRouter model page, for `--dry-run` estimates.
-  final AudioPricing pricing;
+  TtsModelProfile copyWith({String? id}) => TtsModelProfile(
+        alias: alias,
+        id: id ?? this.id,
+        format: format,
+        promptStyle: promptStyle,
+        sendsVoiceField: sendsVoiceField,
+        sampleRate: sampleRate,
+      );
 }
 
-/// Cost data used for the `--dry-run` estimate. From the model's OpenRouter
-/// page; any model without pricing is treated as free (estimate prints 0).
-class AudioPricing {
-  const AudioPricing({
-    this.inputUsdPerMTokens,
-    this.outputUsdPerMTokens,
-    this.usdPerMChars,
-  });
-
-  /// USD per 1M input tokens (text tokens — e.g. Gemini).
-  final double? inputUsdPerMTokens;
-
-  /// USD per 1M output audio tokens (Gemini bills audio output by token).
-  final double? outputUsdPerMTokens;
-
-  /// USD per 1M input characters (Kokoro bills by character).
-  final double? usdPerMChars;
-
-  bool get isFree =>
-      (inputUsdPerMTokens ?? 0) == 0 &&
-      (outputUsdPerMTokens ?? 0) == 0 &&
-      (usdPerMChars ?? 0) == 0;
-}
-
-const freePricing = AudioPricing();
-
-/// Gemini 3.1 Flash TTS Preview: prompt-driven styling, named voices, 24 kHz
-/// mono 16-bit PCM.
-const kGeminiProfile = TtsModelProfile(
-  alias: 'gemini',
-  id: 'google/gemini-3.1-flash-tts-preview',
-  defaultVoice: 'Charon',
-  defaultVoiceLabel: 'Charon',
-  voices: [
-    'Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir', 'Leda', 'Orus', 'Aoede',
-    'Callirrhoe', 'Autonoe', 'Enceladus', 'Iapetus', 'Umbriel', 'Algieba',
-    'Despina', 'Erinome', 'Algenib', 'Rasalgethi', 'Laomedeia', 'Achernar',
-    'Alnilam', 'Schedar', 'Gacrux', 'Pulcherrima', 'Achird', 'Zubenelgenubi',
-    'Vindemiatrix', 'Sadachbia', 'Sadaltager', 'Sulafat',
-  ],
-  promptStyle: true,
-  format: 'pcm',
-  sampleRate: 24000,
-  pricing: AudioPricing(inputUsdPerMTokens: 1.0, outputUsdPerMTokens: 20.0),
-);
-
-/// Kokoro 82M (hexgrad/kokoro-82m): provider-specific voice ids, no prompt
-/// styling, MP3 output (defaults to pcm on the wire, but we always request
-/// mp3 for playable files).
-const kKokoroProfile = TtsModelProfile(
-  alias: 'kokoro',
-  id: 'hexgrad/kokoro-82m',
-  defaultVoice: 'bf_emma',
-  defaultVoiceLabel: 'Emma',
-  voices: [
-    'bf_alice', 'bf_emma', 'bf_isabella', 'bf_lily',
-    'bm_daniel', 'bm_fable', 'bm_george', 'bm_lewis',
-  ],
-  voiceFreeForm: true,
-  promptStyle: false,
-  format: 'mp3',
-  sampleRate: 24000,
-  pricing: AudioPricing(usdPerMChars: 0.62),
-);
-
-/// Fish Audio S2.1 Pro (free) (fish-audio/s2.1-pro-free): free model routed
-/// by OpenRouter. Voices are 32-hex fish.audio ids (curated British list lives
-/// on the "Text to Speech" Logseq page). No prompt styling — inline brackets
-/// read aloud. MP3 output. Transient 502s are not billed.
-const kFishProfile = TtsModelProfile(
-  alias: 'fish',
-  id: 'fish-audio/s2.1-pro-free',
-  defaultVoice: '89f41ea230034706881f85a8227d6ab9',
-  defaultVoiceLabel: 'British Female Narrator',
-  voices: [],
-voiceFreeForm: true,
-  sendsVoiceField: true,
-  promptStyle: false,
-  format: 'mp3',
-);
-
-/// All known model profiles, keyed by [TtsModelProfile.alias].
-final kModelProfiles = <String, TtsModelProfile>{
-  for (final p in [kGeminiProfile, kKokoroProfile, kFishProfile])
-    p.alias: p,
-};
-
-/// Resolves a `--model` value by alias or full id, or null if unknown.
-TtsModelProfile? profileFor(String aliasOrId) {
-  final direct = kModelProfiles[aliasOrId];
-  if (direct != null) return direct;
-  for (final p in kModelProfiles.values) {
-    if (p.id == aliasOrId) return p;
-  }
-  return null;
-}
-
-/// The app's out-of-the-box default: a free model so first runs cost nothing.
-/// Compiled in because it must exist before any config and be identical for
-/// both the CLI and the GUI (the compiled binary can't read a bundled asset).
-const kFreeDefault = FreeDefault(
-  profile: kFishProfile,
+/// The app's out-of-the-box default: the fish model + its free default voice,
+/// so first runs cost nothing and the CLI/GUI preselect it before any config
+/// exists. The config's `"models"`/`"voices"` blocks can override and extend
+/// this; all other models come from the config.
+const kDefaultProfile = DefaultProfile(
+  profile: TtsModelProfile(
+    alias: 'fish',
+    id: 'fish-audio/s2.1-pro-free',
+    format: 'mp3',
+    sendsVoiceField: true,
+  ),
   voice: '89f41ea230034706881f85a8227d6ab9',
   voiceLabel: 'British Female Narrator',
 );
 
 /// A single default model + voice to preselect on cold start.
-class FreeDefault {
-  const FreeDefault({
+class DefaultProfile {
+  const DefaultProfile({
     required this.profile,
     required this.voice,
     required this.voiceLabel,

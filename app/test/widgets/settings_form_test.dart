@@ -60,7 +60,7 @@ void main() {
     final run = tester.widget<RunScreen>(find.byType(RunScreen));
     expect(run.config.inputPath, input);
     expect(run.config.profile.alias, 'fish');
-    expect(run.config.voice, kFishProfile.defaultVoice);
+    expect(run.config.voice, kDefaultProfile.voice);
     // The GUI uses the shared config's api_key read-only (never writes it).
     expect(run.config.apiKey, 'sk-test');
   });
@@ -84,7 +84,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(
       find.byKey(const Key('voiceRawField')),
-    ).controller!.text, kFishProfile.defaultVoice);
+    ).controller!.text, kDefaultProfile.voice);
 
     // Select the alias from the voice dropdown -> raw field fills with hex123.
     await tester.tap(find.byKey(const Key('voiceDropdown')));
@@ -136,12 +136,12 @@ void main() {
     expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
     expect(
       tester.widget<TextField>(find.byKey(const Key('voiceRawField'))).controller!.text,
-      kFishProfile.defaultVoice,
+      kDefaultProfile.voice,
     );
 
     final run = await _buildConfigFromForm(tester, configPath);
     expect(run.profile.alias, 'fish');
-    expect(run.voice, kFishProfile.defaultVoice);
+    expect(run.voice, kDefaultProfile.voice);
     expect(run.voiceLabel, 'British Female Narrator');
     // No config file -> no key from config; TtsClient falls back to env.
     expect(run.apiKey, isNull);

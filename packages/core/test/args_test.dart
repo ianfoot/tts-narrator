@@ -4,6 +4,7 @@ import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/cli/args.dart';
 import 'package:tts_narrator_core/src/cli/voice_config.dart';
 import 'package:tts_narrator_core/src/narration/config.dart';
+import 'package:tts_narrator_core/src/narration/cost.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
 void main() {
@@ -15,9 +16,22 @@ void main() {
     cfgPath = '${dir.path}/voice_config.json';
     File(cfgPath).writeAsStringSync('''{
   "api_key": "sk-cfg",
+  "models": {
+    "gemini": {"id": "google/gemini-3.1-flash-tts-preview", "format": "pcm",
+               "sample_rate": 24000, "prompt_style": true},
+    "kokoro": {"id": "hexgrad/kokoro-82m", "format": "mp3"}
+  },
+  "defaults": {
+    "kokoro": "Emma",
+    "gemini": "Charon"
+  },
+  "pricing": {
+    "kokoro": {"usd_per_m_chars": 0.62}
+  },
   "voices": {
     "fish": {"British Female Narrator (good)": "89f41ea"},
-    "kokoro": {"Emma": "bf_emma"}
+    "kokoro": {"Emma": "bf_emma"},
+    "gemini": {"Charon": "Charon"}
   }
 }''');
   });
@@ -40,11 +54,12 @@ void main() {
     expect(() => parse(['--input', 's', '--tags', 'maybe']), throwsA(isA<CliUsageError>()));
   });
 
-  test('defaults: fish profile (free), British Female Narrator default, env key fallback', () {
+  test('defaults: fish profile (free), compiled free default, no resumption', () {
     final cfg = parse(['--input', 's']);
     expect(cfg.profile.alias, 'fish');
-    expect(cfg.voice, kFishProfile.defaultVoice);
+    expect(cfg.voice, '89f41ea230034706881f85a8227d6ab9');
     expect(cfg.voiceLabel, 'British Female Narrator');
+    expect(cfg.pricing.isFree, isTrue);
     expect(cfg.resume, isFalse);
     expect(cfg.dryRun, isFalse);
   });
@@ -66,32 +81,55 @@ void main() {
   test('passes through unknown kokoro voice id freely', () {
     final cfg = parse(['--input', 's', '--model', 'kokoro', '--voice', 'bm_lewis']);
     expect(cfg.voice, 'bm_lewis');
-    expect(cfg.voiceLabel, 'bm_lewis');
+    // Raw id equals its label, so no friendly label is recorded.
+    expect(cfg.voiceLabel, isNull);
   });
 
-  test('kokoro default voice carries its friendly label', () {
-    final cfg = parse(['--input', 's', '--model', 'kokoro', '--voice', 'bf_emma']);
+  test('explicit voice is never validated (testing arbitrary ids)', () {
+    final cfg = parse(['--input', 's', '--model', 'gemini', '--voice', 'NotAVoice']);
+    expect(cfg.voice, 'NotAVoice');
+    expect(cfg.voiceLabel, isNull);
+  });
+
+  test('--model kokoro without --voice adopts the configured default', () {
+    final cfg = parse(['--input', 's', '--model', 'kokoro']);
     expect(cfg.voice, 'bf_emma');
     expect(cfg.voiceLabel, 'Emma');
   });
 
-  test('gemini validates known voices and rejects unknown ones', () {
-    expect(
-      () => parse(['--input', 's', '--model', 'gemini', '--voice', 'NotAVoice']),
-      throwsA(isA<CliUsageError>()),
-    );
-    final ok = parse(['--input', 's', '--model', 'gemini', '--voice', 'Callirrhoe']);
-    expect(ok.voice, 'Callirrhoe');
+  test('--model gemini without --voice adopts the configured default', () {
+    final cfg = parse(['--input', 's', '--model', 'gemini']);
+    expect(cfg.voice, 'Charon');
   });
 
-  test('--model kokoro without --voice adopts kokoro default', () {
-    final cfg = parse(['--input', 's', '--model', 'kokoro']);
-    expect(cfg.voice, 'bf_emma');
-  });
-
-  test('--model fish without --voice adopts the fish hex default', () {
+  test('--model fish without --voice adopts the compiled free default', () {
     final cfg = parse(['--input', 's', '--model', 'fish']);
     expect(cfg.voice, '89f41ea230034706881f85a8227d6ab9');
+    expect(cfg.voiceLabel, 'British Female Narrator');
+  });
+
+  test('a model with no configured default requires --voice', () {
+    final noDefaults = '${dir.path}/nodefaults.json';
+    File(noDefaults).writeAsStringSync('''{
+  "models": {"kokoro": {"id": "hexgrad/kokoro-82m", "format": "mp3"}},
+  "voices": {"kokoro": {"Emma": "bf_emma"}}
+}''');
+    expect(
+      () => parseArgs(['--input', 's', '--model', 'kokoro', '--config', noDefaults]),
+      throwsA(isA<CliUsageError>()),
+    );
+    final explicit = parseArgs([
+      '--input', 's', '--model', 'kokoro', '--voice', 'bf_emma',
+      '--config', noDefaults,
+    ]);
+    expect(explicit.voice, 'bf_emma');
+  });
+
+  test('pricing comes from the config, free when unconfigured', () {
+    final kokoro = parse(['--input', 's', '--model', 'kokoro', '--voice', 'Emma']);
+    expect(kokoro.pricing, const AudioPricing(usdPerMChars: 0.62));
+    final fish = parse(['--input', 's']);
+    expect(fish.pricing, freePricing);
   });
 
   test('--sample-len and --min-words parse numerically and reject junk', () {
@@ -151,42 +189,56 @@ void main() {
   });
 
   group('renderVoiceListing', () {
-    test('lists all models when no model is given', () {
+    test('lists all models, but only those configured, when no model is given', () {
       final out = renderVoiceListing(config: const VoiceConfig());
-      expect(out, contains('gemini —'));
-      expect(out, contains('kokoro —'));
+      // Only fish bootstraps when nothing is configured.
       expect(out, contains('fish —'));
-    });
-
-    test('lists a single model containing its known voices', () {
-      final out = renderVoiceListing(
-        model: kGeminiProfile,
-        config: const VoiceConfig(),
-      );
-      expect(out, contains('google/gemini-3.1-flash-tts-preview'));
-      expect(out.toLowerCase(), contains('callirrhoe'));
+      expect(out, isNot(contains('gemini —')));
       expect(out, isNot(contains('kokoro —')));
     });
 
-    test('annotates free-form models and shows friendly aliases', () {
-      final cfg = VoiceConfig(aliases: {
-        'fish': {'British Female Narrator': '89f41ea'},
-      });
-      final out = renderVoiceListing(model: kFishProfile, config: cfg);
-      expect(out, contains('free-form'));
-      expect(out, contains('British Female Narrator → 89f41ea'));
+    test('lists a single model with its configured default', () {
+      final cfg = VoiceConfig(
+        models: const {
+          'gemini': TtsModelProfile(
+            alias: 'gemini',
+            id: 'google/gemini-3.1-flash-tts-preview',
+            format: 'pcm',
+          ),
+        },
+        defaults: const {'gemini': 'Charon'},
+        aliases: const {'gemini': {'Charon': 'Charon'}},
+      );
+      final out = renderVoiceListing(
+        model: cfg.models['gemini'],
+        config: cfg,
+      );
+      expect(out, contains('google/gemini-3.1-flash-tts-preview'));
+      expect(out, contains('default voice:  Charon'));
+      expect(out, contains('Charon → Charon'));
+      expect(out, isNot(contains('kokoro —')));
     });
 
-    test('shows the friendly default voice label', () {
+    test('shows friendly aliases and notes when nothing is configured', () {
       final out = renderVoiceListing(
-        model: kFishProfile,
+        model: kDefaultProfile.profile,
         config: const VoiceConfig(),
       );
-      expect(
-        out,
-        contains('default voice:  British Female Narrator '
-            '(89f41ea230034706881f85a8227d6ab9)'),
+      expect(out, contains('default voice:  British Female Narrator '
+          '(89f41ea230034706881f85a8227d6ab9)'));
+      expect(out, contains('none configured — add "fish" aliases in the voice config'));
+    });
+
+    test('shows a default voice when the config has none', () {
+      final out = renderVoiceListing(
+        model: const TtsModelProfile(
+          alias: 'kokoro',
+          id: 'hexgrad/kokoro-82m',
+          format: 'mp3',
+        ),
+        config: const VoiceConfig(),
       );
+      expect(out, contains('default voice:  none configured'));
     });
   });
 
@@ -200,6 +252,7 @@ void main() {
       expect(copy.outDir, base.outDir);
       expect(copy.resume, base.resume);
       expect(copy.apiKey, base.apiKey);
+      expect(copy.pricing, base.pricing);
     });
   });
 }

@@ -68,7 +68,7 @@ Future<int> main(List<String> args) async {
         final stem = inputStem(file);
         final chunks = planChunks(fileConfig);
         totalMinutes += estimateMinutes(chunks);
-        totalCost += estimateCostUsd(config.profile, chunks);
+        totalCost += estimateCostUsd(config.pricing, chunks);
         final pad = chunks.length.toString().length;
         stdout.writeln('\n== $stem == (${chunks.length} chunk(s))');
         for (var i = 0; i < chunks.length; i++) {
@@ -104,7 +104,7 @@ Future<int> main(List<String> args) async {
       final fileConfig = config.copyWith(inputPath: file);
       final stem = inputStem(file);
       final chunks = planChunks(fileConfig);
-      final estimate = estimateCostUsd(config.profile, chunks);
+      final estimate = estimateCostUsd(config.pricing, chunks);
       final minutes = estimateMinutes(chunks);
       stdout.writeln('\n== $stem ==');
       stdout.writeln(
@@ -158,23 +158,24 @@ int _runListVoices(List<String> args) {
     configPath = args[ci + 1];
   }
 
-  TtsModelProfile? model;
-  if (modelArg != null) {
-    model = profileFor(modelArg);
-    if (model == null) {
-      stderr.writeln(
-        'Unknown model "$modelArg". Available: ${kModelProfiles.keys.join(', ')}.',
-      );
-      return 64;
-    }
-  }
-
   VoiceConfig voiceConfig = const VoiceConfig();
   try {
     voiceConfig = loadVoiceConfig(configPath ?? defaultConfigPath());
   } on VoiceConfigError catch (e) {
     stderr.writeln('Error: $e');
     return 64;
+  }
+
+  TtsModelProfile? model;
+  if (modelArg != null) {
+    model = profileFor(modelArg, voiceConfig);
+    if (model == null) {
+      stderr.writeln(
+        'Unknown model "$modelArg". Available: '
+        '${effectiveModels(voiceConfig).map((p) => p.alias).join(', ')}.',
+      );
+      return 64;
+    }
   }
 
   stdout.writeln('Voices for ${model?.alias ?? 'all models'}:');

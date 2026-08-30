@@ -3,13 +3,21 @@ import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/prompt.dart';
 
+const _gemini = TtsModelProfile(
+  alias: 'gemini',
+  id: 'google/gemini-3.1-flash-tts-preview',
+  format: 'pcm',
+  sampleRate: 24000,
+  promptStyle: true,
+);
+
 void main() {
   const prefix = 'Narrate this passage for an audiobook.';
 
   NarrationConfig cfg({bool tags = false, String accent = 'RP', String style = 'warm', String? customPrefix}) =>
       NarrationConfig(
         inputPath: 'story.txt',
-        profile: kGeminiProfile,
+        profile: _gemini,
         voice: 'Callirrhoe',
         useCalmTag: tags,
         accent: accent,
@@ -41,7 +49,7 @@ void main() {
     final p = buildPrompt(
       NarrationConfig(
         inputPath: 's',
-        profile: kGeminiProfile,
+        profile: _gemini,
         voice: 'v',
         passagePrefix: '  Loop.  ',
         accent: '  RP  ',

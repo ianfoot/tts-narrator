@@ -1,6 +1,5 @@
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/narration/cost.dart';
-import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
 void main() {
   group('estimateMinutes', () {
@@ -18,16 +17,26 @@ void main() {
   });
 
   group('estimateCostUsd', () {
-    test('free model costs zero (fish)', () {
-      expect(estimateCostUsd(kFishProfile, ['A Shorts Story']), 0);
+    test('free pricing costs zero', () {
+      expect(estimateCostUsd(const AudioPricing(), ['A Shorts Story']), 0);
     });
 
     test('kokoro bills by character', () {
-      expect(estimateCostUsd(kKokoroProfile, ['abc']), closeTo(3 / 1e6 * 0.62, 1e-12));
+      expect(
+        estimateCostUsd(
+          const AudioPricing(usdPerMChars: 0.62),
+          ['abc'],
+        ),
+        closeTo(3 / 1e6 * 0.62, 1e-12),
+      );
     });
 
     test('gemini bills input tokens + estimated output audio', () {
-      final cost = estimateCostUsd(kGeminiProfile, ['A Shorts Story']);
+      const pricing = AudioPricing(
+        inputUsdPerMTokens: 1.0,
+        outputUsdPerMTokens: 20.0,
+      );
+      final cost = estimateCostUsd(pricing, ['A Shorts Story']);
       expect(cost, greaterThan(0));
 
       // Hand-check: 14 chars -> ceil(14/4)=4 input tokens; 3 words / 160 wpm = 0.01875 min
@@ -36,9 +45,15 @@ void main() {
     });
 
     test('larger input scales cost', () {
+      const pricing = AudioPricing(
+        inputUsdPerMTokens: 1.0,
+        outputUsdPerMTokens: 20.0,
+      );
       final chunks = List.generate(10, (i) => 'Wordy paragraph number $i here.');
-      expect(estimateCostUsd(kGeminiProfile, chunks),
-          greaterThan(estimateCostUsd(kGeminiProfile, ['A'])));
+      expect(
+        estimateCostUsd(pricing, chunks),
+        greaterThan(estimateCostUsd(pricing, ['A'])),
+      );
     });
   });
 

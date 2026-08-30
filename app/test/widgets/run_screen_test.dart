@@ -29,8 +29,8 @@ void main() {
 
     final config = NarrationConfig(
       inputPath: input.path,
-      profile: kFishProfile,
-      voice: kFishProfile.defaultVoice,
+      profile: kDefaultProfile.profile,
+      voice: kDefaultProfile.voice,
     );
 
     await tester.pumpWidget(MaterialApp(home: RunScreen(config: config)));
@@ -48,8 +48,13 @@ void main() {
   ) async {
     final config = NarrationConfig(
       inputPath: '${dir.path}/missing.txt',
-      profile: kGeminiProfile,
-      voice: kGeminiProfile.defaultVoice,
+      profile: const TtsModelProfile(
+        alias: 'gemini',
+        id: 'google/gemini-3.1-flash-tts-preview',
+        format: 'pcm',
+        sampleRate: 24000,
+      ),
+      voice: 'Charon',
     );
 
     await tester.pumpWidget(MaterialApp(home: RunScreen(config: config)));
