@@ -6,6 +6,9 @@ import 'package:tts_narrator_core/src/cli/voice_config.dart';
 import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/cost.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
+import 'package:tts_narrator_core/src/narration/tts_provider.dart';
+
+import 'support/fake_provider.dart';
 
 void main() {
   late Directory dir;
@@ -14,8 +17,12 @@ void main() {
   setUp(() {
     dir = Directory.systemTemp.createTempSync('tts_args_test_');
     cfgPath = '${dir.path}/voice_config.json';
+    ttsProviderRegistry.register('openrouter', () => FakeTtsProvider());
     File(cfgPath).writeAsStringSync('''{
-  "api_key": "sk-cfg",
+  "default_provider": "openrouter",
+  "providers": {
+    "openrouter": { "api_key": "sk-cfg" }
+  },
   "models": {
     "gemini": {"id": "google/gemini-3.1-flash-tts-preview", "format": "pcm",
                "sample_rate": 24000, "prompt_style": true},
@@ -64,12 +71,38 @@ void main() {
     expect(cfg.dryRun, isFalse);
   });
 
-  test('config api_key is used when no --api-key given', () {
-    expect(parse(['--input', 's']).apiKey, 'sk-cfg');
+  test('providers.<id>.api_key is the effective setting when no --api-key given',
+      () {
+    expect(parse(['--input', 's']).providerSettings['api_key'], 'sk-cfg');
   });
 
-  test('--api-key overrides the config key', () {
-    expect(parse(['--input', 's', '--api-key', 'sk-flag']).apiKey, 'sk-flag');
+  test('--api-key overrides the config provider api_key', () {
+    expect(
+      parse(['--input', 's', '--api-key', 'sk-flag']).providerSettings['api_key'],
+      'sk-flag',
+    );
+  });
+
+  test('provider defaults to the config default_provider', () {
+    expect(parse(['--input', 's']).profile.provider, 'openrouter');
+  });
+
+  test('--provider overrides the model provider', () {
+    final cfg = parse(['--input', 's', '--provider', 'openrouter']);
+    expect(cfg.profile.provider, 'openrouter');
+  });
+
+  test('an unknown --provider errors listing registered ids', () {
+    expect(
+      () => parse(['--input', 's', '--provider', 'bogus']),
+      throwsA(
+        isA<CliUsageError>().having(
+          (e) => e.message,
+          'message',
+          contains('openrouter'),
+        ),
+      ),
+    );
   });
 
   test('resolves a friendly fish voice via config and records the label', () {
@@ -251,7 +284,7 @@ void main() {
       expect(copy.voice, base.voice);
       expect(copy.outDir, base.outDir);
       expect(copy.resume, base.resume);
-      expect(copy.apiKey, base.apiKey);
+      expect(copy.providerSettings, base.providerSettings);
       expect(copy.pricing, base.pricing);
     });
   });

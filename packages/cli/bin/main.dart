@@ -1,8 +1,11 @@
 import 'dart:io';
 
 import 'package:tts_narrator_core/tts_narrator_core.dart';
+import 'package:tts_narrator_openrouter/openrouter_tts_provider.dart';
 
 Future<int> main(List<String> args) async {
+  ttsProviderRegistry.register('openrouter', OpenRouterTtsProvider.new);
+
   // --help / --version / --list-voices handled before strict parsing.
   if (args.contains('--help') || args.contains('-h')) {
     stdout.writeln(usage);
@@ -37,6 +40,7 @@ Future<int> main(List<String> args) async {
       ? '${config.voiceLabel} (${config.voice})'
       : config.voice;
   stdout.writeln('Voice:  $label');
+  stdout.writeln('Provider: ${config.profile.provider}');
   stdout.writeln('Format: ${config.profile.format}');
   stdout.writeln('Input:  ${inputs.length == 1 ? inputs.first : '${inputs.length} files (${config.inputPath})'}');
   stdout.writeln(

@@ -22,14 +22,14 @@ void main() {
     test('missing file yields an empty config', () {
       final cfg = loadVoiceConfig('${dir.path}/nope.json');
       expect(cfg.isEmpty, isTrue);
-      expect(cfg.apiKey, isNull);
+      expect(cfg.defaultProvider, isNull);
+      expect(cfg.providers, isEmpty);
       expect(cfg.aliases, isEmpty);
     });
 
-    test('parses api_key, defaults, pricing and per-model aliases', () {
+    test('parses defaults, pricing and per-model aliases', () {
       final path = write(
         jsonSample(
-          apiKey: 'sk-or-test',
           defaults: {'fish': 'Narrator'},
           pricing: {
             'kokoro': {'usd_per_m_chars': 0.62},
@@ -41,7 +41,6 @@ void main() {
         ),
       );
       final cfg = loadVoiceConfig(path);
-      expect(cfg.apiKey, 'sk-or-test');
       expect(cfg.defaults['fish'], 'Narrator');
       expect(cfg.pricing['kokoro']?.usdPerMChars, 0.62);
       expect(cfg.aliases['fish']?['Narrator'], 'hex1');
@@ -83,7 +82,7 @@ void main() {
       expect(() => loadVoiceConfig(path), throwsA(isA<VoiceConfigError>()));
     });
 
-    test('accepts a file with no api_key, models, or voices', () {
+    test('accepts a file with no models, providers, or voices', () {
       final path = write('{"voices": {}}');
       final cfg = loadVoiceConfig(path);
       expect(cfg.isEmpty, isTrue);
@@ -140,6 +139,20 @@ void main() {
       expect(() => loadVoiceConfig(path), throwsA(isA<VoiceConfigError>()));
     });
 
+    test('default_provider folds into models without an explicit provider', () {
+      final folded = write('''{
+  "default_provider": "google",
+  "models": {
+    "implicit": {"id": "a/b"},
+    "explicit": {"id": "c/d", "provider": "openrouter"}
+  }
+}''');
+      final cfg = loadVoiceConfig(folded);
+      // Implicit inherits the default; explicit wins.
+      expect(cfg.models['implicit']?.provider, 'google');
+      expect(cfg.models['explicit']?.provider, 'openrouter');
+    });
+
     test('throws VoiceConfigError on malformed JSON', () {
       final path = write('{not json');
       expect(() => loadVoiceConfig(path), throwsA(isA<VoiceConfigError>()));
@@ -147,11 +160,6 @@ void main() {
 
     test('throws VoiceConfigError on non-object top level', () {
       final path = write('[1,2,3]');
-      expect(() => loadVoiceConfig(path), throwsA(isA<VoiceConfigError>()));
-    });
-
-    test('throws VoiceConfigError on non-string api_key', () {
-      final path = write('{"api_key": 123}');
       expect(() => loadVoiceConfig(path), throwsA(isA<VoiceConfigError>()));
     });
 
@@ -241,7 +249,6 @@ void main() {
 
   group('resolveVoice', () {
     final cfg = VoiceConfig(
-      apiKey: 'k',
       aliases: {
         'fish': {'British Female Narrator (good)': '89f41ea'},
         'kokoro': {'Emma': 'bf_emma'},
@@ -388,12 +395,15 @@ void main() {
     setUp(() => dir = Directory.systemTemp.createTempSync('tts_config_test_'));
     tearDown(() => dir.deleteSync(recursive: true));
 
-    test('round-trips api_key, models, defaults, pricing and aliases', () {
+    test('round-trips default_provider, providers, models, defaults, pricing and aliases', () {
       final path = '${dir.path}/write_test/voice_config.json';
       writeVoiceConfig(
         path,
         VoiceConfig(
-          apiKey: 'sk-or-test',
+          defaultProvider: 'openrouter',
+          providers: const {
+            'openrouter': {'OPENROUTER_API_KEY': r'${OPENROUTER_API_KEY}'},
+          },
           models: {
             'fish': kDefaultProfile.profile,
             'gemini': const TtsModelProfile(
@@ -413,7 +423,9 @@ void main() {
         ),
       );
       final cfg = loadVoiceConfig(path);
-      expect(cfg.apiKey, 'sk-or-test');
+      expect(cfg.defaultProvider, 'openrouter');
+      expect(cfg.providers['openrouter']?['OPENROUTER_API_KEY'],
+          r'${OPENROUTER_API_KEY}');
       expect(cfg.models['gemini']?.id, 'google/gemini-3.1-flash-tts-preview');
       expect(cfg.models['gemini']?.sampleRate, 24000);
       expect(cfg.models['gemini']?.promptStyle, isTrue);
@@ -431,7 +443,7 @@ void main() {
 
     test('creates missing parent directories', () {
       final path = '${dir.path}/a/b/c/voice_config.json';
-      writeVoiceConfig(path, const VoiceConfig(apiKey: 'k'));
+      writeVoiceConfig(path, const VoiceConfig(defaultProvider: 'openrouter'));
       expect(File(path).existsSync(), isTrue);
     });
 
@@ -487,7 +499,7 @@ void main() {
     test('throws VoiceConfigError when the path cannot be written', () {
       final path = '/dev/null/voice_config.json';
       expect(
-        () => writeVoiceConfig(path, const VoiceConfig(apiKey: 'k')),
+        () => writeVoiceConfig(path, const VoiceConfig(defaultProvider: 'x')),
         throwsA(isA<VoiceConfigError>()),
       );
     });
@@ -507,13 +519,11 @@ void main() {
 }
 
 String jsonSample({
-  String? apiKey,
   Map<String, Map<String, String>> voices = const {},
   Map<String, String> defaults = const {},
   Map<String, Map<String, Object?>> pricing = const {},
 }) {
   final out = <String, Object?>{};
-  if (apiKey != null) out['api_key'] = apiKey;
   if (defaults.isNotEmpty) out['defaults'] = defaults;
   if (pricing.isNotEmpty) out['pricing'] = pricing;
   out['voices'] = voices;

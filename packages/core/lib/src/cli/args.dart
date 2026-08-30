@@ -2,6 +2,7 @@ import 'dart:io';
 
 import '../narration/config.dart';
 import '../narration/model_profiles.dart';
+import '../narration/tts_provider.dart';
 import 'voice_config.dart';
 
 /// Thrown when the user provides invalid CLI arguments.
@@ -34,6 +35,7 @@ NarrationConfig parseArgs(List<String> args) {
   var resume = false;
   String? apiKey;
   String? configPath;
+  String? providerFlag;
 
   var i = 0;
   String take(String flag) {
@@ -66,6 +68,8 @@ NarrationConfig parseArgs(List<String> args) {
         configPath = take(arg);
       case '--api-key':
         apiKey = take(arg);
+      case '--provider':
+        providerFlag = take(arg);
       case '--sample-len':
         final v = take(arg);
         final n = int.tryParse(v);
@@ -108,7 +112,7 @@ NarrationConfig parseArgs(List<String> args) {
     throw CliUsageError('--input <path> is required (no default filename).');
   }
 
-  // Voice config: model wiring, voice aliases, defaults, pricing, api_key.
+  // Voice config: model wiring, voice aliases, defaults, pricing, providers.
   final cfgPath = configPath ?? defaultConfigPath();
   if (configPath != null && !File(cfgPath).existsSync()) {
     throw CliUsageError('Voice config file not found: "$cfgPath".');
@@ -135,10 +139,15 @@ NarrationConfig parseArgs(List<String> args) {
     profile = resolved;
   }
 
-  // api_key precedence: --api-key flag > config file > OPENROUTER_API_KEY env.
-  final configKey = voiceConfig.apiKey;
-  if (apiKey == null && configKey != null && configKey.trim().isNotEmpty) {
-    apiKey = configKey;
+  // --provider overrides the model's/default provider; unknown ids error with
+  // the registered list (via the registry's message).
+  if (providerFlag != null) {
+    try {
+      ttsProviderRegistry.resolve(providerFlag);
+    } on StateError catch (e) {
+      throw CliUsageError(e.message);
+    }
+    profile = profile.copyWith(provider: providerFlag);
   }
 
   // Voice resolution. An explicit --voice passes straight through (no
@@ -157,6 +166,19 @@ NarrationConfig parseArgs(List<String> args) {
     }
   }
 
+  // Provider settings: the selected provider's block from the config, with
+  // --api-key merged in as the generic `api_key` setting (it wins over any
+  // `providers.<id>.api_key`). `${ENV}` refs are resolved once at build time;
+  // no env reads happen per chunk.
+  final rawSettings = <String, String>{
+    ...?voiceConfig.providers[profile.provider],
+  };
+  if (apiKey != null && apiKey.trim().isNotEmpty) {
+    rawSettings['api_key'] = apiKey;
+  }
+  final providerSettings =
+      resolveSettings(rawSettings, env: Platform.environment);
+
   return NarrationConfig(
     inputPath: input,
     profile: profile,
@@ -171,8 +193,8 @@ NarrationConfig parseArgs(List<String> args) {
     outDir: outDir,
     dryRun: dryRun,
     resume: resume,
-    apiKey: apiKey,
     pricing: voiceConfig.pricingFor(profile.alias),
+    providerSettings: providerSettings,
   );
 }
 
@@ -252,6 +274,8 @@ Options:
   --model <alias|id>        TTS model: fish (default, free), gemini, or kokoro,
                             or a full model id. Controls prompt styling and
                             output format.
+  --provider <id>           Override the provider serving the model. Unknown
+                            ids list the registered providers.
   --voice <name>            Voice: a friendly alias or a raw provider id.
                             Accepts any value (no validation) so you can test
                             voices. Defaults to the config "defaults" entry, or
@@ -271,10 +295,10 @@ Options:
                             in the output manifest (re-run safe; no re-billing).
   --out <dir>               Output directory (default: "output/<input>/").
   --config <path>           Voice config JSON (default: ~/.config/tts-narrator/
-                            voice_config.json). Holds voice aliases, per-model
-                            defaults/pricing, and api_key.
-  --api-key <key>           OpenRouter API key (defaults to api_key in config,
-                            then OPENROUTER_API_KEY).
+                            voice_config.json). Holds voice aliases, defaults,
+                            pricing, and the per-provider settings block.
+  --api-key <key>           Opaque "api_key" setting merged into the selected
+                            provider's settings (overrides the config).
 
 Output goes to <out>/<input-stem>_<nn>.<ext> — gemini writes 24 kHz PCM WAVs,
 kokoro and fish write MP3s.
