@@ -273,9 +273,12 @@ fvm flutter build macos --release
   entitlement to reach the OpenRouter API; it's already present in
   `app/macos/Runner/DebugProfile.entitlements` and `Release.entitlements`.
 - Linux/Windows are planned but not yet scaffolded (macOS-only for now).
-- The GUI reads/writes the same `~/.config/tts-narrator/voice_config.json` as
-  the CLI, so voice aliases and the api key you save in one are available in
-  the other.
+- The GUI reads the same `~/.config/tts-narrator/voice_config.json` as the CLI
+  for voice aliases and the optional `api_key`, but never writes it — edit that
+  file directly (or via the CLI). It has no API-key field; authentication uses
+  the config's `api_key`, falling back to the `OPENROUTER_API_KEY` environment
+  variable. Note: a GUI app launched from the Finder doesn't inherit a shell's
+  environment, so for double-click use set `api_key` in the config file.
 
 ## Notes / current behaviour
 

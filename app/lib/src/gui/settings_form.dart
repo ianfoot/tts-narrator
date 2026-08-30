@@ -31,8 +31,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _minWords;
   late final TextEditingController _sampleLen;
   late final TextEditingController _outDir;
-  late final TextEditingController _apiKey;
-  late final TextEditingController _aliasLabel;
 
   // Cold-start default: the free fish model + its friendly voice.
   String _modelAlias = kFreeDefault.profile.alias;
@@ -63,8 +61,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _minWords = TextEditingController(text: defaults.minWords.toString());
     _sampleLen = TextEditingController();
     _outDir = TextEditingController(text: defaults.outDir);
-    _apiKey = TextEditingController(text: _voiceConfig.apiKey ?? '');
-    _aliasLabel = TextEditingController();
   }
 
   @override
@@ -78,8 +74,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _minWords,
       _sampleLen,
       _outDir,
-      _apiKey,
-      _aliasLabel,
     ]) {
       c.dispose();
     }
@@ -121,52 +115,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  /// A draft config read from the form, merging any [extraAliases] into what's
-  /// already on disk. The api-key field is the single source of truth for the
-  /// stored key (blank clears it).
-  VoiceConfig _draftConfig({Map<String, Map<String, String>> extraAliases = const {}}) {
-    final aliases = Map<String, Map<String, String>>.from(_voiceConfig.aliases);
-    extraAliases.forEach((model, map) {
-      final merged = Map<String, String>.from(aliases[model] ?? const {});
-      merged.addAll(map);
-      if (merged.isNotEmpty) aliases[model] = merged;
-    });
-    final key = _apiKey.text.trim();
-    return VoiceConfig(apiKey: key.isEmpty ? null : key, aliases: aliases);
-  }
-
-  void _saveConfig() {
-    try {
-      final saved = _draftConfig();
-      _configService.save(saved);
-      setState(() => _voiceConfig = saved);
-      _snack('Voice config saved to ${_configService.path}');
-    } on VoiceConfigError catch (e) {
-      _snack(e.message);
-    }
-  }
-
-  void _saveAlias() {
-    final label = _aliasLabel.text.trim();
-    final raw = _voiceRaw.text.trim();
-    if (label.isEmpty || raw.isEmpty) {
-      _snack('Enter a friendly name and a raw voice id to save an alias.');
-      return;
-    }
-    try {
-      final saved = _draftConfig(extraAliases: {_modelAlias: {label: raw}});
-      _configService.save(saved);
-      setState(() {
-        _voiceConfig = saved;
-        _aliasLabel.clear();
-        _selectedVoiceLabel = label;
-      });
-      _snack('Alias "$label" saved for ${_profile.alias}.');
-    } on VoiceConfigError catch (e) {
-      _snack(e.message);
-    }
-  }
-
   NarrationConfig _buildConfig() {
     final inputPath = _inputPath.text.trim();
     var voice = _voiceRaw.text.trim();
@@ -180,7 +128,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     final minWords = int.tryParse(_minWords.text.trim()) ?? 30;
     final sampleRaw = _sampleLen.text.trim();
-    final keyRaw = _apiKey.text.trim();
     final effectiveLabel = voiceId == _profile.defaultVoice
         ? (_profile.defaultVoiceLabel ?? (voiceLabel != voiceId ? voiceLabel : null))
         : (voiceLabel != voiceId ? voiceLabel : null);
@@ -197,7 +144,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       sampleLen: sampleRaw.isEmpty ? null : int.tryParse(sampleRaw),
       outDir: _outDir.text.trim().isEmpty ? 'output' : _outDir.text.trim(),
       resume: _resume,
-      apiKey: keyRaw.isEmpty ? null : keyRaw,
+      // Read-only use of the shared config's api_key (the GUI never writes it);
+      // absent there, TtsClient falls back to OPENROUTER_API_KEY.
+      apiKey: _voiceConfig.apiKey,
     );
   }
 
@@ -414,41 +363,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: const Text('Resume (skip chunks in an existing manifest)'),
               value: _resume,
               onChanged: (v) => setState(() => _resume = v),
-            ),
-            const SizedBox(height: 8),
-            Text('Config', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _apiKey,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'OpenRouter API key (blank = env fallback)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _aliasLabel,
-                    decoration: const InputDecoration(
-                      labelText: 'Friendly name for the current voice',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton(
-                  onPressed: _saveAlias,
-                  child: const Text('Save alias'),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton(
-                  onPressed: _saveConfig,
-                  child: const Text('Save config'),
-                ),
-              ],
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
