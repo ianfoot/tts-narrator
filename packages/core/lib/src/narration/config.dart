@@ -22,6 +22,7 @@ class NarrationConfig {
     this.resume = false,
     this.apiKey,
     this.pricing = freePricing,
+    this.providerSettings = const {},
   });
 
   /// Path to the source text to narrate (required, no default).
@@ -72,6 +73,11 @@ class NarrationConfig {
   /// Cost data (from the voice config) used for the dry-run/estimate.
   final AudioPricing pricing;
 
+  /// Resolved provider settings for the run's provider (see `resolveSettings`).
+  /// Built once when the config is assembled; providers read their secrets
+  /// from here, never from the environment per chunk.
+  final Map<String, String> providerSettings;
+
   /// Copy of this config with [inputPath] replaced (used to narrate each file
   /// in a batch directory through the same single-file pipeline).
   NarrationConfig copyWith({required String inputPath}) => NarrationConfig(
@@ -90,6 +96,7 @@ class NarrationConfig {
         resume: resume,
         apiKey: apiKey,
         pricing: pricing,
+        providerSettings: providerSettings,
       );
 
   String get resolvedApiKey {

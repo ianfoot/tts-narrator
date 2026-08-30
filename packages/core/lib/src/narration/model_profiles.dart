@@ -19,6 +19,7 @@ class TtsModelProfile {
     this.promptStyle = false,
     this.sendsVoiceField = true,
     this.sampleRate,
+    this.provider = 'openrouter',
   });
 
   /// Short CLI name used for `--model <alias>`.
@@ -40,6 +41,11 @@ class TtsModelProfile {
   /// PCM sample rate used for the WAV header and duration; null for MP3.
   final int? sampleRate;
 
+  /// Provider id that serves this model. Filled from the config `"models"`
+  /// entry, else `default_provider`, else this compiled fallback so cold start
+  /// works — a default value, not special provider treatment.
+  final String provider;
+
   TtsModelProfile copyWith({String? id}) => TtsModelProfile(
         alias: alias,
         id: id ?? this.id,
@@ -47,6 +53,7 @@ class TtsModelProfile {
         promptStyle: promptStyle,
         sendsVoiceField: sendsVoiceField,
         sampleRate: sampleRate,
+        provider: provider,
       );
 }
 
