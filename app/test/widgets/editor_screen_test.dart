@@ -102,7 +102,7 @@ void main() {
     expect(find.byKey(const Key('narrateGuard')), findsNothing);
   });
 
-  testWidgets('Narrate dispatch is a no-op until the run view lands', (
+  testWidgets('Narrate with text dispatches through the onNarrate slot', (
     tester,
   ) async {
     final controller = await makeController();

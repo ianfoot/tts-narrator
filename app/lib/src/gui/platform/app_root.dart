@@ -7,14 +7,14 @@ import 'package:file_selector/file_selector.dart';
 
 import '../controller/app_controller.dart';
 import '../editor/editor_screen.dart';
+import '../narration/narration_screen.dart';
 
 /// Cross-platform app root: a [CupertinoApp] on macOS, a [MaterialApp]
 /// elsewhere, sharing one [AppController] and navigator key.
 ///
-/// Wires the controller's command slots that are shared across platforms: the
-/// native Open file picker. The Narrate slot gains the narration run view in a
-/// later task; Cancel / Preferences are reserved for the run view and the
-/// native menu bar.
+/// Wires the controller's command slots: the native Open file picker and the
+/// Narrate / Cancel slots (navigate to the run view; Cancel stops the run).
+/// Preferences stays reserved for the native menu bar (Task 5).
 class AppRoot extends StatefulWidget {
   const AppRoot({super.key, required this.controller});
 
@@ -33,11 +33,15 @@ class _AppRootState extends State<AppRoot> {
   void initState() {
     super.initState();
     widget.controller.onOpen = _openDocument;
+    widget.controller.onNarrate = _startNarration;
+    widget.controller.onCancel = () => widget.controller.cancelRun();
   }
 
   @override
   void dispose() {
     widget.controller.onOpen = null;
+    widget.controller.onNarrate = null;
+    widget.controller.onCancel = null;
     super.dispose();
   }
 
@@ -50,6 +54,19 @@ class _AppRootState extends State<AppRoot> {
     } on FileSystemException {
       // The picker only returns existing files; ignore races.
     }
+  }
+
+  void _startNarration() {
+    if (widget.controller.narrateBlockReason() != null) return;
+    // startRun sets _narrating synchronously, so a double-trigger cannot push
+    // the run view twice (the second Narrate hits the re-entrancy guard).
+    widget.controller.startRun();
+    final route = _isMac
+        ? CupertinoPageRoute<void>(
+            builder: (_) => NarrationScreen(controller: widget.controller))
+        : MaterialPageRoute<void>(
+            builder: (_) => NarrationScreen(controller: widget.controller));
+    _navigatorKey.currentState?.push(route);
   }
 
   @override

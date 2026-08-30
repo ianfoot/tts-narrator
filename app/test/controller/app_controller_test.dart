@@ -6,6 +6,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
+import '../support/fake_tts_provider.dart';
 
 void main() {
   late Directory dir;
@@ -210,13 +211,20 @@ void main() {
       expect(c.narrateBlockReason(), isNull);
     });
 
-    test('blocks re-entrancy while a run is in progress', () {
+    test('blocks re-entrancy once a run starts', () async {
       final c = makeController()..setText('Hello world. Enough words.');
-      c.startNarrating();
+      final fake = FakeTtsProvider()..register();
+      c.sampleLen = 1;
+      c.outDir = dir.path;
+      c.startRun();
       expect(c.narrating, isTrue);
       expect(c.narrateBlockReason(), contains('already running'));
-      c.stopNarrating();
+      // Let the single fake chunk land.
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.runFinished, isTrue);
+      expect(c.narrating, isFalse);
       expect(c.narrateBlockReason(), isNull);
+      expect(fake.callCount, 1);
     });
 
     test('command slots start unwired', () {

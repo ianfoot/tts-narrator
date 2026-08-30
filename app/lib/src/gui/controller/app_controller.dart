@@ -212,17 +212,141 @@ class AppController extends ChangeNotifier {
 
   bool get narrating => _narrating;
 
-  /// Marks the start of a narration run (set by the run view).
-  void startNarrating() {
+  /// The config snapshot for the active run (banner reads model/voice/estimate
+  /// from this), or null before a run starts.
+  NarrationConfig? runConfig;
+
+  /// The chunk plan for the active run; empty until [startRun] builds it.
+  List<NarrationRunChunk> runChunks = const [];
+
+  /// Plan failure (missing/empty text) — render this instead of a run.
+  String? runPlanError;
+
+  /// Narration failure mid-run (API/etc).
+  String? runError;
+
+  bool _runFinished = false;
+  bool _runStopped = false;
+
+  bool get runFinished => _runFinished;
+
+  bool get runStopped => _runStopped;
+
+  int _doneCount = 0;
+
+  /// Number of chunks whose audio has landed on disk.
+  int get runDoneCount => _doneCount;
+
+  int get totalChunks => runChunks.length;
+
+  double get runProgress => totalChunks == 0 ? 0 : runDoneCount / totalChunks;
+
+  double get runEstimatedMinutes =>
+      estimateMinutes(runChunks.map((c) => c.paragraph).toList());
+
+  double get runEstimatedCostUsd =>
+      estimateCostUsd(runConfig?.pricing ?? pricing, runChunks.map((c) => c.paragraph).toList());
+
+  AbortToken? _abort;
+
+  /// Launches narration of the current document with the current settings,
+  /// snapshotting the plan + config so the run view is stable even as the
+  /// editor keeps changing behind it.
+  ///
+  /// Synchronously runs the plan (so a missing/empty text surfaces
+  /// [runPlanError] without a half-started run), then narrates in the
+  /// background, publishing per-chunk progress via [notifyListeners]. Cancel
+  /// via [cancelRun] throws [AbortException] (→ [runStopped]); any other
+  /// failure lands in [runError].
+  void startRun() {
+    // Idempotent against callers that dispatch without the guard (menu bar).
     if (_narrating) return;
+    final NarrationConfig config;
+    try {
+      config = buildConfig();
+    } catch (e) {
+      _resetRunState();
+      runPlanError = e.toString();
+      notifyListeners();
+      return;
+    }
+    final List<String> paragraphs;
+    try {
+      paragraphs = planChunks(config);
+    } catch (e) {
+      _resetRunState();
+      runPlanError = e.toString();
+      notifyListeners();
+      return;
+    }
+    _resetRunState();
+    runConfig = config;
+    runChunks = [
+      for (var i = 0; i < paragraphs.length; i++)
+        NarrationRunChunk(index: i, paragraph: paragraphs[i]),
+    ];
     _narrating = true;
+    _abort = AbortToken();
     notifyListeners();
+    _narrate(config, paragraphs);
   }
 
-  /// Clears the in-run flag (set by the run view on completion/abort).
-  void stopNarrating() {
+  void _resetRunState() {
+    runChunks = const [];
+    runConfig = null;
+    runPlanError = null;
+    runError = null;
+    _runFinished = false;
+    _runStopped = false;
+    _doneCount = 0;
+    _abort = null;
+  }
+
+  Future<void> _narrate(NarrationConfig config, List<String> paragraphs) async {
+    final token = _abort!;
+    try {
+      try {
+        await narrate(
+          config,
+          abort: token,
+          onProgress: (i, total, paragraph, {resumed = false}) {
+            runChunks[i].running = true;
+            notifyListeners();
+          },
+          onChunkComplete: (i, filePath, {resumed = false}) {
+            runChunks[i]..running = false..filePath = filePath..resumed = resumed;
+            _doneCount++;
+            notifyListeners();
+          },
+        );
+        if (token.cancelled) {
+          _runStopped = true;
+        } else {
+          _runFinished = true;
+        }
+      } on AbortException {
+        _runStopped = true;
+      } catch (e) {
+        // Includes non-Exception failures (e.g. a StateError from an
+        // unregistered provider) — surface them instead of crashing the view.
+        runError = e.toString();
+      }
+    } finally {
+      // Unwind unconditionally: even a non-Exception failure must not leave
+      // the controller "already running" forever.
+      _narrating = false;
+      _abort = null;
+      notifyListeners();
+    }
+  }
+
+  /// Requests cancellation of the active run (no-op when idle).
+  void cancelRun() {
     if (!_narrating) return;
-    _narrating = false;
+    _abort?.cancel();
+    // Mark the run as stopped immediately so the run view flips UI without
+    // waiting for the abort checkpoint; the narrate tail reconciles it too.
+    _runStopped = true;
     notifyListeners();
   }
 
@@ -246,4 +370,21 @@ class AppController extends ChangeNotifier {
     }
     return null;
   }
+}
+
+/// Per-chunk run state rendered by the narration screen.
+class NarrationRunChunk {
+  NarrationRunChunk({required this.index, required this.paragraph});
+
+  final int index;
+  final String paragraph;
+
+  /// Set while a chunk's audio is being synthesized.
+  bool running = false;
+
+  /// Absolute path once the chunk's audio is on disk (null until done).
+  String? filePath;
+
+  /// Whether this chunk was reused from a prior run's manifest.
+  bool resumed = false;
 }

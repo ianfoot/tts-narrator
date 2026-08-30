@@ -68,8 +68,7 @@ class _EditorScreenState extends State<EditorScreen> {
       _showGuard(reason);
       return;
     }
-    // Valid: dispatch to the Narrate slot (the run view arrives in a later
-    // task; until then this is intentionally a no-op).
+    // Dispatch through the Narrate slot (AppRoot navigates to the run view).
     _controller.onNarrate?.call();
   }
 
