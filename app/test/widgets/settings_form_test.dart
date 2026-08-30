@@ -61,7 +61,8 @@ void main() {
     expect(run.config.inputPath, input);
     expect(run.config.profile.alias, 'fish');
     expect(run.config.voice, kFishProfile.defaultVoice);
-    expect(run.config.apiKey, 'sk-test'); // loaded from config, not env
+    // The GUI uses the shared config's api_key read-only (never writes it).
+    expect(run.config.apiKey, 'sk-test');
   });
 
   testWidgets('selecting a voice alias fills the raw id field', (tester) async {
@@ -142,6 +143,8 @@ void main() {
     expect(run.profile.alias, 'fish');
     expect(run.voice, kFishProfile.defaultVoice);
     expect(run.voiceLabel, 'British Female Narrator');
+    // No config file -> no key from config; TtsClient falls back to env.
+    expect(run.apiKey, isNull);
   });
 }
 
