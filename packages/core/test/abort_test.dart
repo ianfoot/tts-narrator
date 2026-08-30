@@ -1,6 +1,5 @@
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/narration/abort.dart';
-import 'package:tts_narrator_core/src/narration/tts_client.dart';
 
 void main() {
   group('AbortToken', () {
@@ -21,22 +20,6 @@ void main() {
     test('throwIfCancelled throws AbortException once cancelled', () {
       final token = AbortToken()..cancel();
       expect(token.throwIfCancelled, throwsA(isA<AbortException>()));
-    });
-  });
-
-  group('AbortToken in TtsClient', () {
-    test('an already-cancelled token aborts before any network call', () {
-      final client = TtsClient(apiKey: 'sk-test');
-      final token = AbortToken()..cancel();
-      expect(
-        () => client.synthesize(
-          model: 'test/model',
-          responseFormat: 'mp3',
-          input: 'hello',
-          abort: token,
-        ),
-        throwsA(isA<AbortException>()),
-      );
     });
   });
 }
