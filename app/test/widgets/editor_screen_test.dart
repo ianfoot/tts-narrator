@@ -8,6 +8,7 @@ import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_text_field.dart';
+import 'package:tts_narrator/src/gui/settings/inspector_rail.dart';
 
 void main() {
   late Directory dir;
@@ -47,6 +48,33 @@ void main() {
     expect(find.textContaining('0 chunks · 0.0 min · '), findsOneWidget);
     expect(find.byKey(const Key('editorOpenButton')), findsOneWidget);
     expect(find.byKey(const Key('editorNarrateButton')), findsOneWidget);
+    expect(find.byKey(const Key('railToggleButton')), findsOneWidget);
+  });
+
+  testWidgets('the settings rail is visible by default and toggles away', (
+    tester,
+  ) async {
+    final controller = await makeController();
+    await pumpEditor(tester, controller);
+
+    expect(find.byType(InspectorRail), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('railToggleButton')));
+    await tester.pump();
+    expect(find.byType(InspectorRail), findsNothing);
+
+    await tester.tap(find.byKey(const Key('railToggleButton')));
+    await tester.pump();
+    expect(find.byType(InspectorRail), findsOneWidget);
+  });
+
+  testWidgets('the rail close button hides the rail', (tester) async {
+    final controller = await makeController();
+    await pumpEditor(tester, controller);
+
+    await tester.tap(find.byKey(const Key('railCloseButton')));
+    await tester.pump();
+    expect(find.byType(InspectorRail), findsNothing);
   });
 
   testWidgets('typing updates the status bar word/char/estimate', (

@@ -90,15 +90,82 @@ class AppController extends ChangeNotifier {
 
   // --- Narration settings -------------------------------------------
 
-  String accent = 'southern British English, neutral and clear';
-  String style = 'warm, composed, restrained, literary';
-  String passagePrefix =
+  String _accent = 'southern British English, neutral and clear';
+  bool _useCalmTag = false;
+  int _minWords = 30;
+  int? _sampleLen;
+  String _outDir = 'output';
+  bool _resume = false;
+  String _style = 'warm, composed, restrained, literary';
+  String _passagePrefix =
       'Narrate this passage for an audiobook. You are a warm, composed female narrator.';
-  bool useCalmTag = false;
-  int minWords = 30;
-  int? sampleLen;
-  String outDir = 'output';
-  bool resume = false;
+
+  String get accent => _accent;
+
+  set accent(String value) {
+    if (value == _accent) return;
+    _accent = value;
+    notifyListeners();
+  }
+
+  String get style => _style;
+
+  set style(String value) {
+    if (value == _style) return;
+    _style = value;
+    notifyListeners();
+  }
+
+  String get passagePrefix => _passagePrefix;
+
+  set passagePrefix(String value) {
+    if (value == _passagePrefix) return;
+    _passagePrefix = value;
+    notifyListeners();
+  }
+
+  bool get useCalmTag => _useCalmTag;
+
+  set useCalmTag(bool value) {
+    if (value == _useCalmTag) return;
+    _useCalmTag = value;
+    notifyListeners();
+  }
+
+  /// Minimum words per chunk (clamped to >= 1). Changing it revises the live
+  /// chunk plan and estimate the editor shows.
+  int get minWords => _minWords;
+
+  set minWords(int value) {
+    final clamped = value < 1 ? 1 : value;
+    if (clamped == _minWords) return;
+    _minWords = clamped;
+    notifyListeners();
+  }
+
+  int? get sampleLen => _sampleLen;
+
+  set sampleLen(int? value) {
+    if (value == _sampleLen) return;
+    _sampleLen = value;
+    notifyListeners();
+  }
+
+  String get outDir => _outDir;
+
+  set outDir(String value) {
+    if (value == _outDir) return;
+    _outDir = value;
+    notifyListeners();
+  }
+
+  bool get resume => _resume;
+
+  set resume(bool value) {
+    if (value == _resume) return;
+    _resume = value;
+    notifyListeners();
+  }
 
   /// Cost data for the active model (free until the config sets pricing).
   AudioPricing get pricing => _voiceConfig.pricingFor(profile.alias);

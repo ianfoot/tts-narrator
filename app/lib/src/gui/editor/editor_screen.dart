@@ -8,7 +8,9 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import '../controller/app_controller.dart';
 import '../platform/platform_page.dart';
 import '../platform/widgets/platform_button.dart';
+import '../platform/widgets/platform_icon_button.dart';
 import '../platform/widgets/platform_text_field.dart';
+import '../settings/inspector_rail.dart';
 
 /// Editor-first home screen: a large empty multiline text field (the document),
 /// a toolbar (Open / Narrate), and a live status bar
@@ -30,6 +32,7 @@ class _EditorScreenState extends State<EditorScreen> {
   late final TextEditingController _textController;
   String? _guardMessage;
   Timer? _guardTimer;
+  bool _railVisible = true;
 
   AppController get _controller => widget.controller;
 
@@ -72,6 +75,8 @@ class _EditorScreenState extends State<EditorScreen> {
     _controller.onNarrate?.call();
   }
 
+  void _toggleRail() => setState(() => _railVisible = !_railVisible);
+
   void _showGuard(String message) {
     _guardTimer?.cancel();
     setState(() => _guardMessage = message);
@@ -105,8 +110,27 @@ class _EditorScreenState extends State<EditorScreen> {
           _buildHeader(),
           _buildToolbar(),
           if (_guardMessage != null) _buildGuardBanner(_guardMessage!),
-          Expanded(child: _buildEditor()),
-          _buildStatusBar(),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _buildEditor()),
+                      _buildStatusBar(),
+                    ],
+                  ),
+                ),
+                if (_railVisible)
+                  InspectorRail(
+                    controller: _controller,
+                    onClose: () => setState(() => _railVisible = false),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -155,6 +179,19 @@ class _EditorScreenState extends State<EditorScreen> {
             onPressed: _onNarratePressed,
             icon: Icon(_isMac ? CupertinoIcons.mic : Icons.mic),
             child: const Text('Narrate'),
+          ),
+          const Spacer(),
+          PlatformIconButton(
+            key: const Key('railToggleButton'),
+            tooltip: 'Show / hide settings',
+            icon: Icon(
+              _isMac
+                  ? (_railVisible
+                        ? CupertinoIcons.line_horizontal_3_decrease_circle
+                        : CupertinoIcons.line_horizontal_3_decrease_circle_fill)
+                  : (_railVisible ? Icons.settings : Icons.settings_outlined),
+            ),
+            onPressed: _toggleRail,
           ),
         ],
       ),

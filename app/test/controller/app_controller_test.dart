@@ -250,4 +250,58 @@ void main() {
       expect(c.estimatedCostUsd, 0); // fish is free.
     });
   });
+
+  group('settings setters', () {
+    test('every setting write notifies listeners once', () {
+      final c = makeController();
+      var notifications = 0;
+      c.addListener(() => notifications++);
+
+      c.accent = 'x';
+      c.style = 'y';
+      c.passagePrefix = 'z';
+      c.useCalmTag = true;
+      c.minWords = 10;
+      c.sampleLen = 2;
+      c.outDir = 'out';
+      c.resume = true;
+
+      expect(c.accent, 'x');
+      expect(c.style, 'y');
+      expect(c.passagePrefix, 'z');
+      expect(c.useCalmTag, isTrue);
+      expect(c.minWords, 10);
+      expect(c.sampleLen, 2);
+      expect(c.outDir, 'out');
+      expect(c.resume, isTrue);
+      expect(notifications, 8);
+    });
+
+    test('identical setting writes are ignored', () {
+      final c = makeController();
+      var notifications = 0;
+      c.addListener(() => notifications++);
+
+      c.resume = false; // already the default
+      c.accent = c.accent; // already set
+
+      expect(notifications, 0);
+    });
+
+    test('min words clamps to at least one', () {
+      final c = makeController();
+      c.minWords = 0;
+      expect(c.minWords, 1);
+      c.minWords = -5;
+      expect(c.minWords, 1);
+    });
+
+    test('sample length can be cleared back to null', () {
+      final c = makeController();
+      c.sampleLen = 4;
+      expect(c.sampleLen, 4);
+      c.sampleLen = null;
+      expect(c.sampleLen, isNull);
+    });
+  });
 }
