@@ -236,6 +236,26 @@ void main() {
     });
   });
 
+  group('modelUiSpec', () {
+    test('empty when no provider registers a spec for the model', () {
+      final c = makeController();
+      expect(c.modelUiSpec.isEmpty, isTrue);
+    });
+
+    test('resolves the active model spec from the registered provider', () {
+      final fake = FakeTtsProvider()
+        ..specsByAlias['fish'] = const ModelUiSpec([
+          ModelUiOption(key: 'accent', label: 'Accent'),
+          ModelUiOption(key: 'useCalmTag', label: '[calm]', type: ModelUiOptionType.bool),
+        ]);
+      fake.register();
+      final c = makeController();
+      expect(c.modelUiSpec.isEmpty, isFalse);
+      final keys = c.modelUiSpec.options.map((o) => o.key).toList();
+      expect(keys, ['accent', 'useCalmTag']);
+    });
+  });
+
   group('estimate', () {
     test('plans and estimates update with the text', () {
       final c = makeController();

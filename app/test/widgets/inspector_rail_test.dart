@@ -10,6 +10,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/settings/inspector_rail.dart';
+import '../support/fake_tts_provider.dart';
 
 void main() {
   late Directory dir;
@@ -53,16 +54,19 @@ void main() {
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
       expect(find.byKey(const Key('voiceDropdown')), findsOneWidget);
       expect(find.byKey(const Key('voiceRawField')), findsOneWidget);
-      expect(find.byKey(const Key('accentField')), findsOneWidget);
-      expect(find.byKey(const Key('styleField')), findsOneWidget);
-      expect(find.byKey(const Key('prefixField')), findsOneWidget);
       expect(find.byKey(const Key('minWordsField')), findsOneWidget);
       expect(find.byKey(const Key('sampleLenField')), findsOneWidget);
       expect(find.byKey(const Key('outDirField')), findsOneWidget);
-      expect(find.byKey(const Key('calmSwitch')), findsOneWidget);
       expect(find.byKey(const Key('resumeSwitch')), findsOneWidget);
       expect(find.byKey(const Key('railNarrateButton')), findsOneWidget);
       expect(find.byKey(const Key('railCloseButton')), findsOneWidget);
+      // The default fish model's plugin declares no model options, so no
+      // styling-only controls (the gemini-only ones) render for it.
+      expect(find.text('MODEL OPTIONS'), findsNothing);
+      expect(find.byKey(const Key('accentField')), findsNothing);
+      expect(find.byKey(const Key('styleField')), findsNothing);
+      expect(find.byKey(const Key('passagePrefixField')), findsNothing);
+      expect(find.byKey(const Key('useCalmTagSwitch')), findsNothing);
 
       final raw = tester.widget<TextField>(
         find.descendant(
@@ -165,13 +169,37 @@ void main() {
     });
   });
 
-  group('styling & run options', () {
-    testWidgets('formatting fields write through to the controller', (
+  group('model options (from the plugin spec)', () {
+    const geminiSpec = ModelUiSpec([
+      ModelUiOption(key: 'accent', label: 'Accent'),
+      ModelUiOption(key: 'style', label: 'Style / register'),
+      ModelUiOption(
+        key: 'passagePrefix',
+        label: 'Passage prefix',
+        type: ModelUiOptionType.multiline,
+      ),
+      ModelUiOption(
+        key: 'useCalmTag',
+        label: 'Prepend [calm] tag',
+        type: ModelUiOptionType.bool,
+      ),
+    ]);
+
+    testWidgets('declared fields render and write through to the controller', (
       tester,
     ) async {
       writeConfig({});
+      final fake = FakeTtsProvider()..modelUiSpec = geminiSpec;
+      fake.register();
       final c = makeController();
       await pumpRail(tester, c);
+
+      // The plugin declared the section, so the controls exist.
+      expect(find.text('MODEL OPTIONS'), findsOneWidget);
+      expect(find.byKey(const Key('accentField')), findsOneWidget);
+      expect(find.byKey(const Key('styleField')), findsOneWidget);
+      expect(find.byKey(const Key('passagePrefixField')), findsOneWidget);
+      expect(find.byKey(const Key('useCalmTagSwitch')), findsOneWidget);
 
       await tester.enterText(
         find.descendant(
@@ -189,26 +217,80 @@ void main() {
       );
       await tester.enterText(
         find.descendant(
-          of: find.byKey(const Key('prefixField')),
+          of: find.byKey(const Key('passagePrefixField')),
           matching: find.byType(TextField),
         ),
         'Read this passage.',
       );
-      await tester.enterText(
-        find.descendant(
-          of: find.byKey(const Key('outDirField')),
-          matching: find.byType(TextField),
-        ),
-        'audio/output',
-      );
+      await tester.tap(find.byKey(const Key('useCalmTagSwitch')));
       await tester.pump();
 
       expect(c.accent, 'a calm brogue');
       expect(c.style, 'measured, unhurried');
       expect(c.passagePrefix, 'Read this passage.');
-      expect(c.outDir, 'audio/output');
+      expect(c.useCalmTag, isTrue);
     });
 
+    testWidgets('an empty spec renders no model options section', (
+      tester,
+    ) async {
+      writeConfig({});
+      FakeTtsProvider().register();
+      final c = makeController();
+      await pumpRail(tester, c);
+
+      expect(find.text('MODEL OPTIONS'), findsNothing);
+      expect(find.byKey(const Key('accentField')), findsNothing);
+      expect(find.byKey(const Key('useCalmTagSwitch')), findsNothing);
+    });
+
+    testWidgets('unbindable keys are ignored rather than crashing the rail', (
+      tester,
+    ) async {
+      writeConfig({});
+      // A future plugin may declare a key this app version cannot bind; it must
+      // not render and must not throw during build.
+      final fake = FakeTtsProvider()
+        ..modelUiSpec = const ModelUiSpec([
+          ModelUiOption(key: 'speed', label: 'Speaking rate'),
+          ModelUiOption(key: 'accent', label: 'Accent'),
+        ]);
+      fake.register();
+      final c = makeController();
+      await pumpRail(tester, c);
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('speedField')), findsNothing);
+      expect(find.byKey(const Key('accentField')), findsOneWidget);
+    });
+
+    testWidgets('a declared hint shows as the field placeholder', (
+      tester,
+    ) async {
+      writeConfig({});
+      final fake = FakeTtsProvider()
+        ..modelUiSpec = const ModelUiSpec([
+          ModelUiOption(
+            key: 'style',
+            label: 'Style / register',
+            hint: 'e.g. warm, restrained',
+          ),
+        ]);
+      fake.register();
+      final c = makeController();
+      await pumpRail(tester, c);
+
+      final field = tester.widget<TextField>(
+        find.descendant(
+          of: find.byKey(const Key('styleField')),
+          matching: find.byType(TextField),
+        ),
+      );
+      expect(field.decoration?.hintText, 'e.g. warm, restrained');
+    });
+  });
+
+  group('run options', () {
     testWidgets('number fields set min words and sample length', (
       tester,
     ) async {
@@ -264,16 +346,24 @@ void main() {
       expect(c.minWords, 1);
     });
 
-    testWidgets('calm and resume switches toggle their flags', (tester) async {
+    testWidgets('the output directory and resume switch write through', (
+      tester,
+    ) async {
       writeConfig({});
       final c = makeController();
       await pumpRail(tester, c);
 
-      await tester.tap(find.byKey(const Key('calmSwitch')));
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(const Key('outDirField')),
+          matching: find.byType(TextField),
+        ),
+        'audio/output',
+      );
       await tester.tap(find.byKey(const Key('resumeSwitch')));
       await tester.pump();
 
-      expect(c.useCalmTag, isTrue);
+      expect(c.outDir, 'audio/output');
       expect(c.resume, isTrue);
     });
   });
@@ -333,6 +423,24 @@ void main() {
         'defaults': {'gemini': 'Charon'},
         'voices': {'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'}},
       });
+      // The fake stands in for the openrouter plugin: gemini declares its
+      // styling options; the default fish model declares none.
+      final fake = FakeTtsProvider()
+        ..specsByAlias['gemini'] = const ModelUiSpec([
+          ModelUiOption(key: 'accent', label: 'Accent'),
+          ModelUiOption(key: 'style', label: 'Style / register'),
+          ModelUiOption(
+            key: 'passagePrefix',
+            label: 'Passage prefix',
+            type: ModelUiOptionType.multiline,
+          ),
+          ModelUiOption(
+            key: 'useCalmTag',
+            label: 'Prepend [calm] tag',
+            type: ModelUiOptionType.bool,
+          ),
+        ]);
+      fake.register();
       final c = makeController();
       await tester.binding.setSurfaceSize(const Size(1200, 1800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -342,7 +450,8 @@ void main() {
 
       expect(find.byKey(const Key('inspectorRail')), findsOneWidget);
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
-      expect(find.byKey(const Key('calmSwitch')), findsOneWidget);
+      // The default fish model declares no options -> no styling-only controls.
+      expect(find.byKey(const Key('useCalmTagSwitch')), findsNothing);
       expect(tester.takeException(), isNull);
 
       // Open the native pop-up menu and pick gemini.
@@ -353,6 +462,9 @@ void main() {
 
       expect(c.modelAlias, 'gemini');
       expect(c.voice, 'CN2pVME9cDEeMRXJzcMPYj0p');
+      // Switching to gemini brings its plugin-declared options.
+      expect(find.byKey(const Key('accentField')), findsOneWidget);
+      expect(find.byKey(const Key('useCalmTagSwitch')), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       debugDefaultTargetPlatformOverride = null;

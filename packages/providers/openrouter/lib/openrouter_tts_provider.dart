@@ -21,6 +21,30 @@ class OpenRouterTtsProvider implements TtsProvider {
   @override
   String get name => 'OpenRouter';
 
+  /// Model plugin UI: models with the config's `prompt_style` flag understand
+  /// accent/style/prefix/[calm] directives woven into the text, so declare
+  /// those styling options for them and nothing otherwise. Keyed off the model
+  /// request shape (`TtsModelProfile.promptStyle`) so it survives any alias or
+  /// model-id change; interface docs re `TtsProvider.modelUiSpecFor`.
+  @override
+  ModelUiSpec modelUiSpecFor(TtsModelProfile model) {
+    if (!model.promptStyle) return const ModelUiSpec.empty();
+    return const ModelUiSpec([
+      ModelUiOption(key: 'accent', label: 'Accent'),
+      ModelUiOption(key: 'style', label: 'Style / register'),
+      ModelUiOption(
+        key: 'passagePrefix',
+        label: 'Passage prefix',
+        type: ModelUiOptionType.multiline,
+      ),
+      ModelUiOption(
+        key: 'useCalmTag',
+        label: 'Prepend [calm] tag',
+        type: ModelUiOptionType.bool,
+      ),
+    ]);
+  }
+
   /// Resolves the API key from the run's resolved [settings] (generic rule
   /// applied in core), falling back to the OPENROUTER_API_KEY env var.
   ///

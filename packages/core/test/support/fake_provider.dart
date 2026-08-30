@@ -27,6 +27,12 @@ class FakeTtsProvider implements TtsProvider {
   @override
   String get name => 'Fake TTS';
 
+  /// Model UI spec surfaced for every model (empty by default).
+  ModelUiSpec modelUiSpec = const ModelUiSpec.empty();
+
+  @override
+  ModelUiSpec modelUiSpecFor(TtsModelProfile model) => modelUiSpec;
+
   @override
   Future<ProviderAudio> synthesize({
     required String model,

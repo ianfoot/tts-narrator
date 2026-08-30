@@ -236,7 +236,10 @@ class _InspectorRailState extends State<InspectorRail> {
               padding: const EdgeInsets.only(bottom: 16),
               children: [
                 _buildModelVoiceSection(),
-                _buildStylingSection(),
+                // Model options are declared by the active model's plugin (the
+                // provider package); the app has no per-model UI knowledge.
+                if (!_controller.modelUiSpec.isEmpty)
+                  _buildModelOptionsSection(_controller.modelUiSpec),
                 _buildRunSection(),
                 _buildNarrateButton(),
               ],
@@ -347,47 +350,106 @@ class _InspectorRailState extends State<InspectorRail> {
     return null;
   }
 
-  Widget _buildStylingSection() {
+  /// Renders the active model's plugin-declared options one per row. Built-in
+  /// keys (`accent`, `style`, `passagePrefix`, `useCalmTag`) bind to the
+  /// narration settings the controller owns; any other key is ignored — the
+  /// app interprets the shared convention, never model-specific knowledge.
+  Widget _buildModelOptionsSection(ModelUiSpec spec) {
+    final options = spec.options
+        .where((o) => _bindableModelOptionKeys.contains(o.key))
+        .toList();
+    if (options.isEmpty) return const SizedBox.shrink();
     return PlatformSection(
-      title: 'Styling',
+      title: 'Model options',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _label('Accent'),
-          PlatformTextField(
-            key: const Key('accentField'),
-            controller: _accent,
-            onChanged: _onAccentChanged,
-          ),
-          _label('Style / register'),
-          PlatformTextField(
-            key: const Key('styleField'),
-            controller: _style,
-            onChanged: _onStyleChanged,
-          ),
-          _label('Passage prefix'),
-          PlatformTextField(
-            key: const Key('prefixField'),
-            controller: _prefix,
-            onChanged: _onPrefixChanged,
-            maxLines: 2,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Row(
-              children: [
-                const Expanded(child: Text('Prepend [calm] tag')),
-                PlatformSwitch(
-                  key: const Key('calmSwitch'),
-                  value: _controller.useCalmTag,
-                  onChanged: (v) => _controller.useCalmTag = v,
-                ),
-              ],
-            ),
-          ),
+          for (final option in options) _buildModelOption(option),
         ],
       ),
     );
+  }
+
+  /// The model-option keys this app version binds to narration settings.
+  static const _bindableModelOptionKeys = {
+    'accent',
+    'style',
+    'passagePrefix',
+    'useCalmTag',
+  };
+
+  Widget _buildModelOption(ModelUiOption option) {
+    switch (option.type) {
+      case ModelUiOptionType.bool:
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Row(
+            children: [
+              Expanded(child: Text(option.label)),
+              PlatformSwitch(
+                key: Key('${option.key}Switch'),
+                value: _modelOptionBool(option.key),
+                onChanged: (v) => _setModelOptionBool(option.key, v),
+              ),
+            ],
+          ),
+        );
+      case ModelUiOptionType.text:
+      case ModelUiOptionType.multiline:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _label(option.label),
+            PlatformTextField(
+              key: Key('${option.key}Field'),
+              controller: _modelOptionController(option.key),
+              onChanged: (v) => _setModelOptionText(option.key, v),
+              maxLines: option.type == ModelUiOptionType.multiline ? 3 : 1,
+              hintText: option.hint,
+            ),
+          ],
+        );
+    }
+  }
+
+  TextEditingController _modelOptionController(String key) {
+    switch (key) {
+      case 'accent':
+        return _accent;
+      case 'style':
+        return _style;
+      case 'passagePrefix':
+        return _prefix;
+    }
+    // Unknown text keys are declared by a plugin this app version does not
+    // know how to bind; skip them rather than crash the rail.
+    throw ArgumentError('No binding for text model option "$key"');
+  }
+
+  void _setModelOptionText(String key, String value) {
+    switch (key) {
+      case 'accent':
+        _onAccentChanged(value);
+        break;
+      case 'style':
+        _onStyleChanged(value);
+        break;
+      case 'passagePrefix':
+        _onPrefixChanged(value);
+        break;
+    }
+  }
+
+  bool _modelOptionBool(String key) {
+    switch (key) {
+      case 'useCalmTag':
+        return _controller.useCalmTag;
+    }
+    throw ArgumentError('No binding for bool model option "$key"');
+  }
+
+  void _setModelOptionBool(String key, bool value) {
+    if (key == 'useCalmTag') _controller.useCalmTag = value;
   }
 
   Widget _buildRunSection() {

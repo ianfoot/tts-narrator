@@ -170,6 +170,15 @@ class AppController extends ChangeNotifier {
   /// Cost data for the active model (free until the config sets pricing).
   AudioPricing get pricing => _voiceConfig.pricingFor(profile.alias);
 
+  /// The editable GUI options for the active model, declared by its model's
+  /// plugin (the provider package). Empty when no plugin declares a spec — the
+  /// app has no per-model UI knowledge.
+  ModelUiSpec get modelUiSpec =>
+      ttsProviderRegistry.resolveOrNull(profile.provider)?.modelUiSpecFor(
+            profile,
+          ) ??
+      const ModelUiSpec.empty();
+
   /// Assembles the run config for the current document + settings, narrating
   /// from the in-memory [text] (`sourceText`) so typed/pasted content needs no
   /// backing file. [inputPath] drives only output naming.

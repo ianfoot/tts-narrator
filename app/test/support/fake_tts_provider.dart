@@ -22,6 +22,16 @@ class FakeTtsProvider implements TtsProvider {
   @override
   String get name => 'Fake TTS';
 
+  /// Model UI spec to surface for the given model (declarable per test).
+  ModelUiSpec modelUiSpec = const ModelUiSpec.empty();
+
+  /// Optional per-alias specs overriding [modelUiSpec]; keyed by model alias.
+  final Map<String, ModelUiSpec> specsByAlias = {};
+
+  @override
+  ModelUiSpec modelUiSpecFor(TtsModelProfile model) =>
+      specsByAlias[model.alias] ?? modelUiSpec;
+
   @override
   Future<ProviderAudio> synthesize({
     required String model,
