@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/cli/voice_config.dart';
+import 'package:tts_narrator_core/src/narration/cost.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
 void main() {
@@ -24,9 +25,11 @@ void main() {
       expect(cfg.aliases, isEmpty);
     });
 
-    test('parses api_key and per-model aliases', () {
+    test('parses api_key, defaults, pricing and per-model aliases', () {
       final path = write(jsonSample(
         apiKey: 'sk-or-test',
+        defaults: {'fish': 'Narrator'},
+        pricing: {'kokoro': {'usd_per_m_chars': 0.62}},
         voices: {
           'fish': {'Narrator': 'hex1'},
           'kokoro': {'Emma': 'bf_emma'},
@@ -34,11 +37,48 @@ void main() {
       ));
       final cfg = loadVoiceConfig(path);
       expect(cfg.apiKey, 'sk-or-test');
+      expect(cfg.defaults['fish'], 'Narrator');
+      expect(cfg.pricing['kokoro']?.usdPerMChars, 0.62);
       expect(cfg.aliases['fish']?['Narrator'], 'hex1');
       expect(cfg.aliases['kokoro']?['Emma'], 'bf_emma');
     });
 
-    test('accepts a file with no api_key and no voices', () {
+    test('parses the models block into request profiles', () {
+      final path = write('''{
+  "models": {
+    "fish": {"id": "fish-audio/s2.1-pro-free", "format": "mp3"},
+    "gemini": {"id": "google/gemini-3.1-flash-tts-preview",
+               "format": "pcm", "sample_rate": 24000, "prompt_style": true},
+    "kokoro": {"id": "hexgrad/kokoro-82m", "format": "mp3"}
+  }
+}''');
+      final cfg = loadVoiceConfig(path);
+      expect(cfg.models, hasLength(3));
+      expect(cfg.models['gemini']?.id, 'google/gemini-3.1-flash-tts-preview');
+      expect(cfg.models['gemini']?.format, 'pcm');
+      expect(cfg.models['gemini']?.sampleRate, 24000);
+      expect(cfg.models['gemini']?.promptStyle, isTrue);
+      expect(cfg.models['gemini']?.sendsVoiceField, isTrue);
+      expect(cfg.models['kokoro']?.format, 'mp3');
+      expect(cfg.models['fish']?.id, 'fish-audio/s2.1-pro-free');
+    });
+
+    test('defaults model fields apply when omitted', () {
+      final path = write('''{"models": {"x": {"id": "a/b"}}}''');
+      final cfg = loadVoiceConfig(path);
+      final m = cfg.models['x']!;
+      expect(m.format, 'mp3');
+      expect(m.promptStyle, isFalse);
+      expect(m.sendsVoiceField, isTrue);
+      expect(m.sampleRate, isNull);
+    });
+
+    test('rejects a model entry with no id', () {
+      final path = write('{"models": {"x": {"format": "mp3"}}}');
+      expect(() => loadVoiceConfig(path), throwsA(isA<VoiceConfigError>()));
+    });
+
+    test('accepts a file with no api_key, models, or voices', () {
       final path = write('{"voices": {}}');
       final cfg = loadVoiceConfig(path);
       expect(cfg.isEmpty, isTrue);
@@ -65,6 +105,70 @@ void main() {
       expect(cfg.aliases['fish']?['A'], 'id1');
       expect(cfg.aliases['fish']?.containsKey('B'), isFalse);
       expect(cfg.aliases['fish']?.containsKey('C'), isFalse);
+    });
+  });
+
+  group('effectiveModels', () {
+    test('with an empty config, only the fish bootstrap exists', () {
+      final models = effectiveModels(const VoiceConfig());
+      expect(models, hasLength(1));
+      expect(models.single.alias, kDefaultProfile.profile.alias);
+      expect(models.single.id, kDefaultProfile.profile.id);
+    });
+
+    test('config models extend the set with new providers', () {
+      final cfg = VoiceConfig(models: {
+        'gemini': const TtsModelProfile(
+          alias: 'gemini',
+          id: 'google/gemini-3.1-flash-tts-preview',
+          format: 'pcm',
+        ),
+        'kokoro': const TtsModelProfile(
+          alias: 'kokoro',
+          id: 'hexgrad/kokoro-82m',
+          format: 'mp3',
+        ),
+      });
+      final models = effectiveModels(cfg);
+      expect(models.map((m) => m.alias).toList(), ['fish', 'gemini', 'kokoro']);
+    });
+
+    test('a config model overrides the fish bootstrap by alias', () {
+      final cfg = VoiceConfig(models: {
+        'fish': const TtsModelProfile(
+          alias: 'fish',
+          id: 'fish-audio/other-free',
+          format: 'mp3',
+        ),
+      });
+      final models = effectiveModels(cfg);
+      expect(models, hasLength(1));
+      expect(models.single.id, 'fish-audio/other-free');
+    });
+  });
+
+  group('profileFor', () {
+    test('resolves a config alias or full id', () {
+      final cfg = VoiceConfig(models: {
+        'gemini': const TtsModelProfile(
+          alias: 'gemini',
+          id: 'google/gemini-3.1-flash-tts-preview',
+          format: 'pcm',
+        ),
+      });
+      expect(profileFor('gemini', cfg)?.id, 'google/gemini-3.1-flash-tts-preview');
+      expect(
+        profileFor('google/gemini-3.1-flash-tts-preview', cfg)?.alias,
+        'gemini',
+      );
+    });
+
+    test('fish bootstraps in with an empty config', () {
+      expect(profileFor('fish', const VoiceConfig()), isNotNull);
+    });
+
+    test('returns null for unknown names', () {
+      expect(profileFor('bogus', const VoiceConfig()), isNull);
     });
   });
 
@@ -100,64 +204,94 @@ void main() {
     });
   });
 
+  group('defaultVoiceFor', () {
+    test('uses the configured default label', () {
+      final cfg = VoiceConfig(
+        defaults: const {'kokoro': 'Emma'},
+        aliases: const {'kokoro': {'Emma': 'bf_emma'}},
+      );
+      final (id, label) = defaultVoiceFor(
+        const TtsModelProfile(alias: 'kokoro', id: 'hexgrad/kokoro-82m'),
+        cfg,
+      );
+      expect(id, 'bf_emma');
+      expect(label, 'Emma');
+    });
+
+    test('fish falls back to the compiled bootstrap voice', () {
+      final (id, label) =
+          defaultVoiceFor(kDefaultProfile.profile, const VoiceConfig());
+      expect(id, kDefaultProfile.voice);
+      expect(label, kDefaultProfile.voiceLabel);
+    });
+
+    test('throws when a model has no default configured', () {
+      expect(
+        () => defaultVoiceFor(
+          const TtsModelProfile(alias: 'gemini', id: 'google/gemini-3.1-flash-tts-preview'),
+          const VoiceConfig(),
+        ),
+        throwsA(isA<VoiceConfigError>()),
+      );
+    });
+  });
+
   group('voiceEntries', () {
-    test('gemini yields its known voices, sorted, no aliases', () {
-      final entries =
-          voiceEntries(model: kGeminiProfile, config: const VoiceConfig());
-      expect(entries, hasLength(kGeminiProfile.voices.length));
-      expect(entries.every((e) => e.model == 'gemini'), isTrue);
-      expect(entries.firstWhere((e) => e.id == 'Charon').isAlias, isFalse);
-      final labels = entries.map((e) => e.label.toLowerCase()).toList();
-      expect(labels, orderedEquals([...labels]..sort()));
-    });
-
-    test('kokoro (free-form) still lists its known voices + default', () {
-      final entries =
-          voiceEntries(model: kKokoroProfile, config: const VoiceConfig());
-      expect(entries.any((e) => e.id == 'bf_emma'), isTrue);
-      expect(entries.any((e) => e.id == 'bm_lewis'), isTrue);
-    });
-
-    test('fish (free-form) includes aliases and its default voice', () {
-      final cfg = VoiceConfig(aliases: {
-        'fish': {'Narrator': 'hex1'},
-      });
-      final entries = voiceEntries(model: kFishProfile, config: cfg);
-      expect(
-        entries.any(
-          (e) => e.id == 'hex1' && e.label == 'Narrator' && e.isAlias,
-        ),
-        isTrue,
+    test('fish includes its compiled default voice, no aliases', () {
+      final entries = voiceEntries(
+        model: kDefaultProfile.profile,
+        config: const VoiceConfig(),
       );
-      expect(entries.any((e) => e.id == kFishProfile.defaultVoice), isTrue);
+      expect(entries, hasLength(1));
+      expect(entries.single.id, kDefaultProfile.voice);
+      expect(entries.single.label, 'British Female Narrator');
+      expect(entries.single.isAlias, isFalse);
     });
 
-    test('labels the default voice with its friendly name', () {
-      final entries =
-          voiceEntries(model: kFishProfile, config: const VoiceConfig());
-      expect(
-        entries.any(
-          (e) => e.id == kFishProfile.defaultVoice &&
-              e.label == 'British Female Narrator',
+    test('a model without aliases or a config default yields no entries', () {
+      final entries = voiceEntries(
+        model: const TtsModelProfile(
+          alias: 'gemini',
+          id: 'google/gemini-3.1-flash-tts-preview',
         ),
-        isTrue,
+        config: const VoiceConfig(),
       );
+      expect(entries, isEmpty);
     });
 
-    test('dedupes the default voice when it doubles as an alias', () {
-      final cfg = VoiceConfig(aliases: {
-        'fish': {'Big Fish': kFishProfile.defaultVoice},
-      });
-      final entries = voiceEntries(model: kFishProfile, config: cfg);
+    test('includes aliases plus the default voice, deduped', () {
+      final cfg = VoiceConfig(
+        defaults: const {'fish': 'Narrator'},
+        aliases: const {'fish': {'Narrator': 'hex1'}},
+      );
+      final entries = voiceEntries(model: kDefaultProfile.profile, config: cfg);
       expect(
-        entries.where((e) => e.id == kFishProfile.defaultVoice),
+        entries.where((e) => e.id == 'hex1'),
         hasLength(1),
       );
+      final alias = entries.firstWhere(
+        (e) => e.id == 'hex1' && e.label == 'Narrator',
+        orElse: () => throw 'missing',
+      );
+      expect(alias.isAlias, isTrue);
     });
 
-    test('covers all models when none is given', () {
-      final entries = voiceEntries(config: const VoiceConfig());
-      expect(entries.map((e) => e.model).toSet(), {'gemini', 'kokoro', 'fish'});
+    test('covers all effective models when none is given', () {
+      final cfg = VoiceConfig(
+        models: {
+          'gemini': const TtsModelProfile(
+            alias: 'gemini',
+            id: 'google/gemini-3.1-flash-tts-preview',
+            format: 'pcm',
+          ),
+        },
+        aliases: const {'gemini': {'Charon': 'Charon'}},
+      );
+      final entries = voiceEntries(config: cfg);
+      expect(
+        entries.map((e) => e.model).toSet(),
+        containsAll(['fish', 'gemini']),
+      );
     });
   });
 
@@ -167,12 +301,26 @@ void main() {
     setUp(() => dir = Directory.systemTemp.createTempSync('tts_config_test_'));
     tearDown(() => dir.deleteSync(recursive: true));
 
-    test('round-trips api_key and aliases', () {
+    test('round-trips api_key, models, defaults, pricing and aliases', () {
       final path = '${dir.path}/write_test/voice_config.json';
       writeVoiceConfig(
         path,
         VoiceConfig(
           apiKey: 'sk-or-test',
+          models: {
+            'fish': kDefaultProfile.profile,
+            'gemini': const TtsModelProfile(
+              alias: 'gemini',
+              id: 'google/gemini-3.1-flash-tts-preview',
+              format: 'pcm',
+              sampleRate: 24000,
+              promptStyle: true,
+            ),
+          },
+          defaults: const {'fish': 'Narrator'},
+          pricing: {
+            'kokoro': const AudioPricing(usdPerMChars: 0.62),
+          },
           aliases: {
             'fish': {'Narrator': 'hex1'},
             'kokoro': {'Emma': 'bf_emma'},
@@ -181,6 +329,11 @@ void main() {
       );
       final cfg = loadVoiceConfig(path);
       expect(cfg.apiKey, 'sk-or-test');
+      expect(cfg.models['gemini']?.id, 'google/gemini-3.1-flash-tts-preview');
+      expect(cfg.models['gemini']?.sampleRate, 24000);
+      expect(cfg.models['gemini']?.promptStyle, isTrue);
+      expect(cfg.defaults['fish'], 'Narrator');
+      expect(cfg.pricing['kokoro']?.usdPerMChars, 0.62);
       expect(cfg.aliases['fish']?['Narrator'], 'hex1');
       expect(cfg.aliases['kokoro']?['Emma'], 'bf_emma');
     });
@@ -192,8 +345,7 @@ void main() {
     });
 
     test('creates missing parent directories', () {
-      final path =
-          '${dir.path}/a/b/c/voice_config.json';
+      final path = '${dir.path}/a/b/c/voice_config.json';
       writeVoiceConfig(path, const VoiceConfig(apiKey: 'k'));
       expect(File(path).existsSync(), isTrue);
     });
@@ -220,9 +372,16 @@ void main() {
   });
 }
 
-String jsonSample({String? apiKey, Map<String, Map<String, String>> voices = const {}}) {
+String jsonSample({
+  String? apiKey,
+  Map<String, Map<String, String>> voices = const {},
+  Map<String, String> defaults = const {},
+  Map<String, Map<String, Object?>> pricing = const {},
+}) {
   final out = <String, Object?>{};
   if (apiKey != null) out['api_key'] = apiKey;
+  if (defaults.isNotEmpty) out['defaults'] = defaults;
+  if (pricing.isNotEmpty) out['pricing'] = pricing;
   out['voices'] = voices;
   return const JsonEncoder().convert(out);
 }

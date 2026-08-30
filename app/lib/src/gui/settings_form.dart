@@ -32,29 +32,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _sampleLen;
   late final TextEditingController _outDir;
 
-  // Cold-start default: the free fish model + its friendly voice.
-  String _modelAlias = kFreeDefault.profile.alias;
-  String? _selectedVoiceLabel = kFreeDefault.voiceLabel;
+// Cold-start default: the fish bootstrap + its friendly voice, replaced by
+  // the config's "defaults" when one is configured.
+  String _modelAlias = kDefaultProfile.profile.alias;
+  String? _selectedVoiceLabel = kDefaultProfile.voiceLabel;
   bool _useCalmTag = false;
   bool _resume = false;
 
-  TtsModelProfile get _profile => profileFor(_modelAlias)!;
+  TtsModelProfile get _profile => profileFor(_modelAlias, _voiceConfig)!;
 
   List<VoiceEntry> get _voiceEntries =>
       voiceEntries(model: _profile, config: _voiceConfig);
 
+  /// The configured/compiled default voice for [model], or null when none.
+  (String, String)? _defaultFor(TtsModelProfile model) {
+    try {
+      return defaultVoiceFor(model, _voiceConfig);
+    } on VoiceConfigError {
+      return null;
+    }
+  }
+
   @override
-  void initState() {
+void initState() {
     super.initState();
     final defaults = NarrationConfig(
       inputPath: '',
-      profile: kFreeDefault.profile,
-      voice: kFreeDefault.voice,
+      profile: kDefaultProfile.profile,
+      voice: kDefaultProfile.voice,
     );
     _configService = ConfigService(path: widget.configPath);
     _voiceConfig = _configService.load();
+    final bootstrap = _defaultFor(kDefaultProfile.profile) ??
+        (kDefaultProfile.voice, kDefaultProfile.voiceLabel);
     _inputPath = TextEditingController();
-    _voiceRaw = TextEditingController(text: defaults.voice);
+    _voiceRaw = TextEditingController(text: bootstrap.$1);
+    _selectedVoiceLabel = bootstrap.$2;
     _accent = TextEditingController(text: defaults.accent);
     _style = TextEditingController(text: defaults.style);
     _prefix = TextEditingController(text: defaults.passagePrefix);
@@ -96,12 +109,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _changeModel(String alias) {
     final previous = _profile;
-    final next = profileFor(alias)!;
+    final next = profileFor(alias, _voiceConfig)!;
     setState(() {
       final raw = _voiceRaw.text.trim();
-      if (raw.isEmpty || raw == previous.defaultVoice) {
-        _voiceRaw.text = next.defaultVoice;
-        _selectedVoiceLabel = next.defaultVoice;
+      final previousDefault = _defaultFor(previous)?.$1;
+      if (raw.isEmpty || raw == previousDefault) {
+        final def = _defaultFor(next);
+        if (def != null) {
+          _voiceRaw.text = def.$1;
+          _selectedVoiceLabel = def.$2;
+        } else {
+          _voiceRaw.text = '';
+          _selectedVoiceLabel = null;
+        }
       }
       _modelAlias = alias;
     });
@@ -117,25 +137,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   NarrationConfig _buildConfig() {
     final inputPath = _inputPath.text.trim();
-    var voice = _voiceRaw.text.trim();
-    if (voice.isEmpty) voice = _profile.defaultVoice;
-    final (voiceId, voiceLabel) = _voiceConfig.resolveVoice(_profile.alias, voice);
-    if (!_profile.voiceFreeForm && !_profile.voices.contains(voiceId)) {
-      throw FormatException(
-        'Unknown voice "$voiceId" for ${_profile.alias}. '
-        'Available: ${_profile.voices.join(', ')}',
+    final raw = _voiceRaw.text.trim();
+    String voice;
+    String? label;
+    if (raw.isEmpty) {
+      final def = _defaultFor(_profile);
+      if (def == null) {
+        throw FormatException(
+          'No voice selected for "${_profile.alias}" — pick an alias or set a '
+          'default in the voice config.',
+        );
+      }
+      voice = def.$1;
+      label = def.$2 == def.$1 ? null : def.$2;
+    } else {
+      // Voices pass through unvalidated (providers add/remove voices; testing
+      // arbitrary ids is a feature).
+      final (voiceId, voiceLabel) = _voiceConfig.resolveVoice(
+        _profile.alias,
+        raw,
       );
+      voice = voiceId;
+      label = (_selectedVoiceLabel != null && voiceId == raw)
+          ? _selectedVoiceLabel
+          : (voiceLabel != voiceId ? voiceLabel : null);
     }
     final minWords = int.tryParse(_minWords.text.trim()) ?? 30;
     final sampleRaw = _sampleLen.text.trim();
-    final effectiveLabel = voiceId == _profile.defaultVoice
-        ? (_profile.defaultVoiceLabel ?? (voiceLabel != voiceId ? voiceLabel : null))
-        : (voiceLabel != voiceId ? voiceLabel : null);
     return NarrationConfig(
       inputPath: inputPath,
       profile: _profile,
-      voice: voiceId,
-      voiceLabel: effectiveLabel,
+      voice: voice,
+      voiceLabel: label,
       accent: _accent.text,
       style: _style.text,
       useCalmTag: _useCalmTag,
@@ -147,6 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // Read-only use of the shared config's api_key (the GUI never writes it);
       // absent there, TtsClient falls back to OPENROUTER_API_KEY.
       apiKey: _voiceConfig.apiKey,
+      pricing: _voiceConfig.pricingFor(_profile.alias),
     );
   }
 
@@ -167,9 +201,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _snack(e.message);
       return;
     }
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => RunScreen(config: config)),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => RunScreen(config: config)));
   }
 
   @override
@@ -208,13 +242,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            Text('Model & voice', style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Model & voice',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: 8),
             InputDecorator(
               decoration: const InputDecoration(
                 labelText: 'Model',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               child: DropdownButton<String>(
                 key: const Key('modelDropdown'),
@@ -222,7 +262,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: _modelAlias,
                 underline: const SizedBox.shrink(),
                 items: [
-                  for (final p in kModelProfiles.values)
+                  for (final p in effectiveModels(_voiceConfig))
                     DropdownMenuItem(
                       value: p.alias,
                       child: Text('${p.alias} — ${p.id}'),
@@ -240,7 +280,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Voice (pick an alias)',
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
                     child: DropdownButton<String>(
                       key: const Key('voiceDropdown'),
@@ -252,9 +295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         for (final e in entries)
                           DropdownMenuItem(
                             value: e.label,
-                            child: Text(
-                              e.label,
-                            ),
+                            child: Text(e.label),
                           ),
                       ],
                       onChanged: (v) => v == null ? null : _applyVoiceLabel(v),
@@ -268,8 +309,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     controller: _voiceRaw,
                     onChanged: (_) {
                       if (_selectedVoiceLabel != null) {
-                        final (id, _) = _voiceConfig
-                            .resolveVoice(_profile.alias, _selectedVoiceLabel!);
+                        final (id, _) = _voiceConfig.resolveVoice(
+                          _profile.alias,
+                          _selectedVoiceLabel!,
+                        );
                         if (_voiceRaw.text != id) {
                           setState(() => _selectedVoiceLabel = null);
                         }

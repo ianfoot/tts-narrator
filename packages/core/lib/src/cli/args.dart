@@ -19,8 +19,9 @@ class CliUsageError implements Exception {
 /// values raise [CliUsageError].
 NarrationConfig parseArgs(List<String> args) {
   String? input;
-  var profile = kFreeDefault.profile;
-  var voice = kFreeDefault.voice;
+  String? modelArg;
+  var voice = '';
+  var voiceSpecified = false;
   var accent = 'southern British English, neutral and clear';
   var style = 'warm, composed, restrained, literary';
   var tags = false;
@@ -49,20 +50,10 @@ NarrationConfig parseArgs(List<String> args) {
       case '--input':
         input = take(arg);
       case '--model':
-        final v = take(arg);
-        final resolved = profileFor(v);
-        if (resolved == null) {
-          throw CliUsageError(
-            'Unknown model "$v". Available: ${kModelProfiles.values.map((p) => p.alias).join(', ')} '
-            '(or pass a full model id).',
-          );
-        }
-        profile = resolved;
-        if (voice == kFreeDefault.voice) {
-          voice = profile.defaultVoice;
-        }
+        modelArg = take(arg);
       case '--voice':
         voice = take(arg);
+        voiceSpecified = true;
       case '--accent':
         accent = take(arg);
       case '--style':
@@ -117,7 +108,7 @@ NarrationConfig parseArgs(List<String> args) {
     throw CliUsageError('--input <path> is required (no default filename).');
   }
 
-  // Voice config: friendly-name aliases + optional api_key.
+  // Voice config: model wiring, voice aliases, defaults, pricing, api_key.
   final cfgPath = configPath ?? defaultConfigPath();
   if (configPath != null && !File(cfgPath).existsSync()) {
     throw CliUsageError('Voice config file not found: "$cfgPath".');
@@ -129,33 +120,48 @@ NarrationConfig parseArgs(List<String> args) {
     throw CliUsageError('$e');
   }
 
+  // Model resolution: default is the fish bootstrap (overridable via config
+  // "models"); an explicit --model resolves against the effective model set.
+  var profile = kDefaultProfile.profile;
+  if (modelArg != null) {
+    final resolved = profileFor(modelArg, voiceConfig);
+    if (resolved == null) {
+      final aliases = effectiveModels(voiceConfig).map((p) => p.alias).join(', ');
+      throw CliUsageError(
+        'Unknown model "$modelArg". Available: $aliases '
+        '(or pass a full model id).',
+      );
+    }
+    profile = resolved;
+  }
+
   // api_key precedence: --api-key flag > config file > OPENROUTER_API_KEY env.
   final configKey = voiceConfig.apiKey;
   if (apiKey == null && configKey != null && configKey.trim().isNotEmpty) {
     apiKey = configKey;
   }
 
-  // Resolve a friendly voice alias (if any) to the provider voice id.
-  final (voiceId, voiceLabel) =
-      voiceConfig.resolveVoice(profile.alias, voice);
-  if (!profile.voiceFreeForm && !profile.voices.contains(voiceId)) {
-    throw CliUsageError(
-      'Unknown voice "$voiceId" for ${profile.alias}. Available: '
-      '${profile.voices.join(', ')}',
-    );
+  // Voice resolution. An explicit --voice passes straight through (no
+  // validation — providers add/remove voices and testing arbitrary ids is a
+  // feature); otherwise the config default is used, with fish falling back to
+  // its compiled free default on cold start.
+  final String voiceId;
+  final String voiceLabel;
+  if (voiceSpecified) {
+    (voiceId, voiceLabel) = voiceConfig.resolveVoice(profile.alias, voice);
+  } else {
+    try {
+      (voiceId, voiceLabel) = defaultVoiceFor(profile, voiceConfig);
+    } on VoiceConfigError catch (e) {
+      throw CliUsageError(e.message);
+    }
   }
-
-  // When no alias matched and the voice is the model's own default, use the
-  // friendly default label (e.g. fish's free "British Female Narrator").
-  final effectiveLabel = voiceId == profile.defaultVoice
-      ? (profile.defaultVoiceLabel ?? voiceLabel)
-      : voiceLabel;
 
   return NarrationConfig(
     inputPath: input,
     profile: profile,
     voice: voiceId,
-    voiceLabel: effectiveLabel,
+    voiceLabel: voiceId == voiceLabel ? null : voiceLabel,
     accent: accent,
     style: style,
     useCalmTag: tags,
@@ -166,6 +172,7 @@ NarrationConfig parseArgs(List<String> args) {
     dryRun: dryRun,
     resume: resume,
     apiKey: apiKey,
+    pricing: voiceConfig.pricingFor(profile.alias),
   );
 }
 
@@ -197,33 +204,34 @@ List<String> expandInputFiles(String inputPath) {
 }
 
 /// Renders a voice listing for [model] (or all models when null), including
-/// friendly aliases resolved from [config].
+/// the configured default and friendly aliases from [config].
 String renderVoiceListing({
   TtsModelProfile? model,
   required VoiceConfig config,
 }) {
-  final profiles = model != null ? [model] : kModelProfiles.values.toList();
+  final profiles = model != null ? [model] : effectiveModels(config);
   final out = StringBuffer();
   for (final p in profiles) {
     out.writeln();
     out.writeln('${p.alias} — ${p.id} (${p.format})');
-    final defaultLabel = p.defaultVoiceLabel;
-    out.writeln(
-      '  default voice:  ${defaultLabel != null ? '$defaultLabel (${p.defaultVoice})' : p.defaultVoice}',
-    );
-    final aliases = config.aliases[p.alias] ?? const <String, String>{};
-    if (p.voiceFreeForm) {
-      out.write('  voices:         free-form provider ids');
-      if (aliases.isEmpty) {
-        out.writeln();
-      } else {
-        out.writeln(' (friendly aliases below)');
-      }
-    } else {
-      out.writeln('  voices:         ${p.voices.join(', ')}');
+    try {
+      final (id, label) = defaultVoiceFor(p, config);
+      final shown = id == label ? label : '$label ($id)';
+      out.writeln('  default voice:  $shown');
+    } on VoiceConfigError {
+      out.writeln('  default voice:  none configured');
     }
+    final aliases = config.aliases[p.alias] ?? const <String, String>{};
     if (aliases.isNotEmpty) {
-      out.writeln('  aliases:        ${aliases.entries.map((e) => '${e.key} → ${e.value}').join(', ')}');
+      out.writeln(
+        '  aliases:        '
+        '${aliases.entries.map((e) => '${e.key} → ${e.value}').join(', ')}',
+      );
+    } else {
+      out.writeln(
+        '  voices:         none configured — add "${p.alias}" aliases in the '
+        'voice config',
+      );
     }
   }
   return out.toString();
@@ -242,16 +250,12 @@ Options:
                             lists all models) and exit. Also honors --model and
                             --config.
   --model <alias|id>        TTS model: fish (default, free), gemini, or kokoro,
-                            or a full model id. Controls voice set, prompt
-                            styling, and output format.
-  --voice <name>            Model-specific voice. For fish: a 32-hex fish.audio
-                            id (default: 89f41ea2... = "British Female
-                            Narrator", free). For gemini: one of its 30 named
-                            voices (default: Charon). For kokoro: a provider
-                            voice id such as bf_emma or bm_lewis; any id is
-                            accepted (prefix a=_US, b=_British). Friendly
-                            aliases from the voice config are resolved to the
-                            raw id.
+                            or a full model id. Controls prompt styling and
+                            output format.
+  --voice <name>            Voice: a friendly alias or a raw provider id.
+                            Accepts any value (no validation) so you can test
+                            voices. Defaults to the config "defaults" entry, or
+                            fish's free "British Female Narrator" when none.
   --accent <text>           Accent description folded into the prompt
                             (gemini only; ignored by kokoro).
   --style <text>            Style/register description in prompt (gemini only;
@@ -267,7 +271,8 @@ Options:
                             in the output manifest (re-run safe; no re-billing).
   --out <dir>               Output directory (default: "output/<input>/").
   --config <path>           Voice config JSON (default: ~/.config/tts-narrator/
-                            voice_config.json). Friendly voice aliases + api_key.
+                            voice_config.json). Holds voice aliases, per-model
+                            defaults/pricing, and api_key.
   --api-key <key>           OpenRouter API key (defaults to api_key in config,
                             then OPENROUTER_API_KEY).
 

@@ -91,9 +91,15 @@ void main() {
   });
 
   group('output dir helpers', () {
+    const gemini = TtsModelProfile(
+      alias: 'gemini',
+      id: 'google/gemini-3.1-flash-tts-preview',
+      format: 'pcm',
+      sampleRate: 24000,
+    );
     NarrationConfig cfg(String input, String out) => NarrationConfig(
           inputPath: input,
-          profile: kGeminiProfile,
+          profile: gemini,
           voice: 'Callirrhoe',
           outDir: out,
         );

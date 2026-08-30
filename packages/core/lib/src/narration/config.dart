@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'cost.dart';
 import 'model_profiles.dart';
 
 /// Configuration for a single narration run.
@@ -20,6 +21,7 @@ class NarrationConfig {
     this.dryRun = false,
     this.resume = false,
     this.apiKey,
+    this.pricing = freePricing,
   });
 
   /// Path to the source text to narrate (required, no default).
@@ -67,6 +69,9 @@ class NarrationConfig {
   /// OpenRouter API key. Falls back to the OPENROUTER_API_KEY env var.
   final String? apiKey;
 
+  /// Cost data (from the voice config) used for the dry-run/estimate.
+  final AudioPricing pricing;
+
   /// Copy of this config with [inputPath] replaced (used to narrate each file
   /// in a batch directory through the same single-file pipeline).
   NarrationConfig copyWith({required String inputPath}) => NarrationConfig(
@@ -84,6 +89,7 @@ class NarrationConfig {
         dryRun: dryRun,
         resume: resume,
         apiKey: apiKey,
+        pricing: pricing,
       );
 
   String get resolvedApiKey {

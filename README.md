@@ -69,9 +69,10 @@ path to the text to narrate.
 | `--api-key <key>` | OpenRouter API key (overrides the config file, then the environment). | env |
 | `--list-voices [model]` | Print available voices (and friendly aliases from the config) for a model, or all models when omitted, then exit. Also honors `--model` / `--config`. | all models |
 
-### Voice configuration
+## Voice configuration
 
-Friendly voice aliases (and an optional `api_key`) live in a single JSON file,
+Everything user-facing — models, per-model default voices, prices, and friendly
+voice aliases — plus an optional `api_key`, lives in a single JSON file,
 defaulting to `~/.config/tts-narrator/voice_config.json` (override with
 `--config`). Copy the repo's `voice_config.example.json` to that path as a
 starting point — it's the paste-template; the file under `~/.config` is the
@@ -80,6 +81,17 @@ live one the tools read:
 ```json
 {
   "api_key": "",
+  "models": {
+    "fish": { "id": "fish-audio/s2.1-pro-free", "format": "mp3" },
+    "kokoro": { "id": "hexgrad/kokoro-82m", "format": "mp3" },
+    "gemini": { "id": "google/gemini-3.1-flash-tts-preview", "format": "pcm",
+                "sample_rate": 24000, "prompt_style": true }
+  },
+  "defaults": { "fish": "British Female Narrator", "kokoro": "Emma", "gemini": "Charon" },
+  "pricing": {
+    "gemini": { "input_usd_per_m_tokens": 1.0, "output_usd_per_m_tokens": 20.0 },
+    "kokoro": { "usd_per_m_chars": 0.62 }
+  },
   "voices": {
     "fish":   { "British Female Narrator": "89f41ea230034706881f85a8227d6ab9", "British War": "2fd511bd06904a21a971c6551dfb853a" },
     "kokoro": { "Emma": "bf_emma", "Lewis": "bm_lewis" }
@@ -87,9 +99,20 @@ live one the tools read:
 }
 ```
 
-- `--voice <name>` first resolves a friendly alias for the selected model to its
-  raw id; unknown values pass through unchanged (today's behavior). The friendly
-  name is kept for display and recorded in the manifest as `voice_label`.
+- **Models**: each entry maps an alias to its model id and request wiring. Add a
+  model or swap an id (e.g. replace the gemini preview) by editing the file —
+  no rebuild. Only the fish bootstrap is compiled in as the out-of-the-box
+  default.
+- **Default voices**: `defaults` names the friendly alias (from `voices`) used
+  when `--voice` / the GUI voice field is empty. With no config, fish falls back
+  to its compiled default (`89f41ea2...`, "British Female Narrator"); other
+  models need a config default or an explicit `--voice`.
+- **Pricing**: per-model cost data for the `--dry-run` / GUI estimates; models
+  without an entry are treated as free.
+- **Voices**: `--voice <name>` resolves a friendly alias for the selected model
+  to its raw id; unknown values pass through unchanged (no validation — testing
+  arbitrary voices is supported). The friendly name is kept for display and
+  recorded in the manifest as `voice_label`.
 - The config file is optional. With no config, the app falls back to the compiled
   free default: **fish** (`fish-audio/s2.1-pro-free`) with voice
   `89f41ea2...` ("British Female Narrator"), so the very first run costs
@@ -99,34 +122,37 @@ live one the tools read:
 
 ### Models
 
-Each model is described by a profile (see `packages/core/lib/src/narration/model_profiles.dart`)
-That captures how it differs from Gemini:
+The fish bootstrap is compiled in (`packages/core/lib/src/narration/model_profiles.dart`);
+every other model comes from the `models` block in the voice config. Model
+differences drive how requests are built:
 
-| Model | Id | Voice format | Prompt styling | Output |
-| --- | --- | --- | --- | --- |
-| `fish` (default) | [`fish-audio/s2.1-pro-free`](https://openrouter.ai/fish-audio/s2.1-pro-free:free#playground) | free-form 32-hex fish.audio id | ✗ (read aloud — ignore `--accent`/`--style`/`--tags`) | `.mp3` (free) |
-| `gemini` | [`google/gemini-3.1-flash-tts-preview`](https://openrouter.ai/google/gemini-3.1-flash-tts-preview) | one of 30 named voices | ✓ (accent/style/`[calm]`) | 24 kHz PCM `.wav` |
-| `kokoro` | [`hexgrad/kokoro-82m`](https://openrouter.ai/hexgrad/kokoro-82m) | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — ignore `--accent`/`--style`/`--tags`) | `.mp3` |
+| Alias | Voice format | Prompt styling | Output |
+| --- | --- | --- | --- |
+| `fish` (default) | free-form 32-hex fish.audio id | ✗ (read aloud — ignore `--accent`/`--style`/`--tags`) | `.mp3` (free) |
+| `gemini` | named voices (rated on the OpenRouter page) | ✓ (accent/style/`[calm]`) | 24 kHz PCM `.wav` |
+| `kokoro` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — ignore `--accent`/`--style`/`--tags`) | `.mp3` |
 
-Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma` ("Emma"); `--voice` overrides.
+Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
+Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma`
+("Emma"); `--voice` overrides.
 
-Add another model by adding a profile and it becomes selectable via
-`--model <alias>` or the full id. Pass `--model <anything-else>` on the CLI to
-list the registered models.
+Add or swap a model by adding/editing a `models` entry; it then becomes
+selectable via `--model <alias>` or the full id. Pass `--model <anything-else>`
+on the CLI to list the registered models.
 
 ### Gemini voices
 
-All 30 Gemini voices: `Zephyr`, `Puck`, `Charon`, `Kore`, `Fenrir`, `Leda`,
-`Orus`, `Aoede`, `Callirrhoe`, `Autonoe`, `Enceladus`, `Iapetus`, `Umbriel`,
-`Algieba`, `Despina`, `Erinome`, `Algenib`, `Rasalgethi`, `Laomedeia`,
-`Achernar`, `Alnilam`, `Schedar`, `Gacrux`, `Pulcherrima`, `Achird`,
-`Zubenelgenubi`, `Vindemiatrix`, `Sadachbia`, `Sadaltager`, `Sulafat`.
+Voices are the named ones on the OpenRouter page (e.g. `Charon`, `Zephyr`,
+`Puck`). Add friendly aliases for the ones you use under `voices.gemini` in the
+config — the drop-down and `--list-voices` show whatever you configure. Any
+unlisted id still works via `--voice` / the raw-id field.
 
 ### Kokoro voices
 
 British voices (prefix `b`): female `bf_alice`, `bf_emma`, `bf_isabella`,
 `bf_lily`; male `bm_daniel`, `bm_fable`, `bm_george`, `bm_lewis`. Any
-`bf_*`/`bm_*` (or other accent prefixes) id is accepted.
+`bf_*`/`bm_*` (or other accent prefixes) id is accepted. Friendly aliases live
+in `voices.kokoro`.
 
 ### Fish voices
 
@@ -227,12 +253,12 @@ packages/core/            # tts_narrator_core — pure Dart, no Flutter deps
     tts_narrator_core.dart # public barrel (both the CLI and GUI import this)
     src/
       cli/args.dart           # flag parsing + usage text
-      cli/voice_config.dart   # voice aliases + api_key JSON config load/save
+      cli/voice_config.dart   # models/voices/defaults/pricing + api_key JSON config load/save
       narration/
         abort.dart            # AbortToken for the GUI Cancel button
         config.dart           # NarrationConfig
         cost.dart             # duration + cost estimates
-        model_profiles.dart   # per-model profile registry (gemini, kokoro, fish)
+        model_profiles.dart   # request wiring + compiled fish bootstrap (kDefaultProfile)
         narration.dart       # chunkText + narration orchestrator
         prompt.dart           # per-paragraph prompt template (Gemini only)
         tts_client.dart       # POST /audio/speech (pcm/mp3), retry on 502

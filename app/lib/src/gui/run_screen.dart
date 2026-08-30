@@ -153,7 +153,7 @@ class _RunScreenState extends State<RunScreen> {
                     chunks: _chunks.length,
                     minutes: minutes,
                     cost: estimateCostUsd(
-                      profile,
+                      _config.pricing,
                       _chunks.map((c) => c.paragraph).toList(),
                     ),
                   ),
