@@ -118,6 +118,80 @@ void main() {
       'model_id': 'x',
     });
   });
+
+  group('sourceText (in-memory)', () {
+    NarrationConfig typedConfig() => NarrationConfig(
+          inputPath: 'story.txt',
+          sourceText: _inputText,
+          profile: TtsModelProfile(
+            alias: 'test',
+            id: 'test/model',
+            format: 'mp3',
+            provider: provider.id,
+          ),
+          voice: 'VoiceOne',
+          providerSettings: const {'api_key': 'sk-test'},
+          outDir: '${dir.path}/out',
+        );
+
+    test('plans from text without any backing file', () {
+      // inputPath points nowhere; sourceText must satisfy the plan.
+      final cfg = typedConfig();
+      expect(planChunks(cfg), [_inputText]);
+    });
+
+    test('empty sourceText raises the inputPath-guarded planning error', () {
+      final cfg = NarrationConfig(
+        inputPath: 'story.txt',
+        sourceText: '',
+        profile: TtsModelProfile(
+          alias: 'test',
+          id: 'test/model',
+          format: 'mp3',
+          provider: provider.id,
+        ),
+        voice: 'VoiceOne',
+        outDir: '${dir.path}/out',
+      );
+      expect(() => planChunks(cfg), throwsStateError);
+    });
+
+    test('narrates from text via the provider without reading inputPath', () async {
+      final cfg = typedConfig();
+      await narrate(cfg);
+
+      expect(provider.callCount, 1);
+      expect(provider.calls.single.input, _inputText);
+
+      // Output naming still derives from inputPath (the document name).
+      final audio = File('${dir.path}/out/story/story_1.mp3');
+      expect(audio.existsSync(), isTrue);
+      expect(audio.readAsBytesSync(), provider.bytes);
+    });
+
+    test('sampleLen limits an in-memory run', () async {
+      const multi = '$_inputText\n\n$_inputText\n\n$_inputText\n\n$_inputText';
+      final cfg = NarrationConfig(
+        inputPath: 'story.txt',
+        sourceText: multi,
+        profile: TtsModelProfile(
+          alias: 'test',
+          id: 'test/model',
+          format: 'mp3',
+          provider: provider.id,
+        ),
+        voice: 'VoiceOne',
+        providerSettings: const {'api_key': 'sk-test'},
+        outDir: '${dir.path}/out',
+        // minWords 1 keeps every paragraph its own chunk = 4 chunks.
+        minWords: 1,
+        sampleLen: 1,
+      );
+      expect(planChunks(cfg), hasLength(4));
+      await narrate(cfg);
+      expect(provider.callCount, 1);
+    });
+  });
 }
 
 String ascii(List<int> bytes) => String.fromCharCodes(bytes);

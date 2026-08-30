@@ -111,10 +111,16 @@ typedef NarrationChunkComplete = void Function(
   bool resumed,
 });
 
-/// Reads [config.inputPath] and returns the narration chunk plan
-/// (scenes/paragraphs to narrate, after min-word merge and length split).
+/// Reads [config]'s source text: the in-memory [NarrationConfig.sourceText]
+/// when set, else the file at [NarrationConfig.inputPath].
+String _sourceText(NarrationConfig config) => config.sourceText ??
+    File(config.inputPath).readAsStringSync();
+
+/// Returns the narration chunk plan (scenes/paragraphs to narrate, after
+/// min-word merge and length split) for [config], reading from
+/// [NarrationConfig.sourceText] or the file at [config.inputPath].
 List<String> planChunks(NarrationConfig config) {
-  final source = File(config.inputPath).readAsStringSync();
+  final source = _sourceText(config);
   final paragraphs = chunkText(source, minWords: config.minWords);
   if (paragraphs.isEmpty) {
     throw StateError('No paragraphs found in "${config.inputPath}".');
@@ -145,7 +151,8 @@ String outputDirPath(NarrationConfig config) {
       : '${config.outDir}/$stem';
 }
 
-/// Narrates [config.inputPath] paragraph by paragraph, writing WAV files and a
+/// Narrates [config] paragraph by paragraph (reading [NarrationConfig.sourceText]
+/// when set, else the file at [config.inputPath]), writing WAV files and a
 /// manifest into [config.outDir]. The manifest is rewritten after every chunk
 /// so a failed run can be resumed via `--resume`.
 ///

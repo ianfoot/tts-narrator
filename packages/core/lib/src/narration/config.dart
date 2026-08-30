@@ -5,6 +5,7 @@ import 'model_profiles.dart';
 class NarrationConfig {
   NarrationConfig({
     required this.inputPath,
+    this.sourceText,
     required this.profile,
     required this.voice,
     this.voiceLabel,
@@ -23,7 +24,17 @@ class NarrationConfig {
   });
 
   /// Path to the source text to narrate (required, no default).
+  ///
+  /// [sourceText] overrides reading from disk: when set, [inputPath] drives
+  /// only output naming (stem/out-dir); narration uses the in-memory text.
+  /// This lets the GUI narrate typed or pasted text with no backing file.
   final String inputPath;
+
+  /// In-memory text to narrate instead of reading [inputPath] from disk.
+  ///
+  /// When null (the CLI), [inputPath] is read as before. The CLI never sets
+  /// this; the GUI sets it for typed/pasted content.
+  final String? sourceText;
 
   /// TTS model profile driving the request body, prompt, and output format.
   final TtsModelProfile profile;
@@ -76,6 +87,7 @@ class NarrationConfig {
   /// in a batch directory through the same single-file pipeline).
   NarrationConfig copyWith({required String inputPath}) => NarrationConfig(
         inputPath: inputPath,
+        sourceText: sourceText,
         profile: profile,
         voice: voice,
         voiceLabel: voiceLabel,
