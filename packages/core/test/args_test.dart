@@ -92,6 +92,52 @@ void main() {
     expect(cfg.profile.provider, 'openrouter');
   });
 
+  test('an unresolvable env ref is a CliUsageError, not a StateError', () {
+    const varName = 'TTN_UNSET_SECRET_4F7B';
+    if (Platform.environment.containsKey(varName)) {
+      return; // Only deterministic when the ref is genuinely unset.
+    }
+    final cfg = '${dir.path}/env_ref.json';
+    File(cfg).writeAsStringSync('''{
+  "providers": {
+    "openrouter": { "OPENROUTER_API_KEY": "\${$varName}" }
+  },
+  "models": {
+    "fish": {"id": "fish-audio/s2.1-pro-free", "format": "mp3"}
+  }
+}''');
+    expect(
+      () => parseArgs(['--input', 's', '--config', cfg]),
+      throwsA(
+        isA<CliUsageError>().having(
+          (e) => e.message,
+          'message',
+          contains(varName),
+        ),
+      ),
+    );
+  });
+
+  test('a dry run skips settings resolution entirely', () {
+    const varName = 'TTN_UNSET_SECRET_9C21';
+    if (Platform.environment.containsKey(varName)) {
+      return; // Only deterministic when the ref is genuinely unset.
+    }
+    final cfg = '${dir.path}/dryrun_env_ref.json';
+    File(cfg).writeAsStringSync('''{
+  "providers": {
+    "openrouter": { "OPENROUTER_API_KEY": "\${$varName}" }
+  },
+  "models": {
+    "fish": {"id": "fish-audio/s2.1-pro-free", "format": "mp3"}
+  }
+}''');
+    // Dry run parses fine with empty provider settings — no key needed.
+    final parsed = parseArgs(['--input', 's', '--dry-run', '--config', cfg]);
+    expect(parsed.dryRun, isTrue);
+    expect(parsed.providerSettings, isEmpty);
+  });
+
   test('an unknown --provider errors listing registered ids', () {
     expect(
       () => parse(['--input', 's', '--provider', 'bogus']),

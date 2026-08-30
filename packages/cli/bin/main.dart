@@ -104,6 +104,10 @@ Future<int> main(List<String> args) async {
         '(~${(totalMinutes * 60).round()} s). '
         'Estimated cost: ${formatCostUsd(totalCost)}.',
       );
+    } on StateError catch (e) {
+      stderr.writeln('Dry run failed: $e');
+      exitCode = _exitUsage;
+      return _exitUsage;
     } on Exception catch (e) {
       stderr.writeln('Dry run failed: $e');
       exitCode = _exitFailure;
@@ -140,6 +144,10 @@ Future<int> main(List<String> args) async {
         '  Done. $kind + manifest.json written to ${outputDirPath(fileConfig)}/.',
       );
     }
+  } on StateError catch (e) {
+    stderr.writeln('Narration failed: $e');
+    exitCode = _exitUsage;
+    return _exitUsage;
   } on Exception catch (e) {
     stderr.writeln('Narration failed: $e');
     exitCode = _exitFailure;

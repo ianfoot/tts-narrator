@@ -169,15 +169,24 @@ NarrationConfig parseArgs(List<String> args) {
   // Provider settings: the selected provider's block from the config, with
   // --api-key merged in as the generic `api_key` setting (it wins over any
   // `providers.<id>.api_key`). `${ENV}` refs are resolved once at build time;
-  // no env reads happen per chunk.
+  // no env reads happen per chunk. A dry run never calls the API, so it skips
+  // resolution entirely — no key is needed to print the plan.
   final rawSettings = <String, String>{
     ...?voiceConfig.providers[profile.provider],
   };
   if (apiKey != null && apiKey.trim().isNotEmpty) {
     rawSettings['api_key'] = apiKey;
   }
-  final providerSettings =
-      resolveSettings(rawSettings, env: Platform.environment);
+  final Map<String, String> providerSettings;
+  if (dryRun) {
+    providerSettings = const {};
+  } else {
+    try {
+      providerSettings = resolveSettings(rawSettings, env: Platform.environment);
+    } on StateError catch (e) {
+      throw CliUsageError(e.message);
+    }
+  }
 
   return NarrationConfig(
     inputPath: input,

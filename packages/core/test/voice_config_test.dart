@@ -485,6 +485,48 @@ void main() {
       expect(loadVoiceConfig(path).models['gemini']?.provider, 'google');
     });
 
+    test('preserves an explicit provider that differs from default_provider',
+        () {
+      final path = '${dir.path}/voice_config.json';
+      writeVoiceConfig(
+        path,
+        const VoiceConfig(
+          defaultProvider: 'google',
+          providers: {'google': {'API_KEY': 'k'}, 'openrouter': {'API_KEY': 'o'}},
+          models: {
+            'gemini': TtsModelProfile(
+              alias: 'gemini',
+              id: 'a/b',
+              provider: 'openrouter', // explicit override, != default_provider
+            ),
+          },
+        ),
+      );
+      final raw = File(path).readAsStringSync();
+      expect(raw, contains('"provider": "openrouter"'));
+      expect(loadVoiceConfig(path).models['gemini']?.provider, 'openrouter');
+    });
+
+    test('elides a provider that merely repeats default_provider', () {
+      final path = '${dir.path}/voice_config.json';
+      writeVoiceConfig(
+        path,
+        const VoiceConfig(
+          defaultProvider: 'google',
+          models: {
+            'gemini': TtsModelProfile(
+              alias: 'gemini',
+              id: 'a/b',
+              provider: 'google',
+            ),
+          },
+        ),
+      );
+      final raw = File(path).readAsStringSync();
+      expect(raw, isNot(contains('"provider"')));
+      expect(loadVoiceConfig(path).models['gemini']?.provider, 'google');
+    });
+
     test('omits default_provider and providers when empty', () {
       final path = '${dir.path}/voice_config.json';
       writeVoiceConfig(path, const VoiceConfig());

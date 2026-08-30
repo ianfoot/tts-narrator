@@ -95,12 +95,12 @@ class VoiceConfig {
   final Map<String, Map<String, String>> aliases;
 
 bool get isEmpty =>
-    defaultProvider == null &&
-    providers.isEmpty &&
-    models.isEmpty &&
-    defaults.isEmpty &&
-    pricing.isEmpty &&
-    aliases.isEmpty;
+      defaultProvider == null &&
+      providers.isEmpty &&
+      models.isEmpty &&
+      defaults.isEmpty &&
+      pricing.isEmpty &&
+      aliases.isEmpty;
 
   /// Pricing for [modelAlias], or [freePricing] when unconfigured.
   AudioPricing pricingFor(String modelAlias) => pricing[modelAlias] ?? freePricing;
@@ -372,14 +372,14 @@ VoiceConfig loadVoiceConfig(String path) {
   }
 }
 
-Map<String, Object?> _modelJson(TtsModelProfile p) => {
+Map<String, Object?> _modelJson(TtsModelProfile p, String effectiveDefault) => {
       'id': p.id,
       'format': p.format,
       if (p.sampleRate != null) 'sample_rate': p.sampleRate,
       if (p.promptStyle) 'prompt_style': p.promptStyle,
       if (!p.sendsVoiceField) 'sends_voice': p.sendsVoiceField,
-      // Only emit a per-model provider when it overrides the compiled default.
-      if (p.provider != 'openrouter') 'provider': p.provider,
+      // Only emit a per-model provider when it overrides the effective default.
+      if (p.provider != effectiveDefault) 'provider': p.provider,
     };
 
 /// Writes [config] to [path] as the shared `voice_config.json` schema,
@@ -394,7 +394,10 @@ void writeVoiceConfig(String path, VoiceConfig config) {
       'default_provider': config.defaultProvider,
     if (config.providers.isNotEmpty) 'providers': config.providers,
     if (config.models.isNotEmpty)
-      'models': {for (final e in config.models.entries) e.key: _modelJson(e.value)},
+      'models': {
+        for (final e in config.models.entries)
+          e.key: _modelJson(e.value, config.defaultProvider ?? 'openrouter'),
+      },
     if (config.defaults.isNotEmpty) 'defaults': config.defaults,
     if (config.pricing.isNotEmpty)
       'pricing': {
