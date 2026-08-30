@@ -1,9 +1,13 @@
 {
-  "api_key": "",
+  "default_provider": "openrouter",
+  "providers": {
+    "openrouter": { "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}" }
+  },
   "models": {
-    "fish": { "id": "fish-audio/s2.1-pro-free", "format": "mp3" },
-    "kokoro": { "id": "hexgrad/kokoro-82m", "format": "mp3" },
+    "fish": { "provider": "openrouter", "id": "fish-audio/s2.1-pro-free", "format": "mp3" },
+    "kokoro": { "provider": "openrouter", "id": "hexgrad/kokoro-82m", "format": "mp3" },
     "gemini": {
+      "provider": "openrouter",
       "id": "google/gemini-3.1-flash-tts-preview",
       "format": "pcm",
       "sample_rate": 24000,

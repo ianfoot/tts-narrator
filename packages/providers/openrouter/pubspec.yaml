@@ -1,0 +1,17 @@
+name: tts_narrator_openrouter
+description: "OpenRouter TTS provider for the tts-narrator narration core."
+publish_to: 'none'
+version: 0.1.0+1
+
+resolution: workspace
+
+environment:
+  sdk: ^3.13.1
+
+dependencies:
+  tts_narrator_core:
+    path: ../../core
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.8

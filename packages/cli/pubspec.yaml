@@ -11,6 +11,8 @@ environment:
 dependencies:
   tts_narrator_core:
     path: ../core
+  tts_narrator_openrouter:
+    path: ../providers/openrouter
 
 dev_dependencies:
   lints: ^6.0.0

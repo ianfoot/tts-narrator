@@ -1,48 +1,61 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'abort.dart';
+import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 const _endpoint = 'https://openrouter.ai/api/v1/audio/speech';
 
-/// A generated audio sample with metadata for the manifest.
-class NarrationSample {
-  NarrationSample({
-    required this.wavPath,
-    required this.generationId,
-    required this.bytes,
-  });
+/// OpenRouter TTS provider: a fold of the former `TtsClient` behind the
+/// generic [TtsProvider] interface. Owns everything OpenRouter-specific —
+/// endpoint, Bearer auth, retries, and the `X-Generation-Id` mapping.
+class OpenRouterTtsProvider implements TtsProvider {
+  OpenRouterTtsProvider({this.environment});
 
-  final String wavPath;
-  final String? generationId;
-  final int bytes;
-}
+  /// Injectable env map (defaults to [Platform.environment]) so tests can run
+  /// hermetic without a real API key or network access.
+  final Map<String, String>? environment;
 
-/// Minimal HTTP client for the OpenRouter `/audio/speech` endpoint.
-class TtsClient {
-  TtsClient({this.apiKey});
+  @override
+  String get id => 'openrouter';
 
-  /// OpenRouter API key; falls back to OPENROUTER_API_KEY when null.
-  final String? apiKey;
+  @override
+  String get name => 'OpenRouter';
 
-  /// Synthesize [input] as audio in [responseFormat], optionally choosing a
+  /// Resolves the API key from the run's resolved [settings] (generic rule
+  /// applied in core), falling back to the OPENROUTER_API_KEY env var.
+  ///
+  /// Precedence: `api_key` > `OPENROUTER_API_KEY` > env. Throws naming the
+  /// missing source so callers know what to fix.
+  String _apiKey(Map<String, String> settings) {
+    for (final key in const ['api_key', 'OPENROUTER_API_KEY']) {
+      final value = settings[key];
+      if (value != null && value.trim().isNotEmpty) return value.trim();
+    }
+    final env = (environment ?? Platform.environment)['OPENROUTER_API_KEY'];
+    if (env != null && env.trim().isNotEmpty) return env.trim();
+    throw StateError(
+      'No OpenRouter API key set. Provide it via the "api_key" or '
+      '"OPENROUTER_API_KEY" provider settings in the voice config, or set '
+      'the OPENROUTER_API_KEY environment variable.',
+    );
+  }
+
+  /// Synthesizes [input] as audio in [responseFormat], optionally choosing a
   /// [voice], returning the raw bytes. Retries on transient 5xx / empty-stream
   /// failures (a documented Gemini TTS quirk).
   ///
   /// [abort] is checked between retries (and before the first attempt); an
   /// already-cancelled token throws [AbortException] without calling the API.
-  Future<List<int>> synthesize({
+  @override
+  Future<ProviderAudio> synthesize({
     required String model,
-    required String responseFormat,
-    String? voice,
+    required String? voice,
     required String input,
-    int retries = 3,
+    required String responseFormat,
+    required Map<String, String> settings,
     AbortToken? abort,
   }) async {
-    final key = apiKey ?? Platform.environment['OPENROUTER_API_KEY'];
-    if (key == null || key.isEmpty) {
-      throw StateError('No API key set (OPENROUTER_API_KEY or --api-key).');
-    }
+    final key = _apiKey(settings);
 
     final body = <String, Object?>{
       'model': model,
@@ -62,18 +75,18 @@ class TtsClient {
       abort?.throwIfCancelled();
       if (statusCode >= 200 && statusCode < 300) {
         if (bytes.isEmpty) {
-          if (attempt <= retries) {
+          if (attempt <= _retries) {
             await _backoff(attempt);
             continue;
           }
           throw HttpException('Empty audio stream after $attempt attempts.');
         }
-        return bytes;
+        return ProviderAudio(bytes: bytes, generationId: generationId);
       }
       // Non-2xx: fail fast unless 5xx (retryable).
       if (statusCode == 502 || statusCode == 500 || statusCode == 503 ||
           statusCode == 529) {
-        if (attempt <= retries) {
+        if (attempt <= _retries) {
           await _backoff(attempt);
           continue;
         }
@@ -82,6 +95,8 @@ class TtsClient {
       throw HttpException('TTS request failed (HTTP $statusCode): $message');
     }
   }
+
+  static const _retries = 3;
 
   Future<(int, List<int>, String?)> _post(
     String body,
@@ -99,7 +114,11 @@ class TtsClient {
         <int>[],
         (acc, chunk) => acc..addAll(chunk),
       );
-      return (response.statusCode, bytes, response.headers.value('X-Generation-Id'));
+      return (
+        response.statusCode,
+        bytes,
+        response.headers.value('X-Generation-Id'),
+      );
     } finally {
       client.close(force: true);
     }

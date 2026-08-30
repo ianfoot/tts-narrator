@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'cost.dart';
 import 'model_profiles.dart';
 
@@ -20,8 +18,8 @@ class NarrationConfig {
     this.outDir = 'output',
     this.dryRun = false,
     this.resume = false,
-    this.apiKey,
     this.pricing = freePricing,
+    this.providerSettings = const {},
   });
 
   /// Path to the source text to narrate (required, no default).
@@ -66,11 +64,13 @@ class NarrationConfig {
   /// (matching index + fingerprint) and keep their records.
   final bool resume;
 
-  /// OpenRouter API key. Falls back to the OPENROUTER_API_KEY env var.
-  final String? apiKey;
-
   /// Cost data (from the voice config) used for the dry-run/estimate.
   final AudioPricing pricing;
+
+  /// Resolved provider settings for the run's provider (see `resolveSettings`).
+  /// Built once when the config is assembled; providers read their secrets
+  /// from here, never from the environment per chunk.
+  final Map<String, String> providerSettings;
 
   /// Copy of this config with [inputPath] replaced (used to narrate each file
   /// in a batch directory through the same single-file pipeline).
@@ -88,17 +88,7 @@ class NarrationConfig {
         outDir: outDir,
         dryRun: dryRun,
         resume: resume,
-        apiKey: apiKey,
         pricing: pricing,
+        providerSettings: providerSettings,
       );
-
-  String get resolvedApiKey {
-    final key = apiKey ?? Platform.environment['OPENROUTER_API_KEY'];
-    if (key == null || key.trim().isEmpty) {
-      throw StateError(
-        'No API key found. Pass --api-key or set OPENROUTER_API_KEY.',
-      );
-    }
-    return key.trim();
-  }
 }

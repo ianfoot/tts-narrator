@@ -1,6 +1,13 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/narration/abort.dart';
-import 'package:tts_narrator_core/src/narration/tts_client.dart';
+import 'package:tts_narrator_core/src/narration/config.dart';
+import 'package:tts_narrator_core/src/narration/model_profiles.dart';
+import 'package:tts_narrator_core/src/narration/narration.dart';
+import 'package:tts_narrator_core/src/narration/tts_provider.dart';
+
+import 'support/fake_provider.dart';
 
 void main() {
   group('AbortToken', () {
@@ -24,19 +31,44 @@ void main() {
     });
   });
 
-  group('AbortToken in TtsClient', () {
-    test('an already-cancelled token aborts before any network call', () {
-      final client = TtsClient(apiKey: 'sk-test');
-      final token = AbortToken()..cancel();
-      expect(
-        () => client.synthesize(
-          model: 'test/model',
-          responseFormat: 'mp3',
-          input: 'hello',
-          abort: token,
-        ),
-        throwsA(isA<AbortException>()),
-      );
+  group('AbortToken in narrate', () {
+    late Directory dir;
+    late FakeTtsProvider provider;
+
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('tts_abort_test_');
+      provider = FakeTtsProvider();
+      ttsProviderRegistry.register(provider.id, () => provider);
     });
+
+    tearDown(() {
+      dir.deleteSync(recursive: true);
+    });
+
+    test(
+      'a pre-cancelled token aborts before the provider is called',
+      () async {
+        final input = File('${dir.path}/story.txt')
+          ..writeAsStringSync(
+            'Hello world. Another sentence here.'
+            'And a third one to be safe.',
+          );
+        final config = NarrationConfig(
+          inputPath: input.path,
+          profile: const TtsModelProfile(
+            alias: 'test',
+            id: 'test/model',
+            provider: 'fake',
+          ),
+          voice: 'v',
+        );
+
+        await expectLater(
+          narrate(config, abort: AbortToken()..cancel()),
+          throwsA(isA<AbortException>()),
+        );
+        expect(provider.callCount, 0);
+      },
+    );
   });
 }
