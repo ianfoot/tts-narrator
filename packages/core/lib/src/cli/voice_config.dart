@@ -60,6 +60,8 @@ class VoiceEntry {
 class VoiceConfig {
   const VoiceConfig({
     this.apiKey,
+    this.defaultProvider,
+    this.providers = const {},
     this.models = const {},
     this.defaults = const {},
     this.pricing = const {},
@@ -68,6 +70,17 @@ class VoiceConfig {
 
   /// Optional OpenRouter API key from the config file.
   final String? apiKey;
+
+  /// Default provider id (`default_provider`) for models without an explicit
+  /// `provider` in the `models` block; null falls back to the compiled
+  /// `'openrouter'` default.
+  final String? defaultProvider;
+
+  /// Opaque per-provider settings (`providers.<id>` → string→string). Keys and
+  /// values are never interpreted here — this is the raw block, round-tripped
+  /// verbatim; `${ENV}` references are resolved at run-config build time via
+  /// [resolveSettings], not at load/save time.
+  final Map<String, Map<String, String>> providers;
 
   /// Per-model request wiring (model alias → profile), overriding or extending
   /// the compiled fish bootstrap.
@@ -84,6 +97,8 @@ class VoiceConfig {
 
   bool get isEmpty =>
       apiKey == null &&
+      defaultProvider == null &&
+      providers.isEmpty &&
       models.isEmpty &&
       defaults.isEmpty &&
       pricing.isEmpty &&
@@ -247,6 +262,30 @@ VoiceConfig loadVoiceConfig(String path) {
       throw const FormatException('"api_key" must be a string');
     }
 
+    final defaultProviderRaw = raw['default_provider'];
+    if (defaultProviderRaw != null && defaultProviderRaw is! String) {
+      throw const FormatException('"default_provider" must be a string');
+    }
+
+    final providersOut = <String, Map<String, String>>{};
+    final providersRaw = raw['providers'];
+    if (providersRaw is Map<String, dynamic>) {
+      providersRaw.forEach((id, settings) {
+        if (settings is! Map<String, dynamic>) {
+          throw FormatException('"providers.$id" must be an object');
+        }
+        final out = <String, String>{};
+        settings.forEach((key, value) {
+          if (value is! String) {
+            throw FormatException('"providers.$id.$key" must be a string');
+          }
+          out[key] = value;
+        });
+        // Preserved as-is (even when empty) so the block round-trips verbatim.
+        providersOut[id] = out;
+      });
+    }
+
     final models = <String, TtsModelProfile>{};
     final modelsRaw = raw['models'];
     if (modelsRaw is Map<String, dynamic>) {
@@ -274,6 +313,10 @@ VoiceConfig loadVoiceConfig(String path) {
         if (sendsVoice != null && sendsVoice is! bool) {
           throw FormatException('"models.$alias.sends_voice" must be a bool');
         }
+        final provider = spec['provider'];
+        if (provider != null && provider is! String) {
+          throw FormatException('"models.$alias.provider" must be a string');
+        }
         models[alias] = TtsModelProfile(
           alias: alias,
           id: id,
@@ -281,6 +324,7 @@ VoiceConfig loadVoiceConfig(String path) {
           promptStyle: promptStyle ?? false,
           sendsVoiceField: sendsVoice ?? true,
           sampleRate: sampleRate?.toInt(),
+          provider: provider ?? 'openrouter',
         );
       });
     }
@@ -322,6 +366,8 @@ VoiceConfig loadVoiceConfig(String path) {
     }
     return VoiceConfig(
       apiKey: apiKey as String?,
+      defaultProvider: defaultProviderRaw as String?,
+      providers: providersOut,
       models: models,
       defaults: defaults,
       pricing: pricingOut,
@@ -340,17 +386,23 @@ Map<String, Object?> _modelJson(TtsModelProfile p) => {
       if (p.sampleRate != null) 'sample_rate': p.sampleRate,
       if (p.promptStyle) 'prompt_style': p.promptStyle,
       if (!p.sendsVoiceField) 'sends_voice': p.sendsVoiceField,
+      // Only emit a per-model provider when it overrides the compiled default.
+      if (p.provider != 'openrouter') 'provider': p.provider,
     };
 
 /// Writes [config] to [path] as the shared `voice_config.json` schema,
-/// creating parent directories as needed. Round-trips `api_key`, `models`,
-/// `defaults`, `pricing`, and the per-model voice aliases so the CLI and GUI
-/// serialize identically.
+/// creating parent directories as needed. Round-trips `api_key`,
+/// `default_provider`, the verbatim `providers` block, `models`, `defaults`,
+/// `pricing`, and the per-model voice aliases so the CLI and GUI serialize
+/// identically.
 ///
 /// Throws a [VoiceConfigError] when the file cannot be written.
 void writeVoiceConfig(String path, VoiceConfig config) {
   final json = <String, Object?>{
     if (config.apiKey != null) 'api_key': config.apiKey,
+    if (config.defaultProvider != null)
+      'default_provider': config.defaultProvider,
+    if (config.providers.isNotEmpty) 'providers': config.providers,
     if (config.models.isNotEmpty)
       'models': {for (final e in config.models.entries) e.key: _modelJson(e.value)},
     if (config.defaults.isNotEmpty) 'defaults': config.defaults,

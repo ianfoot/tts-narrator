@@ -14,7 +14,8 @@ void main() {
     tearDown(() => dir.deleteSync(recursive: true));
 
     String write(String contents) {
-      final f = File('${dir.path}/voice_config.json')..writeAsStringSync(contents);
+      final f = File('${dir.path}/voice_config.json')
+        ..writeAsStringSync(contents);
       return f.path;
     }
 
@@ -26,15 +27,19 @@ void main() {
     });
 
     test('parses api_key, defaults, pricing and per-model aliases', () {
-      final path = write(jsonSample(
-        apiKey: 'sk-or-test',
-        defaults: {'fish': 'Narrator'},
-        pricing: {'kokoro': {'usd_per_m_chars': 0.62}},
-        voices: {
-          'fish': {'Narrator': 'hex1'},
-          'kokoro': {'Emma': 'bf_emma'},
-        },
-      ));
+      final path = write(
+        jsonSample(
+          apiKey: 'sk-or-test',
+          defaults: {'fish': 'Narrator'},
+          pricing: {
+            'kokoro': {'usd_per_m_chars': 0.62},
+          },
+          voices: {
+            'fish': {'Narrator': 'hex1'},
+            'kokoro': {'Emma': 'bf_emma'},
+          },
+        ),
+      );
       final cfg = loadVoiceConfig(path);
       expect(cfg.apiKey, 'sk-or-test');
       expect(cfg.defaults['fish'], 'Narrator');
@@ -84,6 +89,57 @@ void main() {
       expect(cfg.isEmpty, isTrue);
     });
 
+    test(r'parses default_provider and the providers block verbatim', () {
+      final path = write('''{
+  "default_provider": "openrouter",
+  "providers": {
+    "openrouter": { "OPENROUTER_API_KEY": "\${OPENROUTER_API_KEY}" }
+  }
+}''');
+      final cfg = loadVoiceConfig(path);
+      expect(cfg.defaultProvider, 'openrouter');
+      // The `${...}` env reference is preserved as a literal, not resolved.
+      expect(cfg.providers, {
+        'openrouter': {'OPENROUTER_API_KEY': r'${OPENROUTER_API_KEY}'},
+      });
+    });
+
+    test('rejects a non-string default_provider', () {
+      final path = write('{"default_provider": 42}');
+      expect(() => loadVoiceConfig(path), throwsA(isA<VoiceConfigError>()));
+    });
+
+    test('rejects a non-object providers entry', () {
+      final path = write('{"providers": {"openrouter": "sk-or"}}');
+      expect(() => loadVoiceConfig(path), throwsA(isA<VoiceConfigError>()));
+    });
+
+    test('rejects a non-string value inside a providers entry', () {
+      final path = write('{"providers": {"openrouter": {"KEY": 42}}}');
+      expect(() => loadVoiceConfig(path), throwsA(isA<VoiceConfigError>()));
+    });
+
+    test(
+      'parses models entry provider, defaulting to the compiled openrouter',
+      () {
+        final explicit = write(
+          '{"models": {"gemini": {"id": "a/b", "provider": "google"}}}',
+        );
+        expect(loadVoiceConfig(explicit).models['gemini']?.provider, 'google');
+
+        final implicit = write('{"models": {"fish": {"id": "a/b"}}}');
+        expect(
+          loadVoiceConfig(implicit).models['fish']?.provider,
+          'openrouter',
+        );
+      },
+    );
+
+    test('rejects a non-string models provider', () {
+      final path = write('{"models": {"x": {"id": "a/b", "provider": 7}}}');
+      expect(() => loadVoiceConfig(path), throwsA(isA<VoiceConfigError>()));
+    });
+
     test('throws VoiceConfigError on malformed JSON', () {
       final path = write('{not json');
       expect(() => loadVoiceConfig(path), throwsA(isA<VoiceConfigError>()));
@@ -100,7 +156,9 @@ void main() {
     });
 
     test('ignores non-string voice id values, keeps the model key only if non-empty', () {
-      final path = write('''{"voices": {"fish": {"A": "id1", "B": 42, "C": ""}}}''');
+      final path = write(
+        '''{"voices": {"fish": {"A": "id1", "B": 42, "C": ""}}}''',
+      );
       final cfg = loadVoiceConfig(path);
       expect(cfg.aliases['fish']?['A'], 'id1');
       expect(cfg.aliases['fish']?.containsKey('B'), isFalse);
@@ -117,30 +175,34 @@ void main() {
     });
 
     test('config models extend the set with new providers', () {
-      final cfg = VoiceConfig(models: {
-        'gemini': const TtsModelProfile(
-          alias: 'gemini',
-          id: 'google/gemini-3.1-flash-tts-preview',
-          format: 'pcm',
-        ),
-        'kokoro': const TtsModelProfile(
-          alias: 'kokoro',
-          id: 'hexgrad/kokoro-82m',
-          format: 'mp3',
-        ),
-      });
+      final cfg = VoiceConfig(
+        models: {
+          'gemini': const TtsModelProfile(
+            alias: 'gemini',
+            id: 'google/gemini-3.1-flash-tts-preview',
+            format: 'pcm',
+          ),
+          'kokoro': const TtsModelProfile(
+            alias: 'kokoro',
+            id: 'hexgrad/kokoro-82m',
+            format: 'mp3',
+          ),
+        },
+      );
       final models = effectiveModels(cfg);
       expect(models.map((m) => m.alias).toList(), ['fish', 'gemini', 'kokoro']);
     });
 
     test('a config model overrides the fish bootstrap by alias', () {
-      final cfg = VoiceConfig(models: {
-        'fish': const TtsModelProfile(
-          alias: 'fish',
-          id: 'fish-audio/other-free',
-          format: 'mp3',
-        ),
-      });
+      final cfg = VoiceConfig(
+        models: {
+          'fish': const TtsModelProfile(
+            alias: 'fish',
+            id: 'fish-audio/other-free',
+            format: 'mp3',
+          ),
+        },
+      );
       final models = effectiveModels(cfg);
       expect(models, hasLength(1));
       expect(models.single.id, 'fish-audio/other-free');
@@ -149,14 +211,19 @@ void main() {
 
   group('profileFor', () {
     test('resolves a config alias or full id', () {
-      final cfg = VoiceConfig(models: {
-        'gemini': const TtsModelProfile(
-          alias: 'gemini',
-          id: 'google/gemini-3.1-flash-tts-preview',
-          format: 'pcm',
-        ),
-      });
-      expect(profileFor('gemini', cfg)?.id, 'google/gemini-3.1-flash-tts-preview');
+      final cfg = VoiceConfig(
+        models: {
+          'gemini': const TtsModelProfile(
+            alias: 'gemini',
+            id: 'google/gemini-3.1-flash-tts-preview',
+            format: 'pcm',
+          ),
+        },
+      );
+      expect(
+        profileFor('gemini', cfg)?.id,
+        'google/gemini-3.1-flash-tts-preview',
+      );
       expect(
         profileFor('google/gemini-3.1-flash-tts-preview', cfg)?.alias,
         'gemini',
@@ -173,25 +240,37 @@ void main() {
   });
 
   group('resolveVoice', () {
-    final cfg = VoiceConfig(apiKey: 'k', aliases: {
-      'fish': {'British Female Narrator (good)': '89f41ea'},
-      'kokoro': {'Emma': 'bf_emma'},
-    });
+    final cfg = VoiceConfig(
+      apiKey: 'k',
+      aliases: {
+        'fish': {'British Female Narrator (good)': '89f41ea'},
+        'kokoro': {'Emma': 'bf_emma'},
+      },
+    );
 
     test('resolves an alias to its raw id and keeps the label', () {
-      final (id, label) = cfg.resolveVoice('fish', 'British Female Narrator (good)');
+      final (id, label) = cfg.resolveVoice(
+        'fish',
+        'British Female Narrator (good)',
+      );
       expect(id, '89f41ea');
       expect(label, 'British Female Narrator (good)');
     });
 
     test('passes unknown values through unchanged', () {
-      final (id, label) = cfg.resolveVoice('fish', '2fd511bd06904a21a971c6551dfb853a');
+      final (id, label) = cfg.resolveVoice(
+        'fish',
+        '2fd511bd06904a21a971c6551dfb853a',
+      );
       expect(id, '2fd511bd06904a21a971c6551dfb853a');
       expect(label, '2fd511bd06904a21a971c6551dfb853a');
     });
 
     test('is isolated per model', () {
-      final (id, _) = cfg.resolveVoice('kokoro', 'British Female Narrator (good)');
+      final (id, _) = cfg.resolveVoice(
+        'kokoro',
+        'British Female Narrator (good)',
+      );
       expect(id, 'British Female Narrator (good)'); // not a kokoro alias
       final (id2, _) = cfg.resolveVoice('gemini', 'Emma');
       expect(id2, 'Emma');
@@ -208,7 +287,9 @@ void main() {
     test('uses the configured default label', () {
       final cfg = VoiceConfig(
         defaults: const {'kokoro': 'Emma'},
-        aliases: const {'kokoro': {'Emma': 'bf_emma'}},
+        aliases: const {
+          'kokoro': {'Emma': 'bf_emma'},
+        },
       );
       final (id, label) = defaultVoiceFor(
         const TtsModelProfile(alias: 'kokoro', id: 'hexgrad/kokoro-82m'),
@@ -219,8 +300,10 @@ void main() {
     });
 
     test('fish falls back to the compiled bootstrap voice', () {
-      final (id, label) =
-          defaultVoiceFor(kDefaultProfile.profile, const VoiceConfig());
+      final (id, label) = defaultVoiceFor(
+        kDefaultProfile.profile,
+        const VoiceConfig(),
+      );
       expect(id, kDefaultProfile.voice);
       expect(label, kDefaultProfile.voiceLabel);
     });
@@ -228,7 +311,10 @@ void main() {
     test('throws when a model has no default configured', () {
       expect(
         () => defaultVoiceFor(
-          const TtsModelProfile(alias: 'gemini', id: 'google/gemini-3.1-flash-tts-preview'),
+          const TtsModelProfile(
+            alias: 'gemini',
+            id: 'google/gemini-3.1-flash-tts-preview',
+          ),
           const VoiceConfig(),
         ),
         throwsA(isA<VoiceConfigError>()),
@@ -262,13 +348,12 @@ void main() {
     test('includes aliases plus the default voice, deduped', () {
       final cfg = VoiceConfig(
         defaults: const {'fish': 'Narrator'},
-        aliases: const {'fish': {'Narrator': 'hex1'}},
+        aliases: const {
+          'fish': {'Narrator': 'hex1'},
+        },
       );
       final entries = voiceEntries(model: kDefaultProfile.profile, config: cfg);
-      expect(
-        entries.where((e) => e.id == 'hex1'),
-        hasLength(1),
-      );
+      expect(entries.where((e) => e.id == 'hex1'), hasLength(1));
       final alias = entries.firstWhere(
         (e) => e.id == 'hex1' && e.label == 'Narrator',
         orElse: () => throw 'missing',
@@ -285,7 +370,9 @@ void main() {
             format: 'pcm',
           ),
         },
-        aliases: const {'gemini': {'Charon': 'Charon'}},
+        aliases: const {
+          'gemini': {'Charon': 'Charon'},
+        },
       );
       final entries = voiceEntries(config: cfg);
       expect(
@@ -318,9 +405,7 @@ void main() {
             ),
           },
           defaults: const {'fish': 'Narrator'},
-          pricing: {
-            'kokoro': const AudioPricing(usdPerMChars: 0.62),
-          },
+          pricing: {'kokoro': const AudioPricing(usdPerMChars: 0.62)},
           aliases: {
             'fish': {'Narrator': 'hex1'},
             'kokoro': {'Emma': 'bf_emma'},
@@ -348,6 +433,55 @@ void main() {
       final path = '${dir.path}/a/b/c/voice_config.json';
       writeVoiceConfig(path, const VoiceConfig(apiKey: 'k'));
       expect(File(path).existsSync(), isTrue);
+    });
+
+    test('round-trips default_provider and the providers block verbatim', () {
+      final path = '${dir.path}/voice_config.json';
+      writeVoiceConfig(
+        path,
+        const VoiceConfig(
+          defaultProvider: 'openrouter',
+          providers: {
+            'openrouter': {'OPENROUTER_API_KEY': r'${OPENROUTER_API_KEY}'},
+          },
+        ),
+      );
+      final cfg = loadVoiceConfig(path);
+      expect(cfg.defaultProvider, 'openrouter');
+      expect(
+        cfg.providers['openrouter']?['OPENROUTER_API_KEY'],
+        r'${OPENROUTER_API_KEY}',
+      );
+      // The env reference survives in the file, unresolved.
+      expect(File(path).readAsStringSync(), contains(r'${OPENROUTER_API_KEY}'));
+    });
+
+    test('round-trips a per-model provider override', () {
+      final path = '${dir.path}/voice_config.json';
+      writeVoiceConfig(
+        path,
+        const VoiceConfig(
+          models: {
+            'gemini': TtsModelProfile(
+              alias: 'gemini',
+              id: 'a/b',
+              provider: 'google',
+            ),
+          },
+        ),
+      );
+      expect(loadVoiceConfig(path).models['gemini']?.provider, 'google');
+    });
+
+    test('omits default_provider and providers when empty', () {
+      final path = '${dir.path}/voice_config.json';
+      writeVoiceConfig(path, const VoiceConfig());
+      expect(File(path).readAsStringSync(), contains('{}'));
+
+      writeVoiceConfig(path, const VoiceConfig(defaultProvider: 'openrouter'));
+      final s = File(path).readAsStringSync();
+      expect(s, contains('default_provider'));
+      expect(s, isNot(contains('"providers"')));
     });
 
     test('throws VoiceConfigError when the path cannot be written', () {
