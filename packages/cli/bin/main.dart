@@ -22,14 +22,19 @@ Future<int> main(List<String> args) async {
   }
 
   NarrationConfig config;
+  final warnings = <String>[];
   try {
-    config = parseArgs(args);
+    config = parseArgs(args, warningsOut: warnings);
   } on CliUsageError catch (e) {
     stderr.writeln('Error: $e');
     stderr.writeln();
     stderr.writeln(usage);
     exitCode = _exitUsage;
     return _exitUsage;
+  }
+
+  for (final w in warnings) {
+    stderr.writeln('Warning: $w');
   }
 
   List<String> inputs;
@@ -180,13 +185,19 @@ int _runListVoices(List<String> args) {
     configPath = args[ci + 1];
   }
 
-  VoiceConfig voiceConfig = const VoiceConfig();
+  VoiceConfig voiceConfig;
+  final listWarnings = <String>[];
   try {
-    voiceConfig = loadVoiceConfig(configPath ?? defaultConfigPath());
+    final (cfg, warnings) = loadVoiceConfig(configPath ?? defaultConfigDir());
+    voiceConfig = cfg;
+    listWarnings.addAll(warnings);
   } on VoiceConfigError catch (e) {
     stderr.writeln('Error: $e');
     exitCode = _exitUsage;
     return _exitUsage;
+  }
+  for (final w in listWarnings) {
+    stderr.writeln('Warning: $w');
   }
 
   TtsModelProfile? model;

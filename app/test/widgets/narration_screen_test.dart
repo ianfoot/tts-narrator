@@ -13,11 +13,11 @@ import '../support/fake_tts_provider.dart';
 
 void main() {
   late Directory dir;
-  late String configPath;
+  late String configDir;
 
   setUp(() {
     dir = Directory.systemTemp.createTempSync('tts_narration_screen_');
-    configPath = '${dir.path}/voice_config.json';
+    configDir = '${dir.path}/cfg';
   });
 
   tearDown(() {
@@ -25,8 +25,10 @@ void main() {
   });
 
   AppController makeController() {
-    File(configPath).writeAsStringSync('{}');
-    final c = AppController(loader: VoiceConfigLoader(configPath: configPath))
+    File('$configDir/config.json')
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync('{}');
+    final c = AppController(loader: VoiceConfigLoader(configDir: configDir))
       ..outDir = dir.path;
     c.setText(
       'The rain fell on the quiet street all through the long cold night and '
@@ -77,7 +79,7 @@ void main() {
     tester,
   ) async {
     FakeTtsProvider().register();
-    final c = AppController(loader: VoiceConfigLoader(configPath: configPath))
+    final c = AppController(loader: VoiceConfigLoader(configDir: configDir))
       ..outDir = dir.path;
     c.startRun();
     await pumpRun(tester, c);
