@@ -82,10 +82,14 @@ void main() {
       expect(find.byKey(const Key('inspectorRail')), findsOneWidget);
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
       expect(find.byKey(const Key('voiceDropdown')), findsOneWidget);
-      expect(find.byKey(const Key('voiceRawField')), findsOneWidget);
-      expect(find.byKey(const Key('minWordsField')), findsOneWidget);
-      expect(find.byKey(const Key('sampleLenField')), findsOneWidget);
-      expect(find.byKey(const Key('outDirField')), findsOneWidget);
+      expect(find.byKey(const Key('voiceAdvancedDisclosure')), findsOneWidget);
+      // The advanced voice id is collapsed by default.
+      expect(find.byKey(const Key('voiceRawField')), findsNothing);
+      expect(find.text('Overrides selected alias'), findsOneWidget);
+      expect(find.byKey(const Key('minWordsSlider')), findsOneWidget);
+      expect(find.byKey(const Key('minWordsBadge')), findsOneWidget);
+      expect(find.byKey(const Key('sampleSwitch')), findsOneWidget);
+      expect(find.byKey(const Key('outDirPickerButton')), findsOneWidget);
       expect(find.byKey(const Key('resumeSwitch')), findsOneWidget);
       expect(find.byKey(const Key('railCloseButton')), findsOneWidget);
       // The default fish model's plugin declares no model options, so no
@@ -96,15 +100,22 @@ void main() {
       expect(find.byKey(const Key('passagePrefixField')), findsNothing);
       expect(find.byKey(const Key('useCalmTagSwitch')), findsNothing);
 
-      final raw = tester.widget<TextField>(
+      // The min-words badge reflects the controller default.
+      expect(
         find.descendant(
-          of: find.byKey(const Key('voiceRawField')),
-          matching: find.byType(TextField),
+          of: find.byKey(const Key('minWordsBadge')),
+          matching: find.text('30'),
         ),
+        findsOneWidget,
       );
-      expect(raw.controller!.text, kDefaultProfile.voice);
     });
   });
+
+  /// Expands the collapsed "Advanced Voice ID" disclosure.
+  Future<void> expandVoiceRaw(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('voiceAdvancedDisclosure')));
+    await tester.pump();
+  }
 
   group('model & voice', () {
     const gemini = {
@@ -124,6 +135,7 @@ void main() {
       });
       final c = makeController();
       await pumpRail(tester, c);
+      await expandVoiceRaw(tester);
 
       await tester.tap(find.byKey(const Key('modelDropdown')));
       await tester.pumpAndSettle();
@@ -185,6 +197,7 @@ void main() {
       writeConfig({});
       final c = makeController();
       await pumpRail(tester, c);
+      await expandVoiceRaw(tester);
 
       await tester.enterText(
         find.descendant(
@@ -197,6 +210,26 @@ void main() {
 
       expect(c.voice, 'custom_raw_id');
       expect(c.voiceLabel, isNull);
+    });
+
+    testWidgets('the advanced voice id disclosure reveals the raw field', (
+      tester,
+    ) async {
+      writeConfig({});
+      final c = makeController();
+      await pumpRail(tester, c);
+
+      expect(find.byKey(const Key('voiceRawField')), findsNothing);
+      expect(find.text('Overrides selected alias'), findsOneWidget);
+
+      await expandVoiceRaw(tester);
+
+      expect(find.byKey(const Key('voiceRawField')), findsOneWidget);
+      expect(find.text('Overrides selected alias'), findsNothing);
+
+      await tester.tap(find.text('Advanced Voice ID'));
+      await tester.pump();
+      expect(find.byKey(const Key('voiceRawField')), findsNothing);
     });
   });
 
@@ -322,20 +355,46 @@ void main() {
   });
 
   group('run options', () {
-    testWidgets('number fields set min words and sample length', (
+    testWidgets('the min-words slider updates the controller within 10-100', (
       tester,
     ) async {
       writeConfig({});
       final c = makeController();
       await pumpRail(tester, c);
 
-      await tester.enterText(
-        find.descendant(
-          of: find.byKey(const Key('minWordsField')),
-          matching: find.byType(TextField),
-        ),
-        '50',
+      expect(c.minWords, 30);
+      // Drag to the far right -> 100.
+      await tester.drag(
+        find.byKey(const Key('minWordsSlider')),
+        const Offset(600, 0),
       );
+      await tester.pump();
+      expect(c.minWords, 100);
+
+      // Drag to the far left -> 10 (the slider's minimum).
+      await tester.drag(
+        find.byKey(const Key('minWordsSlider')),
+        const Offset(-600, 0),
+      );
+      await tester.pump();
+      expect(c.minWords, 10);
+    });
+
+    testWidgets('sample mode toggles the inline segment count input', (
+      tester,
+    ) async {
+      writeConfig({});
+      final c = makeController();
+      await pumpRail(tester, c);
+
+      expect(find.byKey(const Key('sampleLenField')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('sampleSwitch')));
+      await tester.pump();
+      expect(c.sampleLen, 1);
+      expect(find.byKey(const Key('sampleLenField')), findsOneWidget);
+      expect(find.text('Narrate first [ 1 ] segments only'), findsOneWidget);
+
       await tester.enterText(
         find.descendant(
           of: find.byKey(const Key('sampleLenField')),
@@ -344,57 +403,47 @@ void main() {
         '3',
       );
       await tester.pump();
-
-      expect(c.minWords, 50);
       expect(c.sampleLen, 3);
 
-      // Clearing sample length makes it optional again.
-      await tester.enterText(
-        find.descendant(
-          of: find.byKey(const Key('sampleLenField')),
-          matching: find.byType(TextField),
-        ),
-        '',
-      );
+      await tester.tap(find.byKey(const Key('sampleSwitch')));
       await tester.pump();
       expect(c.sampleLen, isNull);
+      expect(find.byKey(const Key('sampleLenField')), findsNothing);
     });
 
-    testWidgets('min words clamps to a positive value', (tester) async {
-      writeConfig({});
-      final c = makeController();
-      await pumpRail(tester, c);
-
-      await tester.enterText(
-        find.descendant(
-          of: find.byKey(const Key('minWordsField')),
-          matching: find.byType(TextField),
-        ),
-        '0',
-      );
-      await tester.pump();
-
-      expect(c.minWords, 1);
-    });
-
-    testWidgets('the output directory and resume switch write through', (
+    testWidgets('the folder picker writes the chosen directory', (
       tester,
     ) async {
       writeConfig({});
       final c = makeController();
+      await tester.binding.setSurfaceSize(const Size(1200, 1800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: InspectorRail(
+              controller: c,
+              pickDirectory: () async => '/picked/audio',
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('outDirPickerButton')));
+      await tester.pumpAndSettle();
+
+      expect(c.outDir, '/picked/audio');
+      expect(find.text('/picked/audio'), findsOneWidget);
+    });
+
+    testWidgets('the resume switch writes through', (tester) async {
+      writeConfig({});
+      final c = makeController();
       await pumpRail(tester, c);
 
-      await tester.enterText(
-        find.descendant(
-          of: find.byKey(const Key('outDirField')),
-          matching: find.byType(TextField),
-        ),
-        'audio/output',
-      );
       await tester.tap(find.byKey(const Key('resumeSwitch')));
       await tester.pump();
 
-      expect(c.outDir, 'audio/output');
       expect(c.resume, isTrue);
     });
   });
