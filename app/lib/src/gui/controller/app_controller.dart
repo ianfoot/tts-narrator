@@ -142,12 +142,13 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Minimum words per chunk (clamped to >= 1). Changing it revises the live
-  /// chunk plan and estimate the editor shows.
+  /// Minimum words per segment (clamped to the settings rail's 10-100
+  /// slider range). Changing it revises the live chunk plan and estimate the
+  /// editor shows.
   int get minWords => _minWords;
 
   set minWords(int value) {
-    final clamped = value < 1 ? 1 : value;
+    final clamped = value.clamp(10, 100);
     if (clamped == _minWords) return;
     _minWords = clamped;
     notifyListeners();

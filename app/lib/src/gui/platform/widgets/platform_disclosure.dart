@@ -38,7 +38,7 @@ class PlatformDisclosure extends StatelessWidget {
       color: colors.textSecondary,
     );
     final header = GestureDetector(
-      onTapDown: (_) => onToggle(!expanded),
+      onTap: () => onToggle(!expanded),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

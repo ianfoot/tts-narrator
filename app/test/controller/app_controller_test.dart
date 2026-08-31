@@ -456,12 +456,14 @@ void main() {
       expect(notifications, 0);
     });
 
-    test('min words clamps to at least one', () {
+    test('min words clamps to the settings slider range (10-100)', () {
       final c = makeController();
       c.minWords = 0;
-      expect(c.minWords, 1);
+      expect(c.minWords, 10);
       c.minWords = -5;
-      expect(c.minWords, 1);
+      expect(c.minWords, 10);
+      c.minWords = 1000;
+      expect(c.minWords, 100);
     });
 
     test('sample length can be cleared back to null', () {

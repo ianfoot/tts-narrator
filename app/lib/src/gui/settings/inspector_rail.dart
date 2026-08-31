@@ -64,18 +64,16 @@ class _InspectorRailState extends State<InspectorRail> {
   bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
 
   List<(String, String)> get _modelItems => [
-        for (final p in effectiveModels(_controller.voiceConfig))
-          (p.alias, '${p.alias} — ${p.id}'),
-      ];
+    for (final p in effectiveModels(_controller.voiceConfig))
+      (p.alias, '${p.alias} — ${p.id}'),
+  ];
 
   List<(String, String)> get _voiceItems {
     final entries = voiceEntries(
       model: _controller.profile,
       config: _controller.voiceConfig,
     );
-    return [
-      for (final e in entries) (e.label, e.label),
-    ];
+    return [for (final e in entries) (e.label, e.label)];
   }
 
   @override
@@ -85,8 +83,9 @@ class _InspectorRailState extends State<InspectorRail> {
     _accent = TextEditingController(text: _controller.accent);
     _style = TextEditingController(text: _controller.style);
     _prefix = TextEditingController(text: _controller.passagePrefix);
-    _sampleLen =
-        TextEditingController(text: _controller.sampleLen?.toString() ?? '');
+    _sampleLen = TextEditingController(
+      text: _controller.sampleLen?.toString() ?? '',
+    );
     _sampleOn = _controller.sampleLen != null;
     _controller.addListener(_onControllerChanged);
   }
@@ -174,24 +173,30 @@ class _InspectorRailState extends State<InspectorRail> {
   }
 
   Future<void> _pickOutputDirectory() async {
-    final path = await (widget.pickDirectory ??
-        () => getDirectoryPath(initialDirectory: _controller.outDir))();
-    if (path == null) return;
-    _controller.outDir = path;
+    try {
+      final path =
+          await (widget.pickDirectory ??
+              () => getDirectoryPath(initialDirectory: _controller.outDir))();
+      if (path == null) return;
+      _controller.outDir = path;
+    } catch (_) {
+      // The native picker can surface a platform error; leave the current
+      // output directory unchanged rather than crashing the rail.
+    }
   }
 
   AppTokens get _tokens => AppTokens.of(context);
 
   Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 4, top: 8),
-        child: Text(
-          text,
-          style: _tokens.typography.caption.copyWith(
-            fontWeight: FontWeight.w500,
-            color: _tokens.colors.textSecondary,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 4, top: 8),
+    child: Text(
+      text,
+      style: _tokens.typography.caption.copyWith(
+        fontWeight: FontWeight.w500,
+        color: _tokens.colors.textSecondary,
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -242,9 +247,7 @@ class _InspectorRailState extends State<InspectorRail> {
             key: const Key('railCloseButton'),
             tooltip: 'Hide settings',
             icon: Icon(
-              _isMac
-                  ? CupertinoIcons.sidebar_right
-                  : Icons.settings_overscan,
+              _isMac ? CupertinoIcons.sidebar_right : Icons.settings_overscan,
             ),
             onPressed: widget.onClose,
           ),
@@ -321,9 +324,7 @@ class _InspectorRailState extends State<InspectorRail> {
       title: 'Model options',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final option in options) _buildModelOption(option),
-        ],
+        children: [for (final option in options) _buildModelOption(option)],
       ),
     );
   }
@@ -436,14 +437,9 @@ class _InspectorRailState extends State<InspectorRail> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: _tokens.colors.bgSurfaceElevated,
-                  borderRadius: BorderRadius.circular(
-                    AppMetrics.controlRadius,
-                  ),
+                  borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
                 ),
-                child: Text(
-                  '$minWords',
-                  style: _tokens.typography.mono,
-                ),
+                child: Text('$minWords', style: _tokens.typography.mono),
               ),
             ],
           ),
@@ -518,9 +514,7 @@ class _InspectorRailState extends State<InspectorRail> {
             padding: const EdgeInsets.only(top: 12),
             child: Row(
               children: [
-                const Expanded(
-                  child: Text('Skip completed segments (Resume)'),
-                ),
+                const Expanded(child: Text('Skip completed segments (Resume)')),
                 PlatformSwitch(
                   key: const Key('resumeSwitch'),
                   value: _controller.resume,
