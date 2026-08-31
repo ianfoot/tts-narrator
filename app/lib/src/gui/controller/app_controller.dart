@@ -503,7 +503,7 @@ class AppController extends ChangeNotifier {
   /// this before dispatching to [onNarrate].
   String? narrateBlockReason() {
     if (_text.trim().isEmpty) {
-      return 'Nothing to narrate yet — type or paste some text.';
+      return 'Editor text is empty';
     }
     if (_narrating) {
       return 'Narration is already running.';
