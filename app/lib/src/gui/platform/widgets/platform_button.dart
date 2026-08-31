@@ -7,7 +7,13 @@ import '../../theme/app_tokens.dart';
 /// Visual weighting for [PlatformButton].
 enum PlatformButtonStyle { filled, outlined }
 
-/// Platform-aware button: Cupertino on macOS, Material everywhere else.
+/// Platform-aware button: Cupertino on macOS, Material elsewhere.
+///
+/// The filled style is a custom accent-primary container rather than
+/// `CupertinoButton.filled`, whose SDK-default geometry is taller than the
+/// app's 44px toolbar and clipped the toolbar Narrate button. The child is
+/// styled white through a `DefaultTextStyle` so a filled button renders white
+/// text/icons without every caller specifying the color.
 class PlatformButton extends StatelessWidget {
   const PlatformButton({
     super.key,
@@ -64,13 +70,42 @@ class PlatformButton extends StatelessWidget {
         ),
       );
     }
-    return CupertinoButton.filled(onPressed: onPressed, child: label);
+    final accent = AppTokens.of(context).colors.accentPrimary;
+    return CupertinoButton(
+      onPressed: onPressed,
+      padding: EdgeInsets.zero,
+      child: DefaultTextStyle(
+        style: const TextStyle(color: Colors.white),
+        // Icons resolve color from IconTheme, not DefaultTextStyle; without
+        // this the root Cupertino IconTheme (accent-primary) would make icons
+        // invisible on the same-colored fill.
+        child: IconTheme(
+          data: const IconThemeData(color: Colors.white),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
+            ),
+            child: label,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildMaterial() {
     if (style == PlatformButtonStyle.outlined) {
-      return OutlinedButton.icon(onPressed: onPressed, icon: icon ?? const SizedBox.shrink(), label: child);
+      return OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: icon ?? const SizedBox.shrink(),
+        label: child,
+      );
     }
-    return FilledButton.icon(onPressed: onPressed, icon: icon ?? const SizedBox.shrink(), label: child);
+    return FilledButton.icon(
+      onPressed: onPressed,
+      icon: icon ?? const SizedBox.shrink(),
+      label: child,
+    );
   }
 }

@@ -185,13 +185,12 @@ class _EditorScreenState extends State<EditorScreen> {
           onPressed: _onNarratePressed,
           icon: Icon(
             _isMac ? CupertinoIcons.play_fill : Icons.play_arrow,
-            color: Colors.white,
             size: 18,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Narrate', style: TextStyle(color: Colors.white)),
+              const Text('Narrate'),
               const SizedBox(width: 4),
               Text(
                 '⌘N',

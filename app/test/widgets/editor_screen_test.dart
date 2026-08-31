@@ -53,6 +53,9 @@ void main() {
     );
     expect(find.byKey(const Key('editorOpenButton')), findsOneWidget);
     expect(find.byKey(const Key('editorNarrateButton')), findsOneWidget);
+    // Narration is initiated from the toolbar only; the settings rail has no
+    // Narrate button of its own.
+    expect(find.byKey(const Key('railNarrateButton')), findsNothing);
     expect(find.byKey(const Key('railToggleButton')), findsOneWidget);
     expect(find.text('⌘O'), findsOneWidget);
     expect(find.text('⌘N'), findsOneWidget);
