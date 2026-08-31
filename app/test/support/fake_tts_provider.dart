@@ -1,7 +1,8 @@
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
-/// Records every [synthesize] call and returns configurable bytes, so tests can
-/// assert what `narrate` dispatches to the provider without any network.
+/// Simplest fake provider: registers under the `openrouter` id so narration
+/// runs without the real network dependency. Returns each [synthesize] result
+/// with the configured bytes and records every call.
 class FakeTtsProvider implements TtsProvider {
   FakeTtsProvider({List<int>? bytes}) : bytes = bytes ?? 'fake-audio'.codeUnits;
 
@@ -9,29 +10,27 @@ class FakeTtsProvider implements TtsProvider {
   final List<int> bytes;
 
   final List<
-    ({
-      String model,
-      String? voice,
-      String input,
-      String responseFormat,
-      Map<String, String> settings,
-    })
+    ({String model, String? voice, String input, String responseFormat})
   >
   calls = [];
 
   int get callCount => calls.length;
 
   @override
-  String get id => 'fake';
+  String get id => 'openrouter';
 
   @override
   String get name => 'Fake TTS';
 
-  /// Model UI spec surfaced for every model (empty by default).
+  /// Model UI spec to surface for the given model (declarable per test).
   ModelUiSpec modelUiSpec = const ModelUiSpec.empty();
 
+  /// Optional per-alias specs overriding [modelUiSpec]; keyed by model alias.
+  final Map<String, ModelUiSpec> specsByAlias = {};
+
   @override
-  ModelUiSpec modelUiSpecFor(TtsModelProfile model) => modelUiSpec;
+  ModelUiSpec modelUiSpecFor(TtsModelProfile model) =>
+      specsByAlias[model.alias] ?? modelUiSpec;
 
   @override
   Future<ProviderAudio> synthesize({
@@ -48,8 +47,11 @@ class FakeTtsProvider implements TtsProvider {
       voice: voice,
       input: input,
       responseFormat: responseFormat,
-      settings: Map.unmodifiable(settings),
     ));
     return ProviderAudio(bytes: bytes);
   }
+
+  /// Registers this instance with the shared registry under `openrouter`
+  /// (like `main.dart` does), so `narrate` finds it without real credentials.
+  void register() => ttsProviderRegistry.register('openrouter', () => this);
 }

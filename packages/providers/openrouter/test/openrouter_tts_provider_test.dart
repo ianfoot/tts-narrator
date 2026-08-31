@@ -48,4 +48,49 @@ void main() {
       );
     });
   });
+
+  group('modelUiSpecFor', () {
+    test('a prompt-styled model declares its styling options', () {
+      const styled = TtsModelProfile(
+        alias: 'gemini',
+        id: 'google/gemini-3.1-flash-tts-preview',
+        promptStyle: true,
+      );
+      final spec = OpenRouterTtsProvider().modelUiSpecFor(styled);
+      expect(spec.isEmpty, isFalse);
+      expect(
+        spec.options.map((o) => o.key),
+        ['accent', 'style', 'passagePrefix', 'useCalmTag'],
+      );
+      expect(
+        spec.options.firstWhere((o) => o.key == 'passagePrefix').type,
+        ModelUiOptionType.multiline,
+      );
+      expect(
+        spec.options.firstWhere((o) => o.key == 'useCalmTag').type,
+        ModelUiOptionType.bool,
+      );
+    });
+
+    test('a prompt-styled model with a renamed alias still declares them', () {
+      // A user may alias the gemini model to anything; the UI is keyed off the
+      // request-shape promptStyle flag, not the user-editable alias.
+      const renamed = TtsModelProfile(
+        alias: 'my-gemini',
+        id: 'google/gemini-3.1-flash-tts-preview',
+        promptStyle: true,
+      );
+      final spec = OpenRouterTtsProvider().modelUiSpecFor(renamed);
+      expect(spec.isEmpty, isFalse);
+      expect(spec.options, hasLength(4));
+    });
+
+    test('models without prompt styling declare nothing', () {
+      final provider = OpenRouterTtsProvider();
+      const fish = TtsModelProfile(alias: 'fish', id: 'fish-audio/s2.1-pro-free');
+      const kokoro = TtsModelProfile(alias: 'kokoro', id: 'hexgrad/kokoro-82m');
+      expect(provider.modelUiSpecFor(fish).isEmpty, isTrue);
+      expect(provider.modelUiSpecFor(kokoro).isEmpty, isTrue);
+    });
+  });
 }

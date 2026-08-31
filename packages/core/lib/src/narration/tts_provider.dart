@@ -1,4 +1,6 @@
 import 'abort.dart';
+import 'model_profiles.dart';
+import 'model_ui.dart';
 
 /// A synthesized audio sample from a TTS provider.
 class ProviderAudio {
@@ -27,6 +29,17 @@ abstract class TtsProvider {
 
   /// Human-readable name for banners/UI.
   String get name;
+
+  /// Declares the editable GUI options for [model]; empty by default.
+  ///
+  /// The provider package is the model's plugin: it decides which controls a
+  /// model gets in the GUI and the app renders them generically. Core ships no
+  /// model-specific UI knowledge — the keys are the shared
+  /// `accent`/`style`/`passagePrefix`/`useCalmTag` convention. The plugin
+  /// receives the full [TtsModelProfile] so it can key its UI off request
+  /// shape (id, prompt styling) rather than the user-editable alias.
+  ModelUiSpec modelUiSpecFor(TtsModelProfile model) =>
+      const ModelUiSpec.empty();
 
   /// Synthesizes [input] as audio in [responseFormat], optionally choosing a
   /// [voice], returning the raw bytes.

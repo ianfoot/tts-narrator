@@ -303,6 +303,7 @@ packages/core/            # tts_narrator_core — pure Dart, no Flutter deps
         config.dart           # NarrationConfig
         cost.dart             # duration + cost estimates
         model_profiles.dart   # request wiring + compiled fish bootstrap (kDefaultProfile)
+        model_ui.dart         # ModelUiSpec — GUI options declared by a model's plugin
         narration.dart       # chunkText + narration orchestrator
         prompt.dart           # per-paragraph prompt template (Gemini only)
         tts_provider.dart     # TtsProvider interface, registry, resolveSettings
@@ -316,11 +317,24 @@ app/                        # tts_narrator — Flutter macOS GUI
   lib/
     main.dart                 # Flutter entry point (registers the OpenRouter provider)
     src/gui/
-      app.dart                # MaterialApp root
-      config_service.dart     # load/save the shared voice config
-      settings_form.dart      # one-screen settings form
-      run_screen.dart         # dry-run preview, Narrate/Cancel, playback
-  test/widgets/               # widget tests (flutter test)
+      controller/
+        app_controller.dart   # document + settings + run state, command slots
+        config_loader.dart    # read-only voice-config access via core
+      editor/editor_screen.dart   # editor-first home: toolbar, editor, status bar
+      settings/inspector_rail.dart # collapsible settings rail
+      narration/narration_screen.dart # run view: progress, playback, Cancel, Back
+      menu/
+        macos_menu.dart       # PlatformMenuBar tree (macOS menu bar)
+        edit_actions.dart     # platform-neutral Edit-menu dispatch to the focused field
+      platform/
+        app_root.dart         # CupertinoApp (macOS) / MaterialApp (elsewhere)
+        platform_page.dart
+        widgets/              # PlatformButton/TextField/Dropdown/Switch/Section/...
+  test/
+    controller/               # app controller unit tests
+    menu/                     # menu bar structure + dispatch tests
+    widgets/                  # widget tests (flutter test)
+    support/                  # shared test fixtures
 voice_config.example.json   # sample voice config: providers/${ENV} refs, no secrets
 ```
 
@@ -328,10 +342,18 @@ Note: `output/`, `.dart_tool/`, and `build/` are gitignored.
 
 ## GUI (macOS)
 
-A Flutter desktop app (`app/`) wraps the same core the CLI uses. It runs
-narration in-process (no subprocess), with a settings form for model/voice and
-styling, a dry-run estimate, live per-chunk progress, Cancel, and in-app
-playback of finished clips (`audioplayers`).
+A Flutter desktop app (`app/`) wraps the same core the CLI uses. It is
+editor-first: type or paste the text you want narrated right into the window
+(no backing file — the core reads the in-memory text via `sourceText`), then
+hit **Narrate**. A collapsible settings rail controls the model, voice, and
+model-specific options (declared by each model's provider plugin), the run view
+shows per-chunk progress with in-app playback of finished clips, Cancel, and
+Back — and the editor is intact when you return. The native macOS menu bar
+(`PlatformMenuBar`) provides the standard App / File / Edit / View / Window
+menus: Open (⌘O), Save (⌘S), Save As (⇧⌘S), Narrate (⌘N), Close (⌘W), and the
+Edit menu's undo/redo/cut/copy/paste/select-all, which dispatch to the focused
+text field. Saving writes the document to a `.txt`; once saved, narration names
+its output from the real filename.
 
 ```
 cd app
@@ -341,6 +363,11 @@ fvm flutter build macos --debug     # build the .app (SPM-only, no CocoaPods)
 fvm flutter build macos --release
 ```
 
+- The UI is built from Flutter's built-in Cupertino widgets on macOS (Material
+  on Linux/Windows when those are scaffolded), selected by a thin platform
+  root — no third-party UI package. The `PlatformMenuBar` menu bar is
+  macOS-only; the same controller command slots are what in-app menus bind on
+  other platforms.
 - The sandboxed macOS app needs the **`com.apple.security.network.client`**
   entitlement to reach the OpenRouter API; it's already present in
   `app/macos/Runner/DebugProfile.entitlements` and `Release.entitlements`.
