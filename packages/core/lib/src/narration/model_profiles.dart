@@ -41,9 +41,9 @@ class TtsModelProfile {
   /// PCM sample rate used for the WAV header and duration; null for MP3.
   final int? sampleRate;
 
-  /// Provider id that serves this model. Filled from the config `"models"`
-  /// entry, else `default_provider`, else this compiled fallback so cold start
-  /// works — a default value, not special provider treatment.
+  /// Provider id that serves this model. Required in the model config file;
+  /// the compiled fish bootstrap carries `'openrouter'` so cold start works —
+  /// a default value, not special provider treatment.
   final String provider;
 
   TtsModelProfile copyWith({

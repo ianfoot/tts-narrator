@@ -27,7 +27,7 @@ void main() {
     test('missing directory yields an empty config and no warnings', () {
       final (cfg, warnings) = load();
       expect(cfg.isEmpty, isTrue);
-      expect(cfg.defaultProvider, isNull);
+      expect(cfg.defaultModel, isNull);
       expect(cfg.providers, isEmpty);
       expect(cfg.aliases, isEmpty);
       expect(warnings, isEmpty);
@@ -36,14 +36,15 @@ void main() {
     test('parses per-model files into request profiles', () {
       writeModel('gemini', '''{
   "id": "google/gemini-3.1-flash-tts-preview",
+  "provider": "openrouter",
   "format": "pcm",
   "sample_rate": 24000,
   "prompt_style": true
 }''');
-      writeModel('kokoro', '{"id": "hexgrad/kokoro-82m", "format": "mp3"}');
+      writeModel('kokoro', '{"id": "hexgrad/kokoro-82m", "provider": "openrouter", "format": "mp3"}');
       writeModel(
         'fish',
-        '{"id": "fish-audio/s2.1-pro-free", "format": "mp3"}',
+        '{"id": "fish-audio/s2.1-pro-free", "provider": "openrouter", "format": "mp3"}',
       );
       final (cfg, _) = load();
       expect(cfg.models, hasLength(3));
@@ -57,7 +58,7 @@ void main() {
     });
 
     test('defaults model fields apply when omitted', () {
-      writeModel('x', '{"id": "a/b"}');
+      writeModel('x', '{"id": "a/b", "provider": "openrouter"}');
       final (cfg, _) = load();
       final m = cfg.models['x']!;
       expect(m.format, 'mp3');
@@ -70,11 +71,12 @@ void main() {
       writeModel('fish', '''
 {
   "id": "fish-audio/s2.1-pro-free",
+  "provider": "openrouter",
   "default_voice": "Narrator",
   "pricing": {"usd_per_m_chars": 0.62},
   "voices": {"Narrator": "hex1", "Emma": "bf_emma"}
 }''');
-      writeModel('kokoro', '{"id": "hexgrad/kokoro-82m", "voices": {"Emma": "bf_emma"}}');
+      writeModel('kokoro', '{"id": "hexgrad/kokoro-82m", "provider": "openrouter", "voices": {"Emma": "bf_emma"}}');
       final (cfg, _) = load();
       expect(cfg.defaults['fish'], 'Narrator');
       expect(cfg.pricing['fish']?.usdPerMChars, 0.62);
@@ -86,7 +88,7 @@ void main() {
     test('ignores non-string voice id values, keeps the model key only if non-empty',
         () {
       writeModel('fish', '''
-{"id": "a/b", "voices": {"A": "id1", "B": 42, "C": ""}}
+{"id": "a/b", "provider": "openrouter", "voices": {"A": "id1", "B": 42, "C": ""}}
 ''');
       final (cfg, _) = load();
       expect(cfg.aliases['fish']?['A'], 'id1');
@@ -102,7 +104,7 @@ void main() {
     });
 
     test('skips a malformed model file and keeps the rest loading', () {
-      writeModel('good', '{"id": "a/b"}');
+      writeModel('good', '{"id": "a/b", "provider": "openrouter"}');
       writeModel('bad', '{not json');
       final (cfg, warnings) = load();
       expect(cfg.models.keys, ['good']);
@@ -117,8 +119,8 @@ void main() {
     });
 
     test('model files are read in sorted filename order', () {
-      writeModel('zebra', '{"id": "z/a"}');
-      writeModel('alph', '{"id": "a/b"}');
+      writeModel('zebra', '{"id": "z/a", "provider": "openrouter"}');
+      writeModel('alph', '{"id": "a/b", "provider": "openrouter"}');
       final (cfg, _) = load();
       expect(cfg.models.keys.toList(), ['alph', 'zebra']);
     });
@@ -130,23 +132,23 @@ void main() {
       expect(cfg.isEmpty, isTrue);
     });
 
-    test(r'parses default_provider and the providers block verbatim', () {
+    test(r'parses default_model and the providers block verbatim', () {
       writeGlobal('''{
-  "default_provider": "openrouter",
+  "default_model": "fish",
   "providers": {
     "openrouter": { "OPENROUTER_API_KEY": "\${OPENROUTER_API_KEY}" }
   }
 }''');
       final (cfg, _) = load();
-      expect(cfg.defaultProvider, 'openrouter');
+      expect(cfg.defaultModel, 'fish');
       // The `${...}` env reference is preserved as a literal, not resolved.
       expect(cfg.providers, {
         'openrouter': {'OPENROUTER_API_KEY': r'${OPENROUTER_API_KEY}'},
       });
     });
 
-    test('rejects a non-string default_provider (global config)', () {
-      writeGlobal('{"default_provider": 42}');
+    test('rejects a non-string default_model (global config)', () {
+      writeGlobal('{"default_model": 42}');
       expect(load, throwsA(isA<VoiceConfigError>()));
     });
 
@@ -170,26 +172,30 @@ void main() {
       expect(load, throwsA(isA<VoiceConfigError>()));
     });
 
-    test(
-      'parses model-file provider, defaulting to the compiled openrouter',
-      () {
+    test('parses the required model-file provider', () {
         writeModel('gemini', '{"id": "a/b", "provider": "google"}');
-        writeModel('fish', '{"id": "a/b"}');
+        writeModel('fish', '{"id": "a/b", "provider": "openrouter"}');
         final (cfg, _) = load();
         expect(cfg.models['gemini']?.provider, 'google');
         expect(cfg.models['fish']?.provider, 'openrouter');
       },
     );
 
-    test('default_provider folds into model files without an explicit provider',
-        () {
-      writeGlobal('{"default_provider": "google"}');
-      writeModel('implicit', '{"id": "a/b"}');
-      writeModel('explicit', '{"id": "c/d", "provider": "openrouter"}');
-      final (cfg, _) = load();
-      // Implicit inherits the default; explicit wins.
-      expect(cfg.models['implicit']?.provider, 'google');
-      expect(cfg.models['explicit']?.provider, 'openrouter');
+    test('skips a model file with a missing provider and reports a warning', () {
+      writeModel('x', '{"id": "a/b"}');
+      final (cfg, warnings) = load();
+      expect(cfg.models, isEmpty);
+      expect(warnings.single, contains('Skipped model "x"'));
+      expect(warnings.single, contains('"provider"'));
+    });
+
+    test('an unknown default_model warns and keeps the fish fallback', () {
+      writeGlobal('{"default_model": "bogus"}');
+      writeModel('fish', '{"id": "a/b", "provider": "openrouter"}');
+      final (cfg, warnings) = load();
+      expect(cfg.defaultModel, 'bogus');
+      expect(defaultModelFor(cfg).alias, kDefaultProfile.profile.alias);
+      expect(warnings.single, contains('default_model "bogus"'));
     });
   });
 
@@ -263,6 +269,43 @@ void main() {
 
     test('returns null for unknown names', () {
       expect(profileFor('bogus', const VoiceConfig()), isNull);
+    });
+  });
+
+  group('defaultModelFor', () {
+    test('empty config falls back to the compiled fish bootstrap', () {
+      expect(defaultModelFor(const VoiceConfig()).alias, 'fish');
+    });
+
+    test('resolves default_model by alias', () {
+      final cfg = VoiceConfig(
+        defaultModel: 'gemini',
+        models: {
+          'gemini': const TtsModelProfile(
+            alias: 'gemini',
+            id: 'google/gemini-3.1-flash-tts-preview',
+          ),
+        },
+      );
+      expect(defaultModelFor(cfg).alias, 'gemini');
+    });
+
+    test('resolves default_model by full id', () {
+      final cfg = VoiceConfig(
+        defaultModel: 'google/gemini-3.1-flash-tts-preview',
+        models: {
+          'gemini': const TtsModelProfile(
+            alias: 'gemini',
+            id: 'google/gemini-3.1-flash-tts-preview',
+          ),
+        },
+      );
+      expect(defaultModelFor(cfg).alias, 'gemini');
+    });
+
+    test('an unknown default_model falls back to fish', () {
+      final cfg = VoiceConfig(defaultModel: 'bogus');
+      expect(defaultModelFor(cfg).alias, kDefaultProfile.profile.alias);
     });
   });
 
@@ -416,11 +459,11 @@ void main() {
 
     (VoiceConfig, List<String>) read() => loadVoiceConfig('${dir.path}/cfg');
 
-    test('round-trips default_provider, providers, models, defaults, pricing and aliases', () {
+    test('round-trips default_model, providers, models, defaults, pricing and aliases', () {
       writeVoiceConfig(
         '${dir.path}/cfg',
         VoiceConfig(
-          defaultProvider: 'openrouter',
+          defaultModel: 'fish',
           providers: const {
             'openrouter': {'OPENROUTER_API_KEY': r'${OPENROUTER_API_KEY}'},
           },
@@ -449,7 +492,7 @@ void main() {
       );
       final (cfg, warnings) = read();
       expect(warnings, isEmpty);
-      expect(cfg.defaultProvider, 'openrouter');
+      expect(cfg.defaultModel, 'fish');
       expect(cfg.providers['openrouter']?['OPENROUTER_API_KEY'],
           r'${OPENROUTER_API_KEY}');
       expect(cfg.models['gemini']?.id, 'google/gemini-3.1-flash-tts-preview');
@@ -477,7 +520,7 @@ void main() {
     test('creates missing parent directories', () {
       writeVoiceConfig(
         '${dir.path}/a/b/c',
-        const VoiceConfig(defaultProvider: 'openrouter'),
+        const VoiceConfig(defaultModel: 'fish'),
       );
       expect(
         File('${dir.path}/a/b/c${Platform.pathSeparator}config.json')
@@ -486,17 +529,17 @@ void main() {
       );
     });
 
-    test('round-trips default_provider and the providers block verbatim', () {
+    test('round-trips default_model and the providers block verbatim', () {
       writeVoiceConfig(
         '${dir.path}/cfg',
         const VoiceConfig(
-          defaultProvider: 'openrouter',
+          defaultModel: 'fish',
           providers: {
             'openrouter': {'OPENROUTER_API_KEY': r'${OPENROUTER_API_KEY}'},
           },
         ),
       );
-      expect(read().$1.defaultProvider, 'openrouter');
+      expect(read().$1.defaultModel, 'fish');
       expect(read().$2, isEmpty);
       // The env reference survives in the global file, unresolved.
       expect(
@@ -522,18 +565,15 @@ void main() {
       expect(read().$1.models['gemini']?.provider, 'google');
     });
 
-    test('preserves an explicit provider that differs from default_provider',
-        () {
+    test('always writes the provider into each model file', () {
       writeVoiceConfig(
         '${dir.path}/cfg',
         const VoiceConfig(
-          defaultProvider: 'google',
-          providers: {'google': {'API_KEY': 'k'}, 'openrouter': {'API_KEY': 'o'}},
           models: {
             'gemini': TtsModelProfile(
               alias: 'gemini',
               id: 'a/b',
-              provider: 'openrouter', // explicit override, != default_provider
+              provider: 'openrouter',
             ),
           },
         ),
@@ -545,32 +585,11 @@ void main() {
       expect(read().$1.models['gemini']?.provider, 'openrouter');
     });
 
-    test('elides a provider that merely repeats default_provider', () {
-      writeVoiceConfig(
-        '${dir.path}/cfg',
-        const VoiceConfig(
-          defaultProvider: 'google',
-          models: {
-            'gemini': TtsModelProfile(
-              alias: 'gemini',
-              id: 'a/b',
-              provider: 'google',
-            ),
-          },
-        ),
-      );
-      final raw = File(
-        '${dir.path}/cfg${Platform.pathSeparator}gemini.json',
-      ).readAsStringSync();
-      expect(raw, isNot(contains('"provider"')));
-      expect(read().$1.models['gemini']?.provider, 'google');
-    });
-
     test('throws VoiceConfigError when the path cannot be written', () {
       expect(
         () => writeVoiceConfig(
           '/dev/null/cfg',
-          const VoiceConfig(defaultProvider: 'x'),
+          const VoiceConfig(defaultModel: 'x'),
         ),
         throwsA(isA<VoiceConfigError>()),
       );

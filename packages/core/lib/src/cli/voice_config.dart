@@ -26,11 +26,11 @@ class VoiceEntry {
   final bool isAlias;
 }
 
-/// Voice data, model wiring, default provider, and per-provider settings,
+/// Voice data, model wiring, default model, and per-provider settings,
 /// loaded from a config *directory*.
 ///
 /// Layout:
-///   config.json              global data — `default_provider` + `providers`
+///   config.json              global data — `default_model` + `providers`
 ///   `<alias>.json`           per-model — id, format, sample_rate, prompt_style,
 ///                            sends_voice, provider, default_voice, pricing, voices
 ///
@@ -48,7 +48,7 @@ class VoiceEntry {
 /// models without pricing are treated as free.
 class VoiceConfig {
   const VoiceConfig({
-    this.defaultProvider,
+    this.defaultModel,
     this.providers = const {},
     this.models = const {},
     this.defaults = const {},
@@ -56,10 +56,9 @@ class VoiceConfig {
     this.aliases = const {},
   });
 
-  /// Default provider id (`default_provider`) for models without an explicit
-  /// `provider` in the `models` block; null falls back to the compiled
-  /// `'openrouter'` default.
-  final String? defaultProvider;
+  /// Default model alias or id (`default_model`) the CLI and GUI preselect on
+  /// cold start; null falls back to the compiled fish bootstrap.
+  final String? defaultModel;
 
   /// Opaque per-provider settings (`providers.<id>` → string→string). Keys and
   /// values are never interpreted here — this is the raw block, round-tripped
@@ -81,7 +80,7 @@ class VoiceConfig {
   final Map<String, Map<String, String>> aliases;
 
 bool get isEmpty =>
-      defaultProvider == null &&
+      defaultModel == null &&
       providers.isEmpty &&
       models.isEmpty &&
       defaults.isEmpty &&
@@ -134,6 +133,25 @@ TtsModelProfile? profileFor(String aliasOrId, VoiceConfig config) {
     if (p.alias == aliasOrId || p.id == aliasOrId) return p;
   }
   return null;
+}
+
+/// The model the CLI and GUI preselect on cold start.
+///
+/// Resolution order:
+///   1. `default_model` in the config, resolved against the effective model set
+///      (alias or full id);
+///   2. else fish's compiled bootstrap ([kDefaultProfile]) — the app's
+///      out-of-box, cost-free default.
+///
+/// An unresolvable `default_model` is handled (warned + fallback) by the
+/// loader; this helper stays pure.
+TtsModelProfile defaultModelFor(VoiceConfig config) {
+  final dm = config.defaultModel;
+  if (dm != null && dm.trim().isNotEmpty) {
+    final resolved = profileFor(dm.trim(), config);
+    if (resolved != null) return resolved;
+  }
+  return kDefaultProfile.profile;
 }
 
 /// Resolves a friendly alias (or the raw id) for [modelAlias] to a provider id,
@@ -226,7 +244,7 @@ String defaultConfigDir() {
 
 /// Loads a [VoiceConfig] from a config *directory* ([configDir]).
 ///
-/// Reads `config.json` for the global `default_provider` + `providers` block,
+/// Reads `config.json` for the global `default_model` + `providers` block,
 /// then one ``<alias>.json`` file per model directly in the directory. A
 /// missing `config.json` yields empty global data; a directory with no model
 /// files yields no configured models (fish still falls back to its compiled
@@ -234,9 +252,10 @@ String defaultConfigDir() {
 ///
 /// Error policy: a malformed or unreadable `config.json` is a hard
 /// [VoiceConfigError] (the global file is small and should fail loudly). A
-/// malformed *model* file — bad JSON, a missing/non-string `id`, or a
-/// wrong-typed field — is skipped with a warning so one bad model never breaks
-/// the rest of the app.
+/// malformed *model* file — bad JSON, a missing/non-string `id`, a missing or
+/// empty `provider`, or a wrong-typed field — is skipped with a warning so one
+/// bad model never breaks the rest of the app. A `default_model` that names no
+/// configured model also warns and falls back to the fish bootstrap.
 ///
 /// Returns the loaded config plus human-readable [warnings] for skipped models.
 (VoiceConfig, List<String>) loadVoiceConfig(String configDir) {
@@ -264,7 +283,7 @@ String defaultConfigDir() {
   for (final f in files) {
     final alias = _stemOf(f.path);
     try {
-      final m = _parseModelFile(f.path, alias, globalConfig.defaultProvider);
+      final m = _parseModelFile(f.path, alias);
       models[alias] = m.profile;
       if (m.defaultVoice != null) defaults[alias] = m.defaultVoice!;
       if (m.pricing != null) pricing[alias] = m.pricing!;
@@ -273,21 +292,30 @@ String defaultConfigDir() {
       warnings.add('Skipped model "$alias": ${e.message}');
     }
   }
-  return (
-    VoiceConfig(
-      defaultProvider: globalConfig.defaultProvider,
-      providers: globalConfig.providers,
-      models: models,
-      defaults: defaults,
-      pricing: pricing,
-      aliases: aliases,
-    ),
-    warnings,
+
+  final config = VoiceConfig(
+    defaultModel: globalConfig.defaultModel,
+    providers: globalConfig.providers,
+    models: models,
+    defaults: defaults,
+    pricing: pricing,
+    aliases: aliases,
   );
+
+  final configuredDefault = config.defaultModel;
+  if (configuredDefault != null && configuredDefault.trim().isNotEmpty &&
+      profileFor(configuredDefault.trim(), config) == null) {
+    warnings.add(
+      'default_model "$configuredDefault" is not a configured model; '
+      'falling back to the compiled default.',
+    );
+  }
+
+  return (config, warnings);
 }
 
-/// Parses the global `config.json`: `default_provider` + the verbatim
-/// `providers` block. Hard-errors on malformed content.
+/// Parses the global `config.json`: `default_model` + the verbatim `providers`
+/// block. Hard-errors on malformed content.
 VoiceConfig _loadGlobalConfig(String path) {
   final raw = _readJson(path);
   if (raw is! Map<String, dynamic>) {
@@ -295,10 +323,10 @@ VoiceConfig _loadGlobalConfig(String path) {
       'Invalid voice config "$path": top-level value must be a JSON object',
     );
   }
-  final defaultProviderRaw = raw['default_provider'];
-  if (defaultProviderRaw != null && defaultProviderRaw is! String) {
+  final defaultModelRaw = raw['default_model'];
+  if (defaultModelRaw != null && defaultModelRaw is! String) {
     throw VoiceConfigError(
-      'Invalid voice config "$path": "default_provider" must be a string',
+      'Invalid voice config "$path": "default_model" must be a string',
     );
   }
   final providersOut = <String, Map<String, String>>{};
@@ -325,7 +353,7 @@ VoiceConfig _loadGlobalConfig(String path) {
     });
   }
   return VoiceConfig(
-    defaultProvider: defaultProviderRaw as String?,
+    defaultModel: defaultModelRaw as String?,
     providers: providersOut,
   );
 }
@@ -335,7 +363,7 @@ VoiceConfig _loadGlobalConfig(String path) {
 /// anything that makes the model unusable (skipped by the caller).
 ({TtsModelProfile profile, String? defaultVoice, AudioPricing? pricing,
     Map<String, String> voices})
-_parseModelFile(String path, String alias, String? defaultProvider) {
+_parseModelFile(String path, String alias) {
   final raw = _readJson(path);
   if (raw is! Map<String, dynamic>) {
     throw VoiceConfigError('must be a JSON object');
@@ -361,8 +389,8 @@ _parseModelFile(String path, String alias, String? defaultProvider) {
     throw VoiceConfigError('"sends_voice" must be a bool');
   }
   final provider = raw['provider'];
-  if (provider != null && provider is! String) {
-    throw VoiceConfigError('"provider" must be a string');
+  if (provider is! String || provider.trim().isEmpty) {
+    throw VoiceConfigError('needs a non-empty "provider"');
   }
 
   String? defaultVoice;
@@ -406,7 +434,7 @@ _parseModelFile(String path, String alias, String? defaultProvider) {
       promptStyle: promptStyle ?? false,
       sendsVoiceField: sendsVoice ?? true,
       sampleRate: sampleRate?.toInt(),
-      provider: provider ?? defaultProvider ?? 'openrouter',
+      provider: provider.trim(),
     ),
     defaultVoice: defaultVoice,
     pricing: pricing,
@@ -433,21 +461,21 @@ String _stemOf(String path) {
   return dot == -1 ? name : name.substring(0, dot);
 }
 
-/// The JSON for a single model's file, eliding fields that merely restate
-/// defaults so a hand-written file can stay minimal.
+/// The JSON for a single model's file. The `provider` is always written so
+/// each file is self-describing (models route to their provider without any
+/// global fallback); other fields elide values that merely restate defaults so
+/// a hand-written file can stay minimal.
 Map<String, Object?> _modelJson(
   TtsModelProfile p,
   VoiceConfig config,
-  String effectiveDefault,
 ) =>
     {
       'id': p.id,
+      'provider': p.provider,
       if (p.format != 'mp3') 'format': p.format,
       if (p.sampleRate != null) 'sample_rate': p.sampleRate,
       if (p.promptStyle) 'prompt_style': p.promptStyle,
       if (!p.sendsVoiceField) 'sends_voice': p.sendsVoiceField,
-      // Only emit a per-model provider when it overrides the effective default.
-      if (p.provider != effectiveDefault) 'provider': p.provider,
       if (config.defaults[p.alias] != null)
         'default_voice': config.defaults[p.alias],
       if (config.pricing[p.alias] != null)
@@ -466,20 +494,19 @@ Map<String, Object?> _modelJson(
     };
 
 /// Writes [config] to [configDir] as the shared config-directory schema,
-/// creating the directory as needed: a `config.json` with `default_provider` +
+/// creating the directory as needed: a `config.json` with `default_model` +
 /// the verbatim `providers` block, and one ``<alias>.json`` per model (its
-/// id/wiring plus the model's `default_voice`, `pricing`, and voice aliases),
-/// each directly in [configDir]. Round-trips through [loadVoiceConfig] so the
-/// CLI and GUI serialize identically.
+/// id/wiring plus the model's `provider`, `default_voice`, `pricing`, and voice
+/// aliases), each directly in [configDir]. Round-trips through [loadVoiceConfig]
+/// so the CLI and GUI serialize identically.
 ///
 /// Throws a [VoiceConfigError] when a file cannot be written.
 void writeVoiceConfig(String configDir, VoiceConfig config) {
   final globalJson = <String, Object?>{
-    if (config.defaultProvider != null)
-      'default_provider': config.defaultProvider,
+    if (config.defaultModel != null)
+      'default_model': config.defaultModel,
     if (config.providers.isNotEmpty) 'providers': config.providers,
   };
-  final effectiveDefault = config.defaultProvider ?? 'openrouter';
   try {
     File('$configDir${Platform.pathSeparator}config.json')
       ..parent.createSync(recursive: true)
@@ -494,7 +521,7 @@ void writeVoiceConfig(String configDir, VoiceConfig config) {
   if (config.models.isEmpty) return;
   Directory(configDir).createSync(recursive: true);
   for (final entry in config.models.entries) {
-    final modelJson = _modelJson(entry.value, config, effectiveDefault);
+    final modelJson = _modelJson(entry.value, config);
     try {
       File('$configDir${Platform.pathSeparator}${entry.key}.json')
           .writeAsStringSync(

@@ -22,12 +22,12 @@ void main() {
   });
 
   /// Writes the shared grouped config body onto the flat layout: global keys
-  /// (`default_provider`, `providers`) to config.json, and each `models` entry
-  /// plus its `defaults`/`pricing`/`voices` to <alias>.json.
+  /// (`default_model`, `providers`) to config.json, and each `models` entry
+  /// plus its `defaults`/`pricing`/`voices` to <alias>.json. Specs without a
+  /// `provider` default to `openrouter` so model files stay valid.
   void writeConfig(Map<String, Object?> body) {
     final global = <String, Object?>{
-      if (body['default_provider'] != null)
-        'default_provider': body['default_provider'],
+      if (body['default_model'] != null) 'default_model': body['default_model'],
       if (body['providers'] != null) 'providers': body['providers'],
     };
     File('$configDir/config.json')
@@ -42,6 +42,7 @@ void main() {
     Directory(configDir).createSync(recursive: true);
     models.forEach((alias, spec) {
       final m = Map<String, Object?>.from(spec as Map<String, Object?>);
+      m.putIfAbsent('provider', () => 'openrouter');
       final dv = defaults[alias];
       final pr = pricing[alias];
       final vo = voices[alias];

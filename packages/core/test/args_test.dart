@@ -20,13 +20,14 @@ void main() {
     Directory(cfgPath).createSync(recursive: true);
     ttsProviderRegistry.register('openrouter', () => FakeTtsProvider());
     File('$cfgPath/config.json').writeAsStringSync('''{
-  "default_provider": "openrouter",
+  "default_model": "fish",
   "providers": {
     "openrouter": { "api_key": "sk-cfg" }
   }
 }''');
     File('$cfgPath/gemini.json').writeAsStringSync('''{
   "id": "google/gemini-3.1-flash-tts-preview",
+  "provider": "openrouter",
   "format": "pcm",
   "sample_rate": 24000,
   "prompt_style": true,
@@ -35,6 +36,7 @@ void main() {
 }''');
     File('$cfgPath/kokoro.json').writeAsStringSync('''{
   "id": "hexgrad/kokoro-82m",
+  "provider": "openrouter",
   "format": "mp3",
   "default_voice": "Emma",
   "pricing": {"usd_per_m_chars": 0.62},
@@ -42,6 +44,7 @@ void main() {
 }''');
     File('$cfgPath/fish.json').writeAsStringSync('''{
   "id": "fish-audio/s2.1-pro-free",
+  "provider": "openrouter",
   "format": "mp3",
   "voices": {"British Female Narrator (good)": "89f41ea"}
 }''');
@@ -87,7 +90,7 @@ void main() {
     );
   });
 
-  test('provider defaults to the config default_provider', () {
+  test('the model file provider is used to pick settings', () {
     expect(parse(['--input', 's']).profile.provider, 'openrouter');
   });
 
@@ -109,7 +112,7 @@ void main() {
   }
 }''');
     File('$cfg/fish.json').writeAsStringSync(
-        '{"id": "fish-audio/s2.1-pro-free", "format": "mp3"}');
+        '{"id": "fish-audio/s2.1-pro-free", "provider": "openrouter", "format": "mp3"}');
     expect(
       () => parseArgs(['--input', 's', '--config', cfg]),
       throwsA(
@@ -135,7 +138,7 @@ void main() {
   }
 }''');
     File('$cfg/fish.json').writeAsStringSync(
-        '{"id": "fish-audio/s2.1-pro-free", "format": "mp3"}');
+        '{"id": "fish-audio/s2.1-pro-free", "provider": "openrouter", "format": "mp3"}');
     // Dry run parses fine with empty provider settings — no key needed.
     final parsed = parseArgs(['--input', 's', '--dry-run', '--config', cfg]);
     expect(parsed.dryRun, isTrue);
@@ -196,6 +199,7 @@ void main() {
     Directory(noDefaults).createSync(recursive: true);
     File('$noDefaults/kokoro.json').writeAsStringSync('''{
   "id": "hexgrad/kokoro-82m",
+  "provider": "openrouter",
   "format": "mp3",
   "voices": {"Emma": "bf_emma"}
 }''');

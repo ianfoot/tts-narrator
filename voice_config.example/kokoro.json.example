@@ -1,5 +1,6 @@
 {
   "id": "hexgrad/kokoro-82m",
+  "provider": "openrouter",
   "format": "mp3",
   "default_voice": "Emma",
   "pricing": {

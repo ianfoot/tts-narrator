@@ -59,7 +59,7 @@ path to the text to narrate.
 | --- | --- | --- |
 | `--input <path>` | Path to the text to narrate, or a directory of `.txt` files to narrate as a batch (top-level only, sorted, hidden skipped). | — |
 | `--model <alias\|id>` | TTS model: `fish`, `gemini`, `kokoro`, or a full model id. See "Models". | `fish` (free) |
-| `--provider <id>` | Override the provider serving the model. Unknown ids list the registered providers. | model / `default_provider` |
+| `--provider <id>` | Override the provider serving the model. Unknown ids list the registered providers. | model's `provider` |
 | `--voice <name>` | Model-specific voice name or id (free-form for kokoro/fish). Friendly aliases from the voice config resolve to the raw id. | model default |
 | `--accent <text>` | Accent description used in the prompt (Gemini only). | `southern British English, neutral and clear` |
 | `--style <text>` | Style / register description used in the prompt (Gemini only). | `warm, composed, restrained, literary` |
@@ -70,21 +70,21 @@ path to the text to narrate.
 | `--dry-run` | Print the chunk plan + estimated duration/cost and exit without calling the API. | `off` |
 | `--resume` | Skip chunks already present in the output manifest (same prompt + file), so a re-run doesn't re-bill finished paragraphs. | `off` |
 | `--out <dir>` | Output directory base; the input stem is appended unless it already ends with it. | `output` |
-| `--config <path>` | Voice config directory: `config.json` (providers, default provider) + one `<alias>.json` per model (aliases, defaults, pricing). | `~/.config/tts-narrator/` |
+| `--config <path>` | Voice config directory: `config.json` (default model, providers) + one `<alias>.json` per model (provider, aliases, defaults, pricing). | `~/.config/tts-narrator/` |
 | `--api-key <key>` | Opaque `api_key` setting merged into the selected provider's settings (overrides the config). | — |
 | `--list-voices [model]` | Print available voices (and friendly aliases from the config) for a model, or all models when omitted, then exit. Also honors `--model` / `--config`. | all models |
 
 ## Voice configuration
 
-Everything user-facing — the default provider, per-provider settings, models,
-per-model default voices, prices, and friendly voice aliases — lives in a config
-**directory**, defaulting to `~/.config/tts-narrator/` (override with
-`--config`). Two kinds of files:
+Everything user-facing — the default model, per-provider settings, models,
+per-model providers and default voices, prices, and friendly voice aliases —
+lives in a config **directory**, defaulting to `~/.config/tts-narrator/`
+(override with `--config`). Two kinds of files:
 
-- `config.json` — the global bits: `default_provider` and the per-provider
-  settings block (secrets).
-- `<alias>.json` — one file per model: its id and request wiring, the
-  default voice, pricing, and friendly voice aliases.
+- `config.json` — the global bits: `default_model` (the preselected model on
+  cold start) and the per-provider settings block (secrets).
+- `<alias>.json` — one file per model: its id, the provider that serves it,
+  the request wiring, default voice, pricing, and friendly voice aliases.
 
 Copy the repo's `voice_config.example/` directory to that path as a starting
 point — it's the paste-template; the directory under `~/.config` is the live
@@ -93,7 +93,7 @@ one the tools read:
 ```json
 // ~/.config/tts-narrator/config.json
 {
-  "default_provider": "openrouter",
+  "default_model": "fish",
   "providers": {
     "openrouter": { "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}" }
   }
@@ -104,6 +104,7 @@ one the tools read:
 // ~/.config/tts-narrator/fish.json
 {
   "id": "fish-audio/s2.1-pro-free",
+  "provider": "openrouter",
   "format": "mp3",
   "default_voice": "British Female Narrator",
   "voices": {
@@ -117,6 +118,7 @@ one the tools read:
 // ~/.config/tts-narrator/gemini.json
 {
   "id": "google/gemini-3.1-flash-tts-preview",
+  "provider": "openrouter",
   "format": "pcm",
   "sample_rate": 24000,
   "prompt_style": true,
@@ -133,6 +135,7 @@ one the tools read:
 // ~/.config/tts-narrator/kokoro.json
 {
   "id": "hexgrad/kokoro-82m",
+  "provider": "openrouter",
   "format": "mp3",
   "default_voice": "Emma",
   "pricing": { "usd_per_m_chars": 0.62 },
@@ -140,10 +143,12 @@ one the tools read:
 }
 ```
 
-- **Provider routing**: each model file may name the provider that serves it
-  (`"provider": "<id>"`); otherwise the model uses `default_provider`, falling
-  back to the compiled `'openrouter'` default when neither is set. See
-  [Providers](#providers).
+- **Provider routing**: each model file names the provider that serves it
+  (`"provider": "<id>"`, required). See [Providers](#providers).
+- **Default model**: `config.json`'s `default_model` names the model (alias or
+  full id) the CLI and GUI preselect on cold start; a name that matches no
+  configured model warns and falls back to fish. With no config, fish's
+  compiled bootstrap is the preset default.
 - **Models**: each `<alias>.json` file maps an alias to its model id and
   request wiring. Add a model or swap an id (e.g. replace the gemini preview)
   by adding/editing a file — no rebuild. Only the fish bootstrap is compiled
@@ -212,9 +217,9 @@ startup.
   time (a missing or empty variable is an error naming it); any other value is
   used literally. The rule is generic — core never interprets the keys, and
   each provider keeps its own key names.
-- **Selection precedence**: `--provider <id>` > the model's `provider` >
-  `default_provider` > the compiled `'openrouter'` fallback. An unknown
-  `--provider` lists the registered ids.
+- **Selection precedence**: `--provider <id>` > the model's `provider` field
+  (required in each model file). An unknown `--provider` lists the registered
+  ids.
 
 ### Gemini voices
 

@@ -128,9 +128,10 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
   final voiceConfig = loaded.$1;
   if (warningsOut != null) warningsOut.addAll(loaded.$2);
 
-  // Model resolution: default is the fish bootstrap (overridable via config
-  // "models"); an explicit --model resolves against the effective model set.
-  var profile = kDefaultProfile.profile;
+  // Model resolution: the default model comes from the config's
+  // `default_model` (falling back to the fish bootstrap); an explicit --model
+  // resolves against the effective model set.
+  var profile = defaultModelFor(voiceConfig);
   if (modelArg != null) {
     final resolved = profileFor(modelArg, voiceConfig);
     if (resolved == null) {
@@ -308,8 +309,9 @@ Options:
                             in the output manifest (re-run safe; no re-billing).
   --out <dir>               Output directory (default: "output/<input>/").
   --config <path>           Voice config directory (default: ~/.config/tts-
-                            narrator/). Holds config.json (providers) + one
-                            <alias>.json per model (aliases, defaults, pricing).
+                            narrator/). Holds config.json (default model +
+                            providers) + one <alias>.json per model (provider,
+                            aliases, defaults, pricing).
   --api-key <key>           Opaque "api_key" setting merged into the selected
                             provider's settings (overrides the config).
 

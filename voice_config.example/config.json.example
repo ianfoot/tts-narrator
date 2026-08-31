@@ -1,5 +1,5 @@
 {
-  "default_provider": "openrouter",
+  "default_model": "fish",
   "providers": {
     "openrouter": { "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}" }
   }

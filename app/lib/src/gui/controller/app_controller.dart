@@ -15,6 +15,7 @@ import 'config_loader.dart';
 class AppController extends ChangeNotifier {
   AppController({VoiceConfigLoader? loader}) : _loader = loader ?? VoiceConfigLoader() {
     _voiceConfig = _loader.load();
+    _modelAlias = defaultModelFor(_voiceConfig).alias;
     final def = _defaultVoiceFor(profile);
     _voice = def?.$1 ?? kDefaultProfile.voice;
     _voiceLabel = def?.$2;
@@ -22,9 +23,10 @@ class AppController extends ChangeNotifier {
 
   final VoiceConfigLoader _loader;
 
-  /// The compiled fish bootstrap alias is the out-of-box start; [changeModel]
-  /// moves to other configured models.
-  String _modelAlias = kDefaultProfile.profile.alias;
+  /// The preset default model (fish's compiled bootstrap unless `default_model`
+  /// in the config names another); [changeModel] moves to other configured
+  /// models.
+  late String _modelAlias;
   late VoiceConfig _voiceConfig;
 
   // --- Model & voice ------------------------------------------------
