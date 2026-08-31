@@ -431,7 +431,7 @@ void main() {
 
       expect(narrated, isFalse);
       expect(find.byKey(const Key('railGuard')), findsOneWidget);
-      expect(find.textContaining('Nothing to narrate yet'), findsOneWidget);
+      expect(find.textContaining('Editor text is empty'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 5));
       expect(find.byKey(const Key('railGuard')), findsNothing);

@@ -46,11 +46,16 @@ void main() {
 
     expect(find.byType(EditorScreen), findsOneWidget);
     expect(find.byKey(const Key('editorTextField')), findsOneWidget);
-    expect(find.textContaining('0 words · 0 chars'), findsOneWidget);
-    expect(find.textContaining('0 chunks · 0.0 min · '), findsOneWidget);
+    expect(find.textContaining('0 words · 0 characters'), findsOneWidget);
+    expect(
+      find.textContaining('0 segments · ~0 mins · ~\$0.00 (free) est.'),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('editorOpenButton')), findsOneWidget);
     expect(find.byKey(const Key('editorNarrateButton')), findsOneWidget);
     expect(find.byKey(const Key('railToggleButton')), findsOneWidget);
+    expect(find.text('⌘O'), findsOneWidget);
+    expect(find.text('⌘N'), findsOneWidget);
   });
 
   testWidgets('the settings rail is visible by default and toggles away', (
@@ -89,11 +94,14 @@ void main() {
       find.byKey(const Key('editorTextField')),
       'The rain fell on the quiet street. Lights glowed behind the windows.',
     );
-    await tester.pump();
+    // Settle the 100ms status-bar ticker so the previous AnimatedSwitcher
+    // child is gone before asserting on the single live readout.
+    await tester.pumpAndSettle();
 
     expect(find.textContaining('12 words · '), findsOneWidget);
-    expect(find.textContaining('1 chunk'), findsOneWidget);
-    expect(find.textContaining(r' · $0.00 (free)'), findsOneWidget);
+    expect(find.textContaining('1 segment'), findsOneWidget);
+    expect(find.textContaining('~\$0.00 (free) est.'), findsOneWidget);
+    expect(find.byKey(const Key('dirtyDot')), findsOneWidget);
   });
 
   testWidgets('a controller-loading document appears in the editor', (
@@ -113,6 +121,7 @@ void main() {
     expect(field.controller!.text, contains('freshly opened chapter'));
     expect(find.textContaining('story.txt'), findsOneWidget);
     expect(controller.dirty, isFalse);
+    expect(find.byKey(const Key('dirtyDot')), findsNothing);
   });
 
   testWidgets('Narrate on an empty document shows the guard banner', (
@@ -125,10 +134,15 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('narrateGuard')), findsOneWidget);
-    expect(find.textContaining('Nothing to narrate yet'), findsOneWidget);
+    expect(
+      find.textContaining('Cannot narrate: Editor text is empty'),
+      findsOneWidget,
+    );
 
-    // The banner auto-dismisses after the guard timer.
+    // The banner auto-dismisses after the guard timer (plus the exit
+    // animation), so settle the AnimatedSwitcher before asserting it's gone.
     await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('narrateGuard')), findsNothing);
   });
 
@@ -146,5 +160,15 @@ void main() {
 
     expect(narrated, isTrue);
     expect(find.byKey(const Key('narrateGuard')), findsNothing);
+  });
+
+  testWidgets('status bar shows thousands separators for large counts', (
+    tester,
+  ) async {
+    final controller = await makeController();
+    controller.setText(List.generate(1240, (i) => 'word').join(' '));
+    await pumpEditor(tester, controller);
+
+    expect(find.textContaining('1,240 words'), findsOneWidget);
   });
 }

@@ -13,13 +13,13 @@ import '../platform/widgets/platform_text_field.dart';
 import '../settings/inspector_rail.dart';
 import '../theme/app_tokens.dart';
 
-/// Editor-first home screen: a large empty multiline text field (the document),
-/// a toolbar (Open / Narrate), and a live status bar
-/// (words · chars · chunks · est. minutes · est. cost).
+/// Editor-first home screen (JSON UI Schema `header_toolbar` /
+/// `editor_surface` / `status_bar`): a fixed toolbar with the document title,
+/// a large serif editor, and a status bar with a live estimate pill.
 ///
 /// All command dispatch goes through [AppController]; the screen only renders
 /// controller state and surfaces controller guards (e.g. the empty-text
-/// Narrate guard) as a transient inline banner.
+/// Narrate guard) as a transient animated banner.
 class EditorScreen extends StatefulWidget {
   const EditorScreen({super.key, required this.controller});
 
@@ -30,6 +30,10 @@ class EditorScreen extends StatefulWidget {
 }
 
 class _EditorScreenState extends State<EditorScreen> {
+  static const _guardDuration = Duration(milliseconds: 3500);
+  static const _bannerDuration = Duration(milliseconds: 150);
+  static const _tickerDuration = Duration(milliseconds: 100);
+
   late final TextEditingController _textController;
   String? _guardMessage;
   Timer? _guardTimer;
@@ -81,7 +85,7 @@ class _EditorScreenState extends State<EditorScreen> {
   void _showGuard(String message) {
     _guardTimer?.cancel();
     setState(() => _guardMessage = message);
-    _guardTimer = Timer(const Duration(seconds: 4), () {
+    _guardTimer = Timer(_guardDuration, () {
       if (mounted) setState(() => _guardMessage = null);
     });
   }
@@ -94,11 +98,28 @@ class _EditorScreenState extends State<EditorScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildHeader(),
           _buildToolbar(),
           if (_controller.configWarnings.isNotEmpty)
             _buildConfigWarningsBanner(_controller.configWarnings),
-          if (_guardMessage != null) _buildGuardBanner(_guardMessage!),
+          AnimatedSwitcher(
+            duration: _bannerDuration,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, -1),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            ),
+            child: _guardMessage == null
+                ? const SizedBox.shrink(key: Key('guardSlot'))
+                : _buildGuardBanner(
+                    _guardMessage!,
+                    key: const Key('narrateGuard'),
+                  ),
+          ),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -125,88 +146,257 @@ class _EditorScreenState extends State<EditorScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    final mutable = _controller.dirty ? ' • modified' : '';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'TTS Narrator',
-            style: _tokens.typography.screenTitle.copyWith(
-              color: _tokens.colors.accentPrimary,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            '${_controller.documentName}$mutable',
-            style: _tokens.typography.mono.copyWith(
-              color: _tokens.colors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // --- Toolbar (JSON UI Schema `header_toolbar`) --------------------------
 
   Widget _buildToolbar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    final colors = _tokens.colors;
+    final shortcutStyle = _tokens.typography.caption.copyWith(
+      color: colors.textSecondary,
+    );
+    final leftZone = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PlatformIconButton(
+          key: const Key('editorOpenButton'),
+          tooltip: 'Open text file (⌘O)',
+          icon: Icon(_isMac ? CupertinoIcons.folder : Icons.folder_open),
+          onPressed: _onOpenPressed,
+        ),
+        const SizedBox(width: 4),
+        Text('⌘O', style: shortcutStyle),
+      ],
+    );
+    final rightZone = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PlatformIconButton(
+          key: const Key('railToggleButton'),
+          tooltip: 'Show / hide settings',
+          icon: Icon(
+            _isMac
+                ? CupertinoIcons.sidebar_right
+                : (_railVisible ? Icons.settings : Icons.settings_outlined),
+          ),
+          onPressed: _toggleRail,
+        ),
+        const SizedBox(width: 8),
+        PlatformButton(
+          key: const Key('editorNarrateButton'),
+          onPressed: _onNarratePressed,
+          icon: Icon(
+            _isMac ? CupertinoIcons.play_fill : Icons.play_arrow,
+            color: Colors.white,
+            size: 18,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Narrate', style: TextStyle(color: Colors.white)),
+              const SizedBox(width: 4),
+              Text(
+                '⌘N',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.75),
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    return Container(
+      height: AppMetrics.toolbarHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: colors.borderSubtle, width: 0.5),
+        ),
+      ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          PlatformButton(
-            key: const Key('editorOpenButton'),
-            onPressed: _onOpenPressed,
-            style: PlatformButtonStyle.outlined,
-            icon: Icon(_isMac ? CupertinoIcons.folder : Icons.folder_open),
-            child: const Text('Open'),
+          Expanded(
+            child: Align(alignment: Alignment.centerLeft, child: leftZone),
           ),
-          const SizedBox(width: 8),
-          PlatformButton(
-            key: const Key('editorNarrateButton'),
-            onPressed: _onNarratePressed,
-            icon: Icon(_isMac ? CupertinoIcons.mic : Icons.mic),
-            child: const Text('Narrate'),
-          ),
-          const Spacer(),
-          PlatformIconButton(
-            key: const Key('railToggleButton'),
-            tooltip: 'Show / hide settings',
-            icon: Icon(
-              _isMac
-                  ? (_railVisible
-                        ? CupertinoIcons.line_horizontal_3_decrease_circle
-                        : CupertinoIcons.line_horizontal_3_decrease_circle_fill)
-                  : (_railVisible ? Icons.settings : Icons.settings_outlined),
-            ),
-            onPressed: _toggleRail,
+          Expanded(child: Center(child: _buildDocumentTitle())),
+          Expanded(
+            child: Align(alignment: Alignment.centerRight, child: rightZone),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGuardBanner(String message) {
+  /// Document filename plus the 6px `•` modified indicator when unsaved
+  /// changes exist (JSON UI Schema `modifiedIndicator`).
+  Widget _buildDocumentTitle() {
     final colors = _tokens.colors;
-    final background = colors.accentError.withValues(alpha: 0.12);
-    final foreground = colors.accentError;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_controller.dirty) ...[
+          Container(
+            key: const Key('dirtyDot'),
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: colors.textSecondary,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+        ],
+        Flexible(
+          child: Text(
+            _controller.documentName,
+            overflow: TextOverflow.ellipsis,
+            style: _tokens.typography.mono.copyWith(color: colors.textPrimary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- Writing canvas (JSON UI Schema `editor_surface`) -------------------
+
+  Widget _buildEditor() {
+    final colors = _tokens.colors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppMetrics.editorOuterPadding,
+        24,
+        AppMetrics.editorOuterPadding,
+        24,
+      ),
+      child: PlatformTextField(
+        key: const Key('editorTextField'),
+        controller: _textController,
+        onChanged: _onTextChanged,
+        hintText: 'Type, paste text, or open a .txt file...',
+        hintStyle: _tokens.typography.editorBody.copyWith(
+          color: colors.textSecondary.withValues(alpha: 0.4),
+        ),
+        maxLines: null,
+        expands: true,
+        autofocus: true,
+        style: _tokens.typography.editorBody.copyWith(
+          color: colors.textPrimary,
+        ),
+      ),
+    );
+  }
+
+  // --- Status bar (JSON UI Schema `status_bar`) ---------------------------
+
+  Widget _buildStatusBar() {
+    final colors = _tokens.colors;
+    final words = _formatCount(_controller.wordCount);
+    final chars = _formatCount(_controller.charCount);
+    final segments = _controller.plannedChunks.length;
+    final minutes = _controller.estimatedMinutes.round();
+    final cost = formatCostUsd(_controller.estimatedCostUsd);
     return Container(
-      key: const Key('narrateGuard'),
+      height: AppMetrics.statusBarHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: colors.borderSubtle, width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Flexible(
+            child: AnimatedSwitcher(
+              duration: _tickerDuration,
+              child: Text(
+                '$words words · $chars characters',
+                key: ValueKey('$words-$chars'),
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                style: _tokens.typography.mono.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: AnimatedSwitcher(
+                duration: _tickerDuration,
+                child: Container(
+                  key: ValueKey('$segments-$minutes-$cost'),
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: colors.bgSurfaceElevated,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '$segments segments · ~$minutes mins · ~$cost est.',
+                    key: const Key('editorEstimate'),
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: _tokens.typography.mono.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Thousands separators, e.g. 1240 -> "1,240".
+  String _formatCount(int value) {
+    final s = value.toString();
+    if (s.length <= 3) return s;
+    final b = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) b.write(',');
+      b.write(s[i]);
+    }
+    return b.toString();
+  }
+
+  // --- Transient warning banner ------------------------------------------
+
+  Widget _buildGuardBanner(String message, {Key? key}) {
+    final colors = _tokens.colors;
+    final background = colors.accentWarning.withValues(alpha: 0.15);
+    final foreground = colors.accentWarning;
+    return Container(
+      key: key,
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       color: background,
-      child: Text(
-        message,
-        key: const Key('narrateGuardMessage'),
-        style: _tokens.typography.body.copyWith(color: foreground),
+      child: Row(
+        children: [
+          Icon(
+            _isMac
+                ? CupertinoIcons.exclamationmark_triangle
+                : Icons.warning,
+            size: 14,
+            color: foreground,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Cannot narrate: $message',
+            key: const Key('narrateGuardMessage'),
+            style: _tokens.typography.body.copyWith(color: foreground),
+          ),
+        ],
       ),
     );
   }
 
-  /// Persistent, non-fatal notice that one or more model config files were
-  /// skipped on load (e.g. a malformed model). Renders alongside the toolbar so
-  /// the user knows why a model is missing from the picker.
+  //  Persistent, non-fatal notice that one or more model config files were--
   Widget _buildConfigWarningsBanner(List<String> warnings) {
     final colors = _tokens.colors;
     final background = colors.accentWarning.withValues(alpha: 0.12);
@@ -218,66 +408,8 @@ class _EditorScreenState extends State<EditorScreen> {
       color: background,
       child: Text(
         warnings.join('\n'),
-        key: const Key('configWarningsMessage'),
+        key:  const Key('configWarningsMessage'),
         style: _tokens.typography.body.copyWith(color: foreground),
-      ),
-    );
-  }
-
-  Widget _buildEditor() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-      child: PlatformTextField(
-        key: const Key('editorTextField'),
-        controller: _textController,
-        onChanged: _onTextChanged,
-        hintText: 'Type or paste the text to narrate here…',
-        maxLines: null,
-        expands: true,
-        autofocus: true,
-        // Editor typography moves to the serif stack in Task 2; keep the
-        // current reading size/leading here, only tokenize the color.
-        style: TextStyle(
-          fontSize: 15,
-          height: 1.4,
-          color: _tokens.colors.textPrimary,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBar() {
-    final words = _controller.wordCount;
-    final chars = _controller.charCount;
-    final chunks = _controller.plannedChunks.length;
-    final minutes = _controller.estimatedMinutes;
-    final cost = formatCostUsd(_controller.estimatedCostUsd);
-    final colors = _tokens.colors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: colors.borderSubtle, width: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Text(
-            '$words words · $chars chars',
-            key: const Key('editorWordCharCount'),
-            style: _tokens.typography.mono.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            '$chunks chunks · ${minutes.toStringAsFixed(1)} min · $cost',
-            key: const Key('editorEstimate'),
-            style: _tokens.typography.mono.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-        ],
       ),
     );
   }
