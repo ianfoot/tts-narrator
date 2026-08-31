@@ -11,6 +11,7 @@ import '../platform/widgets/platform_button.dart';
 import '../platform/widgets/platform_icon_button.dart';
 import '../platform/widgets/platform_text_field.dart';
 import '../settings/inspector_rail.dart';
+import '../theme/app_tokens.dart';
 
 /// Editor-first home screen: a large empty multiline text field (the document),
 /// a toolbar (Open / Narrate), and a live status bar
@@ -85,21 +86,7 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
-  Color _accentColor() => _isMac
-      ? CupertinoTheme.brightnessOf(context) == Brightness.dark
-          ? CupertinoColors.activeBlue
-          : CupertinoColors.systemBlue
-      : Theme.of(context).colorScheme.primary;
-
-  Color _textColor() => _isMac
-      ? CupertinoTheme.brightnessOf(context) == Brightness.dark
-          ? CupertinoColors.white
-          : CupertinoColors.black
-      : Theme.of(context).colorScheme.onSurface;
-
-  Color _mutedColor() => _isMac
-      ? CupertinoColors.systemGrey
-      : Theme.of(context).colorScheme.onSurfaceVariant;
+  AppTokens get _tokens => AppTokens.of(context);
 
   @override
   Widget build(BuildContext context) {
@@ -147,16 +134,16 @@ class _EditorScreenState extends State<EditorScreen> {
         children: [
           Text(
             'TTS Narrator',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: _accentColor(),
+            style: _tokens.typography.screenTitle.copyWith(
+              color: _tokens.colors.accentPrimary,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             '${_controller.documentName}$mutable',
-            style: TextStyle(fontSize: 12, color: _mutedColor()),
+            style: _tokens.typography.mono.copyWith(
+              color: _tokens.colors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -201,12 +188,9 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Widget _buildGuardBanner(String message) {
-    final background = _isMac
-        ? CupertinoColors.systemRed.withValues(alpha: 0.12)
-        : Theme.of(context).colorScheme.errorContainer;
-    final foreground = _isMac
-        ? CupertinoColors.systemRed
-        : Theme.of(context).colorScheme.onErrorContainer;
+    final colors = _tokens.colors;
+    final background = colors.accentError.withValues(alpha: 0.12);
+    final foreground = colors.accentError;
     return Container(
       key: const Key('narrateGuard'),
       width: double.infinity,
@@ -215,7 +199,7 @@ class _EditorScreenState extends State<EditorScreen> {
       child: Text(
         message,
         key: const Key('narrateGuardMessage'),
-        style: TextStyle(fontSize: 13, color: foreground),
+        style: _tokens.typography.body.copyWith(color: foreground),
       ),
     );
   }
@@ -224,12 +208,9 @@ class _EditorScreenState extends State<EditorScreen> {
   /// skipped on load (e.g. a malformed model). Renders alongside the toolbar so
   /// the user knows why a model is missing from the picker.
   Widget _buildConfigWarningsBanner(List<String> warnings) {
-    final background = _isMac
-        ? CupertinoColors.systemOrange.withValues(alpha: 0.12)
-        : Theme.of(context).colorScheme.surfaceContainerHighest;
-    final foreground = _isMac
-        ? CupertinoColors.systemOrange
-        : _mutedColor();
+    final colors = _tokens.colors;
+    final background = colors.accentWarning.withValues(alpha: 0.12);
+    final foreground = colors.accentWarning;
     return Container(
       key: const Key('configWarnings'),
       width: double.infinity,
@@ -238,7 +219,7 @@ class _EditorScreenState extends State<EditorScreen> {
       child: Text(
         warnings.join('\n'),
         key: const Key('configWarningsMessage'),
-        style: TextStyle(fontSize: 13, color: foreground),
+        style: _tokens.typography.body.copyWith(color: foreground),
       ),
     );
   }
@@ -254,7 +235,13 @@ class _EditorScreenState extends State<EditorScreen> {
         maxLines: null,
         expands: true,
         autofocus: true,
-        style: TextStyle(fontSize: 15, height: 1.4, color: _textColor()),
+        // Editor typography moves to the serif stack in Task 2; keep the
+        // current reading size/leading here, only tokenize the color.
+        style: TextStyle(
+          fontSize: 15,
+          height: 1.4,
+          color: _tokens.colors.textPrimary,
+        ),
       ),
     );
   }
@@ -265,14 +252,12 @@ class _EditorScreenState extends State<EditorScreen> {
     final chunks = _controller.plannedChunks.length;
     final minutes = _controller.estimatedMinutes;
     final cost = formatCostUsd(_controller.estimatedCostUsd);
+    final colors = _tokens.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(
-            color: _isMac ? CupertinoColors.separator : Theme.of(context).dividerColor,
-            width: 0.5,
-          ),
+          top: BorderSide(color: colors.borderSubtle, width: 0.5),
         ),
       ),
       child: Row(
@@ -280,13 +265,17 @@ class _EditorScreenState extends State<EditorScreen> {
           Text(
             '$words words · $chars chars',
             key: const Key('editorWordCharCount'),
-            style: TextStyle(fontSize: 12, color: _mutedColor()),
+            style: _tokens.typography.mono.copyWith(
+              color: colors.textSecondary,
+            ),
           ),
           const Spacer(),
           Text(
             '$chunks chunks · ${minutes.toStringAsFixed(1)} min · $cost',
             key: const Key('editorEstimate'),
-            style: TextStyle(fontSize: 12, color: _mutedColor()),
+            style: _tokens.typography.mono.copyWith(
+              color: colors.textSecondary,
+            ),
           ),
         ],
       ),

@@ -13,6 +13,7 @@ import '../platform/widgets/platform_button.dart';
 import '../platform/widgets/platform_icon_button.dart';
 import '../platform/widgets/platform_list_tile.dart';
 import '../platform/widgets/platform_progress_bar.dart';
+import '../theme/app_tokens.dart';
 
 /// Narration run view: a banner (model/voice + estimate), a per-chunk list
 /// (pending / running / done / resumed) with in-app playback, a determinate
@@ -76,21 +77,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
 
   void _onCancel() => _controller.cancelRun();
 
-  Color _accentColor() => _isMac
-      ? CupertinoTheme.brightnessOf(context) == Brightness.dark
-          ? CupertinoColors.activeBlue
-          : CupertinoColors.systemBlue
-      : Theme.of(context).colorScheme.primary;
-
-  Color _textColor() => _isMac
-      ? CupertinoTheme.brightnessOf(context) == Brightness.dark
-          ? CupertinoColors.white
-          : CupertinoColors.black
-      : Theme.of(context).colorScheme.onSurface;
-
-  Color _mutedColor() => _isMac
-      ? CupertinoColors.systemGrey
-      : Theme.of(context).colorScheme.onSurfaceVariant;
+  AppTokens get _tokens => AppTokens.of(context);
 
   IconData _playIcon() => _isMac ? CupertinoIcons.play_fill : Icons.play_arrow;
   IconData _stopIcon() =>
@@ -127,10 +114,8 @@ class _NarrationScreenState extends State<NarrationScreen> {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
       child: Text(
         'Narrate — ${controller.documentName}',
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: _accentColor(),
+        style: _tokens.typography.screenTitle.copyWith(
+          color: _tokens.colors.accentPrimary,
         ),
       ),
     );
@@ -147,9 +132,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: _isMac
-                ? CupertinoColors.separator
-                : Theme.of(context).dividerColor,
+            color: _tokens.colors.borderSubtle,
             width: 0.5,
           ),
         ),
@@ -160,13 +143,17 @@ class _NarrationScreenState extends State<NarrationScreen> {
           Text(
             '${profile.alias} — $voice',
             key: const Key('runBannerModelVoice'),
-            style: TextStyle(fontSize: 13, color: _textColor()),
+            style: _tokens.typography.body.copyWith(
+              color: _tokens.colors.textPrimary,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
             '${controller.totalChunks} chunks · ${minutes.toStringAsFixed(1)} min · $cost',
             key: const Key('runBannerEstimate'),
-            style: TextStyle(fontSize: 12, color: _mutedColor()),
+            style: _tokens.typography.mono.copyWith(
+              color: _tokens.colors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -174,31 +161,32 @@ class _NarrationScreenState extends State<NarrationScreen> {
   }
 
   Widget _buildMessageCard(String message, {bool isError = false}) {
+    final colors = _tokens.colors;
     final bg = isError
-        ? (_isMac
-              ? CupertinoColors.systemRed.withValues(alpha: 0.12)
-              : Theme.of(context).colorScheme.errorContainer)
-        : (_isMac
-              ? CupertinoColors.systemGrey.withValues(alpha: 0.12)
-              : Theme.of(context).colorScheme.surfaceContainerHighest);
-    final fg = isError
-        ? (_isMac
-              ? CupertinoColors.systemRed
-              : Theme.of(context).colorScheme.onErrorContainer)
-        : _mutedColor();
+        ? colors.accentError.withValues(alpha: 0.12)
+        : colors.bgSurfaceElevated;
+    final fg = isError ? colors.accentError : colors.textSecondary;
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(message, style: TextStyle(fontSize: 13, color: fg)),
+      child: Text(
+        message,
+        style: _tokens.typography.body.copyWith(color: fg),
+      ),
     );
   }
 
   Widget _buildChunkList(AppController controller) {
     if (controller.runChunks.isEmpty) {
       return Center(
-        child: Text('No chunks yet.', style: TextStyle(color: _mutedColor())),
+        child: Text(
+          'No chunks yet.',
+          style: _tokens.typography.body.copyWith(
+            color: _tokens.colors.textSecondary,
+          ),
+        ),
       );
     }
     return ListView.builder(
@@ -215,9 +203,10 @@ class _NarrationScreenState extends State<NarrationScreen> {
         : chunk.paragraph;
     final playable = chunk.filePath != null && File(chunk.filePath!).existsSync();
     final isPlaying = _playingIndex == chunk.index;
+    final colors = _tokens.colors;
     final leading = chunk.resumed
         ? Icon(_isMac ? CupertinoIcons.refresh : Icons.replay_circle_filled,
-            color: isPlaying ? _accentColor() : _mutedColor())
+            color: isPlaying ? colors.accentPrimary : colors.textSecondary)
         : chunk.running
             ? const Padding(
                 padding: EdgeInsets.symmetric(vertical: 4),
@@ -226,7 +215,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
             : Icon(
                 _isMac ? CupertinoIcons.circle : Icons.radio_button_unchecked,
                 size: 16,
-                color: _mutedColor(),
+                color: colors.textSecondary,
               );
     final trailing = (chunk.resumed || playable)
         ? PlatformIconButton(
@@ -246,17 +235,14 @@ class _NarrationScreenState extends State<NarrationScreen> {
   int totalChunks() => _controller.totalChunks;
 
   Widget _buildProgressBar(AppController controller) {
-    final accent = _accentColor();
-    final track = _isMac
-        ? CupertinoColors.systemGrey.withValues(alpha: 0.25)
-        : Theme.of(context).colorScheme.surfaceContainerHighest;
+    final colors = _tokens.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: PlatformProgressBar(
         key: const Key('runProgressBar'),
         value: controller.runProgress,
-        valueColor: accent,
-        backgroundColor: track,
+        valueColor: colors.accentPrimary,
+        backgroundColor: colors.borderSubtle,
       ),
     );
   }

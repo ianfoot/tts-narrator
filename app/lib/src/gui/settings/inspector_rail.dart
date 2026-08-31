@@ -12,6 +12,7 @@ import '../platform/widgets/platform_icon_button.dart';
 import '../platform/widgets/platform_section.dart';
 import '../platform/widgets/platform_switch.dart';
 import '../platform/widgets/platform_text_field.dart';
+import '../theme/app_tokens.dart';
 
 /// Right-side settings rail beside the editor: model & voice, styling, run
 /// options, and a Narrate action. Every control writes straight to
@@ -189,24 +190,15 @@ class _InspectorRailState extends State<InspectorRail> {
     });
   }
 
-  Color _accentColor() => _isMac
-      ? CupertinoTheme.brightnessOf(context) == Brightness.dark
-          ? CupertinoColors.activeBlue
-          : CupertinoColors.systemBlue
-      : Theme.of(context).colorScheme.primary;
-
-  Color _mutedColor() => _isMac
-      ? CupertinoColors.systemGrey
-      : Theme.of(context).colorScheme.onSurfaceVariant;
+  AppTokens get _tokens => AppTokens.of(context);
 
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 4, top: 8),
         child: Text(
           text,
-          style: TextStyle(
-            fontSize: 12,
+          style: _tokens.typography.caption.copyWith(
             fontWeight: FontWeight.w500,
-            color: _mutedColor(),
+            color: _tokens.colors.textSecondary,
           ),
         ),
       );
@@ -218,12 +210,7 @@ class _InspectorRailState extends State<InspectorRail> {
       width: 300,
       decoration: BoxDecoration(
         border: Border(
-          left: BorderSide(
-            color: _isMac
-                ? CupertinoColors.separator
-                : Theme.of(context).dividerColor,
-            width: 0.5,
-          ),
+          left: BorderSide(color: _tokens.colors.borderSubtle, width: 0.5),
         ),
       ),
       child: Column(
@@ -258,10 +245,8 @@ class _InspectorRailState extends State<InspectorRail> {
           Expanded(
             child: Text(
               'Settings',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: _accentColor(),
+              style: _tokens.typography.headerSemibold.copyWith(
+                color: _tokens.colors.accentPrimary,
               ),
             ),
           ),
@@ -281,12 +266,9 @@ class _InspectorRailState extends State<InspectorRail> {
   }
 
   Widget _buildGuardBanner(String message) {
-    final background = _isMac
-        ? CupertinoColors.systemRed.withValues(alpha: 0.12)
-        : Theme.of(context).colorScheme.errorContainer;
-    final foreground = _isMac
-        ? CupertinoColors.systemRed
-        : Theme.of(context).colorScheme.onErrorContainer;
+    final colors = _tokens.colors;
+    final background = colors.accentError.withValues(alpha: 0.12);
+    final foreground = colors.accentError;
     return Container(
       key: const Key('railGuard'),
       width: double.infinity,
@@ -296,7 +278,7 @@ class _InspectorRailState extends State<InspectorRail> {
       child: Text(
         message,
         key: const Key('railGuardMessage'),
-        style: TextStyle(fontSize: 12, color: foreground),
+        style: _tokens.typography.caption.copyWith(color: foreground),
       ),
     );
   }

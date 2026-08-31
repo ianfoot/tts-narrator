@@ -1,6 +1,7 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import '../../theme/app_tokens.dart';
 
 /// Platform-aware settings group: a muted title above its [child], bordered
 /// group styling on macOS (Cupertino-like section) and a plain labeled column
@@ -24,6 +25,7 @@ class PlatformSection extends StatelessWidget {
   }
 
   Widget _buildCupertino(BuildContext context) {
+    final colors = AppTokens.of(context).colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -31,25 +33,17 @@ class PlatformSection extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
           child: Text(
             title.toUpperCase(),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: CupertinoTheme.brightnessOf(context) == Brightness.dark
-                  ? CupertinoColors.systemGrey
-                  : CupertinoColors.systemGrey,
-            ),
+            style: AppTokens.of(context).typography.caption.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: colors.textSecondary,
+                ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: CupertinoTheme.brightnessOf(context) == Brightness.dark
-                ? CupertinoColors.darkBackgroundGray
-                : CupertinoColors.white,
+            color: colors.bgSurface,
             border: Border(
-              bottom: BorderSide(
-                color: CupertinoColors.separator,
-                width: 0.5,
-              ),
+              bottom: BorderSide(color: colors.borderSubtle, width: 0.5),
             ),
           ),
           padding: const EdgeInsets.all(12),

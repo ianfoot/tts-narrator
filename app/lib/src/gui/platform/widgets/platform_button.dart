@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../theme/app_tokens.dart';
+
 /// Visual weighting for [PlatformButton].
 enum PlatformButtonStyle { filled, outlined }
 
@@ -30,12 +32,12 @@ class PlatformButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (defaultTargetPlatform == TargetPlatform.macOS) {
-      return _buildCupertino();
+      return _buildCupertino(context);
     }
     return _buildMaterial();
   }
 
-  Widget _buildCupertino() {
+  Widget _buildCupertino(BuildContext context) {
     final label = icon == null
         ? child
         : Row(
@@ -53,10 +55,10 @@ class PlatformButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             border: Border.all(
-              color: CupertinoColors.systemGrey,
+              color: AppTokens.of(context).colors.borderSubtle,
               width: 0.8,
             ),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
           ),
           child: label,
         ),
