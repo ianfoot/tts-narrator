@@ -308,7 +308,7 @@ Options:
                             in the output manifest (re-run safe; no re-billing).
   --out <dir>               Output directory (default: "output/<input>/").
   --config <path>           Voice config directory (default: ~/.config/tts-
-                            narrator/). Holds config.json (providers) + models/
+                            narrator/). Holds config.json (providers) + one
                             <alias>.json per model (aliases, defaults, pricing).
   --api-key <key>           Opaque "api_key" setting merged into the selected
                             provider's settings (overrides the config).

@@ -18,10 +18,7 @@ void main() {
     }
 
     void writeModel(String alias, String contents) {
-      final models =
-          Directory('${dir.path}${Platform.pathSeparator}models')
-            ..createSync(recursive: true);
-      File('${models.path}${Platform.pathSeparator}$alias.json')
+      File('${dir.path}${Platform.pathSeparator}$alias.json')
           .writeAsStringSync(contents);
     }
 
@@ -464,7 +461,7 @@ void main() {
       expect(cfg.aliases['kokoro']?['Emma'], 'bf_emma');
     });
 
-    test('empty config writes an empty config.json and no models dir', () {
+    test('empty config writes an empty config.json and no model files', () {
       writeVoiceConfig('${dir.path}/cfg', const VoiceConfig());
       expect(
         File('${dir.path}/cfg${Platform.pathSeparator}config.json')
@@ -472,8 +469,8 @@ void main() {
         contains('{}'),
       );
       expect(
-        Directory('${dir.path}/cfg${Platform.pathSeparator}models').existsSync(),
-        isFalse,
+        Directory('${dir.path}/cfg').listSync().whereType<File>().toList(),
+        hasLength(1),
       );
     });
 
@@ -542,7 +539,7 @@ void main() {
         ),
       );
       final raw = File(
-        '${dir.path}/cfg${Platform.pathSeparator}models${Platform.pathSeparator}gemini.json',
+        '${dir.path}/cfg${Platform.pathSeparator}gemini.json',
       ).readAsStringSync();
       expect(raw, contains('"provider": "openrouter"'));
       expect(read().$1.models['gemini']?.provider, 'openrouter');
@@ -563,7 +560,7 @@ void main() {
         ),
       );
       final raw = File(
-        '${dir.path}/cfg${Platform.pathSeparator}models${Platform.pathSeparator}gemini.json',
+        '${dir.path}/cfg${Platform.pathSeparator}gemini.json',
       ).readAsStringSync();
       expect(raw, isNot(contains('"provider"')));
       expect(read().$1.models['gemini']?.provider, 'google');

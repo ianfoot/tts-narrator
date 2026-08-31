@@ -21,9 +21,9 @@ void main() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
-  /// Writes the shared grouped config body out as the new layout: global keys
+  /// Writes the shared grouped config body onto the flat layout: global keys
   /// (`default_provider`, `providers`) to config.json, and each `models` entry
-  /// plus its `defaults`/`pricing`/`voices` to models/<alias>.json.
+  /// plus its `defaults`/`pricing`/`voices` to <alias>.json.
   void writeConfig(Map<String, Object?> body) {
     final global = <String, Object?>{
       if (body['default_provider'] != null)
@@ -39,8 +39,7 @@ void main() {
     final defaults = (body['defaults'] as Map<String, Object?>?) ?? {};
     final pricing = (body['pricing'] as Map<String, Object?>?) ?? {};
     final voices = (body['voices'] as Map<String, Object?>?) ?? {};
-    final modelsDir = Directory('$configDir/models')
-      ..createSync(recursive: true);
+    Directory(configDir).createSync(recursive: true);
     models.forEach((alias, spec) {
       final m = Map<String, Object?>.from(spec as Map<String, Object?>);
       final dv = defaults[alias];
@@ -49,7 +48,7 @@ void main() {
       if (dv is String) m['default_voice'] = dv;
       if (pr is Map) m['pricing'] = pr;
       if (vo is Map) m['voices'] = vo;
-      File('${modelsDir.path}/$alias.json')
+      File('$configDir/$alias.json')
           .writeAsStringSync(const JsonEncoder().convert(m));
     });
   }

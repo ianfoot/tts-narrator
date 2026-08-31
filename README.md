@@ -70,7 +70,7 @@ path to the text to narrate.
 | `--dry-run` | Print the chunk plan + estimated duration/cost and exit without calling the API. | `off` |
 | `--resume` | Skip chunks already present in the output manifest (same prompt + file), so a re-run doesn't re-bill finished paragraphs. | `off` |
 | `--out <dir>` | Output directory base; the input stem is appended unless it already ends with it. | `output` |
-| `--config <path>` | Voice config directory: `config.json` (providers, default provider) + one `models/<alias>.json` per model (aliases, defaults, pricing). | `~/.config/tts-narrator/` |
+| `--config <path>` | Voice config directory: `config.json` (providers, default provider) + one `<alias>.json` per model (aliases, defaults, pricing). | `~/.config/tts-narrator/` |
 | `--api-key <key>` | Opaque `api_key` setting merged into the selected provider's settings (overrides the config). | — |
 | `--list-voices [model]` | Print available voices (and friendly aliases from the config) for a model, or all models when omitted, then exit. Also honors `--model` / `--config`. | all models |
 
@@ -83,7 +83,7 @@ per-model default voices, prices, and friendly voice aliases — lives in a conf
 
 - `config.json` — the global bits: `default_provider` and the per-provider
   settings block (secrets).
-- `models/<alias>.json` — one file per model: its id and request wiring, the
+- `<alias>.json` — one file per model: its id and request wiring, the
   default voice, pricing, and friendly voice aliases.
 
 Copy the repo's `voice_config.example/` directory to that path as a starting
@@ -101,7 +101,7 @@ one the tools read:
 ```
 
 ```json
-// ~/.config/tts-narrator/models/fish.json
+// ~/.config/tts-narrator/fish.json
 {
   "id": "fish-audio/s2.1-pro-free",
   "format": "mp3",
@@ -114,7 +114,7 @@ one the tools read:
 ```
 
 ```json
-// ~/.config/tts-narrator/models/gemini.json
+// ~/.config/tts-narrator/gemini.json
 {
   "id": "google/gemini-3.1-flash-tts-preview",
   "format": "pcm",
@@ -130,7 +130,7 @@ one the tools read:
 ```
 
 ```json
-// ~/.config/tts-narrator/models/kokoro.json
+// ~/.config/tts-narrator/kokoro.json
 {
   "id": "hexgrad/kokoro-82m",
   "format": "mp3",
@@ -144,7 +144,7 @@ one the tools read:
   (`"provider": "<id>"`); otherwise the model uses `default_provider`, falling
   back to the compiled `'openrouter'` default when neither is set. See
   [Providers](#providers).
-- **Models**: each `models/<alias>.json` file maps an alias to its model id and
+- **Models**: each `<alias>.json` file maps an alias to its model id and
   request wiring. Add a model or swap an id (e.g. replace the gemini preview)
   by adding/editing a file — no rebuild. Only the fish bootstrap is compiled
   in as the out-of-the-box default.
@@ -173,7 +173,7 @@ one the tools read:
 ### Models
 
 The fish bootstrap is compiled in (`packages/core/lib/src/narration/model_profiles.dart`);
-every other model comes from its own `models/<alias>.json` file in the voice
+every other model comes from its own `<alias>.json` file in the voice
 config. Model differences drive how requests are built:
 
 | Alias | Voice format | Prompt styling | Output |
@@ -186,7 +186,7 @@ Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
 Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma`
 ("Emma"); `--voice` overrides.
 
-Add or swap a model by adding/editing its `models/<alias>.json` file; it then
+Add or swap a model by adding/editing its `<alias>.json` file; it then
 becomes selectable via `--model <alias>` or the full id. Pass
 `--model <anything-else>` on the CLI to list the registered models.
 
@@ -220,7 +220,7 @@ startup.
 
 Voices are the named ones on the OpenRouter page (e.g. `Charon`, `Zephyr`,
 `Puck`). Add friendly aliases for the ones you use under `voices` in
-`models/gemini.json` — the drop-down and `--list-voices` show whatever you
+`gemini.json` — the drop-down and `--list-voices` show whatever you
 configure. Any unlisted id still works via `--voice` / the raw-id field.
 
 ### Kokoro voices
@@ -228,14 +228,14 @@ configure. Any unlisted id still works via `--voice` / the raw-id field.
 British voices (prefix `b`): female `bf_alice`, `bf_emma`, `bf_isabella`,
 `bf_lily`; male `bm_daniel`, `bm_fable`, `bm_george`, `bm_lewis`. Any
 `bf_*`/`bm_*` (or other accent prefixes) id is accepted. Friendly aliases live
-under `voices` in `models/kokoro.json`.
+under `voices` in `kokoro.json`.
 
 ### Fish voices
 
 Voices are free-form 32-hex fish.audio ids (the default is
 `89f41ea230034706881f85a8227d6ab9`, "British Female Narrator"). Any id is
 accepted; a curated British voice list lives on the "Text to Speech" Logseq
-page and in `voice_config.example/models/fish.json`.
+page and in `voice_config.example/fish.json`.
 
 ## Example
 
@@ -370,7 +370,7 @@ app/                        # tts_narrator — Flutter macOS GUI
     menu/                     # menu bar structure + dispatch tests
     widgets/                  # widget tests (flutter test)
     support/                  # shared test fixtures
-voice_config.example/       # sample config: config.json (providers/${ENV} refs, no secrets) + models/*.json
+voice_config.example/       # sample config: config.json (providers/${ENV} refs, no secrets) + <alias>.json per model
 ```
 
 Note: `output/`, `.dart_tool/`, and `build/` are gitignored.

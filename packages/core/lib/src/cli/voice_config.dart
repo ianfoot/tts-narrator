@@ -31,7 +31,7 @@ class VoiceEntry {
 ///
 /// Layout:
 ///   config.json              global data — `default_provider` + `providers`
-///   ``models/<alias>.json``  per-model — id, format, sample_rate, prompt_style,
+///   `<alias>.json`           per-model — id, format, sample_rate, prompt_style,
 ///                            sends_voice, provider, default_voice, pricing, voices
 ///
 /// Splitting per-model into one file each keeps the user's voice library
@@ -227,9 +227,10 @@ String defaultConfigDir() {
 /// Loads a [VoiceConfig] from a config *directory* ([configDir]).
 ///
 /// Reads `config.json` for the global `default_provider` + `providers` block,
-/// then one ``models/<alias>.json`` file per model. A missing `config.json`
-/// yields empty global data; a missing `models/` directory yields no configured
-/// models (fish still falls back to its compiled bootstrap).
+/// then one ``<alias>.json`` file per model directly in the directory. A
+/// missing `config.json` yields empty global data; a directory with no model
+/// files yields no configured models (fish still falls back to its compiled
+/// bootstrap).
 ///
 /// Error policy: a malformed or unreadable `config.json` is a hard
 /// [VoiceConfigError] (the global file is small and should fail loudly). A
@@ -240,17 +241,19 @@ String defaultConfigDir() {
 /// Returns the loaded config plus human-readable [warnings] for skipped models.
 (VoiceConfig, List<String>) loadVoiceConfig(String configDir) {
   final warnings = <String>[];
-  final global = File('$configDir${Platform.pathSeparator}config.json');
+  final separator = Platform.pathSeparator;
+  final global = File('$configDir${separator}config.json');
   final globalConfig =
       global.existsSync() ? _loadGlobalConfig(global.path) : const VoiceConfig();
 
-  final modelsDir = Directory('$configDir${Platform.pathSeparator}models');
-  if (!modelsDir.existsSync()) return (globalConfig, warnings);
+  final configDirEntry = Directory(configDir);
+  if (!configDirEntry.existsSync()) return (globalConfig, warnings);
 
-  final files = modelsDir
+  final files = configDirEntry
       .listSync()
       .whereType<File>()
       .where((f) => f.path.toLowerCase().endsWith('.json'))
+      .where((f) => !f.path.toLowerCase().endsWith('config.json'))
       .toList()
     ..sort((a, b) => a.path.compareTo(b.path));
 
@@ -327,7 +330,7 @@ VoiceConfig _loadGlobalConfig(String path) {
   );
 }
 
-/// Parses a single `models/<alias>.json` file into a model profile plus its
+/// Parses a single ``<alias>.json`` model file into a model profile plus its
 /// default voice, pricing, and voice aliases. Throws a [VoiceConfigError] for
 /// anything that makes the model unusable (skipped by the caller).
 ({TtsModelProfile profile, String? defaultVoice, AudioPricing? pricing,
@@ -463,11 +466,11 @@ Map<String, Object?> _modelJson(
     };
 
 /// Writes [config] to [configDir] as the shared config-directory schema,
-/// creating parent directories as needed: a `config.json` with
-/// `default_provider` + the verbatim `providers` block, and one
-/// `models/<alias>.json` per model (its id/wiring plus the model's
-/// `default_voice`, `pricing`, and voice aliases). Round-trips through
-/// [loadVoiceConfig] so the CLI and GUI serialize identically.
+/// creating the directory as needed: a `config.json` with `default_provider` +
+/// the verbatim `providers` block, and one ``<alias>.json`` per model (its
+/// id/wiring plus the model's `default_voice`, `pricing`, and voice aliases),
+/// each directly in [configDir]. Round-trips through [loadVoiceConfig] so the
+/// CLI and GUI serialize identically.
 ///
 /// Throws a [VoiceConfigError] when a file cannot be written.
 void writeVoiceConfig(String configDir, VoiceConfig config) {
@@ -489,12 +492,11 @@ void writeVoiceConfig(String configDir, VoiceConfig config) {
   }
 
   if (config.models.isEmpty) return;
-  final modelsDir = Directory('$configDir${Platform.pathSeparator}models')
-    ..createSync(recursive: true);
+  Directory(configDir).createSync(recursive: true);
   for (final entry in config.models.entries) {
     final modelJson = _modelJson(entry.value, config, effectiveDefault);
     try {
-      File('${modelsDir.path}${Platform.pathSeparator}${entry.key}.json')
+      File('$configDir${Platform.pathSeparator}${entry.key}.json')
           .writeAsStringSync(
         const JsonEncoder.withIndent('  ').convert(modelJson),
         flush: true,

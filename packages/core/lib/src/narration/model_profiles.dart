@@ -6,7 +6,7 @@
 /// build a request for a given model.
 ///
 /// Most profiles are NOT compiled here. Models come from the user's
-/// config directory (`models/<alias>.json`) so the user can point at a
+/// config directory (`<alias>.json`) so the user can point at a
 /// different or newer model id (e.g. swap the gemini preview for a GA id)
 /// without a rebuild. Only the out-of-box fish bootstrap lives in code, as the
 /// app's default until any config overrides it. Voices and pricing are also

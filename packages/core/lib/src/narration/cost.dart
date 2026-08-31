@@ -1,7 +1,7 @@
 /// Cost data used for the `--dry-run` estimate and the GUI's summary card.
 ///
 /// Pricing is per-model data from each model's OpenRouter page, so it lives in
-/// the user's per-model config files (`pricing` in `models/<alias>.json`)
+/// the user's per-model config files (`pricing` in `<alias>.json`)
 /// rather than in code — it can drift or be edited without a rebuild. Any
 /// model without pricing entry is treated as free (estimate prints 0).
 class AudioPricing {

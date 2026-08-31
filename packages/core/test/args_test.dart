@@ -17,7 +17,7 @@ void main() {
   setUp(() {
     dir = Directory.systemTemp.createTempSync('tts_args_test_');
     cfgPath = '${dir.path}/cfg';
-    Directory('$cfgPath/models').createSync(recursive: true);
+    Directory(cfgPath).createSync(recursive: true);
     ttsProviderRegistry.register('openrouter', () => FakeTtsProvider());
     File('$cfgPath/config.json').writeAsStringSync('''{
   "default_provider": "openrouter",
@@ -25,7 +25,7 @@ void main() {
     "openrouter": { "api_key": "sk-cfg" }
   }
 }''');
-    File('$cfgPath/models/gemini.json').writeAsStringSync('''{
+    File('$cfgPath/gemini.json').writeAsStringSync('''{
   "id": "google/gemini-3.1-flash-tts-preview",
   "format": "pcm",
   "sample_rate": 24000,
@@ -33,14 +33,14 @@ void main() {
   "default_voice": "Charon",
   "voices": {"Charon": "Charon"}
 }''');
-    File('$cfgPath/models/kokoro.json').writeAsStringSync('''{
+    File('$cfgPath/kokoro.json').writeAsStringSync('''{
   "id": "hexgrad/kokoro-82m",
   "format": "mp3",
   "default_voice": "Emma",
   "pricing": {"usd_per_m_chars": 0.62},
   "voices": {"Emma": "bf_emma"}
 }''');
-    File('$cfgPath/models/fish.json').writeAsStringSync('''{
+    File('$cfgPath/fish.json').writeAsStringSync('''{
   "id": "fish-audio/s2.1-pro-free",
   "format": "mp3",
   "voices": {"British Female Narrator (good)": "89f41ea"}
@@ -102,13 +102,13 @@ void main() {
       return; // Only deterministic when the ref is genuinely unset.
     }
     final cfg = '${dir.path}/env_ref';
-    Directory('$cfg/models').createSync(recursive: true);
+    Directory(cfg).createSync(recursive: true);
     File('$cfg/config.json').writeAsStringSync('''{
   "providers": {
     "openrouter": { "OPENROUTER_API_KEY": "\${$varName}" }
   }
 }''');
-    File('$cfg/models/fish.json').writeAsStringSync(
+    File('$cfg/fish.json').writeAsStringSync(
         '{"id": "fish-audio/s2.1-pro-free", "format": "mp3"}');
     expect(
       () => parseArgs(['--input', 's', '--config', cfg]),
@@ -128,13 +128,13 @@ void main() {
       return; // Only deterministic when the ref is genuinely unset.
     }
     final cfg = '${dir.path}/dryrun_env_ref';
-    Directory('$cfg/models').createSync(recursive: true);
+    Directory(cfg).createSync(recursive: true);
     File('$cfg/config.json').writeAsStringSync('''{
   "providers": {
     "openrouter": { "OPENROUTER_API_KEY": "\${$varName}" }
   }
 }''');
-    File('$cfg/models/fish.json').writeAsStringSync(
+    File('$cfg/fish.json').writeAsStringSync(
         '{"id": "fish-audio/s2.1-pro-free", "format": "mp3"}');
     // Dry run parses fine with empty provider settings — no key needed.
     final parsed = parseArgs(['--input', 's', '--dry-run', '--config', cfg]);
@@ -193,8 +193,8 @@ void main() {
 
   test('a model with no configured default requires --voice', () {
     final noDefaults = '${dir.path}/nodefaults';
-    Directory('$noDefaults/models').createSync(recursive: true);
-    File('$noDefaults/models/kokoro.json').writeAsStringSync('''{
+    Directory(noDefaults).createSync(recursive: true);
+    File('$noDefaults/kokoro.json').writeAsStringSync('''{
   "id": "hexgrad/kokoro-82m",
   "format": "mp3",
   "voices": {"Emma": "bf_emma"}
