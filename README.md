@@ -90,8 +90,9 @@ Copy the repo's `voice_config.example/` directory to that path as a starting
 point — it's the paste-template; the directory under `~/.config` is the live
 one the tools read:
 
+`~/.config/tts-narrator/config.json`:
+
 ```json
-// ~/.config/tts-narrator/config.json
 {
   "default_model": "fish",
   "providers": {
@@ -100,8 +101,9 @@ one the tools read:
 }
 ```
 
+`~/.config/tts-narrator/fish.json`:
+
 ```json
-// ~/.config/tts-narrator/fish.json
 {
   "id": "fish-audio/s2.1-pro-free",
   "provider": "openrouter",
@@ -114,8 +116,9 @@ one the tools read:
 }
 ```
 
+`~/.config/tts-narrator/gemini.json`:
+
 ```json
-// ~/.config/tts-narrator/gemini.json
 {
   "id": "google/gemini-3.1-flash-tts-preview",
   "provider": "openrouter",
@@ -131,8 +134,9 @@ one the tools read:
 }
 ```
 
+`~/.config/tts-narrator/kokoro.json`:
+
 ```json
-// ~/.config/tts-narrator/kokoro.json
 {
   "id": "hexgrad/kokoro-82m",
   "provider": "openrouter",
