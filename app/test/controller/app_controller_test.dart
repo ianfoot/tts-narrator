@@ -10,23 +10,52 @@ import '../support/fake_tts_provider.dart';
 
 void main() {
   late Directory dir;
-  late String configPath;
+  late String configDir;
 
   setUp(() {
     dir = Directory.systemTemp.createTempSync('tts_controller_test_');
-    configPath = '${dir.path}/voice_config.json';
+    configDir = '${dir.path}/cfg';
   });
 
   tearDown(() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
+  /// Writes the shared grouped config body out as the new layout: global keys
+  /// (`default_provider`, `providers`) to config.json, and each `models` entry
+  /// plus its `defaults`/`pricing`/`voices` to models/<alias>.json.
   void writeConfig(Map<String, Object?> body) {
-    File(configPath).writeAsStringSync(const JsonEncoder().convert(body));
+    final global = <String, Object?>{
+      if (body['default_provider'] != null)
+        'default_provider': body['default_provider'],
+      if (body['providers'] != null) 'providers': body['providers'],
+    };
+    File('$configDir/config.json')
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync(const JsonEncoder().convert(global));
+
+    final models = (body['models'] as Map<String, Object?>?) ?? {};
+    if (models.isEmpty) return;
+    final defaults = (body['defaults'] as Map<String, Object?>?) ?? {};
+    final pricing = (body['pricing'] as Map<String, Object?>?) ?? {};
+    final voices = (body['voices'] as Map<String, Object?>?) ?? {};
+    final modelsDir = Directory('$configDir/models')
+      ..createSync(recursive: true);
+    models.forEach((alias, spec) {
+      final m = Map<String, Object?>.from(spec as Map<String, Object?>);
+      final dv = defaults[alias];
+      final pr = pricing[alias];
+      final vo = voices[alias];
+      if (dv is String) m['default_voice'] = dv;
+      if (pr is Map) m['pricing'] = pr;
+      if (vo is Map) m['voices'] = vo;
+      File('${modelsDir.path}/$alias.json')
+          .writeAsStringSync(const JsonEncoder().convert(m));
+    });
   }
 
   AppController makeController() =>
-      AppController(loader: VoiceConfigLoader(configPath: configPath));
+      AppController(loader: VoiceConfigLoader(configDir: configDir));
 
   group('cold start', () {
     test('boots an empty, untitled document on the fish default', () {
@@ -45,7 +74,7 @@ void main() {
 
     test('a missing config file degrades to the compiled fish bootstrap', () {
       final c = AppController(
-        loader: VoiceConfigLoader(configPath: '${dir.path}/nope/config.json'),
+        loader: VoiceConfigLoader(configDir: '${dir.path}/nope'),
       );
       expect(c.profile.alias, 'fish');
       expect(c.voice, kDefaultProfile.voice);
@@ -235,6 +264,7 @@ void main() {
     test('a preserved raw voice drops the previous model label on switch', () {
       writeConfig({
         'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
             'format': 'pcm',
@@ -264,6 +294,9 @@ void main() {
 
     test('resolveVoice wires a friendly alias to its raw id', () {
       writeConfig({
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
+        },
         'voices': {
           'fish': {'Narrator': 'hex123'},
         },

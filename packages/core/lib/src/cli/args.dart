@@ -17,8 +17,10 @@ class CliUsageError implements Exception {
 /// Parses command-line arguments into a [NarrationConfig].
 ///
 /// `--input` is required (no default filenames). Unknown flags and malformed
-/// values raise [CliUsageError].
-NarrationConfig parseArgs(List<String> args) {
+/// values raise [CliUsageError]. Any non-fatal config warnings (e.g. a skipped
+/// malformed model file) are appended to [warningsOut] for the caller to
+/// surface.
+NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
   String? input;
   String? modelArg;
   var voice = '';
@@ -113,16 +115,18 @@ NarrationConfig parseArgs(List<String> args) {
   }
 
   // Voice config: model wiring, voice aliases, defaults, pricing, providers.
-  final cfgPath = configPath ?? defaultConfigPath();
-  if (configPath != null && !File(cfgPath).existsSync()) {
-    throw CliUsageError('Voice config file not found: "$cfgPath".');
+  final cfgDir = configPath ?? defaultConfigDir();
+  if (configPath != null && !Directory(cfgDir).existsSync()) {
+    throw CliUsageError('Voice config directory not found: "$cfgDir".');
   }
-  final VoiceConfig voiceConfig;
+  final (VoiceConfig, List<String>) loaded;
   try {
-    voiceConfig = loadVoiceConfig(cfgPath);
+    loaded = loadVoiceConfig(cfgDir);
   } on VoiceConfigError catch (e) {
     throw CliUsageError('$e');
   }
+  final voiceConfig = loaded.$1;
+  if (warningsOut != null) warningsOut.addAll(loaded.$2);
 
   // Model resolution: default is the fish bootstrap (overridable via config
   // "models"); an explicit --model resolves against the effective model set.
@@ -303,9 +307,9 @@ Options:
   --resume                  Skip chunks whose prompt+fingerprint already exist
                             in the output manifest (re-run safe; no re-billing).
   --out <dir>               Output directory (default: "output/<input>/").
-  --config <path>           Voice config JSON (default: ~/.config/tts-narrator/
-                            voice_config.json). Holds voice aliases, defaults,
-                            pricing, and the per-provider settings block.
+  --config <path>           Voice config directory (default: ~/.config/tts-
+                            narrator/). Holds config.json (providers) + models/
+                            <alias>.json per model (aliases, defaults, pricing).
   --api-key <key>           Opaque "api_key" setting merged into the selected
                             provider's settings (overrides the config).
 

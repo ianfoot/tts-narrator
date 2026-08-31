@@ -6,11 +6,11 @@
 /// build a request for a given model.
 ///
 /// Most profiles are NOT compiled here. Models come from the user's
-/// `voice_config.json` (`"models"` block) so the user can point at a
+/// config directory (`models/<alias>.json`) so the user can point at a
 /// different or newer model id (e.g. swap the gemini preview for a GA id)
 /// without a rebuild. Only the out-of-box fish bootstrap lives in code, as the
 /// app's default until any config overrides it. Voices and pricing are also
-/// user data and live in the same config (see `voice_config.dart`).
+/// user data and live in the per-model files (see `voice_config.dart`).
 class TtsModelProfile {
   const TtsModelProfile({
     required this.alias,

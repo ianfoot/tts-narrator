@@ -35,6 +35,10 @@ class AppController extends ChangeNotifier {
 
   VoiceConfig get voiceConfig => _voiceConfig;
 
+  /// Warnings surfaced while loading the voice config (e.g. a skipped
+  /// malformed model file). Rendered as a persistent, non-fatal banner.
+  List<String> get configWarnings => _loader.warnings;
+
   String get modelAlias => _modelAlias;
 
   /// Raw provider voice id; an empty string means "use the model default".

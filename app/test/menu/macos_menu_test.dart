@@ -13,9 +13,11 @@ import 'package:tts_narrator/src/gui/menu/macos_menu.dart';
 Future<AppController> makeController() async {
   final dir = Directory.systemTemp.createTempSync('tts_menu_test_');
   addTearDown(() => dir.deleteSync(recursive: true));
-  final configPath = '${dir.path}/voice_config.json';
-  File(configPath).writeAsStringSync(const JsonEncoder().convert({}));
-  return AppController(loader: VoiceConfigLoader(configPath: configPath));
+  final configDir = '${dir.path}/cfg';
+  File('$configDir/config.json')
+    ..parent.createSync(recursive: true)
+    ..writeAsStringSync(const JsonEncoder().convert({}));
+  return AppController(loader: VoiceConfigLoader(configDir: configDir));
 }
 
 /// The leaf items of [menu], expanding [PlatformMenuItemGroup] members so
