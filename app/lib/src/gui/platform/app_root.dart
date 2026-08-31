@@ -36,6 +36,7 @@ class _AppRootState extends State<AppRoot> {
     widget.controller.onOpen = _openDocument;
     widget.controller.onNarrate = _startNarration;
     widget.controller.onCancel = () => widget.controller.cancelRun();
+    widget.controller.saveLocationPicker = _pickSaveLocation;
   }
 
   @override
@@ -43,7 +44,17 @@ class _AppRootState extends State<AppRoot> {
     widget.controller.onOpen = null;
     widget.controller.onNarrate = null;
     widget.controller.onCancel = null;
+    widget.controller.saveLocationPicker = null;
     super.dispose();
+  }
+
+  Future<String?> _pickSaveLocation() async {
+    const group = XTypeGroup(label: 'Text', extensions: ['txt']);
+    final location = await getSaveLocation(
+      acceptedTypeGroups: const [group],
+      suggestedName: widget.controller.documentName,
+    );
+    return location?.path;
   }
 
   Future<void> _openDocument() async {

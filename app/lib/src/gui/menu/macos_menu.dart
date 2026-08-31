@@ -79,6 +79,22 @@ PlatformMenu _fileMenu(
       ),
       PlatformMenuItemGroup(members: <PlatformMenuItem>[
         PlatformMenuItem(
+          label: 'Save',
+          shortcut: const SingleActivator(LogicalKeyboardKey.keyS, meta: true),
+          onSelected: () => controller.save(),
+        ),
+        PlatformMenuItem(
+          label: 'Save As…',
+          shortcut: const SingleActivator(
+            LogicalKeyboardKey.keyS,
+            meta: true,
+            shift: true,
+          ),
+          onSelected: () => controller.saveAs(),
+        ),
+      ]),
+      PlatformMenuItemGroup(members: <PlatformMenuItem>[
+        PlatformMenuItem(
           label: 'Close',
           shortcut: const SingleActivator(LogicalKeyboardKey.keyW, meta: true),
           onSelected: () => navigatorKey.currentState?.maybePop(),

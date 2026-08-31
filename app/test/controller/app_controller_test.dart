@@ -93,6 +93,51 @@ void main() {
     });
   });
 
+  group('save', () {
+    test('saveTo writes the text, adopts the path and clears the dirty flag', () {
+      final c = makeController()..setText('Saved text. Enough words to count.');
+      final target = File('${dir.path}/saved.txt');
+      c.saveTo(target.path);
+      expect(File(target.absolute.path).readAsStringSync(), c.text);
+      expect(c.documentPath, target.absolute.path);
+      expect(c.documentName, 'saved.txt');
+      expect(c.dirty, isFalse);
+    });
+
+    test('saveAs picks a location, writes and adopts it', () async {
+      final c = makeController()..setText('Via save as. Enough words.');
+      c.saveLocationPicker = () async => '${dir.path}/picked.txt';
+      await c.saveAs();
+      expect(File('${dir.path}/picked.txt').readAsStringSync(), c.text);
+      expect(c.documentPath, '${dir.path}/picked.txt');
+      expect(c.dirty, isFalse);
+    });
+
+    test('saveAs with a cancelled picker leaves the path untouched', () async {
+      final c = makeController()..setText('Not saved. Enough words.');
+      c.saveLocationPicker = () async => null;
+      await c.saveAs();
+      expect(c.documentPath, isNull);
+      expect(c.dirty, isTrue);
+    });
+
+    test('save on a titled document writes without picking', () async {
+      final c = makeController()..setText('Direct save. Enough words.');
+      final target = File('${dir.path}/direct.txt');
+      c.saveTo(target.path);
+      c.setText('Updated. Enough words to narrate.');
+      var picked = false;
+      c.saveLocationPicker = () async {
+        picked = true;
+        return null;
+      };
+      await c.save();
+      expect(picked, isFalse);
+      expect(File(target.absolute.path).readAsStringSync(), c.text);
+      expect(c.dirty, isFalse);
+    });
+  });
+
   group('buildConfig', () {
     test('narrates from in-memory text with an untitled input path', () {
       writeConfig({

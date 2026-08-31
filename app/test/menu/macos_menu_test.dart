@@ -84,15 +84,20 @@ void main() {
       );
     });
 
-    test('File has Open, Narrate and Close with their shortcuts', () async {
+test('File has Open, Narrate, Save and Close with their shortcuts', () async {
       final file = buildMacMenu(
         controller: await makeController(),
         navigatorKey: GlobalKey<NavigatorState>(),
       )[1];
 
-
       expectMetaShortcut(leafItem(file, 'Open Text…'), LogicalKeyboardKey.keyO);
       expectMetaShortcut(leafItem(file, 'Narrate'), LogicalKeyboardKey.keyN);
+      expectMetaShortcut(leafItem(file, 'Save'), LogicalKeyboardKey.keyS);
+      expectMetaShortcut(
+        leafItem(file, 'Save As…'),
+        LogicalKeyboardKey.keyS,
+        shift: true,
+      );
       expectMetaShortcut(leafItem(file, 'Close'), LogicalKeyboardKey.keyW);
     });
 

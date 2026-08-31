@@ -271,6 +271,49 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Resolves a destination for Save As (and the first save of an untitled
+  /// document); returns null when the user cancels. Wired by the platform
+  /// shell to the native save picker — platform-neutral so Linux/Windows bind
+  /// their own picker.
+  Future<String?> Function()? saveLocationPicker;
+
+  /// Writes [text] to [path] and adopts it as the document: the dirty flag
+  /// clears and future saves keep that path. Throws a [FileSystemException]
+  /// when the file cannot be written.
+  void saveTo(String path) {
+    File(path).writeAsStringSync(_text);
+    _documentPath = File(path).absolute.path;
+    _dirty = false;
+    notifyListeners();
+  }
+
+  /// Saves to the current document path, or prompts (via [saveAs]) when the
+  /// document has not been saved yet. Swallows write errors the way the open
+  /// path does.
+  Future<void> save() async {
+    if (_documentPath == null) {
+      await saveAs();
+      return;
+    }
+    try {
+      saveTo(_documentPath!);
+    } on FileSystemException {
+      // Ignore write failures; the document stays dirty.
+    }
+  }
+
+  /// Prompts for a save location and writes the text there, adopting the new
+  /// path. The old path stays intact until the user confirms a location.
+  Future<void> saveAs() async {
+    final path = await saveLocationPicker?.call();
+    if (path == null) return;
+    try {
+      saveTo(path);
+    } on FileSystemException {
+      // Ignore write failures; the document stays dirty.
+    }
+  }
+
   // --- Live document stats / estimate --------------------------------
 
   /// Non-whitespace words in the document.
