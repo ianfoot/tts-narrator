@@ -11,6 +11,8 @@ import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart';
 
+import '../support/spec_window.dart';
+
 void main() {
   group('AppPalette', () {
     test('covers every spec token in both light and dark', () {
@@ -185,12 +187,10 @@ void main() {
     testWidgets('EditorScreen pumps clean under dark Material + Cupertino', (
       tester,
     ) async {
-      // The spec's default window size; the rail is always visible, so the
-      // 800x600 test default is too narrow for the current toolbar.
-      await tester.binding.setSurfaceSize(
-        const Size(1100, 750),
-      );
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      // The default 800x600 test surface is narrower than the app minimum and
+      // the Ahem test font widens text, so remove full-screen layouts; pump on
+      // a realistic window instead (see setSpecWindowSize).
+      await setSpecWindowSize(tester);
 
       await tester.pumpWidget(
         MaterialApp(
