@@ -1,12 +1,15 @@
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
+import '../platform/widgets/platform_disclosure.dart';
 import '../platform/widgets/platform_dropdown.dart';
 import '../platform/widgets/platform_icon_button.dart';
 import '../platform/widgets/platform_section.dart';
+import '../platform/widgets/platform_slider.dart';
 import '../platform/widgets/platform_switch.dart';
 import '../platform/widgets/platform_text_field.dart';
 import '../theme/app_tokens.dart';
@@ -17,12 +20,22 @@ import '../theme/app_tokens.dart';
 /// (wired by the editor's toggle). Narration is initiated from the editor
 /// toolbar, not the rail.
 class InspectorRail extends StatefulWidget {
-  const InspectorRail({super.key, required this.controller, this.onClose});
+  const InspectorRail({
+    super.key,
+    required this.controller,
+    this.onClose,
+    this.pickDirectory,
+  });
 
   final AppController controller;
 
   /// Called when the user taps the collapse control at the top of the rail.
   final VoidCallback? onClose;
+
+  /// Opens the native directory picker for the output destination; returns
+  /// the chosen path or null when cancelled. Injectable so tests can fake
+  /// the dialog without a platform selector. Defaults to [getDirectoryPath].
+  final Future<String?> Function()? pickDirectory;
 
   @override
   State<InspectorRail> createState() => _InspectorRailState();
@@ -33,32 +46,34 @@ class _InspectorRailState extends State<InspectorRail> {
   late final TextEditingController _accent;
   late final TextEditingController _style;
   late final TextEditingController _prefix;
-  late final TextEditingController _minWords;
   late final TextEditingController _sampleLen;
-  late final TextEditingController _outDir;
 
   /// Set while applying controller state into the local fields; prevents the
   /// controller notify -> field write -> onChanged -> controller write loop
   /// from echoing.
   bool _syncing = false;
 
+  /// Whether the advanced voice id disclosure is expanded.
+  bool _voiceRawExpanded = false;
+
+  /// Whether sample mode is on (revealing the inline segment count input).
+  bool _sampleOn = false;
+
   AppController get _controller => widget.controller;
 
   bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
 
   List<(String, String)> get _modelItems => [
-        for (final p in effectiveModels(_controller.voiceConfig))
-          (p.alias, '${p.alias} — ${p.id}'),
-      ];
+    for (final p in effectiveModels(_controller.voiceConfig))
+      (p.alias, '${p.alias} — ${p.id}'),
+  ];
 
   List<(String, String)> get _voiceItems {
     final entries = voiceEntries(
       model: _controller.profile,
       config: _controller.voiceConfig,
     );
-    return [
-      for (final e in entries) (e.label, e.label),
-    ];
+    return [for (final e in entries) (e.label, e.label)];
   }
 
   @override
@@ -68,25 +83,17 @@ class _InspectorRailState extends State<InspectorRail> {
     _accent = TextEditingController(text: _controller.accent);
     _style = TextEditingController(text: _controller.style);
     _prefix = TextEditingController(text: _controller.passagePrefix);
-    _minWords = TextEditingController(text: _controller.minWords.toString());
-    _sampleLen =
-        TextEditingController(text: _controller.sampleLen?.toString() ?? '');
-    _outDir = TextEditingController(text: _controller.outDir);
+    _sampleLen = TextEditingController(
+      text: _controller.sampleLen?.toString() ?? '',
+    );
+    _sampleOn = _controller.sampleLen != null;
     _controller.addListener(_onControllerChanged);
   }
 
   @override
   void dispose() {
     _controller.removeListener(_onControllerChanged);
-    for (final c in [
-      _voiceRaw,
-      _accent,
-      _style,
-      _prefix,
-      _minWords,
-      _sampleLen,
-      _outDir,
-    ]) {
+    for (final c in [_voiceRaw, _accent, _style, _prefix, _sampleLen]) {
       c.dispose();
     }
     super.dispose();
@@ -110,15 +117,10 @@ class _InspectorRailState extends State<InspectorRail> {
       if (_prefix.text != _controller.passagePrefix) {
         _prefix.text = _controller.passagePrefix;
       }
-      if (_minWords.text != _controller.minWords.toString()) {
-        _minWords.text = _controller.minWords.toString();
-      }
       if (_sampleLen.text != (_controller.sampleLen?.toString() ?? '')) {
         _sampleLen.text = _controller.sampleLen?.toString() ?? '';
       }
-      if (_outDir.text != _controller.outDir) {
-        _outDir.text = _controller.outDir;
-      }
+      _sampleOn = _controller.sampleLen != null;
       _syncing = false;
     });
   }
@@ -143,11 +145,9 @@ class _InspectorRailState extends State<InspectorRail> {
     _controller.passagePrefix = value;
   }
 
-  void _onMinWordsChanged(String value) {
+  void _onMinWordsChanged(double value) {
     if (_syncing) return;
-    final parsed = int.tryParse(value.trim());
-    if (parsed == null) return;
-    _controller.minWords = parsed;
+    _controller.minWords = value.round();
   }
 
   void _onSampleLenChanged(String value) {
@@ -162,29 +162,47 @@ class _InspectorRailState extends State<InspectorRail> {
     _controller.sampleLen = parsed;
   }
 
-  void _onOutDirChanged(String value) {
+  void _onSampleOnChanged(bool value) {
     if (_syncing) return;
-    _controller.outDir = value;
+    _sampleOn = value;
+    if (value && _controller.sampleLen == null) {
+      _controller.sampleLen = 1;
+    } else if (!value) {
+      _controller.sampleLen = null;
+    }
+  }
+
+  Future<void> _pickOutputDirectory() async {
+    try {
+      final path =
+          await (widget.pickDirectory ??
+              () => getDirectoryPath(initialDirectory: _controller.outDir))();
+      if (path == null) return;
+      _controller.outDir = path;
+    } catch (_) {
+      // The native picker can surface a platform error; leave the current
+      // output directory unchanged rather than crashing the rail.
+    }
   }
 
   AppTokens get _tokens => AppTokens.of(context);
 
   Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 4, top: 8),
-        child: Text(
-          text,
-          style: _tokens.typography.caption.copyWith(
-            fontWeight: FontWeight.w500,
-            color: _tokens.colors.textSecondary,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 4, top: 8),
+    child: Text(
+      text,
+      style: _tokens.typography.caption.copyWith(
+        fontWeight: FontWeight.w500,
+        color: _tokens.colors.textSecondary,
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     return Container(
       key: const Key('inspectorRail'),
-      width: 300,
+      width: AppMetrics.railWidth,
       decoration: BoxDecoration(
         border: Border(
           left: BorderSide(color: _tokens.colors.borderSubtle, width: 0.5),
@@ -229,9 +247,7 @@ class _InspectorRailState extends State<InspectorRail> {
             key: const Key('railCloseButton'),
             tooltip: 'Hide settings',
             icon: Icon(
-              _isMac
-                  ? CupertinoIcons.sidebar_right
-                  : Icons.settings_overscan,
+              _isMac ? CupertinoIcons.sidebar_right : Icons.settings_overscan,
             ),
             onPressed: widget.onClose,
           ),
@@ -258,15 +274,21 @@ class _InspectorRailState extends State<InspectorRail> {
             key: const Key('voiceDropdown'),
             value: _selectedVoiceLabel,
             items: _voiceItems,
-            hint: 'Pick a known voice or alias',
+            hint: 'Select a Voice...',
             onChanged: (label) => _controller.applyVoiceLabel(label),
           ),
-          _label('Raw voice id'),
-          PlatformTextField(
-            key: const Key('voiceRawField'),
-            controller: _voiceRaw,
-            onChanged: _onVoiceRawChanged,
-            hintText: 'free-form id or provider voice',
+          PlatformDisclosure(
+            key: const Key('voiceAdvancedDisclosure'),
+            label: 'Advanced Voice ID',
+            expanded: _voiceRawExpanded,
+            caption: 'Overrides selected alias',
+            onToggle: (value) => setState(() => _voiceRawExpanded = value),
+            child: PlatformTextField(
+              key: const Key('voiceRawField'),
+              controller: _voiceRaw,
+              onChanged: _onVoiceRawChanged,
+              hintText: 'free-form id or provider voice',
+            ),
           ),
         ],
       ),
@@ -302,9 +324,7 @@ class _InspectorRailState extends State<InspectorRail> {
       title: 'Model options',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final option in options) _buildModelOption(option),
-        ],
+        children: [for (final option in options) _buildModelOption(option)],
       ),
     );
   }
@@ -397,33 +417,104 @@ class _InspectorRailState extends State<InspectorRail> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _label('Min words per chunk'),
-          PlatformTextField(
-            key: const Key('minWordsField'),
-            controller: _minWords,
-            onChanged: _onMinWordsChanged,
-            keyboardType: TextInputType.number,
-          ),
-          _label('Sample length (optional)'),
-          PlatformTextField(
-            key: const Key('sampleLenField'),
-            controller: _sampleLen,
-            onChanged: _onSampleLenChanged,
-            keyboardType: TextInputType.number,
-          ),
-          _label('Output directory'),
-          PlatformTextField(
-            key: const Key('outDirField'),
-            controller: _outDir,
-            onChanged: _onOutDirChanged,
+          _label('Min words per segment'),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: PlatformSlider(
+                  key: const Key('minWordsSlider'),
+                  value: _controller.minWords.toDouble(),
+                  onChanged: _onMinWordsChanged,
+                  min: 10,
+                  max: 100,
+                  divisions: 90,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                key: const Key('minWordsBadge'),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _tokens.colors.bgSurfaceElevated,
+                  borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
+                ),
+                child: Text('$minWords', style: _tokens.typography.mono),
+              ),
+            ],
           ),
           Padding(
             padding: const EdgeInsets.only(top: 12),
             child: Row(
               children: [
-                const Expanded(
-                  child: Text('Resume (skip completed chunks)'),
+                Expanded(child: Text('Sample mode')),
+                PlatformSwitch(
+                  key: const Key('sampleSwitch'),
+                  value: _sampleOn,
+                  onChanged: _onSampleOnChanged,
                 ),
+              ],
+            ),
+          ),
+          if (_sampleOn)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Narrate first [ $sampleCount ] segments only',
+                      key: ValueKey('sampleCount-$sampleCount'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 48,
+                    child: PlatformTextField(
+                      key: const Key('sampleLenField'),
+                      controller: _sampleLen,
+                      onChanged: _onSampleLenChanged,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Row(
+              children: [
+                const Expanded(child: Text('Output directory')),
+                PlatformIconButton(
+                  key: const Key('outDirPickerButton'),
+                  tooltip: 'Choose output directory',
+                  icon: Icon(
+                    _isMac ? CupertinoIcons.folder : Icons.folder_open,
+                  ),
+                  onPressed: () {
+                    _pickOutputDirectory();
+                  },
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              _controller.outDir,
+              key: ValueKey(_controller.outDir),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: _tokens.typography.mono.copyWith(
+                color: _tokens.colors.textSecondary,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Row(
+              children: [
+                const Expanded(child: Text('Skip completed segments (Resume)')),
                 PlatformSwitch(
                   key: const Key('resumeSwitch'),
                   value: _controller.resume,
@@ -436,4 +527,8 @@ class _InspectorRailState extends State<InspectorRail> {
       ),
     );
   }
+
+  int get minWords => _controller.minWords;
+
+  String get sampleCount => (_controller.sampleLen ?? 1).toString();
 }

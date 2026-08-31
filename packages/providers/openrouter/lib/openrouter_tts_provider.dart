@@ -30,16 +30,26 @@ class OpenRouterTtsProvider implements TtsProvider {
   ModelUiSpec modelUiSpecFor(TtsModelProfile model) {
     if (!model.promptStyle) return const ModelUiSpec.empty();
     return const ModelUiSpec([
-      ModelUiOption(key: 'accent', label: 'Accent'),
-      ModelUiOption(key: 'style', label: 'Style / register'),
+      ModelUiOption(
+        key: 'accent',
+        label: 'Accent',
+        hint: 'e.g., Southern British English',
+      ),
+      ModelUiOption(
+        key: 'style',
+        label: 'Style / register',
+        hint: 'e.g., Warm, composed, literary',
+      ),
       ModelUiOption(
         key: 'passagePrefix',
         label: 'Passage prefix',
+        hint: 'An opening directive woven into the first passage, read aloud '
+            'before the story starts.',
         type: ModelUiOptionType.multiline,
       ),
       ModelUiOption(
         key: 'useCalmTag',
-        label: 'Prepend [calm] tag',
+        label: 'Prepend [calm] directive',
         type: ModelUiOptionType.bool,
       ),
     ]);
