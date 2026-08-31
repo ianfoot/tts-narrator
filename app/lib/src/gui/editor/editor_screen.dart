@@ -109,6 +109,8 @@ class _EditorScreenState extends State<EditorScreen> {
         children: [
           _buildHeader(),
           _buildToolbar(),
+          if (_controller.configWarnings.isNotEmpty)
+            _buildConfigWarningsBanner(_controller.configWarnings),
           if (_guardMessage != null) _buildGuardBanner(_guardMessage!),
           Expanded(
             child: Row(
@@ -213,6 +215,29 @@ class _EditorScreenState extends State<EditorScreen> {
       child: Text(
         message,
         key: const Key('narrateGuardMessage'),
+        style: TextStyle(fontSize: 13, color: foreground),
+      ),
+    );
+  }
+
+  /// Persistent, non-fatal notice that one or more model config files were
+  /// skipped on load (e.g. a malformed model). Renders alongside the toolbar so
+  /// the user knows why a model is missing from the picker.
+  Widget _buildConfigWarningsBanner(List<String> warnings) {
+    final background = _isMac
+        ? CupertinoColors.systemOrange.withValues(alpha: 0.12)
+        : Theme.of(context).colorScheme.surfaceContainerHighest;
+    final foreground = _isMac
+        ? CupertinoColors.systemOrange
+        : _mutedColor();
+    return Container(
+      key: const Key('configWarnings'),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      color: background,
+      child: Text(
+        warnings.join('\n'),
+        key: const Key('configWarningsMessage'),
         style: TextStyle(fontSize: 13, color: foreground),
       ),
     );

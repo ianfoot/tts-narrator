@@ -12,11 +12,11 @@ import 'package:tts_narrator/src/gui/settings/inspector_rail.dart';
 
 void main() {
   late Directory dir;
-  late String configPath;
+  late String configDir;
 
   setUp(() {
     dir = Directory.systemTemp.createTempSync('tts_editor_test_');
-    configPath = '${dir.path}/voice_config.json';
+    configDir = '${dir.path}/cfg';
   });
 
   tearDown(() {
@@ -24,8 +24,10 @@ void main() {
   });
 
   Future<AppController> makeController() async {
-    File(configPath).writeAsStringSync(const JsonEncoder().convert({}));
-    return AppController(loader: VoiceConfigLoader(configPath: configPath));
+    File('$configDir/config.json')
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync(const JsonEncoder().convert({}));
+    return AppController(loader: VoiceConfigLoader(configDir: configDir));
   }
 
   Future<void> pumpEditor(WidgetTester tester, AppController controller) async {

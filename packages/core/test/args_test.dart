@@ -16,30 +16,37 @@ void main() {
 
   setUp(() {
     dir = Directory.systemTemp.createTempSync('tts_args_test_');
-    cfgPath = '${dir.path}/voice_config.json';
+    cfgPath = '${dir.path}/cfg';
+    Directory(cfgPath).createSync(recursive: true);
     ttsProviderRegistry.register('openrouter', () => FakeTtsProvider());
-    File(cfgPath).writeAsStringSync('''{
-  "default_provider": "openrouter",
+    File('$cfgPath/config.json').writeAsStringSync('''{
+  "default_model": "fish",
   "providers": {
     "openrouter": { "api_key": "sk-cfg" }
-  },
-  "models": {
-    "gemini": {"id": "google/gemini-3.1-flash-tts-preview", "format": "pcm",
-               "sample_rate": 24000, "prompt_style": true},
-    "kokoro": {"id": "hexgrad/kokoro-82m", "format": "mp3"}
-  },
-  "defaults": {
-    "kokoro": "Emma",
-    "gemini": "Charon"
-  },
-  "pricing": {
-    "kokoro": {"usd_per_m_chars": 0.62}
-  },
-  "voices": {
-    "fish": {"British Female Narrator (good)": "89f41ea"},
-    "kokoro": {"Emma": "bf_emma"},
-    "gemini": {"Charon": "Charon"}
   }
+}''');
+    File('$cfgPath/gemini.json').writeAsStringSync('''{
+  "id": "google/gemini-3.1-flash-tts-preview",
+  "provider": "openrouter",
+  "format": "pcm",
+  "sample_rate": 24000,
+  "prompt_style": true,
+  "default_voice": "Charon",
+  "voices": {"Charon": "Charon"}
+}''');
+    File('$cfgPath/kokoro.json').writeAsStringSync('''{
+  "id": "hexgrad/kokoro-82m",
+  "provider": "openrouter",
+  "format": "mp3",
+  "default_voice": "Emma",
+  "pricing": {"usd_per_m_chars": 0.62},
+  "voices": {"Emma": "bf_emma"}
+}''');
+    File('$cfgPath/fish.json').writeAsStringSync('''{
+  "id": "fish-audio/s2.1-pro-free",
+  "provider": "openrouter",
+  "format": "mp3",
+  "voices": {"British Female Narrator (good)": "89f41ea"}
 }''');
   });
 
@@ -83,7 +90,7 @@ void main() {
     );
   });
 
-  test('provider defaults to the config default_provider', () {
+  test('the model file provider is used to pick settings', () {
     expect(parse(['--input', 's']).profile.provider, 'openrouter');
   });
 
@@ -97,15 +104,15 @@ void main() {
     if (Platform.environment.containsKey(varName)) {
       return; // Only deterministic when the ref is genuinely unset.
     }
-    final cfg = '${dir.path}/env_ref.json';
-    File(cfg).writeAsStringSync('''{
+    final cfg = '${dir.path}/env_ref';
+    Directory(cfg).createSync(recursive: true);
+    File('$cfg/config.json').writeAsStringSync('''{
   "providers": {
     "openrouter": { "OPENROUTER_API_KEY": "\${$varName}" }
-  },
-  "models": {
-    "fish": {"id": "fish-audio/s2.1-pro-free", "format": "mp3"}
   }
 }''');
+    File('$cfg/fish.json').writeAsStringSync(
+        '{"id": "fish-audio/s2.1-pro-free", "provider": "openrouter", "format": "mp3"}');
     expect(
       () => parseArgs(['--input', 's', '--config', cfg]),
       throwsA(
@@ -123,15 +130,15 @@ void main() {
     if (Platform.environment.containsKey(varName)) {
       return; // Only deterministic when the ref is genuinely unset.
     }
-    final cfg = '${dir.path}/dryrun_env_ref.json';
-    File(cfg).writeAsStringSync('''{
+    final cfg = '${dir.path}/dryrun_env_ref';
+    Directory(cfg).createSync(recursive: true);
+    File('$cfg/config.json').writeAsStringSync('''{
   "providers": {
     "openrouter": { "OPENROUTER_API_KEY": "\${$varName}" }
-  },
-  "models": {
-    "fish": {"id": "fish-audio/s2.1-pro-free", "format": "mp3"}
   }
 }''');
+    File('$cfg/fish.json').writeAsStringSync(
+        '{"id": "fish-audio/s2.1-pro-free", "provider": "openrouter", "format": "mp3"}');
     // Dry run parses fine with empty provider settings — no key needed.
     final parsed = parseArgs(['--input', 's', '--dry-run', '--config', cfg]);
     expect(parsed.dryRun, isTrue);
@@ -188,10 +195,13 @@ void main() {
   });
 
   test('a model with no configured default requires --voice', () {
-    final noDefaults = '${dir.path}/nodefaults.json';
-    File(noDefaults).writeAsStringSync('''{
-  "models": {"kokoro": {"id": "hexgrad/kokoro-82m", "format": "mp3"}},
-  "voices": {"kokoro": {"Emma": "bf_emma"}}
+    final noDefaults = '${dir.path}/nodefaults';
+    Directory(noDefaults).createSync(recursive: true);
+    File('$noDefaults/kokoro.json').writeAsStringSync('''{
+  "id": "hexgrad/kokoro-82m",
+  "provider": "openrouter",
+  "format": "mp3",
+  "voices": {"Emma": "bf_emma"}
 }''');
     expect(
       () => parseArgs(['--input', 's', '--model', 'kokoro', '--config', noDefaults]),
@@ -229,9 +239,9 @@ void main() {
     expect(parse(['--input', 's', '--out', '/tmp/x']).outDir, '/tmp/x');
   });
 
-  test('explicit --config pointing at a missing file errors loudly', () {
+  test('explicit --config pointing at a missing directory errors loudly', () {
     expect(
-      () => parseArgs(['--input', 's', '--config', '${dir.path}/missing.json']),
+      () => parseArgs(['--input', 's', '--config', '${dir.path}/missing']),
       throwsA(isA<CliUsageError>()),
     );
   });

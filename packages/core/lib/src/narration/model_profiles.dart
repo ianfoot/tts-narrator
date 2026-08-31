@@ -6,11 +6,11 @@
 /// build a request for a given model.
 ///
 /// Most profiles are NOT compiled here. Models come from the user's
-/// `voice_config.json` (`"models"` block) so the user can point at a
+/// config directory (`<alias>.json`) so the user can point at a
 /// different or newer model id (e.g. swap the gemini preview for a GA id)
 /// without a rebuild. Only the out-of-box fish bootstrap lives in code, as the
 /// app's default until any config overrides it. Voices and pricing are also
-/// user data and live in the same config (see `voice_config.dart`).
+/// user data and live in the per-model files (see `voice_config.dart`).
 class TtsModelProfile {
   const TtsModelProfile({
     required this.alias,
@@ -41,9 +41,9 @@ class TtsModelProfile {
   /// PCM sample rate used for the WAV header and duration; null for MP3.
   final int? sampleRate;
 
-  /// Provider id that serves this model. Filled from the config `"models"`
-  /// entry, else `default_provider`, else this compiled fallback so cold start
-  /// works — a default value, not special provider treatment.
+  /// Provider id that serves this model. Required in the model config file;
+  /// the compiled fish bootstrap carries `'openrouter'` so cold start works —
+  /// a default value, not special provider treatment.
   final String provider;
 
   TtsModelProfile copyWith({

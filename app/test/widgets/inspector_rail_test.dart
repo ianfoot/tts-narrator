@@ -14,23 +14,52 @@ import '../support/fake_tts_provider.dart';
 
 void main() {
   late Directory dir;
-  late String configPath;
+  late String configDir;
 
   setUp(() {
     dir = Directory.systemTemp.createTempSync('tts_inspector_rail_');
-    configPath = '${dir.path}/voice_config.json';
+    configDir = '${dir.path}/cfg';
   });
 
   tearDown(() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
+  /// Writes the shared grouped config body onto the flat layout: global keys
+  /// (`default_model`, `providers`) to config.json, and each `models` entry
+  /// plus its `defaults`/`pricing`/`voices` to <alias>.json. Specs without a
+  /// `provider` default to `openrouter` so model files stay valid.
   void writeConfig(Map<String, Object?> body) {
-    File(configPath).writeAsStringSync(const JsonEncoder().convert(body));
+    final global = <String, Object?>{
+      if (body['default_model'] != null) 'default_model': body['default_model'],
+      if (body['providers'] != null) 'providers': body['providers'],
+    };
+    File('$configDir/config.json')
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync(const JsonEncoder().convert(global));
+
+    final models = (body['models'] as Map<String, Object?>?) ?? {};
+    if (models.isEmpty) return;
+    final defaults = (body['defaults'] as Map<String, Object?>?) ?? {};
+    final pricing = (body['pricing'] as Map<String, Object?>?) ?? {};
+    final voices = (body['voices'] as Map<String, Object?>?) ?? {};
+    Directory(configDir).createSync(recursive: true);
+    models.forEach((alias, spec) {
+      final m = Map<String, Object?>.from(spec as Map<String, Object?>);
+      m.putIfAbsent('provider', () => 'openrouter');
+      final dv = defaults[alias];
+      final pr = pricing[alias];
+      final vo = voices[alias];
+      if (dv is String) m['default_voice'] = dv;
+      if (pr is Map) m['pricing'] = pr;
+      if (vo is Map) m['voices'] = vo;
+      File('$configDir/$alias.json')
+          .writeAsStringSync(const JsonEncoder().convert(m));
+    });
   }
 
   AppController makeController() =>
-      AppController(loader: VoiceConfigLoader(configPath: configPath));
+      AppController(loader: VoiceConfigLoader(configDir: configDir));
 
   Future<void> pumpRail(WidgetTester tester, AppController controller) async {
     await tester.binding.setSurfaceSize(const Size(1200, 1800));
@@ -136,6 +165,9 @@ void main() {
 
     testWidgets('picking a voice alias resolves to its raw id', (tester) async {
       writeConfig({
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
+        },
         'voices': {'fish': {'Narrator': 'hex123'}},
       });
       final c = makeController();

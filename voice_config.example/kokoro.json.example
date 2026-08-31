@@ -1,0 +1,19 @@
+{
+  "id": "hexgrad/kokoro-82m",
+  "provider": "openrouter",
+  "format": "mp3",
+  "default_voice": "Emma",
+  "pricing": {
+    "usd_per_m_chars": 0.62
+  },
+  "voices": {
+    "Alice": "bf_alice",
+    "Daniel": "bm_daniel",
+    "Emma": "bf_emma",
+    "Fable": "bm_fable",
+    "George": "bm_george",
+    "Isabella": "bf_isabella",
+    "Lewis": "bm_lewis",
+    "Lily": "bf_lily"
+  }
+}
