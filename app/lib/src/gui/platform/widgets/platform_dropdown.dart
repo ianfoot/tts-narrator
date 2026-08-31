@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../theme/app_tokens.dart';
+
 /// Platform-aware single-select dropdown: a [CupertinoMenuAnchor] popup button
 /// on macOS (no Material dependency), a [DropdownButton] inside an
 /// [InputDecorator] elsewhere.
@@ -58,11 +60,11 @@ class PlatformDropdown<T> extends StatelessWidget {
           ),
       ],
       builder: (context, controller, child) {
-        final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+        final colors = AppTokens.of(context).colors;
         return CupertinoButton(
           onPressed: controller.open,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
           pressedOpacity: 0.6,
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -74,13 +76,17 @@ class PlatformDropdown<T> extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     color: selectedIndex == -1
-                        ? CupertinoColors.systemGrey
-                        : (isDark ? CupertinoColors.white : CupertinoColors.black),
+                        ? colors.textSecondary
+                        : colors.textPrimary,
                   ),
                 ),
               ),
               const SizedBox(width: 6),
-              const Icon(CupertinoIcons.chevron_down, size: 14),
+              Icon(
+                CupertinoIcons.chevron_down,
+                size: 14,
+                color: colors.textSecondary,
+              ),
             ],
           ),
         );
