@@ -1,0 +1,119 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+/// Platform-aware single-select dropdown: a [CupertinoMenuAnchor] popup button
+/// on macOS (no Material dependency), a [DropdownButton] inside an
+/// [InputDecorator] elsewhere.
+///
+/// [value] is the currently selected item value, or null when nothing is
+/// selected (renders [hint]). Selecting calls [onChanged] with the new value.
+class PlatformDropdown<T> extends StatelessWidget {
+  const PlatformDropdown({
+    super.key,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    this.label,
+    this.hint,
+  });
+
+  /// Selected item value (from [items]); null shows [hint].
+  final T? value;
+
+  /// Selectable entries: the value and its display label.
+  final List<(T value, String label)> items;
+
+  /// Called when the user picks an entry.
+  final ValueChanged<T>? onChanged;
+
+  /// Optional floating/group label (rendered on Material; ignored on Cupertino).
+  final String? label;
+
+  /// Placeholder shown when [value] is null.
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    if (defaultTargetPlatform == TargetPlatform.macOS) {
+      return _buildCupertino();
+    }
+    return _buildMaterial();
+  }
+
+  Widget _buildCupertino() {
+    final selectedIndex = items.indexWhere((it) => it.$1 == value);
+    final selectedLabel = selectedIndex == -1
+        ? (hint ?? '')
+        : items[selectedIndex].$2;
+    return CupertinoMenuAnchor(
+      enableLongPressToOpen: false,
+      menuChildren: [
+        for (final item in items)
+          CupertinoMenuItem(
+            child: Text(item.$2),
+            onPressed: () {
+              if (onChanged != null) onChanged!(item.$1);
+            },
+          ),
+      ],
+      builder: (context, controller, child) {
+        final isDark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
+        return CupertinoButton(
+          onPressed: controller.open,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          borderRadius: BorderRadius.circular(8),
+          pressedOpacity: 0.6,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  selectedLabel,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: selectedIndex == -1
+                        ? CupertinoColors.systemGrey
+                        : (isDark ? CupertinoColors.white : CupertinoColors.black),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Icon(CupertinoIcons.chevron_down, size: 14),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMaterial() {
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: label,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        border: const OutlineInputBorder(),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          isExpanded: true,
+          isDense: true,
+          hint: hint == null ? null : Text(hint!, overflow: TextOverflow.ellipsis),
+          items: [
+            for (final item in items)
+              DropdownMenuItem<T>(
+                value: item.$1,
+                child: Text(item.$2, overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: (next) {
+            if (next != null) onChanged?.call(next);
+          },
+        ),
+      ),
+    );
+  }
+}

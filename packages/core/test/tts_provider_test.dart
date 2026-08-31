@@ -1,5 +1,7 @@
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/narration/abort.dart';
+import 'package:tts_narrator_core/src/narration/model_profiles.dart';
+import 'package:tts_narrator_core/src/narration/model_ui.dart';
 import 'package:tts_narrator_core/src/narration/tts_provider.dart';
 
 class _FakeProvider implements TtsProvider {
@@ -10,6 +12,10 @@ class _FakeProvider implements TtsProvider {
 
   @override
   final String name;
+
+  @override
+  ModelUiSpec modelUiSpecFor(TtsModelProfile model) =>
+      const ModelUiSpec.empty();
 
   @override
   Future<ProviderAudio> synthesize({

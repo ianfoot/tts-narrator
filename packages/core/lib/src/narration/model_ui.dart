@@ -1,0 +1,47 @@
+/// Declarative UI for a model's adjustable options.
+///
+/// Which controls a model gets in the GUI is owned by the model's plugin (the
+/// provider package): a provider overrides `TtsProvider.modelUiSpecFor` per
+/// model and the app renders whatever options come back, generically. Core
+/// ships no model-specific UI knowledge and the app has no per-model branches.
+///
+/// Option keys are a convention the app interprets against the model-agnostic
+/// narration settings: `accent`, `style`, `passagePrefix`, and `useCalmTag`
+/// bind to the corresponding `NarrationConfig` fields. A model whose plugin
+/// declares no spec gets no model-option controls.
+class ModelUiSpec {
+  const ModelUiSpec([this.options = const <ModelUiOption>[]]);
+
+  const ModelUiSpec.empty() : options = const <ModelUiOption>[];
+
+  /// The editable controls the model exposes, in display order.
+  final List<ModelUiOption> options;
+
+  bool get isEmpty => options.isEmpty;
+}
+
+/// A single editable option declared by a model's plugin.
+class ModelUiOption {
+  const ModelUiOption({
+    required this.key,
+    required this.label,
+    this.type = ModelUiOptionType.text,
+    this.hint,
+  });
+
+  /// Declarative key the app binds against a narration setting
+  /// (`accent`, `style`, `passagePrefix`, `useCalmTag`).
+  final String key;
+
+  /// User-facing label for the control.
+  final String label;
+
+  /// How the option is edited.
+  final ModelUiOptionType type;
+
+  /// Optional placeholder hint.
+  final String? hint;
+}
+
+/// How a [ModelUiOption] is edited in the GUI.
+enum ModelUiOptionType { text, multiline, bool }

@@ -11,5 +11,6 @@ export 'src/narration/abort.dart';
 export 'src/narration/config.dart';
 export 'src/narration/cost.dart';
 export 'src/narration/model_profiles.dart';
+export 'src/narration/model_ui.dart';
 export 'src/narration/narration.dart';
 export 'src/narration/tts_provider.dart';
