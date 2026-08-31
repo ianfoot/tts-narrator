@@ -16,6 +16,7 @@ class PlatformTextField extends StatelessWidget {
     this.enabled = true,
     this.autofocus = false,
     this.style,
+    this.hintStyle,
   });
 
   final TextEditingController? controller;
@@ -33,6 +34,9 @@ class PlatformTextField extends StatelessWidget {
   final bool autofocus;
   final TextStyle? style;
 
+  /// Style for the placeholder/hint text (e.g. a dimmed placeholder).
+  final TextStyle? hintStyle;
+
   @override
   Widget build(BuildContext context) {
     if (defaultTargetPlatform == TargetPlatform.macOS) {
@@ -46,6 +50,7 @@ class PlatformTextField extends StatelessWidget {
         enabled: enabled,
         autofocus: autofocus,
         style: style,
+        placeholderStyle: hintStyle,
         padding: expands ? const EdgeInsets.all(4) : const EdgeInsets.all(12),
         decoration: expands ? const BoxDecoration() : null,
       );
@@ -62,6 +67,7 @@ class PlatformTextField extends StatelessWidget {
       textAlignVertical: TextAlignVertical.top,
       decoration: InputDecoration(
         hintText: hintText,
+        hintStyle: hintStyle,
         border: InputBorder.none,
         isDense: true,
       ),

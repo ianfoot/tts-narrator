@@ -1,12 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
-import '../platform/widgets/platform_button.dart';
 import '../platform/widgets/platform_dropdown.dart';
 import '../platform/widgets/platform_icon_button.dart';
 import '../platform/widgets/platform_section.dart';
@@ -14,10 +11,11 @@ import '../platform/widgets/platform_switch.dart';
 import '../platform/widgets/platform_text_field.dart';
 import '../theme/app_tokens.dart';
 
-/// Right-side settings rail beside the editor: model & voice, styling, run
-/// options, and a Narrate action. Every control writes straight to
-/// [AppController], which notifies the editor so the status-bar estimate stays
-/// live. [onClose] hides the rail (wired by the editor's toggle).
+/// Right-side settings rail beside the editor: model & voice, styling, and run
+/// options. Every control writes straight to [AppController], which notifies
+/// the editor so the status-bar estimate stays live. [onClose] hides the rail
+/// (wired by the editor's toggle). Narration is initiated from the editor
+/// toolbar, not the rail.
 class InspectorRail extends StatefulWidget {
   const InspectorRail({super.key, required this.controller, this.onClose});
 
@@ -38,9 +36,6 @@ class _InspectorRailState extends State<InspectorRail> {
   late final TextEditingController _minWords;
   late final TextEditingController _sampleLen;
   late final TextEditingController _outDir;
-
-  String? _guardMessage;
-  Timer? _guardTimer;
 
   /// Set while applying controller state into the local fields; prevents the
   /// controller notify -> field write -> onChanged -> controller write loop
@@ -94,7 +89,6 @@ class _InspectorRailState extends State<InspectorRail> {
     ]) {
       c.dispose();
     }
-    _guardTimer?.cancel();
     super.dispose();
   }
 
@@ -173,23 +167,6 @@ class _InspectorRailState extends State<InspectorRail> {
     _controller.outDir = value;
   }
 
-  void _onNarratePressed() {
-    final reason = _controller.narrateBlockReason();
-    if (reason != null) {
-      _showGuard(reason);
-      return;
-    }
-    _controller.onNarrate?.call();
-  }
-
-  void _showGuard(String message) {
-    _guardTimer?.cancel();
-    setState(() => _guardMessage = message);
-    _guardTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted) setState(() => _guardMessage = null);
-    });
-  }
-
   AppTokens get _tokens => AppTokens.of(context);
 
   Widget _label(String text) => Padding(
@@ -217,7 +194,6 @@ class _InspectorRailState extends State<InspectorRail> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildHeader(),
-          if (_guardMessage != null) _buildGuardBanner(_guardMessage!),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.only(bottom: 16),
@@ -228,7 +204,6 @@ class _InspectorRailState extends State<InspectorRail> {
                 if (!_controller.modelUiSpec.isEmpty)
                   _buildModelOptionsSection(_controller.modelUiSpec),
                 _buildRunSection(),
-                _buildNarrateButton(),
               ],
             ),
           ),
@@ -261,24 +236,6 @@ class _InspectorRailState extends State<InspectorRail> {
             onPressed: widget.onClose,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildGuardBanner(String message) {
-    final colors = _tokens.colors;
-    final background = colors.accentError.withValues(alpha: 0.12);
-    final foreground = colors.accentError;
-    return Container(
-      key: const Key('railGuard'),
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(6)),
-      child: Text(
-        message,
-        key: const Key('railGuardMessage'),
-        style: _tokens.typography.caption.copyWith(color: foreground),
       ),
     );
   }
@@ -476,18 +433,6 @@ class _InspectorRailState extends State<InspectorRail> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildNarrateButton() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: PlatformButton(
-        key: const Key('railNarrateButton'),
-        onPressed: _onNarratePressed,
-        icon: Icon(_isMac ? CupertinoIcons.mic : Icons.mic),
-        child: const Text('Narrate'),
       ),
     );
   }

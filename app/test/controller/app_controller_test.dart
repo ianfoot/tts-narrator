@@ -311,7 +311,7 @@ void main() {
   group('narrate guard', () {
     test('blocks on empty text', () {
       final c = makeController();
-      expect(c.narrateBlockReason(), contains('Nothing to narrate yet'));
+      expect(c.narrateBlockReason(), contains('Editor text is empty'));
     });
 
     test('allows narration with text present', () {

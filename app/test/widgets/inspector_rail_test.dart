@@ -87,7 +87,6 @@ void main() {
       expect(find.byKey(const Key('sampleLenField')), findsOneWidget);
       expect(find.byKey(const Key('outDirField')), findsOneWidget);
       expect(find.byKey(const Key('resumeSwitch')), findsOneWidget);
-      expect(find.byKey(const Key('railNarrateButton')), findsOneWidget);
       expect(find.byKey(const Key('railCloseButton')), findsOneWidget);
       // The default fish model's plugin declares no model options, so no
       // styling-only controls (the gemini-only ones) render for it.
@@ -397,44 +396,6 @@ void main() {
 
       expect(c.outDir, 'audio/output');
       expect(c.resume, isTrue);
-    });
-  });
-
-  group('narrate', () {
-    testWidgets('dispatches through the Narrate slot when text is present', (
-      tester,
-    ) async {
-      writeConfig({});
-      final c = makeController()..setText('Enough words to narrate.');
-      var narrated = false;
-      c.onNarrate = () => narrated = true;
-      await pumpRail(tester, c);
-
-      await tester.tap(find.byKey(const Key('railNarrateButton')));
-      await tester.pump();
-
-      expect(narrated, isTrue);
-      expect(find.byKey(const Key('railGuard')), findsNothing);
-    });
-
-    testWidgets('shows the guard banner on empty text and does not dispatch', (
-      tester,
-    ) async {
-      writeConfig({});
-      final c = makeController();
-      var narrated = false;
-      c.onNarrate = () => narrated = true;
-      await pumpRail(tester, c);
-
-      await tester.tap(find.byKey(const Key('railNarrateButton')));
-      await tester.pump();
-
-      expect(narrated, isFalse);
-      expect(find.byKey(const Key('railGuard')), findsOneWidget);
-      expect(find.textContaining('Nothing to narrate yet'), findsOneWidget);
-
-      await tester.pump(const Duration(seconds: 5));
-      expect(find.byKey(const Key('railGuard')), findsNothing);
     });
   });
 
