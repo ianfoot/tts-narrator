@@ -70,11 +70,11 @@ void main() {
     expect(find.byType(InspectorRail), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('railToggleButton')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byType(InspectorRail), findsNothing);
 
     await tester.tap(find.byKey(const Key('railToggleButton')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byType(InspectorRail), findsOneWidget);
   });
 
@@ -83,7 +83,7 @@ void main() {
     await pumpEditor(tester, controller);
 
     await tester.tap(find.byKey(const Key('railCloseButton')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byType(InspectorRail), findsNothing);
   });
 

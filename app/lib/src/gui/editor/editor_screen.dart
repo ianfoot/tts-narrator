@@ -33,6 +33,7 @@ class _EditorScreenState extends State<EditorScreen> {
   static const _guardDuration = Duration(milliseconds: 3500);
   static const _bannerDuration = Duration(milliseconds: 150);
   static const _tickerDuration = Duration(milliseconds: 100);
+  static const _railSlideDuration = Duration(milliseconds: 200);
 
   late final TextEditingController _textController;
   String? _guardMessage;
@@ -133,11 +134,26 @@ class _EditorScreenState extends State<EditorScreen> {
                     ],
                   ),
                 ),
-                if (_railVisible)
-                  InspectorRail(
-                    controller: _controller,
-                    onClose: () => setState(() => _railVisible = false),
+                AnimatedSwitcher(
+                  duration: _railSlideDuration,
+                  reverseDuration: _railSlideDuration,
+                  switchInCurve: Curves.easeInOut,
+                  switchOutCurve: Curves.easeInOut,
+                  transitionBuilder: (child, animation) => SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(1, 0),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
                   ),
+                  child: _railVisible
+                      ? InspectorRail(
+                          key: const ValueKey('railVisible'),
+                          controller: _controller,
+                          onClose: () => setState(() => _railVisible = false),
+                        )
+                      : const SizedBox.shrink(key: ValueKey('railHidden')),
+                ),
               ],
             ),
           ),
