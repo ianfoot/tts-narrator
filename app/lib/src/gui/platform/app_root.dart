@@ -1,14 +1,15 @@
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
 import '../editor/editor_screen.dart';
 import '../menu/macos_menu.dart';
 import '../narration/narration_screen.dart';
+import '../theme/app_tokens.dart';
 
 /// Cross-platform app root: a [CupertinoApp] on macOS, a [MaterialApp]
 /// elsewhere, sharing one [AppController] and navigator key.
@@ -37,15 +38,25 @@ class _AppRootState extends State<AppRoot> {
     widget.controller.onNarrate = _startNarration;
     widget.controller.onCancel = () => widget.controller.cancelRun();
     widget.controller.saveLocationPicker = _pickSaveLocation;
+    // Follow the system appearance live (CupertinoApp has no darkTheme/
+    // themeMode, so the theme is rebuilt when the platform brightness flips).
+    WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged =
+        _onPlatformBrightnessChanged;
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged =
+        null;
     widget.controller.onOpen = null;
     widget.controller.onNarrate = null;
     widget.controller.onCancel = null;
     widget.controller.saveLocationPicker = null;
     super.dispose();
+  }
+
+  void _onPlatformBrightnessChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<String?> _pickSaveLocation() async {
@@ -85,11 +96,21 @@ class _AppRootState extends State<AppRoot> {
   Widget build(BuildContext context) {
     final home = EditorScreen(controller: widget.controller);
     if (_isMac) {
+      final dark =
+          WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+          Brightness.dark;
+      final palette = AppPalette.of(
+        dark ? Brightness.dark : Brightness.light,
+      );
       return CupertinoApp(
         title: 'TTS Narrator',
         navigatorKey: _navigatorKey,
         debugShowCheckedModeBanner: false,
-        theme: CupertinoThemeData(brightness: Brightness.light),
+        theme: CupertinoThemeData(
+          // Follows the system appearance (see the platformBrightness listener).
+          brightness: dark ? Brightness.dark : Brightness.light,
+          primaryColor: palette.accentPrimary,
+        ),
         // The native macOS menu bar lives above the editor route, so it stays
         // mounted (and functional) while the narration run view is pushed on
         // top. Home stays mounted under the pushed route.
@@ -102,20 +123,37 @@ class _AppRootState extends State<AppRoot> {
         ),
       );
     }
+    final light = _materialTheme(Brightness.light);
+    final dark = _materialTheme(Brightness.dark);
     return MaterialApp(
       title: 'TTS Narrator',
       navigatorKey: _navigatorKey,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorSchemeSeed: const Color(0xFF5E5336),
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: const Color(0xFF5E5336),
-        brightness: Brightness.dark,
-      ),
+      theme: light,
+      darkTheme: dark,
       themeMode: ThemeMode.system,
       home: home,
     );
+  }
+
+  /// Material [ThemeData] whose surfaces/text/accents map 1:1 onto the spec
+  /// tokens, so the Material path renders the same palette as Cupertino.
+  ThemeData _materialTheme(Brightness brightness) {
+    final palette = AppPalette.of(brightness);
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: const Color(0xFF5E5336),
+          brightness: brightness,
+        ).copyWith(
+          primary: palette.accentPrimary,
+          onSurface: palette.textPrimary,
+          onSurfaceVariant: palette.textSecondary,
+          surface: palette.bgApp,
+          surfaceContainerHighest: palette.bgSurfaceElevated,
+          errorContainer: palette.accentError.withValues(alpha: 0.12),
+          onErrorContainer: palette.accentError,
+          outlineVariant: palette.borderSubtle,
+        );
+    return ThemeData(colorScheme: scheme);
   }
 }
