@@ -7,6 +7,7 @@ import 'package:file_selector/file_selector.dart';
 
 import '../controller/app_controller.dart';
 import '../editor/editor_screen.dart';
+import '../menu/macos_menu.dart';
 import '../narration/narration_screen.dart';
 
 /// Cross-platform app root: a [CupertinoApp] on macOS, a [MaterialApp]
@@ -78,7 +79,16 @@ class _AppRootState extends State<AppRoot> {
         navigatorKey: _navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: CupertinoThemeData(brightness: Brightness.light),
-        home: home,
+        // The native macOS menu bar lives above the editor route, so it stays
+        // mounted (and functional) while the narration run view is pushed on
+        // top. Home stays mounted under the pushed route.
+        home: PlatformMenuBar(
+          menus: buildMacMenu(
+            controller: widget.controller,
+            navigatorKey: _navigatorKey,
+          ),
+          child: home,
+        ),
       );
     }
     return MaterialApp(
