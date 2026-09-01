@@ -7,11 +7,11 @@ void main() {
       expect(estimateMinutes(['one two three four five']), closeTo(5 / 160, 1e-9));
     });
 
-    test('empty chunks estimate zero', () {
+    test('empty segments estimate zero', () {
       expect(estimateMinutes([]), 0);
     });
 
-    test('handles multiple chunks', () {
+    test('handles multiple segments', () {
       expect(estimateMinutes(['a b c', 'd e f g h i j k l m']), closeTo(13 / 160, 1e-9));
     });
   });
@@ -49,9 +49,9 @@ void main() {
         inputUsdPerMTokens: 1.0,
         outputUsdPerMTokens: 20.0,
       );
-      final chunks = List.generate(10, (i) => 'Wordy paragraph number $i here.');
+      final segments = List.generate(10, (i) => 'Wordy paragraph number $i here.');
       expect(
-        estimateCostUsd(pricing, chunks),
+        estimateCostUsd(pricing, segments),
         greaterThan(estimateCostUsd(pricing, ['A'])),
       );
     });

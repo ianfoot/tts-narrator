@@ -21,8 +21,6 @@ class AppTokens {
   /// The resolved platform font stack + type scale.
   final AppTypography typography;
 
-  bool get isDark => brightness == Brightness.dark;
-
   /// Resolves the tokens for [context]'s ambient brightness.
   ///
   /// Safe under both a [CupertinoApp] and a [MaterialApp]: Material's [Theme]
@@ -159,11 +157,6 @@ class AppTypography {
   /// 16pt / 1.6x serif editor body.
   TextStyle get editorBody =>
       TextStyle(fontSize: 16, height: 1.6, fontFamily: editorSerifFamily);
-
-  /// 20pt screen title — editor / run headers. Superseded by the in-toolbar
-  /// title layout in Task 2; kept until the headers move.
-  TextStyle get screenTitle =>
-      const TextStyle(fontSize: 20, fontWeight: FontWeight.w600);
 }
 
 /// Grid, shape, and dimension constants (spec §2).
@@ -172,15 +165,6 @@ class AppTypography {
 /// here so screens never scatter magic numbers.
 class AppMetrics {
   const AppMetrics._();
-
-  /// Spatial grid unit (8px grid: 8/16/24/32).
-  static const double grid = 8;
-
-  /// Minimum control target height.
-  static const double controlMinHeight = 32;
-
-  /// Horizontal padding inside controls.
-  static const double controlPadH = 12;
 
   /// Control corner radius (8px).
   static const double controlRadius = 8;

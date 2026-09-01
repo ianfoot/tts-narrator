@@ -103,7 +103,7 @@ final _envRef = RegExp(r'^\$\{(\w+)\}$');
 ///
 /// A value matching `^\$\{(\w+)\}$` reads that environment variable (from [env],
 /// defaulting to an empty map) at resolution time — once when the run config is
-/// built, never per chunk. Any other value passes through literal (so `api_key`
+/// built, never per segment. Any other value passes through literal (so `api_key`
 /// literals and already-resolved values survive untouched).
 ///
 /// Throws a [StateError] naming the variable when the referenced env var is

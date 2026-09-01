@@ -9,21 +9,21 @@ import 'prompt.dart';
 import 'tts_provider.dart';
 import 'wav.dart';
 
-/// Max characters per narration chunk. Scenes (blank-line-separated
+/// Max characters per narration segment. Scenes (blank-line-separated
 /// paragraphs) are kept whole; only a scene longer than this cap is split at
 /// sentence boundaries. Balances call count vs per-call drift: Google
-/// recommends avoiding fragments (short chunks lose voice lock-in) while
+/// recommends avoiding fragments (short segments lose voice lock-in) while
 /// keeping outputs under a few minutes.
-const _maxChunkLength = 4000;
+const _maxSegmentLength = 4000;
 
-/// Chunks source text into narration units.
+/// Segments source text into narration units.
 ///
 /// Paragraphs are split on blank lines. A paragraph shorter than
 /// [minWords] words is merged into the following paragraph so tiny
 /// fragments don't get an isolated reading. Any resulting paragraph longer
-/// than [maxChunkLength] chars is further split at sentence boundaries.
-/// Returns non-empty, trimmed chunks.
-List<String> chunkText(String text, {int minWords = 30}) {
+/// than [maxSegmentLength] chars is further split at sentence boundaries.
+/// Returns non-empty, trimmed segments.
+List<String> segmentText(String text, {int minWords = 30}) {
   final raw = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
   final paragraphs = raw
       .split(RegExp(r'\n\s*\n'))
@@ -50,19 +50,19 @@ List<String> chunkText(String text, {int minWords = 30}) {
     merged.add(buffer.toString());
   }
 
-  final chunks = <String>[];
+  final segments = <String>[];
   for (final paragraph in merged) {
-    if (paragraph.length <= _maxChunkLength) {
-      chunks.add(paragraph);
+    if (paragraph.length <= _maxSegmentLength) {
+      segments.add(paragraph);
       continue;
     }
-    chunks.addAll(_splitLongParagraph(paragraph));
+    segments.addAll(_splitLongParagraph(paragraph));
   }
-  return chunks;
+  return segments;
 }
 
 /// Splits a long paragraph at sentence boundaries, packing sentences into
-/// chunks of at most [_maxChunkLength] characters.
+/// segments of at most [_maxSegmentLength] characters.
 List<String> _splitLongParagraph(String paragraph) {
   final sentences = paragraph
       .split(RegExp(r'(?<=[.!?])\s+'))
@@ -70,27 +70,27 @@ List<String> _splitLongParagraph(String paragraph) {
       .where((s) => s.isNotEmpty)
       .toList();
 
-  final chunks = <String>[];
+  final segments = <String>[];
   final buffer = StringBuffer();
   for (final sentence in sentences) {
     final wouldBe = buffer.isEmpty
         ? sentence
         : '${buffer.toString()} $sentence';
-    if (wouldBe.length <= _maxChunkLength || buffer.isEmpty) {
+    if (wouldBe.length <= _maxSegmentLength || buffer.isEmpty) {
       buffer
         ..clear()
         ..write(wouldBe);
     } else {
-      chunks.add(buffer.toString());
+      segments.add(buffer.toString());
       buffer
         ..clear()
         ..write(sentence);
     }
   }
   if (buffer.isNotEmpty) {
-    chunks.add(buffer.toString());
+    segments.add(buffer.toString());
   }
-  return chunks;
+  return segments;
 }
 
 /// Progress callback: [index] 0-based, [total], [paragraph] preview.
@@ -101,11 +101,11 @@ typedef NarrationProgress = void Function(
   bool resumed,
 });
 
-/// Completion callback: called once each chunk's audio file is on disk,
+/// Completion callback: called once each segment's audio file is on disk,
 /// with the 0-based [index] and the absolute [filePath] of the written clip
-/// (including resumed chunks). Lets a GUI enable per-chunk playback as soon
-/// as a chunk lands, rather than waiting for the whole run.
-typedef NarrationChunkComplete = void Function(
+/// (including resumed segments). Lets a GUI enable per-segment playback as soon
+/// as a segment lands, rather than waiting for the whole run.
+typedef NarrationSegmentComplete = void Function(
   int index,
   String filePath, {
   bool resumed,
@@ -116,12 +116,12 @@ typedef NarrationChunkComplete = void Function(
 String _sourceText(NarrationConfig config) => config.sourceText ??
     File(config.inputPath).readAsStringSync();
 
-/// Returns the narration chunk plan (scenes/paragraphs to narrate, after
+/// Returns the narration segment plan (scenes/paragraphs to narrate, after
 /// min-word merge and length split) for [config], reading from
 /// [NarrationConfig.sourceText] or the file at [config.inputPath].
-List<String> planChunks(NarrationConfig config) {
+List<String> planSegments(NarrationConfig config) {
   final source = _sourceText(config);
-  final paragraphs = chunkText(source, minWords: config.minWords);
+  final paragraphs = segmentText(source, minWords: config.minWords);
   if (paragraphs.isEmpty) {
     throw StateError('No paragraphs found in "${config.inputPath}".');
   }
@@ -153,18 +153,18 @@ String outputDirPath(NarrationConfig config) {
 
 /// Narrates [config] paragraph by paragraph (reading [NarrationConfig.sourceText]
 /// when set, else the file at [config.inputPath]), writing WAV files and a
-/// manifest into [config.outDir]. The manifest is rewritten after every chunk
+/// manifest into [config.outDir]. The manifest is rewritten after every segment
 /// so a failed run can be resumed via `--resume`.
 ///
-/// [abort], when given, is checked before each chunk and thread through to the
+/// [abort], when given, is checked before each segment and thread through to the
 /// HTTP client; cancelling it throws [AbortException] and stops the run.
 Future<void> narrate(
   NarrationConfig config, {
   NarrationProgress? onProgress,
-  NarrationChunkComplete? onChunkComplete,
+  NarrationSegmentComplete? onSegmentComplete,
   AbortToken? abort,
 }) async {
-  final paragraphs = planChunks(config);
+  final paragraphs = planSegments(config);
 
   final count = min(config.sampleLen ?? paragraphs.length, paragraphs.length);
   final provider = ttsProviderRegistry.resolve(config.profile.provider);
@@ -195,13 +195,13 @@ Future<void> narrate(
     final audioFile =
         '${outDir.path}${Platform.pathSeparator}$baseName.$extension';
 
-    // Resume: reuse an identical prior chunk (same index + prompt + file) and
+    // Resume: reuse an identical prior segment (same index + prompt + file) and
     // carry its fingerprint/bytes across, so a re-run doesn't re-bill it.
     final prior = resumeMatch(existing, index, input, dir);
     if (prior != null) {
       records.add(prior);
       onProgress?.call(i, count, paragraph, resumed: true);
-      onChunkComplete?.call(
+      onSegmentComplete?.call(
         i,
         '$dir${Platform.pathSeparator}${prior['wav']}',
         resumed: true,
@@ -243,7 +243,7 @@ Future<void> narrate(
           : paragraph,
       'prompt': input,
     });
-    onChunkComplete?.call(i, audioFile);
+    onSegmentComplete?.call(i, audioFile);
     _writeManifest(outDir, config, records, paragraphs.length, count, rate);
   }
 
@@ -270,7 +270,7 @@ Map<String, Object?>? resumeMatch(
   return null;
 }
 
-/// Loads per-chunk records from a prior run's manifest, or empty when none.
+/// Loads per-segment records from a prior run's manifest, or empty when none.
 List<Map<String, Object?>> readManifestRecords(Directory outDir) {
   final manifestFile = File(
     '${outDir.path}${Platform.pathSeparator}manifest.json',
@@ -306,7 +306,7 @@ void _writeManifest(
       'voice_label': config.voiceLabel,
     'format': config.profile.format,
     'sample_rate': ?rate,
-    'max_chunk_length': _maxChunkLength,
+    'max_segment_length': _maxSegmentLength,
     // ignore: avoid_redundant_argument_values
     'paragraphs_total': paragraphsTotal,
     'paragraphs_narrated': records.length,

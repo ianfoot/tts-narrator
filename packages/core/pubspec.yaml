@@ -1,5 +1,5 @@
 name: tts_narrator_core
-description: "Pure-Dart core shared by the tts-narrator CLI and GUI (chunking, TTS client, voice config, cost estimates)."
+description: "Pure-Dart core shared by the tts-narrator CLI and GUI (segmentation, TTS client, voice config, cost estimates)."
 publish_to: 'none'
 version: 0.1.0+1
 
