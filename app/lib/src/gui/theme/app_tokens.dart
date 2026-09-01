@@ -203,6 +203,9 @@ class AppMetrics {
   /// Settings rail width (fixed when expanded).
   static const double railWidth = 320;
 
+  /// Width of the run view's per-segment action column.
+  static const double segmentActionWidth = 100;
+
   /// Outer left/right padding framing the editor text column.
   static const double editorOuterPadding = 48;
 

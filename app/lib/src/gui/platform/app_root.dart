@@ -84,12 +84,40 @@ class _AppRootState extends State<AppRoot> {
     // startRun sets _narrating synchronously, so a double-trigger cannot push
     // the run view twice (the second Narrate hits the re-entrancy guard).
     widget.controller.startRun();
-    final route = _isMac
-        ? CupertinoPageRoute<void>(
-            builder: (_) => NarrationScreen(controller: widget.controller))
-        : MaterialPageRoute<void>(
-            builder: (_) => NarrationScreen(controller: widget.controller));
-    _navigatorKey.currentState?.push(route);
+    _navigatorKey.currentState?.push(_runRoute());
+  }
+
+  /// The run view's 250ms cross-fade slide-up from a 20px offset (UI spec §4).
+  /// A bare [PageRouteBuilder] so macOS and Material present identically.
+  PageRouteBuilder<void> _runRoute() {
+    const duration = Duration(milliseconds: 250);
+    final screenHeight = MediaQuery.sizeOf(
+          _navigatorKey.currentContext ?? context,
+        ).height;
+    final beginDy = screenHeight > 0 ? 20 / screenHeight : 0.0;
+    return PageRouteBuilder<void>(
+      transitionDuration: duration,
+      reverseTransitionDuration: duration,
+      pageBuilder: (context, animation, secondaryAnimation) =>
+          NarrationScreen(controller: widget.controller),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeInOut,
+          reverseCurve: Curves.easeInOut,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: Offset(0, beginDy),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
   }
 
   @override
