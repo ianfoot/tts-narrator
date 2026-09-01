@@ -60,7 +60,7 @@ Future<int> main(List<String> args) async {
     'Tags:   ${config.useCalmTag ? 'on ([calm])' : 'off'}',
   );
   if (config.resume) {
-    stdout.writeln('Resume: on (skips chunks matching the existing manifest)');
+    stdout.writeln('Resume: on (skips segments matching the existing manifest)');
   }
   if (!config.profile.promptStyle &&
       (config.accent.trim().isNotEmpty ||
@@ -83,22 +83,22 @@ Future<int> main(List<String> args) async {
       for (final file in inputs) {
         final fileConfig = config.copyWith(inputPath: file);
         final stem = inputStem(file);
-        final chunks = planChunks(fileConfig);
-        totalMinutes += estimateMinutes(chunks);
-        totalCost += estimateCostUsd(config.pricing, chunks);
-        final pad = chunks.length.toString().length;
-        stdout.writeln('\n== $stem == (${chunks.length} chunk(s))');
-        for (var i = 0; i < chunks.length; i++) {
-          final words = chunks[i].split(RegExp(r'\s+')).length;
-          final preview = chunks[i].length > 70
-              ? '${chunks[i].substring(0, 70)}…'
-              : chunks[i];
+        final segments = planSegments(fileConfig);
+        totalMinutes += estimateMinutes(segments);
+        totalCost += estimateCostUsd(config.pricing, segments);
+        final pad = segments.length.toString().length;
+        stdout.writeln('\n== $stem == (${segments.length} segment(s))');
+        for (var i = 0; i < segments.length; i++) {
+          final words = segments[i].split(RegExp(r'\s+')).length;
+          final preview = segments[i].length > 70
+              ? '${segments[i].substring(0, 70)}…'
+              : segments[i];
           stdout.writeln('${i + 1}. ($words words) ${preview.split('\n').first}');
         }
         stdout.writeln(
           '  Output: ${outputDirPath(fileConfig)}'
           '${Platform.pathSeparator}${stem}_${'1'.padLeft(pad, '0')}.$extension … '
-          '${stem}_${chunks.length.toString().padLeft(pad, '0')}.$extension + manifest.json',
+          '${stem}_${segments.length.toString().padLeft(pad, '0')}.$extension + manifest.json',
         );
       }
       if (inputs.length > 1) {
@@ -125,9 +125,9 @@ Future<int> main(List<String> args) async {
     for (final file in inputs) {
       final fileConfig = config.copyWith(inputPath: file);
       final stem = inputStem(file);
-      final chunks = planChunks(fileConfig);
-      final estimate = estimateCostUsd(config.pricing, chunks);
-      final minutes = estimateMinutes(chunks);
+      final segments = planSegments(fileConfig);
+      final estimate = estimateCostUsd(config.pricing, segments);
+      final minutes = estimateMinutes(segments);
       stdout.writeln('\n== $stem ==');
       stdout.writeln(
         '  Estimated duration: ${minutes.toStringAsFixed(1)} min. '

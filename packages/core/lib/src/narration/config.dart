@@ -71,7 +71,7 @@ class NarrationConfig {
   /// If true, print the narration plan and exit without calling the API.
   final bool dryRun;
 
-  /// If true, skip chunks already produced in a compatible existing manifest
+  /// If true, skip segments already produced in a compatible existing manifest
   /// (matching index + fingerprint) and keep their records.
   final bool resume;
 
@@ -80,7 +80,7 @@ class NarrationConfig {
 
   /// Resolved provider settings for the run's provider (see `resolveSettings`).
   /// Built once when the config is assembled; providers read their secrets
-  /// from here, never from the environment per chunk.
+  /// from here, never from the environment per segment.
   final Map<String, String> providerSettings;
 
   /// Copy of this config with [inputPath] replaced (used to narrate each file

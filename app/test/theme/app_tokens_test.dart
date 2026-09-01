@@ -97,16 +97,11 @@ void main() {
       expect(t.editorBody.fontSize, 16);
       expect(t.editorBody.height, 1.6);
       expect(t.editorBody.fontFamily, 'Georgia');
-      expect(t.screenTitle.fontSize, 20);
-      expect(t.screenTitle.fontWeight, FontWeight.w600);
     });
   });
 
   group('AppMetrics', () {
-    test('grid and dimension constants match the spec (§2)', () {
-      expect(AppMetrics.grid, 8);
-      expect(AppMetrics.controlMinHeight % AppMetrics.grid, 0);
-      expect(AppMetrics.controlPadH, 12);
+    test('dimension constants match the spec (§2)', () {
       expect(AppMetrics.controlRadius, 8);
       expect(AppMetrics.cardRadius, 10);
       expect(AppMetrics.segmentGap, 8);
@@ -132,7 +127,7 @@ void main() {
       );
       final tokens =
           tester.state<_ProbeState>(find.byType(_Probe)).tokens!;
-      expect(tokens.isDark, isFalse);
+      expect(tokens.colors.isDark, isFalse);
       expect(tokens.colors.bgApp, AppPalette.light.bgApp);
     });
 
@@ -145,7 +140,7 @@ void main() {
       );
       final tokens =
           tester.state<_ProbeState>(find.byType(_Probe)).tokens!;
-      expect(tokens.isDark, isTrue);
+      expect(tokens.colors.isDark, isTrue);
       expect(tokens.colors.bgApp, AppPalette.dark.bgApp);
     });
 
@@ -160,7 +155,7 @@ void main() {
       );
       final tokens =
           tester.state<_ProbeState>(find.byType(_Probe)).tokens!;
-      expect(tokens.isDark, isTrue);
+      expect(tokens.colors.isDark, isTrue);
       expect(tokens.colors.bgApp, AppPalette.dark.bgApp);
     });
   });

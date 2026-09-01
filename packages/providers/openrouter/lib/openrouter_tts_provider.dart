@@ -146,7 +146,7 @@ class OpenRouterTtsProvider implements TtsProvider {
 
       final bytes = await response.fold<List<int>>(
         <int>[],
-        (acc, chunk) => acc..addAll(chunk),
+        (acc, segment) => acc..addAll(segment),
       );
       return (
         response.statusCode,
