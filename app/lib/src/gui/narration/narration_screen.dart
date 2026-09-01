@@ -36,6 +36,15 @@ class _NarrationScreenState extends State<NarrationScreen> {
   AudioPlayer? _player;
   int? _playingIndex;
 
+  /// Guards against double-taps (or a concurrent system pop) stacking two
+  /// confirm dialogs while one is already open.
+  bool _confirming = false;
+
+  /// How long to wait after the confirm dialog closes before popping the run
+  /// view. The dialog route stays a "present" navigator route until its
+  /// reverse transition finishes, so popping sooner would just re-pop it.
+  static const _confirmLeaveDelay = Duration(milliseconds: 250);
+
   AppController get _controller => widget.controller;
 
   bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
@@ -62,9 +71,18 @@ class _NarrationScreenState extends State<NarrationScreen> {
     if (existing != null) return existing;
     final player = AudioPlayer();
     // AudioPlayer only ever plays this screen's current clip; reaching the
-    // end reverts the active button (⏹ -> ▶) automatically.
+    // end reverts the active button (⏹ -> ▶) automatically. Async load
+    // failures also land on the state stream (rather than a thrown play()
+    // error), so both revert paths clear the active index.
     player.onPlayerComplete.listen((_) {
       if (mounted) setState(() => _playingIndex = null);
+    });
+    player.onPlayerStateChanged.listen((state) {
+      if (state == PlayerState.completed || state == PlayerState.stopped) {
+        if (mounted && _playingIndex != null) {
+          setState(() => _playingIndex = null);
+        }
+      }
     });
     _player = player;
     return player;
@@ -83,20 +101,42 @@ class _NarrationScreenState extends State<NarrationScreen> {
     try {
       await player.play(DeviceFileSource(path));
     } catch (_) {
-      // A clip that fails to load never enters the playing state.
+      // A clip that fails to load (thrown synchronously) never enters the
+      // playing state; the state-stream listener covers async failures.
       if (mounted) setState(() => _playingIndex = null);
       return;
     }
     if (mounted) setState(() => _playingIndex = chunk.index);
   }
 
+  /// Leaves the run view. While a run is generating every pop request (header
+  /// Back, action-bar Back, ⌘W/Close, system back gesture) funnels through
+  /// here via [PopScope]; the confirmation modal must play out before the
+  /// route pops.
   Future<void> _onBack() async {
     final controller = _controller;
-    if (controller.narrating && !controller.runStopped) {
-      final confirmed = await _confirmCancelActiveRun();
-      if (!confirmed) return;
-      controller.cancelRun();
+    final runActive = controller.narrating && !controller.runStopped;
+    if (!runActive) {
+      if (mounted) Navigator.of(context).pop();
+      return;
     }
+    if (_confirming) return;
+    _confirming = true;
+    bool confirmed;
+    try {
+      confirmed = await _confirmCancelActiveRun();
+    } finally {
+      _confirming = false;
+    }
+    if (!confirmed) return;
+    controller.cancelRun();
+    if (!mounted) return;
+    // Wait out the dialog's reverse transition before popping: it stays a
+    // present navigator route until the transition completes, and a pop while
+    // it is would target the dialog instead of this view. The endOfFrame await
+    // lets that closing frame tick past the dialog before we pop.
+    await Future<void>.delayed(_confirmLeaveDelay);
+    await WidgetsBinding.instance.endOfFrame;
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -158,28 +198,37 @@ class _NarrationScreenState extends State<NarrationScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
-    return PlatformPage(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildHeader(controller),
-          if (controller.runConfig != null) _buildSummaryPill(controller),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: _buildProgressBar(controller),
-          ),
-          if (controller.runPlanError != null)
-            _buildMessageCard(controller.runPlanError!, isError: true)
-          else if (controller.runError != null)
-            _buildMessageCard('Narration failed: ${controller.runError}',
-                isError: true)
-          else if (controller.runStopped)
-            _buildMessageCard('Narration was stopped.')
-          else if (controller.runFinished)
-            _buildMessageCard('Narration complete.'),
-          Expanded(child: _buildSegmentList(controller)),
-          _buildActionBar(controller),
-        ],
+    final runActive = controller.narrating && !controller.runStopped;
+    return PopScope(
+      canPop: !runActive,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _onBack();
+        }
+      },
+      child: PlatformPage(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildHeader(controller),
+            if (controller.runConfig != null) _buildSummaryPill(controller),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _buildProgressBar(controller),
+            ),
+            if (controller.runPlanError != null)
+              _buildMessageCard(controller.runPlanError!, isError: true)
+            else if (controller.runError != null)
+              _buildMessageCard('Narration failed: ${controller.runError}',
+                  isError: true)
+            else if (controller.runStopped)
+              _buildMessageCard('Narration was stopped.')
+            else if (controller.runFinished)
+              _buildMessageCard('Narration complete.'),
+            Expanded(child: _buildSegmentList(controller)),
+            _buildActionBar(controller),
+          ],
+        ),
       ),
     );
   }

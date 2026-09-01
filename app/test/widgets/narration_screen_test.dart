@@ -197,6 +197,30 @@ void main() {
     );
   }
 
+  /// Pumps the run view as a *pushed* route above an editor placeholder so a
+  /// confirmed Back actually pops the view (the `home:` variant cannot pop).
+  Future<void> pumpPushedRun(WidgetTester tester, AppController controller) async {
+    await tester.binding.setSurfaceSize(const Size(1000, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(child: Text('EDITOR', key: const Key('editorHost'))),
+          ),
+        ),
+      ),
+    );
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    navigator.push(
+      MaterialPageRoute<void>(builder: (_) => NarrationScreen(controller: controller)),
+    );
+    // Fixed pumps, not pumpAndSettle: an active run renders an ever-animating
+    // spinner that would never settle.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+  }
+
   testWidgets('a launched run renders the header and frozen summary pill', (
     tester,
   ) async {
@@ -376,10 +400,100 @@ void main() {
         matching: find.text('Cancel Run'),
       ),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
+await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
     expect(c.runStopped, isTrue);
     expect(c.text, isNotEmpty);
+  });
+
+  testWidgets('system pop while a run is active prompts, then leaves on confirm', (
+    tester,
+  ) async {
+    _BlockingProvider().register();
+    final c = makeController()..sampleLen = 3;
+    c.startRun();
+    await pumpPushedRun(tester, c);
+
+    // A system back (macOS ⌘W / Close menu) while generating must not pop the
+    // view silently - it funnels through the same confirmation.
+    await tester.binding.handlePopRoute();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Cancel active narration run?'), findsOneWidget);
+    expect(find.byKey(const Key('editorHost')), findsNothing);
+    expect(c.narrating, isTrue);
+
+    // Deferring keeps the run on screen and generating.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Back'),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Cancel active narration run?'), findsNothing);
+    expect(c.runStopped, isFalse);
+    expect(find.byKey(const Key('runHeaderTitle')), findsOneWidget);
+
+    // Confirming cancelRun stops generation and pops back to the editor.
+    await tester.binding.handlePopRoute();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Cancel Run'),
+      ),
+    );
+await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(c.runStopped, isTrue);
+    expect(find.byKey(const Key('runHeaderTitle')), findsNothing);
+    expect(find.byKey(const Key('editorHost')), findsOneWidget);
+  });
+
+  testWidgets('double-tap Back while running shows a single confirm dialog', (
+    tester,
+  ) async {
+    _BlockingProvider().register();
+    final c = makeController()..sampleLen = 3;
+    c.startRun();
+    await pumpPushedRun(tester, c);
+
+    // Two taps land before the first dialog is built; the re-entrancy guard
+    // must not stack a second confirm. The second tap may already be covered
+    // by the first dialog's barrier, so a miss is expected and harmless.
+    await tester.tap(find.byKey(const Key('runBackButton')).first);
+    await tester.tap(
+      find.byKey(const Key('runBackButton')).first,
+      warnIfMissed: false,
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('Cancel active narration run?'), findsOneWidget);
+    expect(c.narrating, isTrue);
+
+    // Confirming once stops the run and pops; a stray second invocation is
+    // already blocked, and the run is no longer active anyway.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Cancel Run'),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(c.runStopped, isTrue);
+    expect(find.byKey(const Key('runHeaderTitle')), findsNothing);
+    expect(find.byKey(const Key('editorHost')), findsOneWidget);
   });
 
   testWidgets('Back on an idle run pops without a prompt', (tester) async {
