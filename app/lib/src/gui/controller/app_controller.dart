@@ -372,10 +372,10 @@ class AppController extends ChangeNotifier {
   double get runProgress => totalSegments == 0 ? 0 : runDoneCount / totalSegments;
 
   double get runEstimatedMinutes =>
-      estimateMinutes(runSegments.map((c) => c.paragraph).toList());
+      estimateMinutes(runSegments.map((s) => s.paragraph).toList());
 
   double get runEstimatedCostUsd =>
-      estimateCostUsd(runConfig?.pricing ?? pricing, runSegments.map((c) => c.paragraph).toList());
+      estimateCostUsd(runConfig?.pricing ?? pricing, runSegments.map((s) => s.paragraph).toList());
 
   AbortToken? _abort;
 
