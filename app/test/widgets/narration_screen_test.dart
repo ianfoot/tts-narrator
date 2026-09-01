@@ -238,12 +238,12 @@ void main() {
     expect(find.byKey(const Key('runBackButton')), findsOneWidget);
     expect(find.byKey(const Key('runActionBack')), findsOneWidget);
 
-    // Let the single chunk land; then Cancel disappears and chunks are done.
+    // Let the single segment land; then Cancel disappears and segments are done.
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.byKey(const Key('runCancelButton')), findsNothing);
     expect(find.textContaining('Narration complete.'), findsOneWidget);
     expect(fake.callCount, 1);
-    expect(c.totalChunks, 1);
+    expect(c.totalSegments, 1);
     expect(c.runDoneCount, 1);
     expect(c.runProgress, 1.0);
     expect(find.byKey(const Key('segStatus_completed_0')), findsOneWidget);
@@ -274,15 +274,15 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(c.runFinished, isTrue);
 
-    // Recast the two real chunks plus two synthetic ones to cover every state.
-    c.runChunks[0].filePath = null; // pending
-    // chunk 1 stays completed (its clip landed on disk during the run).
+    // Recast the two real segments plus two synthetic ones to cover every state.
+    c.runSegments[0].filePath = null; // pending
+    // segment 1 stays completed (its clip landed on disk during the run).
     final resumedFile = File('${dir.path}/resumed.wav')
       ..writeAsStringSync('x');
-    c.runChunks.addAll([
-      NarrationRunChunk(index: 2, paragraph: 'A third passage is processing.')
+    c.runSegments.addAll([
+      NarrationRunSegment(index: 2, paragraph: 'A third passage is processing.')
         ..running = true,
-      NarrationRunChunk(index: 3, paragraph: 'A reused fourth passage.')
+      NarrationRunSegment(index: 3, paragraph: 'A reused fourth passage.')
         ..resumed = true
         ..filePath = resumedFile.path,
     ]);

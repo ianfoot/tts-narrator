@@ -46,26 +46,26 @@ const _narrationWordsPerMinute = 160.0;
 /// Gemini bills audio output per token; standard mapping for Gemini TTS.
 const _geminiTokensPerSecond = 160.0;
 
-/// Estimated narration duration in minutes for [chunks], based on a nominal
+/// Estimated narration duration in minutes for [segments], based on a nominal
 /// narration pace (words / 160 wpm). Used for the dry-run estimate and the
 /// run banner.
-double estimateMinutes(List<String> chunks) {
+double estimateMinutes(List<String> segments) {
   var words = 0;
-  for (final c in chunks) {
+  for (final c in segments) {
     words += c.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
   }
   return words / _narrationWordsPerMinute;
 }
 
-/// Estimated USD cost of narrating [chunks] with [pricing], using the pricing
+/// Estimated USD cost of narrating [segments] with [pricing], using the pricing
 /// from the voice config. Approximate — assumes ~4 text tokens per word's
 /// chars for token-billed input and the nominal narration pace for
 /// duration-billed output (Gemini). Free models (e.g. fish) return 0.
-double estimateCostUsd(AudioPricing pricing, List<String> chunks) {
+double estimateCostUsd(AudioPricing pricing, List<String> segments) {
   if (pricing.isFree) return 0;
 
   var chars = 0;
-  for (final c in chunks) {
+  for (final c in segments) {
     chars += c.length;
   }
 
@@ -75,7 +75,7 @@ double estimateCostUsd(AudioPricing pricing, List<String> chunks) {
 
   final textTokens = (chars / 4).ceil();
   final inputCost = textTokens / 1e6 * (pricing.inputUsdPerMTokens ?? 0);
-  final estSeconds = estimateMinutes(chunks) * 60;
+  final estSeconds = estimateMinutes(segments) * 60;
   final outputCost = estSeconds * _geminiTokensPerSecond / 1e6 *
       (pricing.outputUsdPerMTokens ?? 0);
   return inputCost + outputCost;

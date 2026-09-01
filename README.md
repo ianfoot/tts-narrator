@@ -10,7 +10,7 @@ Uses the [OpenRouter text-to-speech endpoint](https://openrouter.ai/docs/guides/
 (`POST /api/v1/audio/speech`) through the OpenRouter provider.
 
 A Dart **pub workspace** with four packages:
-- `packages/core` — pure-Dart narration core (chunking, provider-agnostic TTS
+- `packages/core` — pure-Dart narration core (segmentation, provider-agnostic TTS
   dispatch, voice config, cost estimates), no Flutter or GUI deps.
 - `packages/cli` — the headless CLI (`bin/main.dart`), compiles to a single
   native executable via `dart compile exe`.
@@ -66,9 +66,9 @@ path to the text to narrate.
 | `--tags on\|off` | Prepend a `[calm]` style tag to every prompt (Gemini only). | `off` |
 | `--passage-prefix <text>` | Pooled preamble prepended to every paragraph prompt. | `Narrate this passage for an audiobook. You are a warm, composed female narrator.` |
 | `--min-words <n>` | Merge paragraphs shorter than `n` words into the next, so tiny fragments don't get an isolated reading. | `30` |
-| `--sample-len <n>` | Narrate only the first `n` chunks (useful for testing). | — |
-| `--dry-run` | Print the chunk plan + estimated duration/cost and exit without calling the API. | `off` |
-| `--resume` | Skip chunks already present in the output manifest (same prompt + file), so a re-run doesn't re-bill finished paragraphs. | `off` |
+| `--sample-len <n>` | Narrate only the first `n` segments (useful for testing). | — |
+| `--dry-run` | Print the segment plan + estimated duration/cost and exit without calling the API. | `off` |
+| `--resume` | Skip segments already present in the output manifest (same prompt + file), so a re-run doesn't re-bill finished paragraphs. | `off` |
 | `--out <dir>` | Output directory base; the input stem is appended unless it already ends with it. | `output` |
 | `--config <path>` | Voice config directory: `config.json` (default model, providers) + one `<alias>.json` per model (provider, aliases, defaults, pricing). | `~/.config/tts-narrator/` |
 | `--api-key <key>` | Opaque `api_key` setting merged into the selected provider's settings (overrides the config). | — |
@@ -249,7 +249,7 @@ page and in `voice_config.example/fish.json`.
 ## Example
 
 ```bash
-# See what the chunk plan looks like without spending credits
+# See what the segment plan looks like without spending credits
 ./build/tts-narrator --input story.txt --voice Callirrhoe --dry-run
 
 # Narrate the first paragraph only, as a smoke test
@@ -286,8 +286,8 @@ page and in `voice_config.example/fish.json`.
 
 ## Output
 
-Each chunk is written to `output/<input-stem>/` as `<input-stem>_<nn>.<ext>`
-(padded to the width of the chunk count, so files sort numerically), plus a
+Each segment is written to `output/<input-stem>/` as `<input-stem>_<nn>.<ext>`
+(padded to the width of the segment count, so files sort numerically), plus a
 `manifest.json` describing the run:
 
 - `gemini` → 24 kHz mono 16-bit PCM `.wav`
@@ -299,22 +299,22 @@ So `story.txt` → `output/story/story_01.mp3` … `story_16.mp3`
 Batch narration (`--input <directory>`) narrates each top-level `.txt` with
 the same model/voice/options; every file gets its own
 `output/<file-stem>/` directory, so outputs never collide. Use `--dry-run`
-first to see all files' chunk plans and one combined time/cost estimate.
+first to see all files' segment plans and one combined time/cost estimate.
 
-The manifest is rewritten after every chunk, so an interrupted run can be
+The manifest is rewritten after every segment, so an interrupted run can be
 picked up with `--resume` (finished paragraphs are skipped — no re-billing).
 
 Manifest contents:
 - `model`, `voice`, optional `voice_label` (friendly alias if used), `format`,
   `sample_rate` (`sample_rate` is omitted for MP3)
-- per-chunk `wav`, `bytes`, `duration_seconds` (null for MP3), `fingerprint`,
+- per-segment `wav`, `bytes`, `duration_seconds` (null for MP3), `fingerprint`,
   `excerpt`, and the exact `input`/`prompt` that produced it (for
   reproducibility)
 
 Playback (macOS): `afplay output/story/story_1.wav` (Gemini),
 `afplay output/story/story_1.mp3` (Kokoro/Fish).
 
-## How narration text is chunked
+## How narration text is segmented
 
 1. Split the input on blank lines into paragraphs.
 2. Merge a paragraph into the next when it is shorter than `--min-words`
@@ -322,12 +322,12 @@ Playback (macOS): `afplay output/story/story_1.wav` (Gemini),
    off-register reading.
 3. Any merged paragraph longer than 4,000 characters is split at sentence
    boundaries.
-4. Each resulting chunk is one call to the TTS API.
+4. Each resulting segment is one call to the TTS API.
 
 The mood of Gemini 3.1 Flash TTS is controlled through the prompt text
 (inline tags like `[calm]`, accent/style descriptions) rather than a separate
 pitch/rate parameter. There is no per-call voice memory, so keeping the prompt
-identical and chunk sizes in the ~30–300 word range produces the most
+identical and segment sizes in the ~30–300 word range produces the most
 consistent narrator.
 
 ## Project layout
@@ -348,7 +348,7 @@ packages/core/            # tts_narrator_core — pure Dart, no Flutter deps
         cost.dart             # duration + cost estimates
         model_profiles.dart   # request wiring + compiled fish bootstrap (kDefaultProfile)
         model_ui.dart         # ModelUiSpec — GUI options declared by a model's plugin
-        narration.dart       # chunkText + narration orchestrator
+        narration.dart       # segmentText + narration orchestrator
         prompt.dart           # per-paragraph prompt template (Gemini only)
         tts_provider.dart     # TtsProvider interface, registry, resolveSettings
         wav.dart              # PCM -> WAV header writer
@@ -391,7 +391,7 @@ editor-first: type or paste the text you want narrated right into the window
 (no backing file — the core reads the in-memory text via `sourceText`), then
 hit **Narrate**. A collapsible settings rail controls the model, voice, and
 model-specific options (declared by each model's provider plugin), the run view
-shows per-chunk progress with in-app playback of finished clips, Cancel, and
+shows per-segment progress with in-app playback of finished clips, Cancel, and
 Back — and the editor is intact when you return. The native macOS menu bar
 (`PlatformMenuBar`) provides the standard App / File / Edit / View / Window
 menus: Open (⌘O), Save (⌘S), Save As (⇧⌘S), Narrate (⌘N), Close (⌘W), and the

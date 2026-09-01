@@ -65,7 +65,7 @@ void main() {
       expect(c.dirty, isFalse);
       expect(c.wordCount, 0);
       expect(c.charCount, 0);
-      expect(c.plannedChunks, isEmpty);
+      expect(c.plannedSegments, isEmpty);
       expect(c.profile.alias, kDefaultProfile.profile.alias);
       expect(c.modelAlias, kDefaultProfile.profile.alias);
       expect(c.voice, kDefaultProfile.voice);
@@ -90,7 +90,7 @@ void main() {
       expect(c.wordCount, 7);
       expect(c.charCount, 'The rain fell on the quiet street.'.length);
       // No paragraphs -> no plan yet.
-      expect(c.plannedChunks, hasLength(1));
+      expect(c.plannedSegments, hasLength(1));
     });
 
     test('setText with identical value is ignored', () {
@@ -327,7 +327,7 @@ void main() {
       c.startRun();
       expect(c.narrating, isTrue);
       expect(c.narrateBlockReason(), contains('already running'));
-      // Let the single fake chunk land.
+      // Let the single fake segment land.
       await Future<void>.delayed(const Duration(milliseconds: 20));
       expect(c.runFinished, isTrue);
       expect(c.narrating, isFalse);
@@ -345,19 +345,19 @@ void main() {
   });
 
   group('run state', () {
-    test('sampleLen sizes the chunk plan so progress completes at 100%', () async {
+    test('sampleLen sizes the segment plan so progress completes at 100%', () async {
       final c = makeController();
       c.setText(
-        'First paragraph with enough words to become its own chunk and then '
+        'First paragraph with enough words to become its own segment and then '
         'carry on a little longer to cross the minimum.\n\n'
-        'Second paragraph with enough words to become its own chunk as well '
+        'Second paragraph with enough words to become its own segment as well '
         'and then carry on a little longer to cross the minimum.',
       );
       final fake = FakeTtsProvider()..register();
       c.sampleLen = 1;
       c.outDir = dir.path;
       c.startRun();
-      expect(c.totalChunks, 1);
+      expect(c.totalSegments, 1);
       await Future<void>.delayed(const Duration(milliseconds: 20));
       expect(c.runFinished, isTrue);
       expect(c.runDoneCount, 1);
@@ -365,12 +365,12 @@ void main() {
       expect(fake.callCount, 1);
     });
 
-    test('cancelling a run clears the in-flight chunk spinner', () async {
+    test('cancelling a run clears the in-flight segment spinner', () async {
       final c = makeController();
       c.setText(
-        'First paragraph with enough words to become its own chunk and then '
+        'First paragraph with enough words to become its own segment and then '
         'carry on a little longer to cross the minimum.\n\n'
-        'Second paragraph with enough words to become its own chunk as well '
+        'Second paragraph with enough words to become its own segment as well '
         'and then carry on a little longer to cross the minimum.',
       );
       FakeTtsProvider().register();
@@ -380,7 +380,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 20));
       expect(c.runStopped, isTrue);
       expect(c.narrating, isFalse);
-      expect(c.runChunks.every((chunk) => !chunk.running), isTrue);
+      expect(c.runSegments.every((segment) => !segment.running), isTrue);
     });
   });
 
@@ -412,8 +412,8 @@ void main() {
         'It was an evening of small, patient sounds. The story drifted on for '
         'a while, unhurried and calm.',
       );
-      final chunks = c.plannedChunks;
-      expect(chunks, isNotEmpty);
+      final segments = c.plannedSegments;
+      expect(segments, isNotEmpty);
       expect(c.estimatedMinutes, greaterThan(0));
       expect(c.estimatedCostUsd, 0); // fish is free.
     });

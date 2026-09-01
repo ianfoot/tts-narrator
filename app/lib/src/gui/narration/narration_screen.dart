@@ -88,10 +88,10 @@ class _NarrationScreenState extends State<NarrationScreen> {
     return player;
   }
 
-  Future<void> _togglePlay(NarrationRunChunk chunk) async {
-    final path = chunk.filePath;
+  Future<void> _togglePlay(NarrationRunSegment segment) async {
+    final path = segment.filePath;
     if (path == null || !File(path).existsSync()) return;
-    if (_playingIndex == chunk.index) {
+    if (_playingIndex == segment.index) {
       await _player?.stop();
       if (mounted) setState(() => _playingIndex = null);
       return;
@@ -106,7 +106,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
       if (mounted) setState(() => _playingIndex = null);
       return;
     }
-    if (mounted) setState(() => _playingIndex = chunk.index);
+    if (mounted) setState(() => _playingIndex = segment.index);
   }
 
   /// Leaves the run view. While a run is generating every pop request (header
@@ -272,7 +272,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
   Widget _buildSummaryPill(AppController controller) {
     final config = controller.runConfig!;
     final voice = config.voiceLabel ?? config.voice;
-    final segments = controller.totalChunks;
+    final segments = controller.totalSegments;
     final minutes = controller.runEstimatedMinutes.round();
     final cost = formatCostUsd(controller.runEstimatedCostUsd);
     return Padding(
@@ -316,7 +316,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
   }
 
   Widget _buildSegmentList(AppController controller) {
-    if (controller.runChunks.isEmpty) {
+    if (controller.runSegments.isEmpty) {
       return Center(
         child: Text(
           'No segments yet.',
@@ -328,18 +328,18 @@ class _NarrationScreenState extends State<NarrationScreen> {
     }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      itemCount: controller.runChunks.length,
+      itemCount: controller.runSegments.length,
       itemBuilder: (context, i) => Padding(
         padding: const EdgeInsets.only(bottom: AppMetrics.segmentGap),
-        child: _buildSegmentCard(controller.runChunks[i]),
+        child: _buildSegmentCard(controller.runSegments[i]),
       ),
     );
   }
 
   /// 3-column segment card: status (32px) · body (flex) · action (100px).
-  Widget _buildSegmentCard(NarrationRunChunk chunk) {
+  Widget _buildSegmentCard(NarrationRunSegment segment) {
     final colors = _tokens.colors;
-    final trimmed = chunk.paragraph.trim();
+    final trimmed = segment.paragraph.trim();
     return Container(
       padding: const EdgeInsets.all(AppMetrics.segmentCardPadding),
       decoration: BoxDecoration(
@@ -350,35 +350,35 @@ class _NarrationScreenState extends State<NarrationScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _statusColumn(chunk),
+          _statusColumn(segment),
           const SizedBox(width: 12),
-          Expanded(child: _bodyColumn(chunk, trimmed)),
-          _actionColumn(chunk),
+          Expanded(child: _bodyColumn(segment, trimmed)),
+          _actionColumn(segment),
         ],
       ),
     );
   }
 
-  Widget _statusColumn(NarrationRunChunk chunk) {
+  Widget _statusColumn(NarrationRunSegment segment) {
     final colors = _tokens.colors;
     final Widget indicator;
-    if (chunk.resumed) {
+    if (segment.resumed) {
       indicator = Icon(
         _isMac ? CupertinoIcons.refresh : Icons.refresh,
-        key: Key('segStatus_resumed_${chunk.index}'),
+        key: Key('segStatus_resumed_${segment.index}'),
         size: 18,
         color: colors.accentWarning,
       );
-    } else if (chunk.running) {
+    } else if (segment.running) {
       indicator = SizedBox(
-        key: Key('segStatus_processing_${chunk.index}'),
+        key: Key('segStatus_processing_${segment.index}'),
         width: 18,
         height: 18,
         child: PlatformActivityIndicator(size: 18),
       );
-    } else if (chunk.filePath != null) {
+    } else if (segment.filePath != null) {
       indicator = Container(
-        key: Key('segStatus_completed_${chunk.index}'),
+        key: Key('segStatus_completed_${segment.index}'),
         width: 18,
         height: 18,
         decoration: BoxDecoration(
@@ -393,7 +393,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
       );
     } else {
       indicator = Container(
-        key: Key('segStatus_pending_${chunk.index}'),
+        key: Key('segStatus_pending_${segment.index}'),
         width: 18,
         height: 18,
         decoration: BoxDecoration(
@@ -405,18 +405,18 @@ class _NarrationScreenState extends State<NarrationScreen> {
     return SizedBox(width: 32, child: Center(child: indicator));
   }
 
-  Widget _bodyColumn(NarrationRunChunk chunk, String trimmed) {
+  Widget _bodyColumn(NarrationRunSegment segment, String trimmed) {
     final colors = _tokens.colors;
     final body = _tokens.typography.body;
     final words = trimmed.isEmpty ? 0 : trimmed.split(RegExp(r'\s+')).length;
     return Column(
-      key: Key('segBody_${chunk.index}'),
+      key: Key('segBody_${segment.index}'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Text(
-              'Segment ${chunk.index + 1}',
+              'Segment ${segment.index + 1}',
               style: body.copyWith(
                 fontWeight: FontWeight.w600,
                 color: colors.textPrimary,
@@ -439,20 +439,20 @@ class _NarrationScreenState extends State<NarrationScreen> {
     );
   }
 
-  Widget _actionColumn(NarrationRunChunk chunk) {
+  Widget _actionColumn(NarrationRunSegment segment) {
     final colors = _tokens.colors;
-    final playable = chunk.filePath != null && File(chunk.filePath!).existsSync();
-    final isPlaying = _playingIndex == chunk.index;
+    final playable = segment.filePath != null && File(segment.filePath!).existsSync();
+    final isPlaying = _playingIndex == segment.index;
     final Widget child;
     if (!playable) {
       child = Text(
-        chunk.running ? 'Processing...' : 'Pending',
-        key: Key('segAction_${chunk.index}'),
+        segment.running ? 'Processing...' : 'Pending',
+        key: Key('segAction_${segment.index}'),
         textAlign: TextAlign.right,
         style: _tokens.typography.mono.copyWith(color: colors.textSecondary),
       );
     } else {
-      child = _playStopButton(chunk, isPlaying);
+      child = _playStopButton(segment, isPlaying);
     }
     return SizedBox(
       width: AppMetrics.segmentActionWidth,
@@ -462,7 +462,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
 
   /// Compact `▶ Play` / `⏹ Stop` toggle sized to fit the 100px action column
   /// (the shared [PlatformButton] outlined geometry is too wide for it).
-  Widget _playStopButton(NarrationRunChunk chunk, bool isPlaying) {
+  Widget _playStopButton(NarrationRunSegment segment, bool isPlaying) {
     final colors = _tokens.colors;
     final label = isPlaying ? 'Stop' : 'Play';
     final icon = Icon(
@@ -473,9 +473,9 @@ class _NarrationScreenState extends State<NarrationScreen> {
     final Widget button;
     if (_isMac) {
       button = CupertinoButton(
-        key: Key('segAction_${chunk.index}'),
+        key: Key('segAction_${segment.index}'),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        onPressed: () => _togglePlay(chunk),
+        onPressed: () => _togglePlay(segment),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
@@ -495,14 +495,14 @@ class _NarrationScreenState extends State<NarrationScreen> {
       );
     } else {
       button = OutlinedButton.icon(
-        key: Key('segAction_${chunk.index}'),
+        key: Key('segAction_${segment.index}'),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           minimumSize: const Size(0, 0),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           visualDensity: VisualDensity.compact,
         ),
-        onPressed: () => _togglePlay(chunk),
+        onPressed: () => _togglePlay(segment),
         icon: icon,
         label: Text(
           label,
@@ -511,7 +511,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
       );
     }
     // Reused clips get a Material-only tooltip (Cupertino has none).
-    if (chunk.resumed && !_isMac) {
+    if (segment.resumed && !_isMac) {
       return Tooltip(message: 'Resumed — tap to play', child: button);
     }
     return button;

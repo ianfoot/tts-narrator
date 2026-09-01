@@ -7,74 +7,74 @@ import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/narration.dart';
 
 void main() {
-  group('chunkText', () {
+  group('segmentText', () {
     test('splits paragraphs on blank lines and trims (minWords 1)', () {
-      final chunks = chunkText('Para one.\n\n\n  Para two.  \n\nPara three.',
+      final segments = segmentText('Para one.\n\n\n  Para two.  \n\nPara three.',
           minWords: 1);
-      expect(chunks, ['Para one.', 'Para two.', 'Para three.']);
+      expect(segments, ['Para one.', 'Para two.', 'Para three.']);
     });
 
     test('default minWords merges short paragraphs together', () {
-      final chunks = chunkText('Para one.\n\n\n  Para two.  \n\nPara three.');
-      expect(chunks, ['Para one. Para two. Para three.']);
+      final segments = segmentText('Para one.\n\n\n  Para two.  \n\nPara three.');
+      expect(segments, ['Para one. Para two. Para three.']);
     });
 
     test('normalizes CRLF; lone CR becomes a newline within a paragraph', () {
-      expect(chunkText('One.\r\n\r\nTwo.\rThree.', minWords: 1),
+      expect(segmentText('One.\r\n\r\nTwo.\rThree.', minWords: 1),
           ['One.', 'Two.\nThree.']);
     });
 
     test('drops empty paragraphs and returns nothing for blank input', () {
-      expect(chunkText('   \n\n  '), isEmpty);
+      expect(segmentText('   \n\n  '), isEmpty);
     });
 
     test('merges a short paragraph into the following long one', () {
-      final chunks = chunkText(
+      final segments = segmentText(
           'Alpha\n\nBeta beta beta. And more words here.', minWords: 5);
-      expect(chunks, ['Alpha', 'Beta beta beta. And more words here.']);
+      expect(segments, ['Alpha', 'Beta beta beta. And more words here.']);
     });
 
     test('a leading short paragraph is not merged (no predecessor)', () {
-      final chunks = chunkText('Alpha\n\nBeta beta beta. And more words here.',
+      final segments = segmentText('Alpha\n\nBeta beta beta. And more words here.',
           minWords: 5);
-      expect(chunks[0], 'Alpha');
-      expect(chunks[1], 'Beta beta beta. And more words here.');
+      expect(segments[0], 'Alpha');
+      expect(segments[1], 'Beta beta beta. And more words here.');
     });
 
     test('merges a short paragraph that follows a long one', () {
-      final chunks = chunkText(
+      final segments = segmentText(
           'one two three four five\n\nshort\n\nanother long paragraph here ok',
           minWords: 5);
-      expect(chunks, ['one two three four five short', 'another long paragraph here ok']);
+      expect(segments, ['one two three four five short', 'another long paragraph here ok']);
     });
 
     test('consecutive short paragraphs pack into the final merge', () {
-      final chunks = chunkText('a\n\nb\n\nc d e f g h', minWords: 3);
-      expect(chunks, ['a b', 'c d e f g h']);
+      final segments = segmentText('a\n\nb\n\nc d e f g h', minWords: 3);
+      expect(segments, ['a b', 'c d e f g h']);
     });
   });
 
-  group('chunkText long split', () {
+  group('segmentText long split', () {
     test('splits an over-cap paragraph at sentence boundaries', () {
       // Deterministic long paragraph: 300 short sentences.
       final sentences = List.generate(300, (i) => 'This is sentence $i.', growable: true);
       final para = sentences.join(' ');
       expect(para.length, greaterThan(4000));
 
-      final chunks = chunkText(para);
-      expect(chunks.length, greaterThan(1));
-      for (final c in chunks) {
+      final segments = segmentText(para);
+      expect(segments.length, greaterThan(1));
+      for (final c in segments) {
         expect(c.length, lessThanOrEqualTo(4000 + 1));
       }
-      // Every chunk ends on a sentence boundary (period + optional space).
-      for (final c in chunks) {
+      // Every segment ends on a sentence boundary (period + optional space).
+      for (final c in segments) {
         expect(c.trimRight().endsWith('.'), isTrue);
       }
     });
 
     test('keeps an under-cap paragraph whole', () {
       final para = List.filled(30, 'Hello world. ').join();
-      expect(chunkText(para), [para.trim()]);
+      expect(segmentText(para), [para.trim()]);
     });
   });
 

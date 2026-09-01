@@ -143,7 +143,7 @@ class AppController extends ChangeNotifier {
   }
 
   /// Minimum words per segment (clamped to the settings rail's 10-100
-  /// slider range). Changing it revises the live chunk plan and estimate the
+  /// slider range). Changing it revises the live segment plan and estimate the
   /// editor shows.
   int get minWords => _minWords;
 
@@ -329,12 +329,12 @@ class AppController extends ChangeNotifier {
 
   int get charCount => _text.length;
 
-  /// The chunk plan for the current text (min-word merge + length split).
-  List<String> get plannedChunks => chunkText(_text, minWords: minWords);
+  /// The segment plan for the current text (min-word merge + length split).
+  List<String> get plannedSegments => segmentText(_text, minWords: minWords);
 
-  double get estimatedMinutes => estimateMinutes(plannedChunks);
+  double get estimatedMinutes => estimateMinutes(plannedSegments);
 
-  double get estimatedCostUsd => estimateCostUsd(pricing, plannedChunks);
+  double get estimatedCostUsd => estimateCostUsd(pricing, plannedSegments);
 
   // --- Run state + command slots -------------------------------------
 
@@ -346,8 +346,8 @@ class AppController extends ChangeNotifier {
   /// from this), or null before a run starts.
   NarrationConfig? runConfig;
 
-  /// The chunk plan for the active run; empty until [startRun] builds it.
-  List<NarrationRunChunk> runChunks = const [];
+  /// The segment plan for the active run; empty until [startRun] builds it.
+  List<NarrationRunSegment> runSegments = const [];
 
   /// Plan failure (missing/empty text) — render this instead of a run.
   String? runPlanError;
@@ -364,18 +364,18 @@ class AppController extends ChangeNotifier {
 
   int _doneCount = 0;
 
-  /// Number of chunks whose audio has landed on disk.
+  /// Number of segments whose audio has landed on disk.
   int get runDoneCount => _doneCount;
 
-  int get totalChunks => runChunks.length;
+  int get totalSegments => runSegments.length;
 
-  double get runProgress => totalChunks == 0 ? 0 : runDoneCount / totalChunks;
+  double get runProgress => totalSegments == 0 ? 0 : runDoneCount / totalSegments;
 
   double get runEstimatedMinutes =>
-      estimateMinutes(runChunks.map((c) => c.paragraph).toList());
+      estimateMinutes(runSegments.map((c) => c.paragraph).toList());
 
   double get runEstimatedCostUsd =>
-      estimateCostUsd(runConfig?.pricing ?? pricing, runChunks.map((c) => c.paragraph).toList());
+      estimateCostUsd(runConfig?.pricing ?? pricing, runSegments.map((c) => c.paragraph).toList());
 
   AbortToken? _abort;
 
@@ -385,7 +385,7 @@ class AppController extends ChangeNotifier {
   ///
   /// Synchronously runs the plan (so a missing/empty text surfaces
   /// [runPlanError] without a half-started run), then narrates in the
-  /// background, publishing per-chunk progress via [notifyListeners]. Cancel
+  /// background, publishing per-segment progress via [notifyListeners]. Cancel
   /// via [cancelRun] throws [AbortException] (→ [runStopped]); any other
   /// failure lands in [runError].
   void startRun() {
@@ -402,7 +402,7 @@ class AppController extends ChangeNotifier {
     }
     final List<String> paragraphs;
     try {
-      paragraphs = planChunks(config);
+      paragraphs = planSegments(config);
     } catch (e) {
       _resetRunState();
       runPlanError = e.toString();
@@ -411,16 +411,16 @@ class AppController extends ChangeNotifier {
     }
     _resetRunState();
     runConfig = config;
-    // narrate() processes only min(sampleLen, paragraphs.length) chunks; build
-    // chunks from the same count so progress reaches 100% and no phantom
+    // narrate() processes only min(sampleLen, paragraphs.length) segments; build
+    // segments from the same count so progress reaches 100% and no phantom
     // pending tiles linger past a sampled run.
     final sampleLen = config.sampleLen;
     final runCount = sampleLen == null
         ? paragraphs.length
         : (sampleLen < paragraphs.length ? sampleLen : paragraphs.length);
-    runChunks = [
+    runSegments = [
       for (var i = 0; i < runCount; i++)
-        NarrationRunChunk(index: i, paragraph: paragraphs[i]),
+        NarrationRunSegment(index: i, paragraph: paragraphs[i]),
     ];
     _narrating = true;
     _abort = AbortToken();
@@ -429,7 +429,7 @@ class AppController extends ChangeNotifier {
   }
 
   void _resetRunState() {
-    runChunks = const [];
+    runSegments = const [];
     runConfig = null;
     runPlanError = null;
     runError = null;
@@ -447,11 +447,11 @@ class AppController extends ChangeNotifier {
           config,
           abort: token,
           onProgress: (i, total, paragraph, {resumed = false}) {
-            runChunks[i].running = true;
+            runSegments[i].running = true;
             notifyListeners();
           },
-          onChunkComplete: (i, filePath, {resumed = false}) {
-            runChunks[i]..running = false..filePath = filePath..resumed = resumed;
+          onSegmentComplete: (i, filePath, {resumed = false}) {
+            runSegments[i]..running = false..filePath = filePath..resumed = resumed;
             _doneCount++;
             notifyListeners();
           },
@@ -471,9 +471,9 @@ class AppController extends ChangeNotifier {
     } finally {
       // Unwind unconditionally: even a non-Exception failure must not leave
       // the controller "already running" forever. Also stop any in-flight
-      // chunk spinner so the run view shows a clean stopped/failed state.
-      for (final chunk in runChunks) {
-        chunk.running = false;
+      // segment spinner so the run view shows a clean stopped/failed state.
+      for (final segment in runSegments) {
+        segment.running = false;
       }
       _narrating = false;
       _abort = null;
@@ -513,19 +513,19 @@ class AppController extends ChangeNotifier {
   }
 }
 
-/// Per-chunk run state rendered by the narration screen.
-class NarrationRunChunk {
-  NarrationRunChunk({required this.index, required this.paragraph});
+/// Per-segment run state rendered by the narration screen.
+class NarrationRunSegment {
+  NarrationRunSegment({required this.index, required this.paragraph});
 
   final int index;
   final String paragraph;
 
-  /// Set while a chunk's audio is being synthesized.
+  /// Set while a segment's audio is being synthesized.
   bool running = false;
 
-  /// Absolute path once the chunk's audio is on disk (null until done).
+  /// Absolute path once the segment's audio is on disk (null until done).
   String? filePath;
 
-  /// Whether this chunk was reused from a prior run's manifest.
+  /// Whether this segment was reused from a prior run's manifest.
   bool resumed = false;
 }

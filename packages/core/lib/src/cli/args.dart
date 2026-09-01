@@ -174,7 +174,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
   // Provider settings: the selected provider's block from the config, with
   // --api-key merged in as the generic `api_key` setting (it wins over any
   // `providers.<id>.api_key`). `${ENV}` refs are resolved once at build time;
-  // no env reads happen per chunk. A dry run never calls the API, so it skips
+  // no env reads happen per segment. A dry run never calls the API, so it skips
   // resolution entirely — no key is needed to print the plan.
   final rawSettings = <String, String>{
     ...?voiceConfig.providers[profile.provider],
@@ -303,9 +303,9 @@ Options:
   --min-words <n>           Merge paragraphs shorter than n words into the next
                             (default: 30).
   --sample-len <n>          Narrate only the first n paragraphs.
-  --dry-run                 Print the chunk plan + cost estimate and exit
+  --dry-run                 Print the segment plan + cost estimate and exit
                             (no API call).
-  --resume                  Skip chunks whose prompt+fingerprint already exist
+  --resume                  Skip segments whose prompt+fingerprint already exist
                             in the output manifest (re-run safe; no re-billing).
   --out <dir>               Output directory (default: "output/<input>/").
   --config <path>           Voice config directory (default: ~/.config/tts-

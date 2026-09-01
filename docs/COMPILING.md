@@ -36,7 +36,7 @@ Run from the repo root so `output/` and `story.txt` resolve as usual:
 ```bash
 file build/tts-narrator      # expect: Mach-O 64-bit executable arm64
 ./build/tts-narrator --help
-./build/tts-narrator --input story.txt --voice Callirrhoe --dry-run   # chunk plan only
+./build/tts-narrator --input story.txt --voice Callirrhoe --dry-run   # segment plan only
 ```
 
 ## Platform notes

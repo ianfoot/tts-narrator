@@ -137,7 +137,7 @@ void main() {
     test('plans from text without any backing file', () {
       // inputPath points nowhere; sourceText must satisfy the plan.
       final cfg = typedConfig();
-      expect(planChunks(cfg), [_inputText]);
+      expect(planSegments(cfg), [_inputText]);
     });
 
     test('empty sourceText raises the inputPath-guarded planning error', () {
@@ -153,7 +153,7 @@ void main() {
         voice: 'VoiceOne',
         outDir: '${dir.path}/out',
       );
-      expect(() => planChunks(cfg), throwsStateError);
+      expect(() => planSegments(cfg), throwsStateError);
     });
 
     test('narrates from text via the provider without reading inputPath', () async {
@@ -183,11 +183,11 @@ void main() {
         voice: 'VoiceOne',
         providerSettings: const {'api_key': 'sk-test'},
         outDir: '${dir.path}/out',
-        // minWords 1 keeps every paragraph its own chunk = 4 chunks.
+        // minWords 1 keeps every paragraph its own segment = 4 segments.
         minWords: 1,
         sampleLen: 1,
       );
-      expect(planChunks(cfg), hasLength(4));
+      expect(planSegments(cfg), hasLength(4));
       await narrate(cfg);
       expect(provider.callCount, 1);
     });

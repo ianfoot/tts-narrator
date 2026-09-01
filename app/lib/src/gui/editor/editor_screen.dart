@@ -308,7 +308,7 @@ class _EditorScreenState extends State<EditorScreen> {
     final colors = _tokens.colors;
     final words = _formatCount(_controller.wordCount);
     final chars = _formatCount(_controller.charCount);
-    final segments = _controller.plannedChunks.length;
+    final segments = _controller.plannedSegments.length;
     final minutes = _controller.estimatedMinutes.round();
     final cost = formatCostUsd(_controller.estimatedCostUsd);
     return Container(
