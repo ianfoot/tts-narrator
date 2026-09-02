@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -76,6 +78,27 @@ void main() {
     await tester.tap(find.byKey(const Key('railToggleButton')));
     await tester.pumpAndSettle();
     expect(find.byType(InspectorRail), findsOneWidget);
+  });
+
+  testWidgets('macOS editor text is top-aligned in the expanding field', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    final controller = await makeController();
+    await tester.binding.setSurfaceSize(const Size(1000, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      CupertinoApp(home: EditorScreen(controller: controller)),
+    );
+
+    final field = tester.widget<CupertinoTextField>(
+      find.descendant(
+        of: find.byKey(const Key('editorTextField')),
+        matching: find.byType(CupertinoTextField),
+      ),
+    );
+    expect(field.textAlignVertical, TextAlignVertical.top);
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('the rail close button hides the rail', (tester) async {

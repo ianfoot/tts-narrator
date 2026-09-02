@@ -51,6 +51,7 @@ class PlatformTextField extends StatelessWidget {
         autofocus: autofocus,
         style: style,
         placeholderStyle: hintStyle,
+        textAlignVertical: TextAlignVertical.top,
         padding: expands ? const EdgeInsets.all(4) : const EdgeInsets.all(12),
         decoration: expands ? const BoxDecoration() : null,
       );
