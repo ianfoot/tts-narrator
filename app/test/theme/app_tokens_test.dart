@@ -70,6 +70,26 @@ void main() {
     });
   });
 
+  group('resolveBrightness', () {
+    test('pins the brightness for light and dark modes', () {
+      expect(resolveBrightness(AppThemeMode.light, Brightness.dark), Brightness.light);
+      expect(resolveBrightness(AppThemeMode.light, Brightness.light), Brightness.light);
+      expect(resolveBrightness(AppThemeMode.dark, Brightness.light), Brightness.dark);
+      expect(resolveBrightness(AppThemeMode.dark, Brightness.dark), Brightness.dark);
+    });
+
+    test('delegates to the system brightness in system mode', () {
+      expect(
+        resolveBrightness(AppThemeMode.system, Brightness.dark),
+        Brightness.dark,
+      );
+      expect(
+        resolveBrightness(AppThemeMode.system, Brightness.light),
+        Brightness.light,
+      );
+    });
+  });
+
   group('AppTypography', () {
     test('resolves the serif + mono family per platform', () {
       expect(AppTypography(TargetPlatform.macOS).editorSerifFamily, 'Georgia');

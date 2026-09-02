@@ -6,6 +6,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
+import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import '../support/fake_tts_provider.dart';
 
 void main() {
@@ -416,6 +417,35 @@ void main() {
       expect(segments, isNotEmpty);
       expect(c.estimatedMinutes, greaterThan(0));
       expect(c.estimatedCostUsd, 0); // fish is free.
+    });
+  });
+
+  group('appearance', () {
+    test('defaults to following the system appearance', () {
+      final c = makeController();
+      expect(c.themeMode, AppThemeMode.system);
+    });
+
+    test('themeMode write updates the value and notifies listeners', () {
+      final c = makeController();
+      var notifications = 0;
+      c.addListener(() => notifications++);
+
+      c.themeMode = AppThemeMode.dark;
+      expect(c.themeMode, AppThemeMode.dark);
+      expect(notifications, 1);
+
+      c.themeMode = AppThemeMode.light;
+      expect(c.themeMode, AppThemeMode.light);
+      expect(notifications, 2);
+    });
+
+    test('identical themeMode write is ignored', () {
+      final c = makeController();
+      var notifications = 0;
+      c.addListener(() => notifications++);
+      c.themeMode = AppThemeMode.system;
+      expect(notifications, 0);
     });
   });
 

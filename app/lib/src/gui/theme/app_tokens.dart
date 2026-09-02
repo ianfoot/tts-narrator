@@ -1,6 +1,26 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 
+/// The user's appearance choice: follow the system, or force light/dark.
+///
+/// Kept platform-neutral (an [AppThemeMode], not Flutter's [ThemeMode]) so the
+/// controller can own it and the macOS/Material shells map it onto their
+/// brightness resolution via [resolveBrightness].
+enum AppThemeMode { system, light, dark }
+
+/// Resolves the effective [Brightness] for [mode]: [AppThemeMode.light] and
+/// `.dark` pin the value, [AppThemeMode.system] defers to [system].
+Brightness resolveBrightness(AppThemeMode mode, Brightness system) {
+  switch (mode) {
+    case AppThemeMode.light:
+      return Brightness.light;
+    case AppThemeMode.dark:
+      return Brightness.dark;
+    case AppThemeMode.system:
+      return system;
+  }
+}
+
 /// Design tokens for the TTS Narrator GUI ("Detailed UI Design Spec").
 ///
 /// Everything visual — colors, typography, spacing/shape metrics — resolves
