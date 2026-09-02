@@ -42,17 +42,23 @@ class _AppRootState extends State<AppRoot> {
     // themeMode, so the theme is rebuilt when the platform brightness flips).
     WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged =
         _onPlatformBrightnessChanged;
+    widget.controller.addListener(_onControllerChanged);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged =
         null;
+    widget.controller.removeListener(_onControllerChanged);
     widget.controller.onOpen = null;
     widget.controller.onNarrate = null;
     widget.controller.onCancel = null;
     widget.controller.saveLocationPicker = null;
     super.dispose();
+  }
+
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onPlatformBrightnessChanged() {
@@ -92,8 +98,8 @@ class _AppRootState extends State<AppRoot> {
   PageRouteBuilder<void> _runRoute() {
     const duration = Duration(milliseconds: 250);
     final screenHeight = MediaQuery.sizeOf(
-          _navigatorKey.currentContext ?? context,
-        ).height;
+      _navigatorKey.currentContext ?? context,
+    ).height;
     final beginDy = screenHeight > 0 ? 20 / screenHeight : 0.0;
     return PageRouteBuilder<void>(
       transitionDuration: duration,
@@ -124,12 +130,12 @@ class _AppRootState extends State<AppRoot> {
   Widget build(BuildContext context) {
     final home = EditorScreen(controller: widget.controller);
     if (_isMac) {
-      final dark =
-          WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+      final dark = resolveBrightness(
+            widget.controller.themeMode,
+            WidgetsBinding.instance.platformDispatcher.platformBrightness,
+          ) ==
           Brightness.dark;
-      final palette = AppPalette.of(
-        dark ? Brightness.dark : Brightness.light,
-      );
+      final palette = AppPalette.of(dark ? Brightness.dark : Brightness.light);
       return CupertinoApp(
         title: 'TTS Narrator',
         navigatorKey: _navigatorKey,
@@ -159,7 +165,11 @@ class _AppRootState extends State<AppRoot> {
       debugShowCheckedModeBanner: false,
       theme: light,
       darkTheme: dark,
-      themeMode: ThemeMode.system,
+      themeMode: switch (widget.controller.themeMode) {
+        AppThemeMode.light => ThemeMode.light,
+        AppThemeMode.dark => ThemeMode.dark,
+        AppThemeMode.system => ThemeMode.system,
+      },
       home: home,
     );
   }
