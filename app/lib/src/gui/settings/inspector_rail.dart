@@ -9,6 +9,7 @@ import '../platform/widgets/platform_disclosure.dart';
 import '../platform/widgets/platform_dropdown.dart';
 import '../platform/widgets/platform_icon_button.dart';
 import '../platform/widgets/platform_section.dart';
+import '../platform/widgets/platform_segmented.dart';
 import '../platform/widgets/platform_slider.dart';
 import '../platform/widgets/platform_switch.dart';
 import '../platform/widgets/platform_text_field.dart';
@@ -222,6 +223,7 @@ class _InspectorRailState extends State<InspectorRail> {
                 if (!_controller.modelUiSpec.isEmpty)
                   _buildModelOptionsSection(_controller.modelUiSpec),
                 _buildRunSection(),
+                _buildAppearanceSection(),
               ],
             ),
           ),
@@ -409,6 +411,22 @@ class _InspectorRailState extends State<InspectorRail> {
 
   void _setModelOptionBool(String key, bool value) {
     if (key == 'useCalmTag') _controller.useCalmTag = value;
+  }
+
+  Widget _buildAppearanceSection() {
+    return PlatformSection(
+      title: 'Appearance',
+      child: PlatformSegmentedControl<AppThemeMode>(
+        key: const Key('themeSegmented'),
+        value: _controller.themeMode,
+        items: const [
+          (AppThemeMode.light, 'Light'),
+          (AppThemeMode.system, 'Auto'),
+          (AppThemeMode.dark, 'Dark'),
+        ],
+        onChanged: (mode) => _controller.themeMode = mode,
+      ),
+    );
   }
 
   Widget _buildRunSection() {

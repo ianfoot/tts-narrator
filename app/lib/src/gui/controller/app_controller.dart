@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'config_loader.dart';
+import '../theme/app_tokens.dart' show AppThemeMode;
 
 /// Central, platform-neutral app state for the TTS Narrator GUI: the open
 /// document, the narration settings, the run flag, and the command slots that
@@ -96,6 +97,20 @@ class AppController extends ChangeNotifier {
   void applyVoiceLabel(String label) {
     final (id, _) = _voiceConfig.resolveVoice(profile.alias, label);
     setVoice(id, label: label);
+  }
+
+  // --- Appearance ----------------------------------------------------
+
+  AppThemeMode _themeMode = AppThemeMode.system;
+
+  /// The user's appearance choice ([AppThemeMode.system] follows the OS).
+  /// Session-only; defaults to the OS setting so the app boots as before.
+  AppThemeMode get themeMode => _themeMode;
+
+  set themeMode(AppThemeMode value) {
+    if (value == _themeMode) return;
+    _themeMode = value;
+    notifyListeners();
   }
 
   // --- Narration settings -------------------------------------------
