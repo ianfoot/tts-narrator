@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/narration/config.dart';
@@ -28,10 +30,10 @@ void main() {
     dir.deleteSync(recursive: true);
   });
 
-  String writeInput() =>
+  String writeInput({String? text}) =>
       (File('${dir.path}/story.txt')
             ..createSync(recursive: true)
-            ..writeAsStringSync(_inputText))
+            ..writeAsStringSync(text ?? _inputText))
           .path;
 
   NarrationConfig config(
@@ -95,6 +97,56 @@ void main() {
     },
   );
 
+  test('writes a combined track and records it in the manifest', () async {
+    final input = writeInput();
+    await narrate(config(input, format: 'mp3'));
+
+    final combined = File('${dir.path}/out/story/story_full.mp3');
+    expect(combined.existsSync(), isTrue);
+    // Single segment: the combined track is a byte copy of the segment.
+    expect(combined.readAsBytesSync(), provider.bytes);
+
+    final segment = File('${dir.path}/out/story/story_1.mp3');
+    expect(segment.existsSync(), isTrue);
+
+    final manifest = jsonDecode(
+      File('${dir.path}/out/story/manifest.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
+    expect(manifest['combined_file'], 'story_full.mp3');
+    expect(manifest['combined_bytes'], provider.bytes.length);
+    expect(manifest['segments_deleted'], isFalse);
+  });
+
+  test('pools every WAV segment into one combined WAV', () async {
+    final input = writeInput(text: '$_inputText\n\n$_inputText');
+    final cfg = NarrationConfig(
+      inputPath: input,
+      profile: TtsModelProfile(
+        alias: 'test',
+        id: 'test/model',
+        format: 'pcm',
+        sampleRate: 24000,
+        provider: provider.id,
+      ),
+      voice: 'VoiceOne',
+      providerSettings: const {'api_key': 'sk-test'},
+      outDir: '${dir.path}/out',
+      minWords: 1,
+    );
+    await narrate(cfg);
+
+    final pcm1 = _pcmPayload(
+      File('${dir.path}/out/story/story_1.wav').readAsBytesSync(),
+    );
+    final pcm2 = _pcmPayload(
+      File('${dir.path}/out/story/story_2.wav').readAsBytesSync(),
+    );
+    final combined = _pcmPayload(
+      File('${dir.path}/out/story/story_full.wav').readAsBytesSync(),
+    );
+    expect(combined, [...pcm1, ...pcm2]);
+  });
+
   test('omits the voice field when sendsVoiceField is false', () async {
     final input = writeInput();
     await narrate(config(input, sendsVoiceField: false));
@@ -121,18 +173,18 @@ void main() {
 
   group('sourceText (in-memory)', () {
     NarrationConfig typedConfig() => NarrationConfig(
-          inputPath: 'story.txt',
-          sourceText: _inputText,
-          profile: TtsModelProfile(
-            alias: 'test',
-            id: 'test/model',
-            format: 'mp3',
-            provider: provider.id,
-          ),
-          voice: 'VoiceOne',
-          providerSettings: const {'api_key': 'sk-test'},
-          outDir: '${dir.path}/out',
-        );
+      inputPath: 'story.txt',
+      sourceText: _inputText,
+      profile: TtsModelProfile(
+        alias: 'test',
+        id: 'test/model',
+        format: 'mp3',
+        provider: provider.id,
+      ),
+      voice: 'VoiceOne',
+      providerSettings: const {'api_key': 'sk-test'},
+      outDir: '${dir.path}/out',
+    );
 
     test('plans from text without any backing file', () {
       // inputPath points nowhere; sourceText must satisfy the plan.
@@ -156,18 +208,21 @@ void main() {
       expect(() => planSegments(cfg), throwsStateError);
     });
 
-    test('narrates from text via the provider without reading inputPath', () async {
-      final cfg = typedConfig();
-      await narrate(cfg);
+    test(
+      'narrates from text via the provider without reading inputPath',
+      () async {
+        final cfg = typedConfig();
+        await narrate(cfg);
 
-      expect(provider.callCount, 1);
-      expect(provider.calls.single.input, _inputText);
+        expect(provider.callCount, 1);
+        expect(provider.calls.single.input, _inputText);
 
-      // Output naming still derives from inputPath (the document name).
-      final audio = File('${dir.path}/out/story/story_1.mp3');
-      expect(audio.existsSync(), isTrue);
-      expect(audio.readAsBytesSync(), provider.bytes);
-    });
+        // Output naming still derives from inputPath (the document name).
+        final audio = File('${dir.path}/out/story/story_1.mp3');
+        expect(audio.existsSync(), isTrue);
+        expect(audio.readAsBytesSync(), provider.bytes);
+      },
+    );
 
     test('sampleLen limits an in-memory run', () async {
       const multi = '$_inputText\n\n$_inputText\n\n$_inputText\n\n$_inputText';
@@ -195,3 +250,17 @@ void main() {
 }
 
 String ascii(List<int> bytes) => String.fromCharCodes(bytes);
+
+/// Extracts the `data` chunk payload from a WAV file's bytes.
+List<int> _pcmPayload(Uint8List wav) {
+  var offset = 12;
+  while (offset + 8 <= wav.length) {
+    final id = String.fromCharCodes(wav.sublist(offset, offset + 4));
+    final size = ByteData.sublistView(wav).getUint32(offset + 4, Endian.little);
+    if (id == 'data') {
+      return wav.sublist(offset + 8, offset + 8 + size);
+    }
+    offset += 8 + size.toInt();
+  }
+  throw StateError('no data chunk');
+}

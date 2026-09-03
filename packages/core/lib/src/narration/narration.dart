@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'abort.dart';
+import 'concat.dart';
 import 'config.dart';
 import 'prompt.dart';
 import 'tts_provider.dart';
@@ -247,7 +248,23 @@ Future<void> narrate(
     _writeManifest(outDir, config, records, paragraphs.length, count, rate);
   }
 
-  _writeManifest(outDir, config, records, paragraphs.length, count, rate);
+  // Every successful run leaves a single combined track next to the segments
+  // (same stem, `_full` suffix). Segments stay on disk by default; the GUI's
+  // "Clean Up Segments…" removes them afterwards via [cleanupSegmentFiles].
+  final segmentPaths = [
+    for (final r in records)
+      '${outDir.path}${Platform.pathSeparator}${r['wav']}',
+  ];
+  final combinedFile = '${stem}_full.$extension';
+  final combinedBytes = File(concatSegments(
+    segmentPaths,
+    outputPath: '${outDir.path}${Platform.pathSeparator}$combinedFile',
+    format: config.profile.format,
+    sampleRate: rate ?? 24000,
+  )).lengthSync();
+
+  _writeManifest(outDir, config, records, paragraphs.length, count, rate,
+      combinedFile: combinedFile, combinedBytes: combinedBytes);
 }
 
 /// Returns the prior record for [index] from [existing] when `--resume` can
@@ -297,8 +314,10 @@ void _writeManifest(
   List<Map<String, Object?>> records,
   int paragraphsTotal,
   int count,
-  int? rate,
-) {
+  int? rate, {
+  String? combinedFile,
+  int? combinedBytes,
+}) {
   final manifest = {
     'model': config.profile.id,
     'voice': config.voice,
@@ -310,6 +329,9 @@ void _writeManifest(
     // ignore: avoid_redundant_argument_values
     'paragraphs_total': paragraphsTotal,
     'paragraphs_narrated': records.length,
+    'combined_file': ?combinedFile,
+    'combined_bytes': ?combinedBytes,
+    'segments_deleted': false,
     'paragraphs': records,
   };
   File('${outDir.path}${Platform.pathSeparator}manifest.json')
