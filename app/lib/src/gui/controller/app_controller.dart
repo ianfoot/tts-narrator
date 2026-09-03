@@ -14,7 +14,8 @@ import '../theme/app_tokens.dart' show AppThemeMode;
 /// here and subscribes via [ChangeNotifier]. Model/voice handling reuses the
 /// core's config resolution so the GUI and CLI agree on defaults.
 class AppController extends ChangeNotifier {
-  AppController({VoiceConfigLoader? loader}) : _loader = loader ?? VoiceConfigLoader() {
+  AppController({VoiceConfigLoader? loader})
+    : _loader = loader ?? VoiceConfigLoader() {
     _voiceConfig = _loader.load();
     _modelAlias = defaultModelFor(_voiceConfig).alias;
     final def = _defaultVoiceFor(profile);
@@ -33,8 +34,8 @@ class AppController extends ChangeNotifier {
   // --- Model & voice ------------------------------------------------
 
   /// The active model profile (alias resolved against the loaded config).
-  TtsModelProfile get profile => profileFor(_modelAlias, _voiceConfig) ??
-      kDefaultProfile.profile;
+  TtsModelProfile get profile =>
+      profileFor(_modelAlias, _voiceConfig) ?? kDefaultProfile.profile;
 
   VoiceConfig get voiceConfig => _voiceConfig;
 
@@ -200,9 +201,9 @@ class AppController extends ChangeNotifier {
   /// plugin (the provider package). Empty when no plugin declares a spec — the
   /// app has no per-model UI knowledge.
   ModelUiSpec get modelUiSpec =>
-      ttsProviderRegistry.resolveOrNull(profile.provider)?.modelUiSpecFor(
-            profile,
-          ) ??
+      ttsProviderRegistry
+          .resolveOrNull(profile.provider)
+          ?.modelUiSpecFor(profile) ??
       const ModelUiSpec.empty();
 
   /// Assembles the run config for the current document + settings, narrating
@@ -361,6 +362,43 @@ class AppController extends ChangeNotifier {
   /// from this), or null before a run starts.
   NarrationConfig? runConfig;
 
+  /// Output directory of the most recent (or active) run; the target for
+  /// segment cleanup. Null until a run starts.
+  String? _lastRunDir;
+
+  /// The output directory of the most recent run; [segmentCleanupAvailable]
+  /// inspects this. Null before any run starts.
+  String? get lastRunOutputDir => _lastRunDir;
+
+  /// Whether the most recent run's per-segment audio files can still be
+  /// cleaned up (combined track exists, segments not yet deleted, and the run
+  /// is finished). Powers the File ▸ "Clean Up Segments…" command.
+  bool get canCleanupSegments {
+    if (narrating) return false;
+    final dir = _lastRunDir;
+    return dir != null && segmentCleanupAvailable(dir);
+  }
+
+  /// Deletes the last run's per-segment audio files, keeping the combined
+  /// track and the manifest (marked `segments_deleted: true`). Returns how
+  /// many files were removed; a later call is a harmless no-op. Guarded
+  /// against running while narration is active so the tiles' completed
+  /// indicators revert instead of dangling at deleted files. Throws a
+  /// [FileSystemException] when a segment cannot be removed.
+  Future<int> cleanupSegments() async {
+    if (narrating) return 0;
+    final dir = _lastRunDir;
+    if (dir == null) return 0;
+    final removed = cleanupSegmentFiles(dir);
+    if (removed > 0) {
+      for (final segment in runSegments) {
+        segment.filePath = null;
+      }
+    }
+    notifyListeners();
+    return removed;
+  }
+
   /// The segment plan for the active run; empty until [startRun] builds it.
   List<NarrationRunSegment> runSegments = const [];
 
@@ -384,13 +422,16 @@ class AppController extends ChangeNotifier {
 
   int get totalSegments => runSegments.length;
 
-  double get runProgress => totalSegments == 0 ? 0 : runDoneCount / totalSegments;
+  double get runProgress =>
+      totalSegments == 0 ? 0 : runDoneCount / totalSegments;
 
   double get runEstimatedMinutes =>
       estimateMinutes(runSegments.map((s) => s.paragraph).toList());
 
-  double get runEstimatedCostUsd =>
-      estimateCostUsd(runConfig?.pricing ?? pricing, runSegments.map((s) => s.paragraph).toList());
+  double get runEstimatedCostUsd => estimateCostUsd(
+    runConfig?.pricing ?? pricing,
+    runSegments.map((s) => s.paragraph).toList(),
+  );
 
   AbortToken? _abort;
 
@@ -426,6 +467,7 @@ class AppController extends ChangeNotifier {
     }
     _resetRunState();
     runConfig = config;
+    _lastRunDir = outputDirPath(config);
     // narrate() processes only min(sampleLen, paragraphs.length) segments; build
     // segments from the same count so progress reaches 100% and no phantom
     // pending tiles linger past a sampled run.
@@ -466,7 +508,10 @@ class AppController extends ChangeNotifier {
             notifyListeners();
           },
           onSegmentComplete: (i, filePath, {resumed = false}) {
-            runSegments[i]..running = false..filePath = filePath..resumed = resumed;
+            runSegments[i]
+              ..running = false
+              ..filePath = filePath
+              ..resumed = resumed;
             _doneCount++;
             notifyListeners();
           },

@@ -148,6 +148,11 @@ Future<int> main(List<String> args) async {
       stdout.writeln(
         '  Done. $kind + manifest.json written to ${outputDirPath(fileConfig)}/.',
       );
+      stdout.writeln(
+        '  Combined track: '
+        '${outputDirPath(fileConfig)}${Platform.pathSeparator}'
+        '${stem}_full.${fileConfig.profile.format == 'pcm' ? 'wav' : 'mp3'}',
+      );
     }
   } on StateError catch (e) {
     stderr.writeln('Narration failed: $e');
