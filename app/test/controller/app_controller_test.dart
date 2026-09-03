@@ -383,6 +383,59 @@ void main() {
       expect(c.narrating, isFalse);
       expect(c.runSegments.every((segment) => !segment.running), isTrue);
     });
+
+    test('canCleanupSegments enables and cleanupSegments removes per-segment '
+        'files while keeping the combined track', () async {
+      final c = makeController();
+      c.setText(
+        'A single paragraph long enough that it does not need any other '
+        'company. It crosses the minimum word count comfortably and becomes '
+        'one segment all on its own, plain and simple.',
+      );
+      final fake = FakeTtsProvider()..register();
+      c.outDir = dir.path;
+      c.startRun();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.runFinished, isTrue);
+      expect(c.narrating, isFalse);
+
+      expect(c.canCleanupSegments, isTrue);
+
+      final outDir = Directory('${dir.path}/untitled');
+      expect(File('${outDir.path}/untitled_full.mp3').existsSync(), isTrue);
+      final manifestPath = '${outDir.path}/manifest.json';
+      expect(File(manifestPath).existsSync(), isTrue);
+
+      final removed = await c.cleanupSegments();
+
+      expect(removed, 1); // one paragraph -> one segment file.
+      expect(outDir.listSync().whereType<File>().length, 2); // combined + manifest
+      expect(c.canCleanupSegments, isFalse);
+      // Tiles no longer point at deleted files.
+      expect(c.runSegments.single.filePath, isNull);
+      final manifest = jsonDecode(
+        File(manifestPath).readAsStringSync(),
+      ) as Map<String, dynamic>;
+      expect(manifest['segments_deleted'], isTrue);
+      expect(fake.callCount, 1);
+    });
+
+    test('cleanupSegments before any run is a harmless no-op', () async {
+      final c = makeController();
+      expect(c.canCleanupSegments, isFalse);
+      expect(await c.cleanupSegments(), 0);
+    });
+
+    test('cleanupSegments is a no-op while a run is in flight', () async {
+      final c = makeController()..setText('Hello world. Enough words.');
+      FakeTtsProvider().register();
+      c.sampleLen = 1;
+      c.outDir = dir.path;
+      c.startRun();
+      expect(c.narrating, isTrue);
+      expect(await c.cleanupSegments(), 0);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    });
   });
 
   group('modelUiSpec', () {
