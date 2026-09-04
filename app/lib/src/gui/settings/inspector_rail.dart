@@ -149,10 +149,7 @@ class _InspectorRailState extends State<InspectorRail> {
   void _onSampleLenChanged(String value) {
     if (_syncing) return;
     final trimmed = value.trim();
-    if (trimmed.isEmpty) {
-      _controller.sampleLen = null;
-      return;
-    }
+    if (trimmed.isEmpty) return; // clearing the field to retype; keep sample mode on
     final parsed = int.tryParse(trimmed);
     if (parsed == null) return;
     _controller.sampleLen = parsed;
