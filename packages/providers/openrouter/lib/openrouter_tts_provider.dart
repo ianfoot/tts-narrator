@@ -27,13 +27,19 @@ class OpenRouterTtsProvider implements TtsProvider {
 
   /// Model plugin UI: models with the config's `prompt_style` flag understand
   /// accent/style/prefix/[calm] directives woven into the text, so declare
-  /// those styling options for them and nothing otherwise. Keyed off the model
-  /// request shape (`TtsModelProfile.promptStyle`) so it survives any alias or
-  /// model-id change; interface docs re `TtsProvider.modelUiSpecFor`.
+  /// those styling options — plus a narrator-gender control that the app
+  /// rewrites into the narrated prose — for them and nothing otherwise. Keyed
+  /// off the model request shape (`TtsModelProfile.promptStyle`) so it survives
+  /// any alias or model-id change; interface docs re `TtsProvider.modelUiSpecFor`.
   @override
   ModelUiSpec modelUiSpecFor(TtsModelProfile model) {
     if (!model.promptStyle) return const ModelUiSpec.empty();
     return const ModelUiSpec([
+      ModelUiOption(
+        key: 'gender',
+        label: 'Narrator gender',
+        type: ModelUiOptionType.gender,
+      ),
       ModelUiOption(
         key: 'accent',
         label: 'Accent',

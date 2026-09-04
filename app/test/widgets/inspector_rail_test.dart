@@ -280,6 +280,111 @@ void main() {
       await tester.pump();
       expect(find.byKey(const Key('voiceRawField')), findsNothing);
     });
+
+    testWidgets('gender control narrows the voice list for tagged models', (
+      tester,
+    ) async {
+      writeConfig({
+        'models': {'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'}},
+        'defaults': {'kokoro': 'Emma'},
+        'voices': {
+          'kokoro': {
+            'Alice': {'id': 'bf_alice', 'gender': 'female'},
+            'Daniel': {'id': 'bm_daniel', 'gender': 'male'},
+            'Emma': {'id': 'bf_emma', 'gender': 'female'},
+            'Fable': {'id': 'bm_fable', 'gender': 'male'},
+          },
+        },
+      });
+      await tester.binding.setSurfaceSize(const Size(1200, 1800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final c = makeController();
+      c.changeModel('kokoro');
+      await pumpRail(tester, c);
+
+      final control = tester.widget<PlatformSegmentedControl<VoiceGender?>>(
+        find.byKey(const Key('genderControl')),
+      );
+      expect(control.value, isNull);
+      expect(control.items.map((it) => it.$2), ['Any', 'Female', 'Male']);
+
+      // Female voices get a compact shorthand in the dropdown.
+      await tester.tap(find.byKey(const Key('voiceDropdown')));
+      await tester.pumpAndSettle();
+      expect(find.text('Emma (f)').last, findsOneWidget);
+      expect(find.text('Alice (f)').last, findsOneWidget);
+      // Close the open dropdown.
+      await tester.tapAt(const Offset(600, 100));
+      await tester.pumpAndSettle();
+
+      // Switch to Male: the filter narrows the picker and auto-selects.
+      await tester.tap(find.text('Male'));
+      await tester.pump();
+      expect(c.voiceGenderFilter, VoiceGender.male);
+      expect(c.voiceLabel, 'Daniel');
+
+      await tester.tap(find.byKey(const Key('voiceDropdown')));
+      await tester.pumpAndSettle();
+      expect(find.text('Daniel (m)').last, findsOneWidget);
+      expect(find.text('Fable (m)').last, findsOneWidget);
+      expect(find.text('Emma (f)'), findsNothing);
+
+      // Back to Any: the picker returns to the full list (Material path must
+      // forward the null selection instead of treating it as no-op).
+      await tester.tapAt(const Offset(600, 100));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Any'));
+      await tester.pump();
+      expect(c.voiceGenderFilter, isNull);
+      await tester.tap(find.byKey(const Key('voiceDropdown')));
+      await tester.pumpAndSettle();
+      expect(find.text('Emma (f)').last, findsOneWidget);
+      expect(find.text('Daniel (m)').last, findsOneWidget);
+    });
+
+    testWidgets('gemini shows no voice-picker gender control without tags', (
+      tester,
+    ) async {
+      writeConfig({
+        'models': {
+          'gemini': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'format': 'pcm',
+            'sample_rate': 24000,
+            'prompt_style': true,
+          },
+        },
+        'defaults': {'gemini': 'Charon'},
+        'voices': {'gemini': {'Charon': 'Charon'}},
+      });
+      // The real openrouter plugin surfaces gender as a Model option for
+      // prompt-styled models; emulate that spec via the fake provider.
+      final fake = FakeTtsProvider()
+        ..modelUiSpec = const ModelUiSpec([
+          ModelUiOption(
+            key: 'gender',
+            label: 'Narrator gender',
+            type: ModelUiOptionType.gender,
+          ),
+        ]);
+      fake.register();
+      final c = makeController();
+      c.changeModel('gemini');
+      await pumpRail(tester, c);
+
+      // Untagged voices -> no filter in "Model & voice".
+      expect(find.byKey(const Key('genderControl')), findsNothing);
+      // The plugin instead surfaces the option in Model options.
+      expect(find.byKey(const Key('genderOptionSegmented')), findsOneWidget);
+      expect(find.text('Narrator gender'), findsOneWidget);
+
+      // Tapping Male drives the controller's narrator gender (and its prompt
+      // rewrite) for the prompt-styled model.
+      await tester.tap(find.text('Male'));
+      await tester.pump();
+      expect(c.voiceGenderFilter, VoiceGender.male);
+      expect(c.passagePrefix, contains('male narrator'));
+    });
   });
 
   group('model options (from the plugin spec)', () {

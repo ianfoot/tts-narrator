@@ -64,13 +64,7 @@ class _InspectorRailState extends State<InspectorRail> {
       (p.alias, '${p.alias} — ${p.id}'),
   ];
 
-  List<(String, String)> get _voiceItems {
-    final entries = voiceEntries(
-      model: _controller.profile,
-      config: _controller.voiceConfig,
-    );
-    return [for (final e in entries) (e.label, e.label)];
-  }
+  List<(String, String)> get _voiceItems => _controller.voiceItems;
 
   @override
   void initState() {
@@ -250,6 +244,20 @@ class _InspectorRailState extends State<InspectorRail> {
             onChanged: (alias) => _controller.changeModel(alias),
           ),
           _label('Voice alias'),
+          if (_controller.hasGenderTags) ...[
+            const SizedBox(height: 8),
+            PlatformSegmentedControl<VoiceGender?>(
+              key: const Key('genderControl'),
+              value: _controller.voiceGenderFilter,
+              items: const [
+                (null, 'Any'),
+                (VoiceGender.female, 'Female'),
+                (VoiceGender.male, 'Male'),
+              ],
+              onChanged: (g) => _controller.voiceGenderFilter = g,
+            ),
+            const SizedBox(height: 8),
+          ],
           PlatformDropdown<String>(
             key: const Key('voiceDropdown'),
             value: _selectedVoiceLabel,
@@ -311,6 +319,7 @@ class _InspectorRailState extends State<InspectorRail> {
 
   /// The model-option keys this app version binds to narration settings.
   static const _bindableModelOptionKeys = {
+    'gender',
     'accent',
     'style',
     'passagePrefix',
@@ -329,6 +338,28 @@ class _InspectorRailState extends State<InspectorRail> {
                 key: Key('${option.key}Switch'),
                 value: _modelOptionBool(option.key),
                 onChanged: (v) => _setModelOptionBool(option.key, v),
+              ),
+            ],
+          ),
+        );
+      case ModelUiOptionType.gender:
+        final g = _controller.voiceGenderFilter;
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _label(option.label),
+              const SizedBox(height: 6),
+              PlatformSegmentedControl<VoiceGender?>(
+                key: const Key('genderOptionSegmented'),
+                value: g,
+                items: const [
+                  (null, 'Any'),
+                  (VoiceGender.female, 'Female'),
+                  (VoiceGender.male, 'Male'),
+                ],
+                onChanged: (v) => _controller.voiceGenderFilter = v,
               ),
             ],
           ),

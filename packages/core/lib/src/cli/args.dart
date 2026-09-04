@@ -257,12 +257,14 @@ String renderVoiceListing({
     } on VoiceConfigError {
       out.writeln('  default voice:  none configured');
     }
-    final aliases = config.aliases[p.alias] ?? const <String, String>{};
-    if (aliases.isNotEmpty) {
-      out.writeln(
-        '  aliases:        '
-        '${aliases.entries.map((e) => '${e.key} → ${e.value}').join(', ')}',
-      );
+    final voices = config.voices[p.alias] ?? const <String, Voice>{};
+    if (voices.isNotEmpty) {
+      final shown = voices.entries.map((e) {
+        final g = e.value.gender;
+        final tag = g == null ? '' : ' [${g.shorthand}]';
+        return '${e.key} → ${e.value.id}$tag';
+      }).join(', ');
+      out.writeln('  aliases:        $shown');
     } else {
       out.writeln(
         '  voices:         none configured — add "${p.alias}" aliases in the '

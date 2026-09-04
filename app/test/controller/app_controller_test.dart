@@ -310,6 +310,170 @@ void main() {
     });
   });
 
+  group('voice gender', () {
+    void writeKokoro() {
+      writeConfig({
+        'models': {
+          'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+        },
+        'defaults': {
+          'kokoro': 'Emma',
+        },
+        'voices': {
+          'kokoro': {
+            'Alice': {'id': 'bf_alice', 'gender': 'female'},
+            'Daniel': {'id': 'bm_daniel', 'gender': 'male'},
+            'Emma': {'id': 'bf_emma', 'gender': 'female'},
+            'Fable': {'id': 'bm_fable', 'gender': 'male'},
+          },
+        },
+      });
+    }
+
+    void writeGemini() {
+      writeConfig({
+        'models': {
+          'gemini': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'format': 'pcm',
+            'sample_rate': 24000,
+            'prompt_style': true,
+          },
+        },
+        'defaults': {
+          'gemini': 'Charon',
+        },
+        'voices': {
+          'gemini': {'Charon': 'Charon'},
+        },
+      });
+    }
+
+    test('hasGenderTags is true when a model tags voices', () {
+      writeKokoro();
+      final c = makeController()..changeModel('kokoro');
+      expect(c.hasGenderTags, isTrue);
+    });
+
+    test('an untagged model has no gender tags', () {
+      writeGemini();
+      final c = makeController()..changeModel('gemini');
+      expect(c.hasGenderTags, isFalse);
+    });
+
+    test('the gender filter narrows voiceItems and appends shorthand', () {
+      writeKokoro();
+      final c = makeController()..changeModel('kokoro');
+      expect(c.voiceItems.map((e) => e.$1), containsAll(['Emma', 'Daniel']));
+      c.voiceGenderFilter = VoiceGender.male;
+      expect(
+        c.voiceItems.map((e) => e.$1),
+        unorderedEquals(['Daniel', 'Fable']),
+      );
+      expect(
+        c.voiceItems.map((e) => e.$2),
+        containsAll(['Daniel (m)', 'Fable (m)']),
+      );
+    });
+
+    test('setting a gender filter auto-selects a matching voice', () {
+      writeKokoro();
+      final c = makeController()..changeModel('kokoro');
+      expect(c.voiceLabel, 'Emma'); // default is female
+      c.voiceGenderFilter = VoiceGender.male;
+      expect(c.voiceLabel, 'Daniel'); // first male entry
+      c.voiceGenderFilter = null;
+      expect(c.voiceLabel, 'Daniel'); // resetting the filter keeps the pick
+    });
+
+    test('changeModel resets the gender filter', () {
+      writeKokoro();
+      writeGemini();
+      final c = makeController()..changeModel('kokoro');
+      c.voiceGenderFilter = VoiceGender.male;
+      expect(c.voiceGenderFilter, VoiceGender.male);
+      c.changeModel('fish');
+      expect(c.voiceGenderFilter, isNull);
+    });
+
+    test('changing gender tweaks the narrator phrase on gemini', () {
+      writeGemini();
+      final c = makeController()..changeModel('gemini');
+      expect(c.passagePrefix, contains('female narrator'));
+      c.voiceGenderFilter = VoiceGender.male;
+      expect(c.passagePrefix, contains('male narrator'));
+      expect(c.passagePrefix, isNot(contains('female narrator')));
+      c.voiceGenderFilter = VoiceGender.female;
+      expect(c.passagePrefix, contains('female narrator'));
+    });
+
+    test('gender never rewrites a custom prefix without the exact phrase', () {
+      writeGemini();
+      final c = makeController()..changeModel('gemini');
+      c.passagePrefix = 'Read this in a hushed tone.';
+      c.voiceGenderFilter = VoiceGender.male;
+      expect(c.passagePrefix, 'Read this in a hushed tone.');
+    });
+
+    test('selecting any reverts the narrator phrase on gemini', () {
+      writeGemini();
+      final c = makeController()..changeModel('gemini');
+      final defaultPrefix = c.passagePrefix;
+      expect(defaultPrefix, contains('female narrator'));
+      c.voiceGenderFilter = VoiceGender.male;
+      expect(c.passagePrefix, contains('male narrator'));
+      c.voiceGenderFilter = null;
+      expect(c.passagePrefix, defaultPrefix);
+    });
+
+    test('male narrator is not mistaken inside a female phrase', () {
+      writeGemini();
+      final c = makeController()..changeModel('gemini');
+      // The default prefix already says "female narrator"; selecting Female
+      // must not treat that phrase's 'male narrator' substring as a male one.
+      c.voiceGenderFilter = VoiceGender.female;
+      expect(c.passagePrefix, contains('female narrator'));
+      expect(c.voiceGenderFilter, VoiceGender.female);
+      // Reverting to Any is likewise a no-op on the default phrase.
+      c.voiceGenderFilter = null;
+      expect(c.passagePrefix, contains('female narrator'));
+    });
+
+    test('a gender with no matching voices reverts the filter to any', () {
+      writeConfig({
+        'models': {
+          'single': {'id': 'example/single', 'format': 'mp3'},
+        },
+        'defaults': {
+          'single': 'Alice',
+        },
+        'voices': {
+          'single': {
+            'Alice': {'id': 'a', 'gender': 'female'},
+            'Beth': {'id': 'b', 'gender': 'female'},
+          },
+        },
+      });
+      final c = makeController()..changeModel('single');
+      expect(c.hasGenderTags, isTrue);
+      c.voiceGenderFilter = VoiceGender.male;
+      // No male voices: rather than leave a voice hidden behind an empty
+      // filter, the pick reverts to "any" and the full list stays available.
+      expect(c.voiceGenderFilter, isNull);
+      expect(c.voiceItems.map((e) => e.$1), unorderedEquals(['Alice', 'Beth']));
+      expect(c.voiceLabel, 'Alice');
+    });
+
+    test('gender on an untagged model leaves the voice list untouched', () {
+      writeGemini();
+      final c = makeController()..changeModel('gemini');
+      final before = c.voiceItems.map((e) => e.$1).toList();
+      c.voiceGenderFilter = VoiceGender.male;
+      expect(c.voiceItems.map((e) => e.$1), before);
+      expect(c.voiceLabel, 'Charon'); // no auto-switch; default stays
+    });
+  });
+
   group('narrate guard', () {
     test('blocks on empty text', () {
       final c = makeController();

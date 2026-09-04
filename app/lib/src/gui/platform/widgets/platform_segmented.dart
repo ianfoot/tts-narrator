@@ -110,16 +110,25 @@ class PlatformSegmentedControl<T> extends StatelessWidget {
   }
 
   Widget _buildMaterial() {
+    // A null [value] selects whichever item carries a null value (e.g. an
+    // "Any" segment); keep the set non-empty so [SegmentedButton] renders.
+    final selected = <T>{
+      if (value != null) value!,
+      if (value == null)
+        for (final it in items)
+          if (it.$1 == null) it.$1,
+    };
     return SegmentedButton<T>(
       segments: [
         for (final item in items)
           ButtonSegment<T>(value: item.$1, label: Text(item.$2)),
       ],
-      selected: {if (value != null) value!},
+      selected: selected,
       onSelectionChanged: (selection) {
         if (onChanged == null) return;
-        final next = selection.isEmpty ? null : selection.first;
-        if (next != null) onChanged!(next);
+        // [emptySelectionAllowed] is false, so [selection] is never empty;
+        // a null value selects the null-valued segment (e.g. "Any").
+        onChanged!(selection.first);
       },
       showSelectedIcon: false,
     );

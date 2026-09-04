@@ -7,13 +7,13 @@
     "usd_per_m_chars": 0.62
   },
   "voices": {
-    "Alice": "bf_alice",
-    "Daniel": "bm_daniel",
-    "Emma": "bf_emma",
-    "Fable": "bm_fable",
-    "George": "bm_george",
-    "Isabella": "bf_isabella",
-    "Lewis": "bm_lewis",
-    "Lily": "bf_lily"
+    "Alice": {"id": "bf_alice", "gender": "female"},
+    "Daniel": {"id": "bm_daniel", "gender": "male"},
+    "Emma": {"id": "bf_emma", "gender": "female"},
+    "Fable": {"id": "bm_fable", "gender": "male"},
+    "George": {"id": "bm_george", "gender": "male"},
+    "Isabella": {"id": "bf_isabella", "gender": "female"},
+    "Lewis": {"id": "bm_lewis", "gender": "male"},
+    "Lily": {"id": "bf_lily", "gender": "female"}
   }
 }

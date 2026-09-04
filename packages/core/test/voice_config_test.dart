@@ -29,7 +29,7 @@ void main() {
       expect(cfg.isEmpty, isTrue);
       expect(cfg.defaultModel, isNull);
       expect(cfg.providers, isEmpty);
-      expect(cfg.aliases, isEmpty);
+      expect(cfg.voices, isEmpty);
       expect(warnings, isEmpty);
     });
 
@@ -80,20 +80,83 @@ void main() {
       final (cfg, _) = load();
       expect(cfg.defaults['fish'], 'Narrator');
       expect(cfg.pricing['fish']?.usdPerMChars, 0.62);
-      expect(cfg.aliases['fish']?['Narrator'], 'hex1');
-      expect(cfg.aliases['fish']?['Emma'], 'bf_emma');
-      expect(cfg.aliases['kokoro']?['Emma'], 'bf_emma');
+      expect(cfg.voices['fish']?['Narrator']?.id, 'hex1');
+      expect(cfg.voices['fish']?['Emma']?.id, 'bf_emma');
+      expect(cfg.voices['kokoro']?['Emma']?.id, 'bf_emma');
     });
 
-    test('ignores non-string voice id values, keeps the model key only if non-empty',
-        () {
-      writeModel('fish', '''
-{"id": "a/b", "provider": "openrouter", "voices": {"A": "id1", "B": 42, "C": ""}}
+    test('parses voices as one object per voice with optional gender', () {
+      writeModel('kokoro', '''
+{
+  "id": "a/b",
+  "provider": "openrouter",
+  "voices": {
+    "Emma": {"id": "bf_emma", "gender": "female"},
+    "Daniel": {"id": "bm_daniel", "gender": "male"},
+    "Fable": {"id": "bm_fable"}
+  }
+}
+''');
+      writeModel('gemini', '{"id": "a/b", "provider": "openrouter"}');
+      final (cfg, _) = load();
+      expect(cfg.voices['kokoro']?['Emma']?.id, 'bf_emma');
+      expect(cfg.voices['kokoro']?['Emma']?.gender, VoiceGender.female);
+      expect(cfg.voices['kokoro']?['Daniel']?.gender, VoiceGender.male);
+      // Untyped entries carry an id but no gender tag.
+      expect(cfg.voices['kokoro']?['Fable']?.gender, isNull);
+      // Untagged models carry no entries at all.
+      expect(cfg.voices.containsKey('gemini'), isFalse);
+    });
+
+    test('accepts the legacy string shorthand for voices', () {
+      writeModel('x', '''
+{
+  "id": "a/b",
+  "provider": "openrouter",
+  "voices": {"A": "id1", "B": 42, "C": ""}
+}
 ''');
       final (cfg, _) = load();
-      expect(cfg.aliases['fish']?['A'], 'id1');
-      expect(cfg.aliases['fish']?.containsKey('B'), isFalse);
-      expect(cfg.aliases['fish']?.containsKey('C'), isFalse);
+      expect(cfg.voices['x']?['A']?.id, 'id1');
+      expect(cfg.voices['x']?['A']?.gender, isNull);
+      // Malformed entries are skipped.
+      expect(cfg.voices['x']?.containsKey('B'), isFalse);
+      expect(cfg.voices['x']?.containsKey('C'), isFalse);
+    });
+
+    test('skips malformed voice-object entries and bad genders quietly', () {
+      writeModel('x', '''
+{
+  "id": "a/b",
+  "provider": "openrouter",
+  "voices": {
+    "A": {"id": "ok1", "gender": "female"},
+    "B": {"id": ""},
+    "C": {"gender": "male"},
+    "D": {"id": 42},
+    "E": {"id": "ok2", "gender": "soprano"},
+    "F": {"id": "ok3", "gender": "Male"}
+  }
+}
+''');
+      final (cfg, warnings) = load();
+      expect(cfg.voices['x']?['A']?.gender, VoiceGender.female);
+      expect(cfg.voices['x']?.containsKey('B'), isFalse);
+      expect(cfg.voices['x']?.containsKey('C'), isFalse);
+      expect(cfg.voices['x']?.containsKey('D'), isFalse);
+      // Unrecognized gender strings are dropped, the voice kept.
+      expect(cfg.voices['x']?['E']?.id, 'ok2');
+      expect(cfg.voices['x']?['E']?.gender, isNull);
+      // Case-insensitive gender parsing.
+      expect(cfg.voices['x']?['F']?.gender, VoiceGender.male);
+      expect(warnings, isEmpty);
+    });
+
+    test('rejects a non-object voices block', () {
+      writeModel('x', '{"id": "a/b", "provider": "openrouter", "voices": ["female"]}');
+      final (cfg, warnings) = load();
+      expect(cfg.models, isEmpty);
+      expect(warnings.single, contains('"voices"'));
     });
 
     test('skips a model file with no id and reports a warning', () {
@@ -311,9 +374,9 @@ void main() {
 
   group('resolveVoice', () {
     final cfg = VoiceConfig(
-      aliases: {
-        'fish': {'British Female Narrator (good)': '89f41ea'},
-        'kokoro': {'Emma': 'bf_emma'},
+      voices: {
+        'fish': const {'British Female Narrator (good)': Voice(id: '89f41ea')},
+        'kokoro': const {'Emma': Voice(id: 'bf_emma')},
       },
     );
 
@@ -352,12 +415,39 @@ void main() {
     });
   });
 
+  group('parseVoiceGender', () {
+    test('parses the config spellings case-insensitively', () {
+      expect(parseVoiceGender('male'), VoiceGender.male);
+      expect(parseVoiceGender('Female'), VoiceGender.female);
+      expect(parseVoiceGender(' NEUTRAL '), VoiceGender.neutral);
+    });
+
+    test('returns null for null, empty and unknown input', () {
+      expect(parseVoiceGender(null), isNull);
+      expect(parseVoiceGender(''), isNull);
+      expect(parseVoiceGender('soprano'), isNull);
+    });
+  });
+
+  group('genderFor', () {
+    test('looks up a tag by voice label under the model alias', () {
+      final cfg = VoiceConfig(
+        voices: const {
+          'kokoro': {'Emma': Voice(id: 'bf_emma', gender: VoiceGender.female)},
+        },
+      );
+      expect(cfg.genderFor('kokoro', 'Emma'), VoiceGender.female);
+      expect(cfg.genderFor('kokoro', 'Daniel'), isNull);
+      expect(cfg.genderFor('gemini', 'Emma'), isNull);
+    });
+  });
+
   group('defaultVoiceFor', () {
     test('uses the configured default label', () {
       final cfg = VoiceConfig(
         defaults: const {'kokoro': 'Emma'},
-        aliases: const {
-          'kokoro': {'Emma': 'bf_emma'},
+        voices: const {
+          'kokoro': {'Emma': Voice(id: 'bf_emma')},
         },
       );
       final (id, label) = defaultVoiceFor(
@@ -417,8 +507,8 @@ void main() {
     test('includes aliases plus the default voice, deduped', () {
       final cfg = VoiceConfig(
         defaults: const {'fish': 'Narrator'},
-        aliases: const {
-          'fish': {'Narrator': 'hex1'},
+        voices: const {
+          'fish': {'Narrator': Voice(id: 'hex1')},
         },
       );
       final entries = voiceEntries(model: kDefaultProfile.profile, config: cfg);
@@ -439,8 +529,8 @@ void main() {
             format: 'pcm',
           ),
         },
-        aliases: const {
-          'gemini': {'Charon': 'Charon'},
+        voices: const {
+          'gemini': {'Charon': Voice(id: 'Charon')},
         },
       );
       final entries = voiceEntries(config: cfg);
@@ -448,6 +538,29 @@ void main() {
         entries.map((e) => e.model).toSet(),
         containsAll(['fish', 'gemini']),
       );
+    });
+
+    test('tags entries with their configured gender', () {
+      final cfg = VoiceConfig(
+        voices: const {
+          'kokoro': {
+            'Emma': Voice(id: 'bf_emma', gender: VoiceGender.female),
+            'Daniel': Voice(id: 'bm_daniel', gender: VoiceGender.male),
+            'Fable': Voice(id: 'bm_fable', gender: VoiceGender.male),
+          },
+        },
+        defaults: const {'kokoro': 'Emma'},
+      );
+      final entries = voiceEntries(
+        model: const TtsModelProfile(alias: 'kokoro', id: 'hexgrad/kokoro-82m'),
+        config: cfg,
+      );
+      VoiceEntry entryFor(String label) => entries.firstWhere(
+        (e) => e.label == label,
+      );
+      expect(entryFor('Emma').gender, VoiceGender.female);
+      expect(entryFor('Daniel').gender, VoiceGender.male);
+      expect(entryFor('Fable').gender, VoiceGender.male);
     });
   });
 
@@ -484,9 +597,11 @@ void main() {
           },
           defaults: const {'fish': 'Narrator'},
           pricing: {'kokoro': const AudioPricing(usdPerMChars: 0.62)},
-          aliases: {
-            'fish': {'Narrator': 'hex1'},
-            'kokoro': {'Emma': 'bf_emma'},
+          voices: {
+            'fish': const {'Narrator': Voice(id: 'hex1')},
+            'kokoro': const {
+              'Emma': Voice(id: 'bf_emma', gender: VoiceGender.female),
+            },
           },
         ),
       );
@@ -500,8 +615,9 @@ void main() {
       expect(cfg.models['gemini']?.promptStyle, isTrue);
       expect(cfg.defaults['fish'], 'Narrator');
       expect(cfg.pricing['kokoro']?.usdPerMChars, 0.62);
-      expect(cfg.aliases['fish']?['Narrator'], 'hex1');
-      expect(cfg.aliases['kokoro']?['Emma'], 'bf_emma');
+      expect(cfg.voices['fish']?['Narrator']?.id, 'hex1');
+      expect(cfg.voices['kokoro']?['Emma']?.id, 'bf_emma');
+      expect(cfg.voices['kokoro']?['Emma']?.gender, VoiceGender.female);
     });
 
     test('empty config writes an empty config.json and no model files', () {
@@ -583,6 +699,40 @@ void main() {
       ).readAsStringSync();
       expect(raw, contains('"provider": "openrouter"'));
       expect(read().$1.models['gemini']?.provider, 'openrouter');
+    });
+
+    test('round-trips voices with their gender in one object per entry', () {
+      writeVoiceConfig(
+        '${dir.path}/cfg',
+        const VoiceConfig(
+          models: {
+            'kokoro': TtsModelProfile(
+              alias: 'kokoro',
+              id: 'hexgrad/kokoro-82m',
+              format: 'mp3',
+            ),
+          },
+          voices: {
+            'kokoro': {
+              'Emma': Voice(id: 'bf_emma', gender: VoiceGender.female),
+              'Daniel': Voice(id: 'bm_daniel', gender: VoiceGender.male),
+              'Fable': Voice(id: 'bm_fable'),
+            },
+          },
+        ),
+      );
+      final cfg = read().$1;
+      expect(cfg.voices['kokoro']?['Emma']?.id, 'bf_emma');
+      expect(cfg.voices['kokoro']?['Emma']?.gender, VoiceGender.female);
+      expect(cfg.voices['kokoro']?['Daniel']?.gender, VoiceGender.male);
+      expect(cfg.voices['kokoro']?['Fable']?.gender, isNull);
+      final raw = File(
+        '${dir.path}/cfg${Platform.pathSeparator}kokoro.json',
+      ).readAsStringSync();
+      expect(raw, contains('"id": "bf_emma"'));
+      expect(raw, contains('"gender": "female"'));
+      // No legacy parallel gender block.
+      expect(raw, isNot(contains('voice_genders')));
     });
 
     test('throws VoiceConfigError when the path cannot be written', () {
