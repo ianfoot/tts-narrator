@@ -195,6 +195,41 @@ class _EditorScreenState extends State<EditorScreen> {
 
   void _toggleRail() => setState(() => _railVisible = !_railVisible);
 
+  /// Cycles the appearance system -> light -> dark -> system.
+  void _cycleThemeMode() {
+    _controller.themeMode = switch (_controller.themeMode) {
+      AppThemeMode.system => AppThemeMode.light,
+      AppThemeMode.light => AppThemeMode.dark,
+      AppThemeMode.dark => AppThemeMode.system,
+    };
+  }
+
+  /// Friendly label for the appearance tooltip.
+  String _themeModeLabel(AppThemeMode mode) => switch (mode) {
+        AppThemeMode.system => 'Auto',
+        AppThemeMode.light => 'Light',
+        AppThemeMode.dark => 'Dark',
+      };
+
+  /// Toolbar button showing the current appearance; tapping cycles it.
+  Widget _buildAppearanceButton() {
+    final mode = _controller.themeMode;
+    return PlatformIconButton(
+      key: const Key('appearanceToggleButton'),
+      tooltip: 'Appearance: ${_themeModeLabel(mode)}',
+      icon: Icon(
+        switch (mode) {
+          AppThemeMode.light => _isMac ? CupertinoIcons.sun_max : Icons.light_mode,
+          AppThemeMode.dark => _isMac ? CupertinoIcons.moon : Icons.dark_mode,
+          AppThemeMode.system => _isMac
+              ? CupertinoIcons.circle_lefthalf_fill
+              : Icons.brightness_auto,
+        },
+      ),
+      onPressed: _cycleThemeMode,
+    );
+  }
+
   void _showGuard(String message) {
     _guardTimer?.cancel();
     setState(() => _guardMessage = message);
@@ -294,6 +329,8 @@ class _EditorScreenState extends State<EditorScreen> {
           onPressed: _toggleRail,
         ),
         const SizedBox(width: 8),
+        _buildAppearanceButton(),
+        const SizedBox(width: 8),
         PlatformIconButton(
           key: const Key('editorOpenButton'),
           tooltip: 'Open text file (⌘O)',
@@ -347,7 +384,14 @@ class _EditorScreenState extends State<EditorScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Align(alignment: Alignment.centerLeft, child: leftZone),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: leftZone,
+              ),
+            ),
           ),
           Expanded(child: Center(child: _buildDocumentTitle())),
           Expanded(

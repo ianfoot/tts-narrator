@@ -11,6 +11,7 @@ import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_text_field.dart';
 import 'package:tts_narrator/src/gui/settings/inspector_rail.dart';
+import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
 
@@ -316,5 +317,54 @@ void main() {
     expect(controller.runFinished, isTrue);
     expect(find.text('Play Full'), findsOneWidget);
     expect(find.text('Stop'), findsNothing);
+  });
+
+  group('appearance toggle', () {
+    testWidgets('button renders with the system (auto) mode by default', (
+      tester,
+    ) async {
+      final controller = await makeController();
+      await pumpEditor(tester, controller);
+
+      expect(find.byKey(const Key('appearanceToggleButton')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('appearanceToggleButton')),
+          matching: find.byIcon(Icons.brightness_auto),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('tapping cycles system -> light -> dark -> system', (
+      tester,
+    ) async {
+      final controller = await makeController();
+      await pumpEditor(tester, controller);
+
+      await tester.tap(find.byKey(const Key('appearanceToggleButton')));
+      expect(controller.themeMode, AppThemeMode.light);
+      await tester.tap(find.byKey(const Key('appearanceToggleButton')));
+      expect(controller.themeMode, AppThemeMode.dark);
+      await tester.tap(find.byKey(const Key('appearanceToggleButton')));
+      expect(controller.themeMode, AppThemeMode.system);
+    });
+
+    testWidgets('button icon follows a controller-driven mode change', (
+      tester,
+    ) async {
+      final controller = await makeController();
+      await pumpEditor(tester, controller);
+
+      controller.themeMode = AppThemeMode.dark;
+      await tester.pump();
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('appearanceToggleButton')),
+          matching: find.byIcon(Icons.dark_mode),
+        ),
+        findsOneWidget,
+      );
+    });
   });
 }
