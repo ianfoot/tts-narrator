@@ -384,6 +384,70 @@ void main() {
       expect(c.runSegments.every((segment) => !segment.running), isTrue);
     });
 
+    test('a successful run records the combined track path', () async {
+      final c = makeController();
+      c.setText(
+        'A single paragraph long enough that it does not need any other '
+        'company. It crosses the minimum word count comfortably and becomes '
+        'one segment all on its own, plain and simple.',
+      );
+      FakeTtsProvider().register();
+      c.outDir = dir.path;
+      expect(c.completedAudioPath, isNull);
+      c.startRun();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.runFinished, isTrue);
+      final path = c.completedAudioPath;
+      expect(path, isNotNull);
+      expect(File(path!).existsSync(), isTrue);
+      expect(path, endsWith('untitled_full.mp3'));
+    });
+
+    test('a cancelled run never records a combined track path', () async {
+      final c = makeController();
+      c.setText(
+        'First paragraph with enough words to become its own segment and then '
+        'carry on a little longer to cross the minimum.\n\n'
+        'Second paragraph with enough words to become its own segment as well '
+        'and then carry on a little longer to cross the minimum.',
+      );
+      FakeTtsProvider().register();
+      c.outDir = dir.path;
+      c.startRun();
+      c.cancelRun();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.runStopped, isTrue);
+      expect(c.completedAudioPath, isNull);
+    });
+
+    test('starting a new run clears a prior completed track path', () async {
+      final c = makeController();
+      c.setText(
+        'A single paragraph long enough that it does not need any other '
+        'company. It crosses the minimum word count comfortably and becomes '
+        'one segment all on its own, plain and simple.',
+      );
+      FakeTtsProvider().register();
+      c.outDir = dir.path;
+      c.startRun();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.runFinished, isTrue);
+      expect(c.completedAudioPath, isNotNull);
+
+      // A second run resets the path while it generates, then restores it on
+      // completion.
+      c.setText(
+        'A different single paragraph long enough to stand alone too. It '
+        'easily crosses the minimum word count and becomes its own segment, '
+        'just like the first one did before it.',
+      );
+      c.startRun();
+      expect(c.completedAudioPath, isNull);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.runFinished, isTrue);
+      expect(c.completedAudioPath, isNotNull);
+    });
+
     test('canCleanupSegments enables and cleanupSegments removes per-segment '
         'files while keeping the combined track', () async {
       final c = makeController();

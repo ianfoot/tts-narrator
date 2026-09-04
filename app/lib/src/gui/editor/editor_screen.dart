@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +42,12 @@ class _EditorScreenState extends State<EditorScreen> {
   Timer? _guardTimer;
   bool _railVisible = true;
 
+  /// Plays the completed combined track from a successful narration run. The
+  /// button lives on the status bar and persists after leaving the run view,
+  /// so the finished file stays one tap away until the next run replaces it.
+  AudioPlayer? _player;
+  bool _playingFull = false;
+
   AppController get _controller => widget.controller;
 
   bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
@@ -56,10 +64,17 @@ class _EditorScreenState extends State<EditorScreen> {
     _controller.removeListener(_onControllerChanged);
     _textController.dispose();
     _guardTimer?.cancel();
+    _player?.dispose();
     super.dispose();
   }
 
   void _onControllerChanged() {
+    // A new run clears the completed track path; stop any playback of the
+    // prior track so stale audio doesn't keep playing under the run view.
+    if (_playingFull && _controller.completedAudioPath == null) {
+      _player?.stop();
+      _playingFull = false;
+    }
     setState(() {
       if (_textController.text != _controller.text) {
         _textController.text = _controller.text;
@@ -68,6 +83,103 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   void _onTextChanged(String value) => _controller.setText(value);
+
+  AudioPlayer _ensurePlayer() {
+    final existing = _player;
+    if (existing != null) return existing;
+    final player = AudioPlayer();
+    // One player for the full track only (per-segment clips play on the run
+    // view). Reaching the end — or an explicit stop — reverts the button from
+    // Stop back to Play automatically.
+    player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _playingFull = false);
+    });
+    player.onPlayerStateChanged.listen((state) {
+      if (state == PlayerState.completed || state == PlayerState.stopped) {
+        if (mounted && _playingFull) {
+          setState(() => _playingFull = false);
+        }
+      }
+    });
+    _player = player;
+    return player;
+  }
+
+  Future<void> _togglePlayFull() async {
+    if (_playingFull) {
+      await _player?.stop();
+      if (mounted) setState(() => _playingFull = false);
+      return;
+    }
+    final path = _controller.completedAudioPath;
+    if (path == null || !File(path).existsSync()) return;
+    await _player?.stop();
+    final player = _ensurePlayer();
+    try {
+      await player.play(DeviceFileSource(path));
+    } catch (_) {
+      // A file that fails to load synchronously never enters the playing
+      // state; the state-stream listener covers async failures.
+      if (mounted) setState(() => _playingFull = false);
+      return;
+    }
+    if (mounted) setState(() => _playingFull = true);
+  }
+
+  /// Compact `▶ Play Full` / `⏹ Stop` toggle for the completed combined track,
+  /// shown only while a finished run's audio file is on disk.
+  Widget _buildFullPlayButton() {
+    final colors = _tokens.colors;
+    final label = _playingFull ? 'Stop' : 'Play Full';
+    final icon = Icon(
+      _isMac
+          ? (_playingFull ? CupertinoIcons.stop_circle : CupertinoIcons.play_fill)
+          : (_playingFull ? Icons.stop_circle_outlined : Icons.play_arrow),
+      size: 14,
+      color: colors.textPrimary,
+    );
+    final Widget button;
+    if (_isMac) {
+      button = CupertinoButton(
+        key: const Key('editorFullPlayButton'),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        onPressed: _togglePlayFull,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            border: Border.all(color: colors.borderSubtle, width: 0.8),
+            borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
+          ),
+          child: DefaultTextStyle(
+            style: _tokens.typography.caption.copyWith(
+              color: colors.textPrimary,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [icon, const SizedBox(width: 4), Text(label)],
+            ),
+          ),
+        ),
+      );
+    } else {
+      button = OutlinedButton.icon(
+        key: const Key('editorFullPlayButton'),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          minimumSize: const Size(0, 0),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          visualDensity: VisualDensity.compact,
+        ),
+        onPressed: _togglePlayFull,
+        icon: icon,
+        label: Text(
+          label,
+          style: _tokens.typography.caption.copyWith(color: colors.textPrimary),
+        ),
+      );
+    }
+    return button;
+  }
 
   void _onOpenPressed() => _controller.onOpen?.call();
 
@@ -180,6 +292,10 @@ class _EditorScreenState extends State<EditorScreen> {
         ),
         const SizedBox(width: 4),
         Text('⌘O', style: shortcutStyle),
+        if (_controller.completedAudioPath != null) ...[
+          const SizedBox(width: 8),
+          _buildFullPlayButton(),
+        ],
       ],
     );
     final rightZone = Row(

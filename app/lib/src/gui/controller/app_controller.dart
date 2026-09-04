@@ -408,6 +408,14 @@ class AppController extends ChangeNotifier {
   /// Narration failure mid-run (API/etc).
   String? runError;
 
+  /// Absolute path of the completed combined track from the last successful
+  /// run, or null until one lands. Persists across leaving the run view so the
+  /// editor can keep offering playback of the finished file; cleared when a new
+  /// run starts or the run state resets (cleanup keeps the track on disk).
+  String? _completedAudioPath;
+
+  String? get completedAudioPath => _completedAudioPath;
+
   bool _runFinished = false;
   bool _runStopped = false;
 
@@ -492,6 +500,7 @@ class AppController extends ChangeNotifier {
     runError = null;
     _runFinished = false;
     _runStopped = false;
+    _completedAudioPath = null;
     _doneCount = 0;
     _abort = null;
   }
@@ -520,6 +529,7 @@ class AppController extends ChangeNotifier {
           _runStopped = true;
         } else {
           _runFinished = true;
+          _completedAudioPath = combinedFilePath(_lastRunDir!);
         }
       } on AbortException {
         _runStopped = true;
