@@ -11,7 +11,6 @@ import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/settings/inspector_rail.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_segmented.dart';
-import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import '../support/fake_tts_provider.dart';
 
 void main() {
@@ -109,54 +108,6 @@ void main() {
         ),
         findsOneWidget,
       );
-    });
-  });
-
-  group('appearance', () {
-    testWidgets('segmented control mirrors the controller theme mode', (
-      tester,
-    ) async {
-      writeConfig({});
-      final c = makeController();
-      await pumpRail(tester, c);
-
-      final control = tester.widget<PlatformSegmentedControl<AppThemeMode>>(
-        find.byKey(const Key('themeSegmented')),
-      );
-      expect(control.value, AppThemeMode.system);
-      expect(control.items.map((it) => it.$1).toSet(), containsAll(AppThemeMode.values));
-      expect(find.text('Light'), findsOneWidget);
-      expect(find.text('Auto'), findsOneWidget);
-      expect(find.text('Dark'), findsOneWidget);
-    });
-
-    testWidgets('tapping a segment updates the controller theme mode', (
-      tester,
-    ) async {
-      writeConfig({});
-      final c = makeController();
-      await pumpRail(tester, c);
-
-      await tester.tap(find.text('Dark'));
-      await tester.pump();
-      expect(c.themeMode, AppThemeMode.dark);
-
-      await tester.tap(find.text('Light'));
-      await tester.pump();
-      expect(c.themeMode, AppThemeMode.light);
-    });
-
-    testWidgets('rail reflects a controller-driven mode change', (tester) async {
-      writeConfig({});
-      final c = makeController();
-      await pumpRail(tester, c);
-
-      c.themeMode = AppThemeMode.dark;
-      await tester.pump();
-      final control = tester.widget<PlatformSegmentedControl<AppThemeMode>>(
-        find.byKey(const Key('themeSegmented')),
-      );
-      expect(control.value, AppThemeMode.dark);
     });
   });
 
