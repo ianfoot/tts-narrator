@@ -460,6 +460,29 @@ void main() {
       expect(find.byKey(const Key('sampleLenField')), findsNothing);
     });
 
+    testWidgets('clearing the sample count keeps sample mode on', (tester) async {
+      writeConfig({});
+      final c = makeController();
+      await pumpRail(tester, c);
+
+      await tester.tap(find.byKey(const Key('sampleSwitch')));
+      await tester.pump();
+      expect(c.sampleLen, 1);
+
+      final field = find.descendant(
+        of: find.byKey(const Key('sampleLenField')),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(field, '');
+      await tester.pump();
+      expect(c.sampleLen, 1);
+      expect(find.byKey(const Key('sampleLenField')), findsOneWidget);
+
+      await tester.enterText(field, '7');
+      await tester.pump();
+      expect(c.sampleLen, 7);
+    });
+
     testWidgets('the folder picker writes the chosen directory', (
       tester,
     ) async {
