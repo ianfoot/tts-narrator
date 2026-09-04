@@ -11,6 +11,8 @@ import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_text_field.dart';
 import 'package:tts_narrator/src/gui/settings/inspector_rail.dart';
+import '../support/fake_audio_platform.dart';
+import '../support/fake_tts_provider.dart';
 
 void main() {
   late Directory dir;
@@ -196,5 +198,132 @@ void main() {
     await pumpEditor(tester, controller);
 
     expect(find.textContaining('1,240 words'), findsOneWidget);
+  });
+
+  testWidgets('no full-play button until a narration run completes', (
+    tester,
+  ) async {
+    final controller = await makeController();
+    controller.setText('Some real text to narrate.');
+    await pumpEditor(tester, controller);
+    expect(find.byKey(const Key('editorFullPlayButton')), findsNothing);
+  });
+
+  testWidgets('a completed run shows the full-play button', (tester) async {
+    final controller = await makeController();
+    controller.setText(
+      'A single paragraph long enough that it does not need any other '
+      'company. It crosses the minimum word count comfortably and becomes '
+      'one segment all on its own, plain and simple.',
+    );
+    FakeTtsProvider().register();
+    controller.outDir = dir.path;
+    controller.startRun();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+
+    await pumpEditor(tester, controller);
+    expect(controller.runFinished, isTrue);
+    expect(controller.completedAudioPath, isNotNull);
+    expect(find.byKey(const Key('editorFullPlayButton')), findsOneWidget);
+    expect(find.text('Play Full'), findsOneWidget);
+  });
+
+  testWidgets('full-play button toggles to Stop and reverts on clip end', (
+    tester,
+  ) async {
+    final audio = installFakeAudioPlatform();
+    final controller = await makeController();
+    controller.setText(
+      'A single paragraph long enough that it does not need any other '
+      'company. It crosses the minimum word count comfortably and becomes '
+      'one segment all on its own, plain and simple.',
+    );
+    FakeTtsProvider().register();
+    controller.outDir = dir.path;
+    controller.startRun();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await pumpEditor(tester, controller);
+    expect(find.byKey(const Key('editorFullPlayButton')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('editorFullPlayButton')));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Stop'), findsOneWidget);
+
+    audio.emitComplete();
+    await tester.pump();
+    expect(find.text('Play Full'), findsOneWidget);
+  });
+
+  testWidgets('a stopped run does not show the full-play button', (
+    tester,
+  ) async {
+    final controller = await makeController();
+    controller.setText(
+      'First paragraph with enough words to become its own segment and then '
+      'carry on a little longer to cross the minimum.\n\n'
+      'Second paragraph with enough words to become its own segment as well '
+      'and then carry on a little longer to cross the minimum.',
+    );
+    FakeTtsProvider().register();
+    controller.outDir = dir.path;
+    controller.startRun();
+    controller.cancelRun();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+
+    await pumpEditor(tester, controller);
+    expect(controller.runStopped, isTrue);
+    expect(controller.completedAudioPath, isNull);
+    expect(find.byKey(const Key('editorFullPlayButton')), findsNothing);
+  });
+
+  testWidgets('starting a new run stops playback of the prior track', (
+    tester,
+  ) async {
+    installFakeAudioPlatform();
+    final controller = await makeController();
+    controller.setText(
+      'A single paragraph long enough that it does not need any other '
+      'company. It crosses the minimum word count comfortably and becomes '
+      'one segment all on its own, plain and simple.',
+    );
+    FakeTtsProvider().register();
+    controller.outDir = dir.path;
+
+    // First run completes and starts playing.
+    controller.startRun();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await pumpEditor(tester, controller);
+    await tester.tap(find.byKey(const Key('editorFullPlayButton')));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Stop'), findsOneWidget);
+
+    // A second run clears the completed path mid-playback; the prior track
+    // must stop and the button must not be left in a stale Stop state.
+    controller.setText(
+      'A different single paragraph long enough to stand alone too. It '
+      'easily crosses the minimum word count and becomes its own segment, '
+      'just like the first one did before it.',
+    );
+    controller.startRun();
+    expect(controller.completedAudioPath, isNull);
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pump();
+    await tester.pump();
+
+    expect(controller.runFinished, isTrue);
+    expect(find.text('Play Full'), findsOneWidget);
+    expect(find.text('Stop'), findsNothing);
   });
 }
