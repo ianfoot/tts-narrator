@@ -4,6 +4,59 @@ import 'dart:io';
 import '../narration/cost.dart';
 import '../narration/model_profiles.dart';
 
+/// The narrator gender a configured voice is tagged with.
+///
+/// Tagging is purely optional, per-voice metadata carried inside each entry of
+/// a model's `voices` block. Models expose different signals: kokoro's ids
+/// encode it (`bf_*`/`bm_*`), curated lists like fish's encode it in the
+/// friendly label, and gemini's named voices carry no gender signal at all (so
+/// they stay untagged). [neutral] covers unisex or unspecified voices.
+enum VoiceGender {
+  male,
+  female,
+  neutral;
+
+  /// The lowercase config spelling for this gender (`'male'`, `'female'`,
+  /// `'neutral'`), used in `voices` blocks and CLI/UI labels.
+  String get label => name;
+
+  /// Single-letter shorthand for compact UI labels: `m`/`f`/`n`.
+  String get shorthand => switch (this) {
+        VoiceGender.male => 'm',
+        VoiceGender.female => 'f',
+        VoiceGender.neutral => 'n',
+      };
+}
+
+/// Parses the config-string form to a [VoiceGender], or null for anything
+/// unrecognized (mislabels are dropped by the loader, not a hard error).
+VoiceGender? parseVoiceGender(String? value) {
+  if (value == null) return null;
+  return switch (value.trim().toLowerCase()) {
+    'male' => VoiceGender.male,
+    'female' => VoiceGender.female,
+    'neutral' => VoiceGender.neutral,
+    _ => null,
+  };
+}
+
+/// One configured voice in a model's `voices` block: the provider voice id
+/// sent in the request body, plus optional metadata (gender, and room for
+/// more fields later) — one entry per voice, so a voice's fields live
+/// together instead of being split across parallel blocks.
+class Voice {
+  const Voice({
+    required this.id,
+    this.gender,
+  });
+
+  /// Provider voice id sent in the request body.
+  final String id;
+
+  /// Optional narrator gender tag; null when the voice is untagged.
+  final VoiceGender? gender;
+}
+
 /// A single selectable voice for the GUI voice picker and CLI listing.
 class VoiceEntry {
   const VoiceEntry({
@@ -11,6 +64,7 @@ class VoiceEntry {
     required this.id,
     required this.label,
     required this.isAlias,
+    this.gender,
   });
 
   /// Model alias this voice belongs to (e.g. `gemini`, `fish`).
@@ -24,6 +78,9 @@ class VoiceEntry {
 
   /// Whether [label] is a friendly alias from the config (vs a raw id).
   final bool isAlias;
+
+  /// Optional narrator gender tag; null when the voice is untagged.
+  final VoiceGender? gender;
 }
 
 /// Voice data, model wiring, default model, and per-provider settings,
@@ -32,7 +89,8 @@ class VoiceEntry {
 /// Layout:
 ///   config.json              global data — `default_model` + `providers`
 ///   `<alias>.json`           per-model — id, format, sample_rate, prompt_style,
-///                            sends_voice, provider, default_voice, pricing, voices
+///                            sends_voice, provider, default_voice, pricing,
+///                            voices (each entry: id + optional gender)
 ///
 /// Splitting per-model into one file each keeps the user's voice library
 /// modular: edit a single model without touching the others, drop in a new
@@ -53,7 +111,7 @@ class VoiceConfig {
     this.models = const {},
     this.defaults = const {},
     this.pricing = const {},
-    this.aliases = const {},
+    this.voices = const {},
   });
 
   /// Default model alias or id (`default_model`) the CLI and GUI preselect on
@@ -70,22 +128,24 @@ class VoiceConfig {
   /// the compiled fish bootstrap.
   final Map<String, TtsModelProfile> models;
 
-  /// Per-model default voice label (model alias → friendly name from [aliases]).
+  /// Per-model default voice label (model alias → friendly name from [voices]).
   final Map<String, String> defaults;
 
   /// Per-model cost data (model alias → pricing), for dry-run estimates.
   final Map<String, AudioPricing> pricing;
 
-  /// Friendly-name → provider voice id, keyed by model alias.
-  final Map<String, Map<String, String>> aliases;
+  /// Voice library per model: friendly label → [Voice], keyed by model alias.
+  /// A voice's id and optional metadata (gender, and room for more later) live
+  /// together in one entry, so there is no parallel block to keep in sync.
+  final Map<String, Map<String, Voice>> voices;
 
-bool get isEmpty =>
+  bool get isEmpty =>
       defaultModel == null &&
       providers.isEmpty &&
       models.isEmpty &&
       defaults.isEmpty &&
       pricing.isEmpty &&
-      aliases.isEmpty;
+      voices.isEmpty;
 
   /// Pricing for [modelAlias], or [freePricing] when unconfigured.
   AudioPricing pricingFor(String modelAlias) => pricing[modelAlias] ?? freePricing;
@@ -96,13 +156,18 @@ bool get isEmpty =>
   /// returned. Otherwise the value is returned unchanged (free-form ids and
   /// raw id passthrough keep working exactly as before).
   (String id, String label) resolveVoice(String modelAlias, String value) {
-    final modelAliases = aliases[modelAlias];
-    if (modelAliases != null) {
-      final id = modelAliases[value];
-      if (id != null) return (id, value);
+    final modelVoices = voices[modelAlias];
+    if (modelVoices != null) {
+      final voice = modelVoices[value];
+      if (voice != null) return (voice.id, value);
     }
     return (value, value);
   }
+
+  /// The gender tag for [voiceLabel] under [modelAlias], or null when the
+  /// voice (or the whole model) is untagged.
+  VoiceGender? genderFor(String modelAlias, String voiceLabel) =>
+      voices[modelAlias]?[voiceLabel]?.gender;
 }
 
 /// The effective set of models the app can narrate with: the compiled fish
@@ -157,8 +222,8 @@ TtsModelProfile defaultModelFor(VoiceConfig config) {
 /// Resolves a friendly alias (or the raw id) for [modelAlias] to a provider id,
 /// returning null when [value] matches neither.
 String? _resolveAlias(VoiceConfig config, String modelAlias, String value) {
-  final modelAliases = config.aliases[modelAlias];
-  return modelAliases?[value] ?? (value.isNotEmpty ? value : null);
+  final modelVoices = config.voices[modelAlias];
+  return modelVoices?[value]?.id ?? (value.isNotEmpty ? value : null);
 }
 
 /// The default voice (+ friendly label) for [model], used when `--voice` /
@@ -208,11 +273,19 @@ List<VoiceEntry> voiceEntries({
   for (final p in profiles) {
     void add(String id, String label, bool isAlias) {
       if (entries.any((e) => e.model == p.alias && e.id == id)) return;
-      entries.add(VoiceEntry(model: p.alias, id: id, label: label, isAlias: isAlias));
+      entries.add(
+        VoiceEntry(
+          model: p.alias,
+          id: id,
+          label: label,
+          isAlias: isAlias,
+          gender: config.genderFor(p.alias, label),
+        ),
+      );
     }
 
-    for (final e in (config.aliases[p.alias] ?? const <String, String>{}).entries) {
-      add(e.value, e.key, true);
+    for (final e in (config.voices[p.alias] ?? const <String, Voice>{}).entries) {
+      add(e.value.id, e.key, true);
     }
     try {
       final (id, label) = defaultVoiceFor(p, config);
@@ -279,7 +352,7 @@ String defaultConfigDir() {
   final models = <String, TtsModelProfile>{};
   final defaults = <String, String>{};
   final pricing = <String, AudioPricing>{};
-  final aliases = <String, Map<String, String>>{};
+  final voices = <String, Map<String, Voice>>{};
   for (final f in files) {
     final alias = _stemOf(f.path);
     try {
@@ -287,7 +360,7 @@ String defaultConfigDir() {
       models[alias] = m.profile;
       if (m.defaultVoice != null) defaults[alias] = m.defaultVoice!;
       if (m.pricing != null) pricing[alias] = m.pricing!;
-      if (m.voices.isNotEmpty) aliases[alias] = m.voices;
+      if (m.voices.isNotEmpty) voices[alias] = m.voices;
     } on VoiceConfigError catch (e) {
       warnings.add('Skipped model "$alias": ${e.message}');
     }
@@ -299,7 +372,7 @@ String defaultConfigDir() {
     models: models,
     defaults: defaults,
     pricing: pricing,
-    aliases: aliases,
+    voices: voices,
   );
 
   final configuredDefault = config.defaultModel;
@@ -359,10 +432,10 @@ VoiceConfig _loadGlobalConfig(String path) {
 }
 
 /// Parses a single ``<alias>.json`` model file into a model profile plus its
-/// default voice, pricing, and voice aliases. Throws a [VoiceConfigError] for
+/// default voice, pricing, and voice library. Throws a [VoiceConfigError] for
 /// anything that makes the model unusable (skipped by the caller).
 ({TtsModelProfile profile, String? defaultVoice, AudioPricing? pricing,
-    Map<String, String> voices})
+    Map<String, Voice> voices})
 _parseModelFile(String path, String alias) {
   final raw = _readJson(path);
   if (raw is! Map<String, dynamic>) {
@@ -415,14 +488,25 @@ _parseModelFile(String path, String alias) {
     );
   }
 
-  final voices = <String, String>{};
+  final voices = <String, Voice>{};
   final voicesRaw = raw['voices'];
   if (voicesRaw != null) {
     if (voicesRaw is! Map<String, dynamic>) {
       throw VoiceConfigError('"voices" must be an object');
     }
-    voicesRaw.forEach((label, idValue) {
-      if (idValue is String && idValue.isNotEmpty) voices[label] = idValue;
+    voicesRaw.forEach((label, value) {
+      if (value is String) {
+        // Legacy shorthand: "label": "id" with no metadata.
+        if (value.isNotEmpty) voices[label] = Voice(id: value);
+        return;
+      }
+      if (value is! Map<String, dynamic>) return; // skip malformed entries
+      final id = value['id'];
+      if (id is! String || id.isEmpty) return; // skip entries without an id
+      voices[label] = Voice(
+        id: id,
+        gender: parseVoiceGender(value['gender'] is String ? value['gender'] : null),
+      );
     });
   }
 
@@ -489,16 +573,23 @@ Map<String, Object?> _modelJson(
             'output_usd_per_m_tokens':
                 config.pricing[p.alias]!.outputUsdPerMTokens,
         },
-      if (config.aliases[p.alias] != null && config.aliases[p.alias]!.isNotEmpty)
-        'voices': config.aliases[p.alias],
+      if (config.voices[p.alias] != null && config.voices[p.alias]!.isNotEmpty)
+        'voices': {
+          for (final e in config.voices[p.alias]!.entries)
+            e.key: {
+              'id': e.value.id,
+              if (e.value.gender != null) 'gender': e.value.gender!.label,
+            },
+        },
     };
 
 /// Writes [config] to [configDir] as the shared config-directory schema,
 /// creating the directory as needed: a `config.json` with `default_model` +
 /// the verbatim `providers` block, and one ``<alias>.json`` per model (its
-/// id/wiring plus the model's `provider`, `default_voice`, `pricing`, and voice
-/// aliases), each directly in [configDir]. Round-trips through [loadVoiceConfig]
-/// so the CLI and GUI serialize identically.
+/// id/wiring plus the model's `provider`, `default_voice`, `pricing`, and
+/// voice library — one object per voice), each directly in [configDir].
+/// Round-trips through [loadVoiceConfig] so the CLI and GUI serialize
+/// identically.
 ///
 /// Throws a [VoiceConfigError] when a file cannot be written.
 void writeVoiceConfig(String configDir, VoiceConfig config) {

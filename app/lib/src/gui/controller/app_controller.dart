@@ -83,6 +83,8 @@ class AppController extends ChangeNotifier {
       _voiceLabel = null;
     }
     _modelAlias = alias;
+    // Gender tags are per-model; the filter does not carry across a switch.
+    _voiceGender = null;
     notifyListeners();
   }
 
@@ -98,6 +100,136 @@ class AppController extends ChangeNotifier {
   void applyVoiceLabel(String label) {
     final (id, _) = _voiceConfig.resolveVoice(profile.alias, label);
     setVoice(id, label: label);
+  }
+
+  // --- Voice gender -------------------------------------------------
+
+  /// Narrator-gender selection. Two uses, both flowing through this one field:
+  /// narrowing the voice picker for models whose config tags voices with a
+  /// gender, and (via the openrouter plugin's `gender` model option) driving
+  /// the narrator phrase in the passage prefix for prompt-style models. Null
+  /// is "any / unselected".
+  VoiceGender? _voiceGender;
+
+  /// The active narrator gender, or null for "any".
+  VoiceGender? get voiceGenderFilter => _voiceGender;
+
+  set voiceGenderFilter(VoiceGender? value) {
+    if (value == _voiceGender) return;
+    _voiceGender = value;
+    _applyGenderFilter();
+    notifyListeners();
+  }
+
+  /// Whether the active model tags any of its voices with a gender (drives the
+  /// voice-picker gender control in "Model & voice").
+  bool get hasGenderTags =>
+      _voiceConfig.voices[profile.alias]?.values.any((v) => v.gender != null) ??
+      false;
+
+  /// Selectable voices for the active model, narrowed to [voiceGenderFilter].
+  /// Each entry is `(value, displayLabel)`: tagged voices get a compact
+  /// ` (m)`/` (f)`/` (n)` suffix so gender is visible in the dropdown.
+  List<(String, String)> get voiceItems => [
+    for (final e in _genderFilteredVoiceEntries(profile))
+      (
+        e.label,
+        e.gender == null ? e.label : '${e.label} (${e.gender!.shorthand})',
+      ),
+  ];
+
+  List<VoiceEntry> _genderFilteredVoiceEntries(TtsModelProfile p) {
+    final all = voiceEntries(model: p, config: _voiceConfig);
+    if (_voiceGender == null) return all;
+    // Untagged models have nothing to filter against: a gender set via a
+    // prompt-style model's option still keeps the full voice list.
+    final tagged = _voiceConfig.voices[p.alias]?.values.any(
+          (v) => v.gender != null,
+        ) ??
+        false;
+    if (!tagged) return all;
+    return [for (final e in all) if (e.gender == _voiceGender) e];
+  }
+
+  /// Applies the consequences of a narrator-gender change: for prompt-style
+  /// models rewrites the narrator phrase in [passagePrefix], and when the
+  /// model's voices are gender-tagged auto-switches the selected voice so it
+  /// matches the filter. Selecting "any" (null) reverts both effects.
+  void _applyGenderFilter() {
+    final g = _voiceGender;
+    if (g == null) {
+      _revertNarratorGenderToBaseline();
+      return;
+    }
+    _syncNarratorGenderToPrefix(g);
+    final matches = _genderFilteredVoiceEntries(profile);
+    if (matches.isEmpty) {
+      // A gender was picked but the model has no voices of that gender (a
+      // tagged model whose voices are all the other gender). Revert to "any"
+      // so the picker keeps the full list and the narrator phrase stays
+      // consistent, rather than leaving a voice hidden by an empty filter.
+      _voiceGender = null;
+      _revertNarratorGenderToBaseline();
+      return;
+    }
+    if (!matches.any((e) => e.id == _voice || e.label == _voiceLabel)) {
+      // Prefer the model default when it matches the filter, else the first
+      // matching voice — mirrors changeModel's reset-to-default semantics.
+      late final VoiceEntry pick;
+      final def = _defaultVoiceFor(profile);
+      if (def != null) {
+        final defEntry = matches.where((e) => e.id == def.$1);
+        pick = defEntry.isNotEmpty ? defEntry.first : matches.first;
+      } else {
+        pick = matches.first;
+      }
+      _voice = pick.id;
+      _voiceLabel = pick.label;
+    }
+  }
+
+  static const _genderFemalePhrase = 'female narrator';
+  static const _genderMalePhrase = 'male narrator';
+
+  /// Whether [prefix] contains the exact male-phrase form. `female narrator`
+  /// already contains `male narrator` as a substring, so a plain
+  /// [String.contains] can't tell them apart; a phrase is "male" only when the
+  /// female form isn't also present.
+  static bool _hasMaleNarratorPhrase(String prefix) =>
+      prefix.contains(_genderMalePhrase) &&
+      !prefix.contains(_genderFemalePhrase);
+
+  /// Rewrites the gendered narrator phrase in [passagePrefix] when switching
+  /// gender on a prompt-style model. Only the exact `female narrator` ↔
+  /// `male narrator` phrases are swapped — custom prefixes are left alone.
+  void _syncNarratorGenderToPrefix(VoiceGender g) {
+    if (!profile.promptStyle) return;
+    if (g == VoiceGender.male &&
+        _passagePrefix.contains(_genderFemalePhrase)) {
+      _passagePrefix = _passagePrefix.replaceAll(
+        _genderFemalePhrase,
+        _genderMalePhrase,
+      );
+    } else if (g == VoiceGender.female && _hasMaleNarratorPhrase(_passagePrefix)) {
+      _passagePrefix = _passagePrefix.replaceAll(
+        _genderMalePhrase,
+        _genderFemalePhrase,
+      );
+    }
+  }
+
+  /// Returns the narrator phrase in [passagePrefix] to its ungendered
+  /// default when the last applied switch was a prompt-style one. Only
+  /// reverts the exact `male narrator` phrase back to `female narrator`;
+  /// custom prefixes are left alone (mirrors [_syncNarratorGenderToPrefix]).
+  void _revertNarratorGenderToBaseline() {
+    if (!profile.promptStyle) return;
+    if (_hasMaleNarratorPhrase(_passagePrefix)) {
+      _passagePrefix = _passagePrefix.replaceAll(
+        _genderMalePhrase,
+        _genderFemalePhrase,
+      );
+    }
   }
 
   // --- Appearance ----------------------------------------------------
