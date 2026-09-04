@@ -262,7 +262,6 @@ class _EditorScreenState extends State<EditorScreen> {
                       ? InspectorRail(
                           key: const ValueKey('railVisible'),
                           controller: _controller,
-                          onClose: () => setState(() => _railVisible = false),
                         )
                       : const SizedBox.shrink(key: ValueKey('railHidden')),
                 ),
