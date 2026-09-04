@@ -86,6 +86,45 @@ void main() {
     });
   });
 
+  group('combinedFilePath', () {
+    test('null when no manifest exists', () {
+      expect(combinedFilePath(dir.path), isNull);
+    });
+
+    test('null when the manifest has no combined_file', () {
+      write(
+        'manifest.json',
+        utf8.encode(const JsonEncoder().convert({'format': 'mp3'})),
+      );
+      expect(combinedFilePath(dir.path), isNull);
+    });
+
+    test('null when the combined file is missing from disk', () {
+      write(
+        'manifest.json',
+        utf8.encode(
+          const JsonEncoder().convert({'combined_file': 'story_full.mp3'}),
+        ),
+      );
+      expect(combinedFilePath(dir.path), isNull);
+    });
+
+    test('returns the absolute path when the file exists', () {
+      write(
+        'manifest.json',
+        utf8.encode(
+          const JsonEncoder().convert({'combined_file': 'story_full.mp3'}),
+        ),
+      );
+      write('story_full.mp3', [9, 9]);
+      expect(combinedFilePath(dir.path), '${dir.path}/story_full.mp3');
+    });
+
+    test('null for a missing directory', () {
+      expect(combinedFilePath('${dir.path}/nope'), isNull);
+    });
+  });
+
   group('segmentCleanupAvailable / cleanupSegmentFiles', () {
     test('true only when the manifest has undeleted, present segments', () {
       write(

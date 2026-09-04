@@ -48,6 +48,21 @@ String concatSegments(
   return outputPath;
 }
 
+/// Absolute path of the combined track recorded in the run's manifest inside
+/// [outDirPath], or null when there is no manifest, no `combined_file` entry,
+/// or the file is missing from disk. Lets callers surface/persist the finished
+/// single track without re-deriving the `stem_full.ext` naming.
+String? combinedFilePath(String outDirPath) {
+  final outDir = Directory(outDirPath);
+  if (!outDir.existsSync()) return null;
+  final manifest = _readManifest(outDir);
+  if (manifest == null) return null;
+  final combined = manifest['combined_file'];
+  if (combined is! String || combined.isEmpty) return null;
+  final path = '${outDir.path}${Platform.pathSeparator}$combined';
+  return File(path).existsSync() ? path : null;
+}
+
 /// Whether [cleanupSegmentFiles] would do anything useful for [outDirPath]: a
 /// manifest with a still-present combined file exists, segments have not been
 /// deleted yet, and at least one per-segment audio file remains on disk.
