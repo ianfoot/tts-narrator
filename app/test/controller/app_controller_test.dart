@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -418,6 +419,74 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 20));
       expect(c.runStopped, isTrue);
       expect(c.completedAudioPath, isNull);
+    });
+
+    test('cancelRun makes narration idle immediately', () async {
+      final c = makeController();
+      c.setText(
+        'First paragraph with enough words to become its own segment and then '
+        'carry on a little longer to cross the minimum.\n\n'
+        'Second paragraph with enough words to become its own segment as well '
+        'and then carry on a little longer to cross the minimum.',
+      );
+      final fake = FakeTtsProvider();
+      final gate = Completer<void>();
+      fake.gate = gate;
+      fake.register();
+      c.outDir = dir.path;
+      c.startRun();
+      expect(c.narrating, isTrue);
+      // Cancel must release the controller immediately: a new run can start
+      // while the cancelled request is still unwinding, with no "already
+      // running" guard left over.
+      c.cancelRun();
+      expect(c.narrating, isFalse);
+      expect(c.narrateBlockReason(), isNull);
+      // Let the abandoned request settle and confirm the controller stays idle.
+      gate.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.narrating, isFalse);
+      expect(c.narrateBlockReason(), isNull);
+      expect(c.runStopped, isTrue);
+    });
+
+    test('a successor run is not clobbered by the cancelled predecessor',
+        () async {
+      final c = makeController();
+      c.setText(
+        'First paragraph with enough words to become its own segment on its '
+        'own, carrying straight past the minimum without needing any company '
+        'from a neighbouring paragraph. It simply keeps going until it clears '
+        'the bar here.\n\n'
+        'Second paragraph with enough words to become its own segment as well, '
+        'also carrying well past the minimum so it does not fuse with anything '
+        'around it either. It clears the bar all by itself just the same.',
+      );
+      final fake = FakeTtsProvider();
+      final gate = Completer<void>();
+      fake.gate = gate;
+      fake.register();
+      c.outDir = dir.path;
+      c.sampleLen = null;
+      // Run A: gated mid-flight, then cancelled.
+      c.startRun();
+      c.cancelRun();
+      // Run B: starts while A's request is still in flight (gate not yet
+      // released), and must finish cleanly.
+      c.startRun();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.runFinished, isTrue);
+      expect(c.narrating, isFalse);
+      // Release A's stale request; its unwind must not mark B stopped, blank
+      // its progress, or drop its combined track.
+      gate.complete();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(c.runFinished, isTrue);
+      expect(c.runStopped, isFalse);
+      expect(c.narrating, isFalse);
+      expect(c.runDoneCount, 2);
+      expect(c.runError, isNull);
+      expect(c.completedAudioPath, isNotNull);
     });
 
     test('starting a new run clears a prior completed track path', () async {

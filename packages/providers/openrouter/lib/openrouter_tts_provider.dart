@@ -9,11 +9,15 @@ const _endpoint = 'https://openrouter.ai/api/v1/audio/speech';
 /// generic [TtsProvider] interface. Owns everything OpenRouter-specific —
 /// endpoint, Bearer auth, retries, and the `X-Generation-Id` mapping.
 class OpenRouterTtsProvider implements TtsProvider {
-  OpenRouterTtsProvider({this.environment});
+  OpenRouterTtsProvider({this.environment, this.endpoint});
 
   /// Injectable env map (defaults to [Platform.environment]) so tests can run
   /// hermetic without a real API key or network access.
   final Map<String, String>? environment;
+
+  /// Injectable endpoint (defaults to the public OpenRouter speech URL) so
+  /// tests can point the provider at a local server.
+  final String? endpoint;
 
   @override
   String get id => 'openrouter';
@@ -104,8 +108,11 @@ class OpenRouterTtsProvider implements TtsProvider {
     while (true) {
       abort?.throwIfCancelled();
       attempt++;
-      final (statusCode, bytes, generationId) =
-          await _post(jsonEncode(body), key);
+      final (statusCode, bytes, generationId) = await _runAttempt(
+        body,
+        key,
+        abort: abort,
+      );
       abort?.throwIfCancelled();
       if (statusCode >= 200 && statusCode < 300) {
         if (bytes.isEmpty) {
@@ -132,18 +139,44 @@ class OpenRouterTtsProvider implements TtsProvider {
 
   static const _retries = 3;
 
+  /// Runs a single attempt at [body], normalizing a cancellation-induced
+  /// mid-request failure into [AbortException] so the run unwinds cleanly.
+  ///
+  /// A genuine [AbortException] (from a pre-cancelled token) passes through;
+  /// any I/O error raised by the force-close on cancel is reported as an
+  /// abort rather than a connection failure.
+  Future<(int, List<int>, String?)> _runAttempt(
+    Map<String, Object?> body,
+    String key, {
+    AbortToken? abort,
+  }) async {
+    try {
+      return await _post(jsonEncode(body), key, abort: abort);
+    } on AbortException {
+      rethrow;
+    } catch (_) {
+      if (abort?.cancelled == true) throw AbortException();
+      rethrow;
+    }
+  }
+
   Future<(int, List<int>, String?)> _post(
     String body,
-    String key,
-  ) async {
+    String key, {
+    AbortToken? abort,
+  }) async {
     final client = HttpClient();
+    // On cancel, force-close the live connection so the in-flight read is
+    // terminated instead of left billing a stalled response. Unsubscribed once
+    // this request settles; a later cancel of the same token (e.g. for a
+    // retry) registers a fresh hook.
+    final unsubscribe = abort?.onCancel(() => client.close(force: true));
     try {
-      final request = await client.postUrl(Uri.parse(_endpoint));
+      final request = await client.postUrl(Uri.parse(endpoint ?? _endpoint));
       request.headers.contentType = ContentType.json;
       request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $key');
       request.write(body);
       final response = await request.close();
-
       final bytes = await response.fold<List<int>>(
         <int>[],
         (acc, segment) => acc..addAll(segment),
@@ -154,6 +187,7 @@ class OpenRouterTtsProvider implements TtsProvider {
         response.headers.value('X-Generation-Id'),
       );
     } finally {
+      unsubscribe?.call();
       client.close(force: true);
     }
   }
