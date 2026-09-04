@@ -31,14 +31,19 @@ void main() {
     test('merges a short paragraph into the following long one', () {
       final segments = segmentText(
           'Alpha\n\nBeta beta beta. And more words here.', minWords: 5);
-      expect(segments, ['Alpha', 'Beta beta beta. And more words here.']);
+      expect(segments, ['Alpha Beta beta beta. And more words here.']);
     });
 
-    test('a leading short paragraph is not merged (no predecessor)', () {
-      final segments = segmentText('Alpha\n\nBeta beta beta. And more words here.',
-          minWords: 5);
-      expect(segments[0], 'Alpha');
-      expect(segments[1], 'Beta beta beta. And more words here.');
+    test('a leading short paragraph under the default keeps its minimum', () {
+      // Regression: a 14-word first paragraph must not stand alone at
+      // minWords 30; it merges with the following paragraph. Its predecessor
+      // is empty, so the only way to reach the minimum is forward glue.
+      final shortLead = List.generate(14, (i) => 'word$i').join(' ');
+      final longPar = List.generate(30, (i) => 'following$i').join(' ');
+      final segments = segmentText('$shortLead\n\n$longPar');
+      expect(segments, hasLength(1));
+      expect(segments.single.split(RegExp(r'\s+')).length, greaterThanOrEqualTo(30));
+      expect(segments.single.startsWith('word0'), isTrue);
     });
 
     test('merges a short paragraph that follows a long one', () {
@@ -48,9 +53,9 @@ void main() {
       expect(segments, ['one two three four five short', 'another long paragraph here ok']);
     });
 
-    test('consecutive short paragraphs pack into the final merge', () {
+    test('consecutive short paragraphs accumulate past the minimum', () {
       final segments = segmentText('a\n\nb\n\nc d e f g h', minWords: 3);
-      expect(segments, ['a b', 'c d e f g h']);
+      expect(segments, ['a b c d e f g h']);
     });
   });
 
