@@ -237,15 +237,6 @@ class _EditorScreenState extends State<EditorScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(child: _buildEditor()),
-                      _buildStatusBar(),
-                    ],
-                  ),
-                ),
                 AnimatedSwitcher(
                   duration: _railSlideDuration,
                   reverseDuration: _railSlideDuration,
@@ -253,7 +244,7 @@ class _EditorScreenState extends State<EditorScreen> {
                   switchOutCurve: Curves.easeInOut,
                   transitionBuilder: (child, animation) => SlideTransition(
                     position: Tween<Offset>(
-                      begin: const Offset(1, 0),
+                      begin: const Offset(-1, 0),
                       end: Offset.zero,
                     ).animate(animation),
                     child: child,
@@ -264,6 +255,15 @@ class _EditorScreenState extends State<EditorScreen> {
                           controller: _controller,
                         )
                       : const SizedBox.shrink(key: ValueKey('railHidden')),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _buildEditor()),
+                      _buildStatusBar(),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -284,6 +284,17 @@ class _EditorScreenState extends State<EditorScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         PlatformIconButton(
+          key: const Key('railToggleButton'),
+          tooltip: 'Show / hide settings',
+          icon: Icon(
+            _isMac
+                ? CupertinoIcons.sidebar_left
+                : (_railVisible ? Icons.settings : Icons.settings_outlined),
+          ),
+          onPressed: _toggleRail,
+        ),
+        const SizedBox(width: 8),
+        PlatformIconButton(
           key: const Key('editorOpenButton'),
           tooltip: 'Open text file (⌘O)',
           icon: Icon(_isMac ? CupertinoIcons.folder : Icons.folder_open),
@@ -300,17 +311,6 @@ class _EditorScreenState extends State<EditorScreen> {
     final rightZone = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        PlatformIconButton(
-          key: const Key('railToggleButton'),
-          tooltip: 'Show / hide settings',
-          icon: Icon(
-            _isMac
-                ? CupertinoIcons.sidebar_right
-                : (_railVisible ? Icons.settings : Icons.settings_outlined),
-          ),
-          onPressed: _toggleRail,
-        ),
-        const SizedBox(width: 8),
         PlatformButton(
           key: const Key('editorNarrateButton'),
           onPressed: _onNarratePressed,
