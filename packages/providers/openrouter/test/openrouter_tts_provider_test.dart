@@ -91,7 +91,11 @@ void main() {
       expect(spec.isEmpty, isFalse);
       expect(
         spec.options.map((o) => o.key),
-        ['accent', 'style', 'passagePrefix', 'useCalmTag'],
+        ['gender', 'accent', 'style', 'passagePrefix', 'useCalmTag'],
+      );
+      expect(
+        spec.options.firstWhere((o) => o.key == 'gender').type,
+        ModelUiOptionType.gender,
       );
       expect(
         spec.options.firstWhere((o) => o.key == 'passagePrefix').type,
@@ -113,7 +117,7 @@ void main() {
       );
       final spec = OpenRouterTtsProvider().modelUiSpecFor(renamed);
       expect(spec.isEmpty, isFalse);
-      expect(spec.options, hasLength(4));
+      expect(spec.options, hasLength(5));
     });
 
     test('models without prompt styling declare nothing', () {

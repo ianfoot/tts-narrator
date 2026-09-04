@@ -55,6 +55,30 @@ void main() {
       await tester.pump();
       expect(changed, 'dark');
     });
+
+    testWidgets('tapping the null-valued segment reports null', (tester) async {
+      String? changed = 'unset';
+      const items = <(String?, String)>[
+        (null, 'Any'),
+        ('female', 'Female'),
+        ('male', 'Male'),
+      ];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PlatformSegmentedControl<String?>(
+              value: 'male',
+              items: items,
+              onChanged: (v) => changed = v,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Any'));
+      await tester.pump();
+      expect(changed, isNull);
+    });
   });
 
   group('macOS', () {

@@ -195,6 +195,18 @@ Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
 Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma`
 ("Emma"); `--voice` overrides.
 
+Gender tags drive a narrator-gender filter (and, for prompt-driven models, may
+rewrite the "narrator" phrase in the passage prefix). Tagging is per-voice and
+inline: each voice in a model's `voices` block is an object with `id` and an
+optional `gender` (`male`/`female`/`neutral`) — one entry per voice, so nothing
+is repeated across blocks (`"Alice": {"id": "bf_alice", "gender": "female"}`).
+The plain string shorthand from older configs (`"Alice": "bf_alice"`) still
+loads. Configs ship with fish and kokoro tagged (fish from the curated list,
+kokoro from its `bf_*`/`bm_*` id convention); gemini's named voices carry no
+published gender signal, so its voices stay untagged — instead the openrouter
+plugin exposes a "Narrator gender" control in the rail's Model options for
+gemini (and any other prompt-styled model).
+
 Add or swap a model by adding/editing its `<alias>.json` file; it then
 becomes selectable via `--model <alias>` or the full id. Pass
 `--model <anything-else>` on the CLI to list the registered models.

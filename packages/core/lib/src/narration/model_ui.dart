@@ -9,6 +9,14 @@
 /// narration settings: `accent`, `style`, `passagePrefix`, and `useCalmTag`
 /// bind to the corresponding `NarrationConfig` fields. A model whose plugin
 /// declares no spec gets no model-option controls.
+/// Options binding conventions the app interprets (see the rail):
+///   `accent`/`style`/`passagePrefix` — editable text against the matching
+///   narration settings;
+///   `useCalmTag` — a bool toggle against the matching setting;
+///   `gender` — a narrator-gender (male/female/any) segmented control that the
+///   app wires to its voice/narrator gender state.
+///
+/// A model whose plugin declares no spec gets no model-option controls.
 class ModelUiSpec {
   const ModelUiSpec([this.options = const <ModelUiOption>[]]);
 
@@ -29,8 +37,8 @@ class ModelUiOption {
     this.hint,
   });
 
-  /// Declarative key the app binds against a narration setting
-  /// (`accent`, `style`, `passagePrefix`, `useCalmTag`).
+  /// Declarative key the app binds against a narration setting or narrator
+  /// state (`accent`, `style`, `passagePrefix`, `useCalmTag`, `gender`).
   final String key;
 
   /// User-facing label for the control.
@@ -44,4 +52,4 @@ class ModelUiOption {
 }
 
 /// How a [ModelUiOption] is edited in the GUI.
-enum ModelUiOptionType { text, multiline, bool }
+enum ModelUiOptionType { text, multiline, bool, gender }

@@ -296,7 +296,7 @@ void main() {
           ),
         },
         defaults: const {'gemini': 'Charon'},
-        aliases: const {'gemini': {'Charon': 'Charon'}},
+        voices: const {'gemini': {'Charon': Voice(id: 'Charon')}},
       );
       final out = renderVoiceListing(
         model: cfg.models['gemini'],
@@ -328,6 +328,27 @@ void main() {
         config: const VoiceConfig(),
       );
       expect(out, contains('default voice:  none configured'));
+    });
+
+    test('tags aliases with their configured gender', () {
+      final cfg = VoiceConfig(
+        voices: const {
+          'kokoro': {
+            'Emma': Voice(id: 'bf_emma', gender: VoiceGender.female),
+            'Daniel': Voice(id: 'bm_daniel', gender: VoiceGender.male),
+          },
+        },
+      );
+      final out = renderVoiceListing(
+        model: const TtsModelProfile(
+          alias: 'kokoro',
+          id: 'hexgrad/kokoro-82m',
+          format: 'mp3',
+        ),
+        config: cfg,
+      );
+      expect(out, contains('Emma → bf_emma [f]'));
+      expect(out, contains('Daniel → bm_daniel [m]'));
     });
   });
 
