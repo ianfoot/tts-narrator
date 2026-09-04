@@ -15,7 +15,7 @@ import '../platform/widgets/platform_switch.dart';
 import '../platform/widgets/platform_text_field.dart';
 import '../theme/app_tokens.dart';
 
-/// Right-side settings rail beside the editor: model & voice, styling, and run
+/// Left-side settings rail beside the editor: model & voice, styling, and run
 /// options. Every control writes straight to [AppController], which notifies
 /// the editor so the status-bar estimate stays live. The rail is hidden via the
 /// editor toolbar's toggle; narration is initiated from the toolbar, not here.
@@ -192,7 +192,7 @@ class _InspectorRailState extends State<InspectorRail> {
       width: AppMetrics.railWidth,
       decoration: BoxDecoration(
         border: Border(
-          left: BorderSide(color: _tokens.colors.borderSubtle, width: 0.5),
+          right: BorderSide(color: _tokens.colors.borderSubtle, width: 0.5),
         ),
       ),
       child: Column(
