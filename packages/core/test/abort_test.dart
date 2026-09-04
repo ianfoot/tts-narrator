@@ -29,6 +29,48 @@ void main() {
       final token = AbortToken()..cancel();
       expect(token.throwIfCancelled, throwsA(isA<AbortException>()));
     });
+
+    test('onCancel fires each registered callback once on cancel', () {
+      final token = AbortToken();
+      var first = 0;
+      var second = 0;
+      token.onCancel(() => first++);
+      token.onCancel(() => second++);
+      token.cancel();
+      expect(first, 1);
+      expect(second, 1);
+      token.cancel();
+      expect(first, 1);
+      expect(second, 1);
+    });
+
+    test('onCancel registered after cancel fires immediately', () {
+      final token = AbortToken()..cancel();
+      var fired = 0;
+      final unsubscribe = token.onCancel(() => fired++);
+      expect(fired, 1);
+      unsubscribe();
+      token.cancel();
+      expect(fired, 1);
+    });
+
+    test('unsubscribing prevents a later cancel from firing the callback', () {
+      final token = AbortToken();
+      var fired = 0;
+      final unsubscribe = token.onCancel(() => fired++);
+      unsubscribe();
+      token.cancel();
+      expect(fired, 0);
+    });
+
+    test('a throwing subscriber does not block the rest from firing', () {
+      final token = AbortToken();
+      var fired = 0;
+      token.onCancel(() => throw StateError('hook failed'));
+      token.onCancel(() => fired++);
+      token.cancel();
+      expect(fired, 1);
+    });
   });
 
   group('AbortToken in narrate', () {

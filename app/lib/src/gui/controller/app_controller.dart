@@ -507,47 +507,62 @@ class AppController extends ChangeNotifier {
 
   Future<void> _narrate(NarrationConfig config) async {
     final token = _abort!;
+    // Snapshot the segment tiles this invocation owns. A successor run
+    // reassigns the runSegments field before a cancelled predecessor unwinds,
+    // so callbacks must drive the tiles they created — never whatever run is
+    // current now.
+    final segments = runSegments;
+    bool isCurrentRun() => _abort == token;
     try {
       try {
         await narrate(
           config,
           abort: token,
           onProgress: (i, total, paragraph, {resumed = false}) {
-            runSegments[i].running = true;
+            segments[i].running = true;
             notifyListeners();
           },
           onSegmentComplete: (i, filePath, {resumed = false}) {
-            runSegments[i]
+            segments[i]
               ..running = false
               ..filePath = filePath
               ..resumed = resumed;
-            _doneCount++;
+            if (isCurrentRun()) _doneCount++;
             notifyListeners();
           },
         );
-        if (token.cancelled) {
-          _runStopped = true;
-        } else {
-          _runFinished = true;
-          _completedAudioPath = combinedFilePath(_lastRunDir!);
+        // Only the current run drives terminal state: a cancelled predecessor
+        // that settles after a successor took over must not mark the new run
+        // stopped or overwrite its completed-track path/error.
+        if (isCurrentRun()) {
+          if (token.cancelled) {
+            _runStopped = true;
+          } else {
+            _runFinished = true;
+            _completedAudioPath = combinedFilePath(_lastRunDir!);
+          }
         }
       } on AbortException {
-        _runStopped = true;
+        if (isCurrentRun()) _runStopped = true;
       } catch (e) {
         // Includes non-Exception failures (e.g. a StateError from an
         // unregistered provider) — surface them instead of crashing the view.
-        runError = e.toString();
+        if (isCurrentRun()) runError = e.toString();
       }
     } finally {
-      // Unwind unconditionally: even a non-Exception failure must not leave
-      // the controller "already running" forever. Also stop any in-flight
-      // segment spinner so the run view shows a clean stopped/failed state.
-      for (final segment in runSegments) {
+      // Unwind unconditionally: even a non-Exception failure must not leave a
+      // lingering segment spinner on the tiles this invocation owned. Post the
+      // clear even when a successor run took over — the last notify before a
+      // cancel happened before this flag flip, and the run view keeps painting
+      // this invocation's tiles until they revert.
+      for (final segment in segments) {
         segment.running = false;
       }
-      _narrating = false;
-      _abort = null;
       notifyListeners();
+      if (isCurrentRun()) {
+        _narrating = false;
+        _abort = null;
+      }
     }
   }
 
@@ -555,6 +570,14 @@ class AppController extends ChangeNotifier {
   void cancelRun() {
     if (!_narrating) return;
     _abort?.cancel();
+    // Go idle immediately so the user can start a new run while the old
+    // request unwinds; a cancelled provider's onCancel hook aborts the live
+    // call, and the narrate tail's isCurrentRun guards keep a settled zombie
+    // from clobbering a successor run's state. Until the provider's force-close
+    // lands, a zombie may still write a late segment/manifest to the shared out
+    // dir — bounded today because OpenRouter force-closes on cancel.
+    _abort = null;
+    _narrating = false;
     // Mark the run as stopped immediately so the run view flips UI without
     // waiting for the abort checkpoint; the narrate tail reconciles it too.
     _runStopped = true;
