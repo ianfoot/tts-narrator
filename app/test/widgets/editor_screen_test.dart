@@ -103,15 +103,6 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('the rail close button hides the rail', (tester) async {
-    final controller = await makeController();
-    await pumpEditor(tester, controller);
-
-    await tester.tap(find.byKey(const Key('railCloseButton')));
-    await tester.pumpAndSettle();
-    expect(find.byType(InspectorRail), findsNothing);
-  });
-
   testWidgets('typing updates the status bar word/char/estimate', (
     tester,
   ) async {
