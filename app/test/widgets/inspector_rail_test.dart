@@ -93,7 +93,6 @@ void main() {
       expect(find.byKey(const Key('sampleSwitch')), findsOneWidget);
       expect(find.byKey(const Key('outDirPickerButton')), findsOneWidget);
       expect(find.byKey(const Key('resumeSwitch')), findsOneWidget);
-      expect(find.byKey(const Key('railCloseButton')), findsOneWidget);
       // The default fish model's plugin declares no model options, so no
       // styling-only controls (the gemini-only ones) render for it.
       expect(find.text('MODEL OPTIONS'), findsNothing);
@@ -560,28 +559,6 @@ void main() {
       expect(tester.takeException(), isNull);
 
       debugDefaultTargetPlatformOverride = null;
-    });
-  });
-
-  group('close', () {
-    testWidgets('the close button reports hide to its caller', (tester) async {
-      writeConfig({});
-      final c = makeController();
-      var closed = false;
-      await tester.binding.setSurfaceSize(const Size(1200, 1800));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: InspectorRail(controller: c, onClose: () => closed = true),
-          ),
-        ),
-      );
-
-      await tester.tap(find.byKey(const Key('railCloseButton')));
-      await tester.pump();
-
-      expect(closed, isTrue);
     });
   });
 }

@@ -17,21 +17,16 @@ import '../theme/app_tokens.dart';
 
 /// Right-side settings rail beside the editor: model & voice, styling, and run
 /// options. Every control writes straight to [AppController], which notifies
-/// the editor so the status-bar estimate stays live. [onClose] hides the rail
-/// (wired by the editor's toggle). Narration is initiated from the editor
-/// toolbar, not the rail.
+/// the editor so the status-bar estimate stays live. The rail is hidden via the
+/// editor toolbar's toggle; narration is initiated from the toolbar, not here.
 class InspectorRail extends StatefulWidget {
   const InspectorRail({
     super.key,
     required this.controller,
-    this.onClose,
     this.pickDirectory,
   });
 
   final AppController controller;
-
-  /// Called when the user taps the collapse control at the top of the rail.
-  final VoidCallback? onClose;
 
   /// Opens the native directory picker for the output destination; returns
   /// the chosen path or null when cancelled. Injectable so tests can fake
@@ -235,25 +230,11 @@ class _InspectorRailState extends State<InspectorRail> {
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Settings',
-              style: _tokens.typography.headerSemibold.copyWith(
-                color: _tokens.colors.accentPrimary,
-              ),
-            ),
-          ),
-          PlatformIconButton(
-            key: const Key('railCloseButton'),
-            tooltip: 'Hide settings',
-            icon: Icon(
-              _isMac ? CupertinoIcons.sidebar_right : Icons.settings_overscan,
-            ),
-            onPressed: widget.onClose,
-          ),
-        ],
+      child: Text(
+        'Settings',
+        style: _tokens.typography.headerSemibold.copyWith(
+          color: _tokens.colors.accentPrimary,
+        ),
       ),
     );
   }
