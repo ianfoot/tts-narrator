@@ -20,10 +20,13 @@ const _maxSegmentLength = 4000;
 /// Segments source text into narration units.
 ///
 /// Paragraphs are split on blank lines. A paragraph shorter than
-/// [minWords] words is merged into the following paragraph so tiny
-/// fragments don't get an isolated reading. Any resulting paragraph longer
-/// than [maxSegmentLength] chars is further split at sentence boundaries.
-/// Returns non-empty, trimmed segments.
+/// [minWords] words is merged with a neighbour so tiny fragments don't get an
+/// isolated reading: a short paragraph accumulates into the following
+/// paragraph (a leading fragment has nowhere to glue to but forward), and the
+/// merged unit keeps growing until it holds at least [minWords] words. A
+/// trailing fragment with no following paragraph is kept as-is. Any resulting
+/// paragraph longer than [maxSegmentLength] chars is further split at sentence
+/// boundaries. Returns non-empty, trimmed segments.
 List<String> segmentText(String text, {int minWords = 30}) {
   final raw = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
   final paragraphs = raw
@@ -34,10 +37,12 @@ List<String> segmentText(String text, {int minWords = 30}) {
 
   final merged = <String>[];
   final buffer = StringBuffer();
+  var bufferWords = 0;
   for (final paragraph in paragraphs) {
     final words = paragraph.split(RegExp(r'\s+')).length;
-    if (buffer.isNotEmpty && words < minWords) {
+    if (buffer.isNotEmpty && (bufferWords < minWords || words < minWords)) {
       buffer.write(' $paragraph');
+      bufferWords += words;
     } else {
       if (buffer.isNotEmpty) {
         merged.add(buffer.toString());
@@ -45,6 +50,7 @@ List<String> segmentText(String text, {int minWords = 30}) {
       buffer
         ..clear()
         ..write(paragraph);
+      bufferWords = words;
     }
   }
   if (buffer.isNotEmpty) {
