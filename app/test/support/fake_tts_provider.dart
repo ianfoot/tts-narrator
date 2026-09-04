@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 /// Simplest fake provider: registers under the `openrouter` id so narration
@@ -42,6 +44,14 @@ class FakeTtsProvider implements TtsProvider {
     AbortToken? abort,
   }) async {
     abort?.throwIfCancelled();
+    final currentGate = gate;
+    gate = null;
+    if (currentGate != null) {
+      // Hold the call open so tests can cancel mid-flight; release it later
+      // to let the request settle.
+      await currentGate.future;
+      abort?.throwIfCancelled();
+    }
     calls.add((
       model: model,
       voice: voice,
@@ -50,6 +60,11 @@ class FakeTtsProvider implements TtsProvider {
     ));
     return ProviderAudio(bytes: bytes);
   }
+
+  /// When non-null, the next [synthesize] awaits it before returning (one-shot:
+  /// cleared after the gate consumes it). Lets tests suspend a run mid-flight,
+  /// cancel it, start a successor, then release the gate.
+  Completer<void>? gate;
 
   /// Registers this instance with the shared registry under `openrouter`
   /// (like `main.dart` does), so `narrate` finds it without real credentials.

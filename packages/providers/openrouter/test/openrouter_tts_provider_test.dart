@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
@@ -19,6 +22,34 @@ void main() {
         ),
         throwsA(isA<AbortException>()),
       );
+    });
+
+    test('cancelling while a request is in flight aborts the live HTTP call',
+        () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final requestArrived = Completer<void>();
+      final serverDone = server.listen((request) {
+        // Never respond: hold the connection open until the client aborts.
+        requestArrived.complete();
+      });
+      final token = AbortToken();
+      final provider = OpenRouterTtsProvider(
+        environment: const {},
+        endpoint: 'http://${server.address.address}:${server.port}',
+      );
+      final future = provider.synthesize(
+        model: 'test/model',
+        voice: null,
+        responseFormat: 'mp3',
+        input: 'hello',
+        settings: const {'api_key': 'sk-test'},
+        abort: token,
+      );
+      await requestArrived.future;
+      token.cancel();
+      await expectLater(future, throwsA(isA<AbortException>()));
+      await serverDone.cancel();
+      await server.close(force: true);
     });
   });
 
