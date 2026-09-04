@@ -724,6 +724,11 @@ class AppController extends ChangeNotifier {
   VoidCallback? onCancel;
   VoidCallback? onPreferences;
 
+  /// Invoked to choose the output folder (opened from the native menu bar or
+  /// an in-app shortcut). Wired by the platform shell; the menu item and any
+  /// key binding dispatch here.
+  VoidCallback? onSetOutputFolder;
+
   /// Returns null when narration may start, otherwise the reason it is
   /// blocked (empty text / already running). The Narrate entrypoints guard on
   /// this before dispatching to [onNarrate].

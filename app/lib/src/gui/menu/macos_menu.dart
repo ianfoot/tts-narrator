@@ -81,6 +81,11 @@ PlatformMenu _fileMenu(
         onSelected: () => controller.onOpen?.call(),
       ),
       PlatformMenuItem(
+        label: 'Output Folder…',
+        shortcut: const SingleActivator(LogicalKeyboardKey.keyE, meta: true),
+        onSelected: () => controller.onSetOutputFolder?.call(),
+      ),
+      PlatformMenuItem(
         label: 'Narrate',
         shortcut: const SingleActivator(LogicalKeyboardKey.keyN, meta: true),
         onSelected: () {

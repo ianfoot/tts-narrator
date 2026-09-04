@@ -90,7 +90,6 @@ void main() {
       expect(find.byKey(const Key('minWordsSlider')), findsOneWidget);
       expect(find.byKey(const Key('minWordsBadge')), findsOneWidget);
       expect(find.byKey(const Key('sampleSwitch')), findsOneWidget);
-      expect(find.byKey(const Key('outDirPickerButton')), findsOneWidget);
       expect(find.byKey(const Key('resumeSwitch')), findsOneWidget);
       // The default fish model's plugin declares no model options, so no
       // styling-only controls (the gemini-only ones) render for it.
@@ -537,31 +536,6 @@ void main() {
       await tester.enterText(field, '7');
       await tester.pump();
       expect(c.sampleLen, 7);
-    });
-
-    testWidgets('the folder picker writes the chosen directory', (
-      tester,
-    ) async {
-      writeConfig({});
-      final c = makeController();
-      await tester.binding.setSurfaceSize(const Size(1200, 1800));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: InspectorRail(
-              controller: c,
-              pickDirectory: () async => '/picked/audio',
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.byKey(const Key('outDirPickerButton')));
-      await tester.pumpAndSettle();
-
-      expect(c.outDir, '/picked/audio');
-      expect(find.text('/picked/audio'), findsOneWidget);
     });
 
     testWidgets('the resume switch writes through', (tester) async {

@@ -35,11 +35,17 @@ void main() {
     return AppController(loader: VoiceConfigLoader(configDir: configDir));
   }
 
-  Future<void> pumpEditor(WidgetTester tester, AppController controller) async {
+  Future<void> pumpEditor(
+    WidgetTester tester,
+    AppController controller, {
+    Future<String?> Function()? pickDirectory,
+  }) async {
     await tester.binding.setSurfaceSize(const Size(1000, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      MaterialApp(home: EditorScreen(controller: controller)),
+      MaterialApp(
+        home: EditorScreen(controller: controller, pickDirectory: pickDirectory),
+      ),
     );
   }
 
@@ -62,7 +68,7 @@ void main() {
     // Narrate button of its own.
     expect(find.byKey(const Key('railNarrateButton')), findsNothing);
     expect(find.byKey(const Key('railToggleButton')), findsOneWidget);
-    expect(find.text('⌘O'), findsOneWidget);
+    expect(find.byTooltip('Open text file (⌘O)'), findsOneWidget);
     expect(find.text('⌘N'), findsOneWidget);
   });
 
@@ -365,6 +371,48 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+  });
+
+  group('output folder', () {
+    testWidgets('shows the output-folder button with a tooltip', (
+      tester,
+    ) async {
+      final controller = await makeController();
+      await pumpEditor(tester, controller);
+
+      expect(find.byKey(const Key('outDirPickerButton')), findsOneWidget);
+      expect(find.byTooltip('Set output folder (⌘E)'), findsOneWidget);
+    });
+
+    testWidgets('tapping writes the chosen directory', (tester) async {
+      final controller = await makeController();
+      await pumpEditor(
+        tester,
+        controller,
+        pickDirectory: () async => '/picked/audio',
+      );
+
+      await tester.tap(find.byKey(const Key('outDirPickerButton')));
+      await tester.pump();
+
+      expect(controller.outDir, '/picked/audio');
+    });
+
+    testWidgets('cancelling the picker leaves the directory unchanged', (
+      tester,
+    ) async {
+      final controller = await makeController();
+      await pumpEditor(
+        tester,
+        controller,
+        pickDirectory: () async => null,
+      );
+
+      await tester.tap(find.byKey(const Key('outDirPickerButton')));
+      await tester.pump();
+
+      expect(controller.outDir, 'output');
     });
   });
 }
