@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'config_loader.dart';
@@ -15,14 +16,25 @@ import '../theme/app_tokens.dart' show AppThemeMode;
 /// here and subscribes via [ChangeNotifier]. Model/voice handling reuses the
 /// core's config resolution so the GUI and CLI agree on defaults.
 class AppController extends ChangeNotifier {
-  AppController({VoiceConfigLoader? loader})
-    : _loader = loader ?? VoiceConfigLoader() {
+  AppController({VoiceConfigLoader? loader, SharedPreferences? prefs})
+    : _prefs = prefs,
+      _loader = loader ?? VoiceConfigLoader() {
     _voiceConfig = _loader.load();
     _modelAlias = defaultModelFor(_voiceConfig).alias;
     final def = _defaultVoiceFor(profile);
     _voice = def?.$1 ?? kDefaultProfile.voice;
     _voiceLabel = def?.$2;
+    final savedOutDir = prefs?.getString(_outDirPrefsKey);
+    if (savedOutDir != null && savedOutDir.trim().isNotEmpty) {
+      _outDir = savedOutDir;
+    }
   }
+
+  /// Preferences key holding the last output folder the user picked.
+  static const _outDirPrefsKey = 'outDir';
+
+  /// The persistent preference store; null when the host has none (tests).
+  final SharedPreferences? _prefs;
 
   final VoiceConfigLoader _loader;
 
@@ -317,6 +329,7 @@ class AppController extends ChangeNotifier {
     if (value == _outDir) return;
     _outDir = value;
     notifyListeners();
+    _prefs?.setString(_outDirPrefsKey, value);
   }
 
   bool get resume => _resume;

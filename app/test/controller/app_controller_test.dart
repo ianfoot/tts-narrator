@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
@@ -852,6 +853,49 @@ void main() {
       expect(c.sampleLen, 4);
       c.sampleLen = null;
       expect(c.sampleLen, isNull);
+    });
+  });
+
+  group('output folder persistence', () {
+    test('loads a previously saved output folder on construction', () async {
+      SharedPreferences.setMockInitialValues({'outDir': '/tmp/saved'});
+      final prefs = await SharedPreferences.getInstance();
+      final c = AppController(
+        loader: VoiceConfigLoader(configDir: configDir),
+        prefs: prefs,
+      );
+      expect(c.outDir, '/tmp/saved');
+    });
+
+    test('persists an output folder change to the preference store', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final prefs = await SharedPreferences.getInstance();
+      final c = AppController(
+        loader: VoiceConfigLoader(configDir: configDir),
+        prefs: prefs,
+      );
+      c.outDir = '/tmp/picked';
+      expect(prefs.getString('outDir'), '/tmp/picked');
+    });
+
+    test('falls back to the default when no folder is saved', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final prefs = await SharedPreferences.getInstance();
+      final c = AppController(
+        loader: VoiceConfigLoader(configDir: configDir),
+        prefs: prefs,
+      );
+      expect(c.outDir, 'output');
+    });
+
+    test('falls back to the default when the saved value is empty', () async {
+      SharedPreferences.setMockInitialValues({'outDir': ''});
+      final prefs = await SharedPreferences.getInstance();
+      final c = AppController(
+        loader: VoiceConfigLoader(configDir: configDir),
+        prefs: prefs,
+      );
+      expect(c.outDir, 'output');
     });
   });
 }

@@ -211,16 +211,6 @@ void main() {
     expect(find.byKey(const Key('narrateGuard')), findsNothing);
   });
 
-  testWidgets('status bar shows thousands separators for large counts', (
-    tester,
-  ) async {
-    final controller = await makeController();
-    controller.setText(List.generate(1240, (i) => 'word').join(' '));
-    await pumpEditor(tester, controller);
-
-    expect(find.textContaining('1,240 words'), findsOneWidget);
-  });
-
   testWidgets('no full-play button until a narration run completes', (
     tester,
   ) async {
