@@ -13,7 +13,7 @@ import '../platform/platform_page.dart';
 import '../platform/widgets/platform_button.dart';
 import '../platform/widgets/platform_icon_button.dart';
 import '../platform/widgets/platform_text_field.dart';
-import '../settings/inspector_rail.dart';
+import '../settings/settings_panel.dart';
 import '../theme/app_tokens.dart';
 
 /// Editor-first home screen (JSON UI Schema `header_toolbar` /
@@ -319,7 +319,7 @@ class _EditorScreenState extends State<EditorScreen> {
                     child: child,
                   ),
                   child: _railVisible
-                      ? InspectorRail(
+                      ? SettingsPanel(
                           key: const ValueKey('railVisible'),
                           controller: _controller,
                         )

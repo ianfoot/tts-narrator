@@ -10,7 +10,7 @@ import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_text_field.dart';
-import 'package:tts_narrator/src/gui/settings/inspector_rail.dart';
+import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
@@ -78,15 +78,15 @@ void main() {
     final controller = await makeController();
     await pumpEditor(tester, controller);
 
-    expect(find.byType(InspectorRail), findsOneWidget);
+    expect(find.byType(SettingsPanel), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('railToggleButton')));
     await tester.pumpAndSettle();
-    expect(find.byType(InspectorRail), findsNothing);
+    expect(find.byType(SettingsPanel), findsNothing);
 
     await tester.tap(find.byKey(const Key('railToggleButton')));
     await tester.pumpAndSettle();
-    expect(find.byType(InspectorRail), findsOneWidget);
+    expect(find.byType(SettingsPanel), findsOneWidget);
   });
 
   testWidgets('macOS editor text is top-aligned in the expanding field', (
