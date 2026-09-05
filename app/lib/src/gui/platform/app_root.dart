@@ -38,6 +38,8 @@ class _AppRootState extends State<AppRoot> {
     widget.controller.onNarrate = _startNarration;
     widget.controller.onCancel = () => widget.controller.cancelRun();
     widget.controller.onSetOutputFolder = widget.controller.pickOutputFolder;
+    widget.controller.onToggleSettingsPanel =
+        widget.controller.toggleSettingsPanel;
     widget.controller.saveLocationPicker = _pickSaveLocation;
     // Follow the system appearance live (CupertinoApp has no darkTheme/
     // themeMode, so the theme is rebuilt when the platform brightness flips).
@@ -55,6 +57,7 @@ class _AppRootState extends State<AppRoot> {
     widget.controller.onNarrate = null;
     widget.controller.onCancel = null;
     widget.controller.onSetOutputFolder = null;
+    widget.controller.onToggleSettingsPanel = null;
     widget.controller.saveLocationPicker = null;
     super.dispose();
   }

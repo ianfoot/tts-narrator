@@ -112,6 +112,23 @@ void main() {
     expect(find.byType(SettingsPanel), findsOneWidget);
   });
 
+  testWidgets('a controller-driven panel toggle hides and restores the rail', (
+    tester,
+  ) async {
+    final controller = await makeController();
+    await pumpEditor(tester, controller);
+
+    expect(find.byType(SettingsPanel), findsOneWidget);
+
+    controller.toggleSettingsPanel();
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsPanel), findsNothing);
+
+    controller.toggleSettingsPanel();
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsPanel), findsOneWidget);
+  });
+
   testWidgets('macOS editor text is top-aligned in the expanding field', (
     tester,
   ) async {

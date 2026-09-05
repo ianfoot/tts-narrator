@@ -9,6 +9,7 @@ import 'package:tts_narrator/src/gui/editor/editor_toolbar.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 
 import '../support/fake_tts_provider.dart';
+import '../support/recording_cleanup_controller.dart';
 
 void main() {
   late Directory dir;
@@ -35,6 +36,7 @@ void main() {
     bool playingFull = false,
     VoidCallback? onTogglePlayFull,
     void Function(String)? onShowGuard,
+    VoidCallback? onCleanupSegments,
   }) async {
     await tester.binding.setSurfaceSize(const Size(1200, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -49,6 +51,7 @@ void main() {
             playingFull: playingFull,
             onTogglePlayFull: onTogglePlayFull,
             onShowGuard: onShowGuard,
+            onCleanupSegments: onCleanupSegments,
           ),
         ),
       ),
@@ -198,6 +201,35 @@ void main() {
     });
   });
 
+  group('save button', () {
+    testWidgets('is disabled until the document is dirty', (tester) async {
+      final controller = makeController();
+      await pumpToolbar(tester, controller);
+      final button = tester.widget<IconButton>(
+        find.descendant(
+          of: find.byKey(const Key('editorSaveButton')),
+          matching: find.byType(IconButton),
+        ),
+      );
+      expect(button.onPressed, isNull);
+    });
+
+    testWidgets('saving a dirty document clears the dirty flag', (
+      tester,
+    ) async {
+      final controller = makeController();
+      final savedPath = '${dir.path}/doc.txt';
+      controller.saveLocationPicker = () async => savedPath;
+      controller.setText('Some text worth saving.');
+      await pumpToolbar(tester, controller);
+
+      await tester.tap(find.byKey(const Key('editorSaveButton')));
+      await tester.pump();
+      expect(File(savedPath).existsSync(), isTrue);
+      expect(controller.dirty, isFalse);
+    });
+  });
+
   group('full-play button', () {
     testWidgets('no full-play button until a narration run completes', (
       tester,
@@ -239,6 +271,58 @@ void main() {
       });
       await pumpToolbar(tester, controller);
       expect(find.byKey(const Key('editorFullPlayButton')), findsNothing);
+    });
+  });
+
+  group('clean-up button', () {
+    testWidgets('is absent until a run leaves cleanable segments', (
+      tester,
+    ) async {
+      final controller = RecordingCleanupController();
+      await pumpToolbar(tester, controller);
+      expect(find.byKey(const Key('editorCleanupButton')), findsNothing);
+    });
+
+    testWidgets('appears once a finished run has cleanable segments', (
+      tester,
+    ) async {
+      final controller = RecordingCleanupController()
+        ..cleanupUsable = true
+        ..runDir = 'the run dir';
+      await pumpToolbar(tester, controller);
+      expect(find.byKey(const Key('editorCleanupButton')), findsOneWidget);
+      expect(find.byTooltip('Clean up segments'), findsOneWidget);
+    });
+
+    testWidgets('hides again when cleanup is no longer available', (
+      tester,
+    ) async {
+      final controller = RecordingCleanupController()
+        ..cleanupUsable = true
+        ..runDir = 'the run dir';
+      await pumpToolbar(tester, controller);
+      expect(find.byKey(const Key('editorCleanupButton')), findsOneWidget);
+
+      controller
+        ..cleanupUsable = false
+        ..runDir = null;
+      controller.notifyListeners();
+      await tester.pump();
+      expect(find.byKey(const Key('editorCleanupButton')), findsNothing);
+    });
+
+    testWidgets('tapping dispatches to onCleanupSegments', (tester) async {
+      final controller = RecordingCleanupController()
+        ..cleanupUsable = true
+        ..runDir = 'the run dir';
+      var cleaned = false;
+      await pumpToolbar(
+        tester,
+        controller,
+        onCleanupSegments: () => cleaned = true,
+      );
+      await tester.tap(find.byKey(const Key('editorCleanupButton')));
+      expect(cleaned, isTrue);
     });
   });
 }
