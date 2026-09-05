@@ -9,7 +9,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
-import 'package:tts_narrator/src/gui/settings/inspector_rail.dart';
+import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_segmented.dart';
 import '../support/fake_tts_provider.dart';
 
@@ -18,7 +18,7 @@ void main() {
   late String configDir;
 
   setUp(() {
-    dir = Directory.systemTemp.createTempSync('tts_inspector_rail_');
+    dir = Directory.systemTemp.createTempSync('tts_settings_panel_');
     configDir = '${dir.path}/cfg';
   });
 
@@ -67,7 +67,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: InspectorRail(controller: controller)),
+        home: Scaffold(body: SettingsPanel(controller: controller)),
       ),
     );
   }
@@ -80,7 +80,7 @@ void main() {
       final c = makeController();
       await pumpRail(tester, c);
 
-      expect(find.byKey(const Key('inspectorRail')), findsOneWidget);
+      expect(find.byKey(const Key('settingsPanel')), findsOneWidget);
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
       expect(find.byKey(const Key('voiceDropdown')), findsOneWidget);
       expect(find.byKey(const Key('voiceAdvancedDisclosure')), findsOneWidget);
@@ -589,10 +589,10 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1200, 1800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(
-        CupertinoApp(home: InspectorRail(controller: c)),
+        CupertinoApp(home: SettingsPanel(controller: c)),
       );
 
-      expect(find.byKey(const Key('inspectorRail')), findsOneWidget);
+      expect(find.byKey(const Key('settingsPanel')), findsOneWidget);
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
       // The default fish model declares no options -> no styling-only controls.
       expect(find.byKey(const Key('useCalmTagSwitch')), findsNothing);

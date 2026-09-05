@@ -16,8 +16,8 @@ import '../theme/app_tokens.dart';
 /// options. Every control writes straight to [AppController], which notifies
 /// the editor so the status-bar estimate stays live. The rail is hidden via the
 /// editor toolbar's toggle; narration is initiated from the toolbar, not here.
-class InspectorRail extends StatefulWidget {
-  const InspectorRail({
+class SettingsPanel extends StatefulWidget {
+  const SettingsPanel({
     super.key,
     required this.controller,
   });
@@ -25,10 +25,10 @@ class InspectorRail extends StatefulWidget {
   final AppController controller;
 
   @override
-  State<InspectorRail> createState() => _InspectorRailState();
+  State<SettingsPanel> createState() => _SettingsPanelState();
 }
 
-class _InspectorRailState extends State<InspectorRail> {
+class _SettingsPanelState extends State<SettingsPanel> {
   late final TextEditingController _voiceRaw;
   late final TextEditingController _accent;
   late final TextEditingController _style;
@@ -164,7 +164,7 @@ class _InspectorRailState extends State<InspectorRail> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      key: const Key('inspectorRail'),
+      key: const Key('settingsPanel'),
       width: AppMetrics.railWidth,
       decoration: BoxDecoration(
         border: Border(
