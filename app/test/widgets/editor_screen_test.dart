@@ -95,6 +95,61 @@ void main() {
     expect(estimateRight.dx, closeTo(barRect.right - 16 - 4, 1));
   });
 
+  testWidgets('status bar shows the default output folder verbatim', (
+    tester,
+  ) async {
+    final controller = await makeController();
+    await pumpEditor(tester, controller);
+    await tester.pumpAndSettle();
+
+    expect(
+      (tester.widget<Text>(find.byKey(const Key('statusOutDir')))).data,
+      'output',
+    );
+  });
+
+  testWidgets(
+    'status bar shows the full output folder path when it fits the slot',
+    (tester) async {
+      final controller = await makeController();
+      final dir = Directory.systemTemp.createTempSync('tts_status_outdir_');
+      addTearDown(() {
+        if (dir.existsSync()) dir.deleteSync(recursive: true);
+      });
+      const longPath = '/deep/folder';
+      controller.outDir = longPath;
+      await pumpEditor(tester, controller);
+      await tester.pumpAndSettle();
+
+      final text = (tester.widget<Text>(
+        find.byKey(const Key('statusOutDir')),
+      )).data;
+      expect(text, longPath);
+    },
+  );
+
+  testWidgets(
+    'status bar left-truncates a long output folder path on a narrow window',
+    (tester) async {
+      final controller = await makeController();
+      const longPath = '/a/very/long/prefix/that/will/not/fit/at/any/window/width/finalLeaf';
+      controller.outDir = longPath;
+      await pumpEditor(tester, controller);
+      await tester.pumpAndSettle();
+
+      final widget = tester.widget<Text>(
+        find.byKey(const Key('statusOutDir')),
+      );
+      final rendered = widget.data!;
+      // The leaf folder name survives the truncation.
+      expect(rendered.endsWith('finalLeaf'), isTrue);
+      // A leading ellipsis marks the truncation.
+      expect(rendered.startsWith('\u2026'), isTrue);
+      // The full path was shortened.
+      expect(rendered.length, lessThan(longPath.length));
+    },
+  );
+
   testWidgets('the settings rail is visible by default and toggles away', (
     tester,
   ) async {

@@ -255,9 +255,7 @@ class _EditorScreenState extends State<EditorScreen> {
       height: AppMetrics.statusBarHeight,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: colors.borderSubtle, width: 0.5),
-        ),
+        border: Border(top: BorderSide(color: colors.borderSubtle, width: 0.5)),
       ),
       child: Row(
         children: [
@@ -274,6 +272,29 @@ class _EditorScreenState extends State<EditorScreen> {
                   color: colors.textSecondary,
                 ),
               ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final monoStyle = _tokens.typography.mono.copyWith(
+                  color: colors.textSecondary,
+                );
+                final text = _leftTruncate(
+                  _controller.outDir,
+                  monoStyle,
+                  constraints.maxWidth,
+                );
+                return Text(
+                  text,
+                  key: const Key('statusOutDir'),
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.clip,
+                  style: monoStyle,
+                );
+              },
             ),
           ),
           const SizedBox(width: 12),
@@ -303,6 +324,28 @@ class _EditorScreenState extends State<EditorScreen> {
     );
   }
 
+  /// Returns [s] left-truncated with a leading ellipsis if it would not
+  /// fit within [maxWidth] when rendered with [style]. The leaf (rightmost
+  /// part) is preserved, so the actual folder name stays visible when the
+  /// full path is too long for the status bar slot.
+  String _leftTruncate(String s, TextStyle style, double maxWidth) {
+    if (maxWidth <= 0 || s.isEmpty) return s;
+    final tp = TextPainter(
+      text: TextSpan(text: s, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout(maxWidth: double.infinity);
+    if (tp.width <= maxWidth) return s;
+    const ellipsis = '\u2026';
+    for (var i = 1; i < s.length; i++) {
+      final candidate = '$ellipsis${s.substring(i)}';
+      tp.text = TextSpan(text: candidate, style: style);
+      tp.layout(maxWidth: double.infinity);
+      if (tp.width <= maxWidth) return candidate;
+    }
+    return ellipsis;
+  }
+
   /// Thousands separators, e.g. 1240 -> "1,240".
   String _formatCount(int value) {
     final s = value.toString();
@@ -329,9 +372,7 @@ class _EditorScreenState extends State<EditorScreen> {
       child: Row(
         children: [
           Icon(
-            _isMac
-                ? CupertinoIcons.exclamationmark_triangle
-                : Icons.warning,
+            _isMac ? CupertinoIcons.exclamationmark_triangle : Icons.warning,
             size: 14,
             color: foreground,
           ),
@@ -358,7 +399,7 @@ class _EditorScreenState extends State<EditorScreen> {
       color: background,
       child: Text(
         warnings.join('\n'),
-        key:  const Key('configWarningsMessage'),
+        key: const Key('configWarningsMessage'),
         style: _tokens.typography.body.copyWith(color: foreground),
       ),
     );
