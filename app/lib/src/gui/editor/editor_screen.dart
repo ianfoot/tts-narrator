@@ -10,11 +10,11 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
 import '../platform/platform_page.dart';
-import '../platform/widgets/platform_button.dart';
-import '../platform/widgets/platform_icon_button.dart';
+
 import '../platform/widgets/platform_text_field.dart';
 import '../settings/settings_panel.dart';
 import '../theme/app_tokens.dart';
+import 'editor_toolbar.dart';
 
 /// Editor-first home screen (JSON UI Schema `header_toolbar` /
 /// `editor_surface` / `status_bar`): a fixed toolbar with the document title,
@@ -38,7 +38,6 @@ class EditorScreen extends StatefulWidget {
 }
 
 class _EditorScreenState extends State<EditorScreen> {
-  static const _guardDuration = Duration(milliseconds: 3500);
   static const _bannerDuration = Duration(milliseconds: 150);
   static const _tickerDuration = Duration(milliseconds: 100);
   static const _railSlideDuration = Duration(milliseconds: 200);
@@ -132,142 +131,12 @@ class _EditorScreenState extends State<EditorScreen> {
     if (mounted) setState(() => _playingFull = true);
   }
 
-  /// Compact `▶ Play Full` / `⏹ Stop` toggle for the completed combined track,
-  /// shown only while a finished run's audio file is on disk.
-  Widget _buildFullPlayButton() {
-    final colors = _tokens.colors;
-    final label = _playingFull ? 'Stop' : 'Play Full';
-    final icon = Icon(
-      _isMac
-          ? (_playingFull ? CupertinoIcons.stop_circle : CupertinoIcons.play_fill)
-          : (_playingFull ? Icons.stop_circle_outlined : Icons.play_arrow),
-      size: 14,
-      color: colors.textPrimary,
-    );
-    final Widget button;
-    if (_isMac) {
-      button = CupertinoButton(
-        key: const Key('editorFullPlayButton'),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        onPressed: _togglePlayFull,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            border: Border.all(color: colors.borderSubtle, width: 0.8),
-            borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
-          ),
-          child: DefaultTextStyle(
-            style: _tokens.typography.caption.copyWith(
-              color: colors.textPrimary,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [icon, const SizedBox(width: 4), Text(label)],
-            ),
-          ),
-        ),
-      );
-    } else {
-      button = OutlinedButton.icon(
-        key: const Key('editorFullPlayButton'),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          minimumSize: const Size(0, 0),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          visualDensity: VisualDensity.compact,
-        ),
-        onPressed: _togglePlayFull,
-        icon: icon,
-        label: Text(
-          label,
-          style: _tokens.typography.caption.copyWith(color: colors.textPrimary),
-        ),
-      );
-    }
-    return button;
-  }
-
-  void _onOpenPressed() => _controller.onOpen?.call();
-
-  void _onNarratePressed() {
-    final reason = _controller.narrateBlockReason();
-    if (reason != null) {
-      _showGuard(reason);
-      return;
-    }
-    // Dispatch through the Narrate slot (AppRoot navigates to the run view).
-    _controller.onNarrate?.call();
-  }
-
   void _toggleRail() => setState(() => _railVisible = !_railVisible);
-
-  /// Opens the native directory picker for the output destination; leaves the
-  /// current directory unchanged when cancelled or on a platform error.
-  Future<void> _pickOutputDirectory() async {
-    try {
-      final path =
-          await (widget.pickDirectory ??
-              () => getDirectoryPath(initialDirectory: _controller.outDir))();
-      if (path == null) return;
-      _controller.outDir = path;
-    } catch (_) {
-      // The native picker can surface a platform error; keep the current
-      // output directory rather than crashing the toolbar.
-    }
-  }
-
-  /// Toolbar button showing the current output directory; tapping opens the
-  /// directory picker.
-  Widget _buildOutputFolderButton() {
-    return PlatformIconButton(
-      key: const Key('outDirPickerButton'),
-      tooltip: 'Set output folder (⌘E)',
-      icon: Icon(
-        _isMac ? CupertinoIcons.folder_badge_plus : Icons.output,
-      ),
-      onPressed: _pickOutputDirectory,
-    );
-  }
-
-  /// Cycles the appearance system -> light -> dark -> system.
-  void _cycleThemeMode() {
-    _controller.themeMode = switch (_controller.themeMode) {
-      AppThemeMode.system => AppThemeMode.light,
-      AppThemeMode.light => AppThemeMode.dark,
-      AppThemeMode.dark => AppThemeMode.system,
-    };
-  }
-
-  /// Friendly label for the appearance tooltip.
-  String _themeModeLabel(AppThemeMode mode) => switch (mode) {
-        AppThemeMode.system => 'Auto',
-        AppThemeMode.light => 'Light',
-        AppThemeMode.dark => 'Dark',
-      };
-
-  /// Toolbar button showing the current appearance; tapping cycles it.
-  Widget _buildAppearanceButton() {
-    final mode = _controller.themeMode;
-    return PlatformIconButton(
-      key: const Key('appearanceToggleButton'),
-      tooltip: 'Appearance: ${_themeModeLabel(mode)}',
-      icon: Icon(
-        switch (mode) {
-          AppThemeMode.light => _isMac ? CupertinoIcons.sun_max : Icons.light_mode,
-          AppThemeMode.dark => _isMac ? CupertinoIcons.moon : Icons.dark_mode,
-          AppThemeMode.system => _isMac
-              ? CupertinoIcons.circle_lefthalf_fill
-              : Icons.brightness_auto,
-        },
-      ),
-      onPressed: _cycleThemeMode,
-    );
-  }
 
   void _showGuard(String message) {
     _guardTimer?.cancel();
     setState(() => _guardMessage = message);
-    _guardTimer = Timer(_guardDuration, () {
+    _guardTimer = Timer(const Duration(milliseconds: 3500), () {
       if (mounted) setState(() => _guardMessage = null);
     });
   }
@@ -280,7 +149,15 @@ class _EditorScreenState extends State<EditorScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildToolbar(),
+          EditorToolbar(
+            controller: _controller,
+            railVisible: _railVisible,
+            onToggleRail: _toggleRail,
+            pickDirectory: widget.pickDirectory,
+            playingFull: _playingFull,
+            onTogglePlayFull: _togglePlayFull,
+            onShowGuard: _showGuard,
+          ),
           if (_controller.configWarnings.isNotEmpty)
             _buildConfigWarningsBanner(_controller.configWarnings),
           AnimatedSwitcher(
@@ -339,121 +216,6 @@ class _EditorScreenState extends State<EditorScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  // --- Toolbar (JSON UI Schema `header_toolbar`) --------------------------
-
-  Widget _buildToolbar() {
-    final colors = _tokens.colors;
-    final leftZone = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        PlatformIconButton(
-          key: const Key('railToggleButton'),
-          tooltip: 'Show / hide settings',
-          icon: Icon(
-            _isMac
-                ? CupertinoIcons.sidebar_left
-                : (_railVisible ? Icons.settings : Icons.settings_outlined),
-          ),
-          onPressed: _toggleRail,
-        ),
-        const SizedBox(width: 8),
-        _buildAppearanceButton(),
-        const SizedBox(width: 8),
-        PlatformIconButton(
-          key: const Key('editorOpenButton'),
-          tooltip: 'Open text file (⌘O)',
-          icon: Icon(_isMac ? CupertinoIcons.folder : Icons.folder_open),
-          onPressed: _onOpenPressed,
-        ),
-        const SizedBox(width: 8),
-        _buildOutputFolderButton(),
-      ],
-    );
-    final rightZone = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        PlatformButton(
-          key: const Key('editorNarrateButton'),
-          onPressed: _onNarratePressed,
-          compact: true,
-          icon: Icon(
-            _isMac ? CupertinoIcons.play_fill : Icons.play_arrow,
-            size: 18,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Narrate'),
-              const SizedBox(width: 4),
-              Text(
-                '⌘N',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.75),
-                  fontSize: 11,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (_controller.completedAudioPath != null) ...[
-          const SizedBox(width: 8),
-          _buildFullPlayButton(),
-        ],
-      ],
-    );
-    return Container(
-      height: AppMetrics.toolbarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: colors.borderSubtle, width: 0.5),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Align(alignment: Alignment.centerLeft, child: leftZone),
-          ),
-          Expanded(child: Center(child: _buildDocumentTitle())),
-          Expanded(
-            child: Align(alignment: Alignment.centerRight, child: rightZone),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Document filename plus the 6px `•` modified indicator when unsaved
-  /// changes exist (JSON UI Schema `modifiedIndicator`).
-  Widget _buildDocumentTitle() {
-    final colors = _tokens.colors;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (_controller.dirty) ...[
-          Container(
-            key: const Key('dirtyDot'),
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: colors.textSecondary,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-        ],
-        Flexible(
-          child: Text(
-            _controller.documentName,
-            overflow: TextOverflow.ellipsis,
-            style: _tokens.typography.mono.copyWith(color: colors.textPrimary),
-          ),
-        ),
-      ],
     );
   }
 
