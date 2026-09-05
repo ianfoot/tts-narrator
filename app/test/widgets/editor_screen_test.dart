@@ -72,6 +72,29 @@ void main() {
     expect(find.text('⌘N'), findsOneWidget);
   });
 
+  testWidgets('the status bar spans the full window and hugs the estimate pill right', (
+    tester,
+  ) async {
+    final controller = await makeController();
+    await pumpEditor(tester, controller);
+    await tester.pumpAndSettle();
+
+    // The status bar is a sibling of the toolbar, not confined to the editor
+    // column, so it spans the full window like the toolbar does.
+    final screenRect = tester.getRect(find.byType(EditorScreen));
+    final barRect = tester.getRect(find.byKey(const Key('statusBar')));
+    expect(barRect.left, screenRect.left);
+    expect(barRect.right, closeTo(screenRect.right, 1));
+
+    // The estimate pill announces the bar's right edge rather than floating
+    // at a hardcoded midpoint: the bar's 16px horizontal padding plus the
+    // pill's 4px inner padding inset the text from the window edge.
+    final estimateRight = tester.getBottomRight(
+      find.byKey(const Key('editorEstimate')),
+    );
+    expect(estimateRight.dx, closeTo(barRect.right - 16 - 4, 1));
+  });
+
   testWidgets('the settings rail is visible by default and toggles away', (
     tester,
   ) async {
