@@ -93,6 +93,7 @@ test('File has Open, Narrate, Save and Close with their shortcuts', () async {
       )[1];
 
       expectMetaShortcut(leafItem(file, 'Open Text…'), LogicalKeyboardKey.keyO);
+      expectMetaShortcut(leafItem(file, 'Output Folder…'), LogicalKeyboardKey.keyE);
       expectMetaShortcut(leafItem(file, 'Narrate'), LogicalKeyboardKey.keyN);
       expectMetaShortcut(leafItem(file, 'Save'), LogicalKeyboardKey.keyS);
       expectMetaShortcut(
@@ -194,6 +195,20 @@ test('File has Open, Narrate, Save and Close with their shortcuts', () async {
 
       leafItem(file, 'Open Text…').onSelected?.call();
       expect(opened, isTrue);
+    });
+
+    test('Output Folder dispatches through the onSetOutputFolder slot', () async {
+      final controller = await makeController();
+      var picked = false;
+      controller.onSetOutputFolder = () => picked = true;
+      final file = buildMacMenu(
+        controller: controller,
+        navigatorKey: GlobalKey<NavigatorState>(),
+      )[1];
+
+
+      leafItem(file, 'Output Folder…').onSelected?.call();
+      expect(picked, isTrue);
     });
 
     test('Preferences dispatches through the onPreferences slot', () async {

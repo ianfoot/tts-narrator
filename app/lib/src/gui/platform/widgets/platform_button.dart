@@ -21,6 +21,7 @@ class PlatformButton extends StatelessWidget {
     required this.child,
     this.icon,
     this.style = PlatformButtonStyle.filled,
+    this.compact = false,
   });
 
   /// Tap handler; null disables the button.
@@ -34,6 +35,12 @@ class PlatformButton extends StatelessWidget {
   final Widget? icon;
 
   final PlatformButtonStyle style;
+
+  /// Slims the button for tight toolbars: reduces Material tap-target padding
+  /// ([VisualDensity.compact], zero minimum size) and Cupertino inner padding.
+  /// Icons and text keep their natural size; only the padding around them
+  /// shrinks.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -54,11 +61,15 @@ class PlatformButton extends StatelessWidget {
               child,
             ],
           );
+    final pad = EdgeInsets.symmetric(
+      horizontal: compact ? 8 : 14,
+      vertical: compact ? 5 : (style == PlatformButtonStyle.outlined ? 8 : 6),
+    );
     if (style == PlatformButtonStyle.outlined) {
       return CupertinoButton(
         onPressed: onPressed,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: pad,
           decoration: BoxDecoration(
             border: Border.all(
               color: AppTokens.of(context).colors.borderSubtle,
@@ -82,7 +93,7 @@ class PlatformButton extends StatelessWidget {
         child: IconTheme(
           data: const IconThemeData(color: Colors.white),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            padding: pad,
             decoration: BoxDecoration(
               color: accent,
               borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
@@ -95,15 +106,30 @@ class PlatformButton extends StatelessWidget {
   }
 
   Widget _buildMaterial() {
+    final ButtonStyle? buttonStyle;
+    if (compact) {
+      buttonStyle = (style == PlatformButtonStyle.outlined
+              ? OutlinedButton.styleFrom
+              : FilledButton.styleFrom)(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        minimumSize: const Size(0, 0),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+      );
+    } else {
+      buttonStyle = null;
+    }
     if (style == PlatformButtonStyle.outlined) {
       return OutlinedButton.icon(
         onPressed: onPressed,
+        style: buttonStyle,
         icon: icon ?? const SizedBox.shrink(),
         label: child,
       );
     }
     return FilledButton.icon(
       onPressed: onPressed,
+      style: buttonStyle,
       icon: icon ?? const SizedBox.shrink(),
       label: child,
     );
