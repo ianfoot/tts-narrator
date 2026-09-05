@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -23,9 +24,14 @@ import '../theme/app_tokens.dart';
 /// controller state and surfaces controller guards (e.g. the empty-text
 /// Narrate guard) as a transient animated banner.
 class EditorScreen extends StatefulWidget {
-  const EditorScreen({super.key, required this.controller});
+  const EditorScreen({super.key, required this.controller, this.pickDirectory});
 
   final AppController controller;
+
+  /// Opens the native directory picker for the output destination; returns
+  /// the chosen path or null when cancelled. Injectable so tests can fake
+  /// the dialog without a platform selector. Defaults to [getDirectoryPath].
+  final Future<String?> Function()? pickDirectory;
 
   @override
   State<EditorScreen> createState() => _EditorScreenState();
@@ -195,6 +201,34 @@ class _EditorScreenState extends State<EditorScreen> {
 
   void _toggleRail() => setState(() => _railVisible = !_railVisible);
 
+  /// Opens the native directory picker for the output destination; leaves the
+  /// current directory unchanged when cancelled or on a platform error.
+  Future<void> _pickOutputDirectory() async {
+    try {
+      final path =
+          await (widget.pickDirectory ??
+              () => getDirectoryPath(initialDirectory: _controller.outDir))();
+      if (path == null) return;
+      _controller.outDir = path;
+    } catch (_) {
+      // The native picker can surface a platform error; keep the current
+      // output directory rather than crashing the toolbar.
+    }
+  }
+
+  /// Toolbar button showing the current output directory; tapping opens the
+  /// directory picker.
+  Widget _buildOutputFolderButton() {
+    return PlatformIconButton(
+      key: const Key('outDirPickerButton'),
+      tooltip: 'Set output folder (⌘E)',
+      icon: Icon(
+        _isMac ? CupertinoIcons.folder_badge_plus : Icons.output,
+      ),
+      onPressed: _pickOutputDirectory,
+    );
+  }
+
   /// Cycles the appearance system -> light -> dark -> system.
   void _cycleThemeMode() {
     _controller.themeMode = switch (_controller.themeMode) {
@@ -312,9 +346,6 @@ class _EditorScreenState extends State<EditorScreen> {
 
   Widget _buildToolbar() {
     final colors = _tokens.colors;
-    final shortcutStyle = _tokens.typography.caption.copyWith(
-      color: colors.textSecondary,
-    );
     final leftZone = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -337,12 +368,8 @@ class _EditorScreenState extends State<EditorScreen> {
           icon: Icon(_isMac ? CupertinoIcons.folder : Icons.folder_open),
           onPressed: _onOpenPressed,
         ),
-        const SizedBox(width: 4),
-        Text('⌘O', style: shortcutStyle),
-        if (_controller.completedAudioPath != null) ...[
-          const SizedBox(width: 8),
-          _buildFullPlayButton(),
-        ],
+        const SizedBox(width: 8),
+        _buildOutputFolderButton(),
       ],
     );
     final rightZone = Row(
@@ -351,6 +378,7 @@ class _EditorScreenState extends State<EditorScreen> {
         PlatformButton(
           key: const Key('editorNarrateButton'),
           onPressed: _onNarratePressed,
+          compact: true,
           icon: Icon(
             _isMac ? CupertinoIcons.play_fill : Icons.play_arrow,
             size: 18,
@@ -370,6 +398,10 @@ class _EditorScreenState extends State<EditorScreen> {
             ],
           ),
         ),
+        if (_controller.completedAudioPath != null) ...[
+          const SizedBox(width: 8),
+          _buildFullPlayButton(),
+        ],
       ],
     );
     return Container(
@@ -384,14 +416,7 @@ class _EditorScreenState extends State<EditorScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: leftZone,
-              ),
-            ),
+            child: Align(alignment: Alignment.centerLeft, child: leftZone),
           ),
           Expanded(child: Center(child: _buildDocumentTitle())),
           Expanded(

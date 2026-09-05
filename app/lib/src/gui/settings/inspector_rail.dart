@@ -1,13 +1,10 @@
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
 import '../platform/widgets/platform_disclosure.dart';
 import '../platform/widgets/platform_dropdown.dart';
-import '../platform/widgets/platform_icon_button.dart';
 import '../platform/widgets/platform_section.dart';
 import '../platform/widgets/platform_segmented.dart';
 import '../platform/widgets/platform_slider.dart';
@@ -23,15 +20,9 @@ class InspectorRail extends StatefulWidget {
   const InspectorRail({
     super.key,
     required this.controller,
-    this.pickDirectory,
   });
 
   final AppController controller;
-
-  /// Opens the native directory picker for the output destination; returns
-  /// the chosen path or null when cancelled. Injectable so tests can fake
-  /// the dialog without a platform selector. Defaults to [getDirectoryPath].
-  final Future<String?> Function()? pickDirectory;
 
   @override
   State<InspectorRail> createState() => _InspectorRailState();
@@ -56,8 +47,6 @@ class _InspectorRailState extends State<InspectorRail> {
   bool _sampleOn = false;
 
   AppController get _controller => widget.controller;
-
-  bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
 
   List<(String, String)> get _modelItems => [
     for (final p in effectiveModels(_controller.voiceConfig))
@@ -156,19 +145,6 @@ class _InspectorRailState extends State<InspectorRail> {
       _controller.sampleLen = 1;
     } else if (!value) {
       _controller.sampleLen = null;
-    }
-  }
-
-  Future<void> _pickOutputDirectory() async {
-    try {
-      final path =
-          await (widget.pickDirectory ??
-              () => getDirectoryPath(initialDirectory: _controller.outDir))();
-      if (path == null) return;
-      _controller.outDir = path;
-    } catch (_) {
-      // The native picker can surface a platform error; leave the current
-      // output directory unchanged rather than crashing the rail.
     }
   }
 
@@ -490,36 +466,6 @@ class _InspectorRailState extends State<InspectorRail> {
                 ],
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Row(
-              children: [
-                const Expanded(child: Text('Output directory')),
-                PlatformIconButton(
-                  key: const Key('outDirPickerButton'),
-                  tooltip: 'Choose output directory',
-                  icon: Icon(
-                    _isMac ? CupertinoIcons.folder : Icons.folder_open,
-                  ),
-                  onPressed: () {
-                    _pickOutputDirectory();
-                  },
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              _controller.outDir,
-              key: ValueKey(_controller.outDir),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-              style: _tokens.typography.mono.copyWith(
-                color: _tokens.colors.textSecondary,
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.only(top: 12),
             child: Row(
