@@ -202,18 +202,11 @@ class _EditorScreenState extends State<EditorScreen> {
                         )
                       : const SizedBox.shrink(key: ValueKey('railHidden')),
                 ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(child: _buildEditor()),
-                      _buildStatusBar(),
-                    ],
-                  ),
-                ),
+                Expanded(child: _buildEditor()),
               ],
             ),
           ),
+          _buildStatusBar(),
         ],
       ),
     );
@@ -258,6 +251,7 @@ class _EditorScreenState extends State<EditorScreen> {
     final minutes = _controller.estimatedMinutes.round();
     final cost = formatCostUsd(_controller.estimatedCostUsd);
     return Container(
+      key: const Key('statusBar'),
       height: AppMetrics.statusBarHeight,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -267,7 +261,7 @@ class _EditorScreenState extends State<EditorScreen> {
       ),
       child: Row(
         children: [
-          Flexible(
+          Expanded(
             child: AnimatedSwitcher(
               duration: _tickerDuration,
               child: Text(
@@ -283,28 +277,23 @@ class _EditorScreenState extends State<EditorScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          Flexible(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: AnimatedSwitcher(
-                duration: _tickerDuration,
-                child: Container(
-                  key: ValueKey('$segments-$minutes-$cost'),
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: colors.bgSurfaceElevated,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    '$segments segments · ~$minutes mins · ~$cost est.',
-                    key: const Key('editorEstimate'),
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                    style: _tokens.typography.mono.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
+          AnimatedSwitcher(
+            duration: _tickerDuration,
+            child: Container(
+              key: ValueKey('$segments-$minutes-$cost'),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: colors.bgSurfaceElevated,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '$segments segments · ~$minutes mins · ~$cost est.',
+                key: const Key('editorEstimate'),
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                style: _tokens.typography.mono.copyWith(
+                  color: colors.textSecondary,
                 ),
               ),
             ),
