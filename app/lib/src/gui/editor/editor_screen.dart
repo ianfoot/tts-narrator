@@ -6,7 +6,6 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
 import '../platform/platform_page.dart';
@@ -14,6 +13,7 @@ import '../platform/platform_page.dart';
 import '../platform/widgets/platform_text_field.dart';
 import '../settings/settings_panel.dart';
 import '../theme/app_tokens.dart';
+import 'editor_status_bar.dart';
 import 'editor_toolbar.dart';
 
 /// Editor-first home screen (JSON UI Schema `header_toolbar` /
@@ -39,7 +39,6 @@ class EditorScreen extends StatefulWidget {
 
 class _EditorScreenState extends State<EditorScreen> {
   static const _bannerDuration = Duration(milliseconds: 150);
-  static const _tickerDuration = Duration(milliseconds: 100);
   static const _railSlideDuration = Duration(milliseconds: 200);
 
   late final TextEditingController _textController;
@@ -206,7 +205,7 @@ class _EditorScreenState extends State<EditorScreen> {
               ],
             ),
           ),
-          _buildStatusBar(),
+          EditorStatusBar(controller: _controller),
         ],
       ),
     );
@@ -241,80 +240,6 @@ class _EditorScreenState extends State<EditorScreen> {
     );
   }
 
-  // --- Status bar (JSON UI Schema `status_bar`) ---------------------------
-
-  Widget _buildStatusBar() {
-    final colors = _tokens.colors;
-    final words = _formatCount(_controller.wordCount);
-    final chars = _formatCount(_controller.charCount);
-    final segments = _controller.plannedSegments.length;
-    final minutes = _controller.estimatedMinutes.round();
-    final cost = formatCostUsd(_controller.estimatedCostUsd);
-    return Container(
-      key: const Key('statusBar'),
-      height: AppMetrics.statusBarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: colors.borderSubtle, width: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: _tickerDuration,
-              child: Text(
-                '$words words · $chars characters',
-                key: ValueKey('$words-$chars'),
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                style: _tokens.typography.mono.copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          AnimatedSwitcher(
-            duration: _tickerDuration,
-            child: Container(
-              key: ValueKey('$segments-$minutes-$cost'),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: colors.bgSurfaceElevated,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                '$segments segments · ~$minutes mins · ~$cost est.',
-                key: const Key('editorEstimate'),
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                style: _tokens.typography.mono.copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Thousands separators, e.g. 1240 -> "1,240".
-  String _formatCount(int value) {
-    final s = value.toString();
-    if (s.length <= 3) return s;
-    final b = StringBuffer();
-    for (var i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) b.write(',');
-      b.write(s[i]);
-    }
-    return b.toString();
-  }
-
   // --- Transient warning banner ------------------------------------------
 
   Widget _buildGuardBanner(String message, {Key? key}) {
@@ -329,9 +254,7 @@ class _EditorScreenState extends State<EditorScreen> {
       child: Row(
         children: [
           Icon(
-            _isMac
-                ? CupertinoIcons.exclamationmark_triangle
-                : Icons.warning,
+            _isMac ? CupertinoIcons.exclamationmark_triangle : Icons.warning,
             size: 14,
             color: foreground,
           ),
@@ -358,7 +281,7 @@ class _EditorScreenState extends State<EditorScreen> {
       color: background,
       child: Text(
         warnings.join('\n'),
-        key:  const Key('configWarningsMessage'),
+        key: const Key('configWarningsMessage'),
         style: _tokens.typography.body.copyWith(color: foreground),
       ),
     );
