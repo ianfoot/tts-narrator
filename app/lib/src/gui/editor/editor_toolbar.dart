@@ -22,6 +22,7 @@ class EditorToolbar extends StatefulWidget {
     this.playingFull = false,
     this.onTogglePlayFull,
     this.onShowGuard,
+    this.onCleanupSegments,
   });
 
   final AppController controller;
@@ -31,6 +32,9 @@ class EditorToolbar extends StatefulWidget {
   final bool playingFull;
   final VoidCallback? onTogglePlayFull;
   final void Function(String message)? onShowGuard;
+
+  /// Fired by the clean-up button; runs the shared confirm-and-delete flow.
+  final VoidCallback? onCleanupSegments;
 
   @override
   State<EditorToolbar> createState() => _EditorToolbarState();
@@ -104,6 +108,17 @@ class _EditorToolbarState extends State<EditorToolbar> {
       tooltip: 'Set output folder (⌘E)',
       icon: Icon(_isMac ? CupertinoIcons.folder_badge_plus : Icons.output),
       onPressed: _pickOutputDirectory,
+    );
+  }
+
+  /// Saves the document, mirroring the menu bar's File ▸ Save (⌘S). Disabled
+  /// (greyed, via a null callback) while there is nothing unsaved.
+  Widget _buildSaveButton() {
+    return PlatformIconButton(
+      key: const Key('editorSaveButton'),
+      tooltip: 'Save (⌘S)',
+      icon: Icon(_isMac ? CupertinoIcons.square_arrow_down : Icons.save_outlined),
+      onPressed: controller.dirty ? () => controller.save() : null,
     );
   }
 
@@ -184,6 +199,19 @@ class _EditorToolbarState extends State<EditorToolbar> {
     );
   }
 
+  /// Deletes the last run's per-segment files, mirroring the menu bar's
+  /// File ▸ Clean Up Segments… command. Only rendered while a finished run
+  /// still has cleanable segments; the shared flow it dispatches to confirms
+  /// deletion before touching anything.
+  Widget _buildCleanupButton() {
+    return PlatformIconButton(
+      key: const Key('editorCleanupButton'),
+      tooltip: 'Clean up segments',
+      icon: Icon(_isMac ? CupertinoIcons.trash : Icons.delete_outline),
+      onPressed: widget.onCleanupSegments,
+    );
+  }
+
   Widget _buildNarrateButton(AppTokens tokens) {
     return PlatformButton(
       key: const Key('editorNarrateButton'),
@@ -233,54 +261,50 @@ class _EditorToolbarState extends State<EditorToolbar> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  PlatformIconButton(
-                    key: const Key('railToggleButton'),
-                    tooltip: 'Show / hide settings',
-                    icon: Icon(
-                      _isMac
-                          ? CupertinoIcons.sidebar_left
-                          : (widget.railVisible
-                                ? Icons.settings
-                                : Icons.settings_outlined),
-                    ),
-                    onPressed: widget.onToggleRail,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildAppearanceButton(tokens),
-                  const SizedBox(width: 8),
-                  PlatformIconButton(
-                    key: const Key('editorOpenButton'),
-                    tooltip: 'Open text file (⌘O)',
-                    icon: Icon(_isMac ? CupertinoIcons.folder : Icons.folder_open),
-                    onPressed: () => controller.onOpen?.call(),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildOutputFolderButton(),
-                ],
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              PlatformIconButton(
+                key: const Key('railToggleButton'),
+                tooltip: 'Show / hide settings',
+                icon: Icon(
+                  _isMac
+                      ? CupertinoIcons.sidebar_left
+                      : (widget.railVisible
+                            ? Icons.settings
+                            : Icons.settings_outlined),
+                ),
+                onPressed: widget.onToggleRail,
               ),
-            ),
+              const SizedBox(width: 8),
+              _buildAppearanceButton(tokens),
+              const SizedBox(width: 8),
+              PlatformIconButton(
+                key: const Key('editorOpenButton'),
+                tooltip: 'Open text file (⌘O)',
+                icon: Icon(_isMac ? CupertinoIcons.folder : Icons.folder_open),
+                onPressed: () => controller.onOpen?.call(),
+              ),
+              const SizedBox(width: 8),
+              _buildOutputFolderButton(),
+              const SizedBox(width: 8),
+              _buildSaveButton(),
+            ],
           ),
           Expanded(child: Center(child: _buildDocumentTitle(tokens))),
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildNarrateButton(tokens),
-                  if (fullPlay != null) ...[
-                    const SizedBox(width: 8),
-                    fullPlay,
-                  ],
-                ],
-              ),
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildNarrateButton(tokens),
+              if (fullPlay != null) ...[
+                const SizedBox(width: 8),
+                fullPlay,
+              ],
+              if (controller.canCleanupSegments) ...[
+                const SizedBox(width: 8),
+                _buildCleanupButton(),
+              ],
+            ],
           ),
         ],
       ),

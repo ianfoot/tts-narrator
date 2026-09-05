@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import '../controller/app_controller.dart';
 import '../platform/platform_page.dart';
 
+import '../cleanup_segments_flow.dart';
 import '../platform/widgets/platform_text_field.dart';
 import '../settings/settings_panel.dart';
 import '../theme/app_tokens.dart';
@@ -44,7 +45,6 @@ class _EditorScreenState extends State<EditorScreen> {
   late final TextEditingController _textController;
   String? _guardMessage;
   Timer? _guardTimer;
-  bool _railVisible = true;
 
   /// Plays the completed combined track from a successful narration run. The
   /// button lives on the status bar and persists after leaving the run view,
@@ -130,14 +130,19 @@ class _EditorScreenState extends State<EditorScreen> {
     if (mounted) setState(() => _playingFull = true);
   }
 
-  void _toggleRail() => setState(() => _railVisible = !_railVisible);
-
   void _showGuard(String message) {
     _guardTimer?.cancel();
     setState(() => _guardMessage = message);
     _guardTimer = Timer(const Duration(milliseconds: 3500), () {
       if (mounted) setState(() => _guardMessage = null);
     });
+  }
+
+  /// Runs the shared Clean Up Segments flow (confirm → delete → summary) with
+  /// this screen's context so the dialogs mount inside the editor route. The
+  /// same flow backs the macOS menu bar's File ▸ Clean Up Segments command.
+  void _cleanUpSegments() {
+    runCleanupSegmentsFlow(controller: _controller, context: context);
   }
 
   AppTokens get _tokens => AppTokens.of(context);
@@ -150,12 +155,13 @@ class _EditorScreenState extends State<EditorScreen> {
         children: [
           EditorToolbar(
             controller: _controller,
-            railVisible: _railVisible,
-            onToggleRail: _toggleRail,
+            railVisible: _controller.settingsPanelVisible,
+            onToggleRail: _controller.toggleSettingsPanel,
             pickDirectory: widget.pickDirectory,
             playingFull: _playingFull,
             onTogglePlayFull: _togglePlayFull,
             onShowGuard: _showGuard,
+            onCleanupSegments: _cleanUpSegments,
           ),
           if (_controller.configWarnings.isNotEmpty)
             _buildConfigWarningsBanner(_controller.configWarnings),
@@ -194,7 +200,7 @@ class _EditorScreenState extends State<EditorScreen> {
                     ).animate(animation),
                     child: child,
                   ),
-                  child: _railVisible
+                  child: _controller.settingsPanelVisible
                       ? SettingsPanel(
                           key: const ValueKey('railVisible'),
                           controller: _controller,
