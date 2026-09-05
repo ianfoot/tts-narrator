@@ -259,6 +259,21 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- Settings panel -----------------------------------------------
+
+  bool _settingsPanelVisible = true;
+
+  /// Whether the settings rail is shown on the editor. Driven by the toolbar
+  /// toggle and, on macOS, the View menu command, so both dispatch through one
+  /// piece of state.
+  bool get settingsPanelVisible => _settingsPanelVisible;
+
+  /// Flips [settingsPanelVisible] and notifies listeners.
+  void toggleSettingsPanel() {
+    _settingsPanelVisible = !_settingsPanelVisible;
+    notifyListeners();
+  }
+
   // --- Narration settings -------------------------------------------
 
   String _accent = 'southern British English, neutral and clear';
@@ -737,6 +752,12 @@ class AppController extends ChangeNotifier {
   VoidCallback? onNarrate;
   VoidCallback? onCancel;
   VoidCallback? onPreferences;
+
+  /// Fired to toggle the settings panel (the native menu bar's View command
+  /// dispatches here). Wired by the platform shell to [toggleSettingsPanel];
+  /// mirrors the other command slots so non-macOS platforms can bind the same
+  /// action to an in-app control.
+  VoidCallback? onToggleSettingsPanel;
 
   /// Invoked to choose the output folder (opened from the native menu bar or
   /// an in-app shortcut). Wired by the platform shell; the menu item and any

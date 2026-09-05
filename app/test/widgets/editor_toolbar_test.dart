@@ -198,6 +198,35 @@ void main() {
     });
   });
 
+  group('save button', () {
+    testWidgets('is disabled until the document is dirty', (tester) async {
+      final controller = makeController();
+      await pumpToolbar(tester, controller);
+      final button = tester.widget<IconButton>(
+        find.descendant(
+          of: find.byKey(const Key('editorSaveButton')),
+          matching: find.byType(IconButton),
+        ),
+      );
+      expect(button.onPressed, isNull);
+    });
+
+    testWidgets('saving a dirty document clears the dirty flag', (
+      tester,
+    ) async {
+      final controller = makeController();
+      final savedPath = '${dir.path}/doc.txt';
+      controller.saveLocationPicker = () async => savedPath;
+      controller.setText('Some text worth saving.');
+      await pumpToolbar(tester, controller);
+
+      await tester.tap(find.byKey(const Key('editorSaveButton')));
+      await tester.pump();
+      expect(File(savedPath).existsSync(), isTrue);
+      expect(controller.dirty, isFalse);
+    });
+  });
+
   group('full-play button', () {
     testWidgets('no full-play button until a narration run completes', (
       tester,

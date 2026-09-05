@@ -107,6 +107,17 @@ class _EditorToolbarState extends State<EditorToolbar> {
     );
   }
 
+  /// Saves the document, mirroring the menu bar's File ▸ Save (⌘S). Disabled
+  /// (greyed, via a null callback) while there is nothing unsaved.
+  Widget _buildSaveButton() {
+    return PlatformIconButton(
+      key: const Key('editorSaveButton'),
+      tooltip: 'Save (⌘S)',
+      icon: Icon(_isMac ? CupertinoIcons.square_arrow_down : Icons.save_outlined),
+      onPressed: controller.dirty ? () => controller.save() : null,
+    );
+  }
+
   Widget _buildDocumentTitle(AppTokens tokens) {
     final colors = tokens.colors;
     return Row(
@@ -262,6 +273,8 @@ class _EditorToolbarState extends State<EditorToolbar> {
                   ),
                   const SizedBox(width: 8),
                   _buildOutputFolderButton(),
+                  const SizedBox(width: 8),
+                  _buildSaveButton(),
                 ],
               ),
             ),

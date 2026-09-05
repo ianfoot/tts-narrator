@@ -44,7 +44,6 @@ class _EditorScreenState extends State<EditorScreen> {
   late final TextEditingController _textController;
   String? _guardMessage;
   Timer? _guardTimer;
-  bool _railVisible = true;
 
   /// Plays the completed combined track from a successful narration run. The
   /// button lives on the status bar and persists after leaving the run view,
@@ -130,8 +129,6 @@ class _EditorScreenState extends State<EditorScreen> {
     if (mounted) setState(() => _playingFull = true);
   }
 
-  void _toggleRail() => setState(() => _railVisible = !_railVisible);
-
   void _showGuard(String message) {
     _guardTimer?.cancel();
     setState(() => _guardMessage = message);
@@ -150,8 +147,8 @@ class _EditorScreenState extends State<EditorScreen> {
         children: [
           EditorToolbar(
             controller: _controller,
-            railVisible: _railVisible,
-            onToggleRail: _toggleRail,
+            railVisible: _controller.settingsPanelVisible,
+            onToggleRail: _controller.toggleSettingsPanel,
             pickDirectory: widget.pickDirectory,
             playingFull: _playingFull,
             onTogglePlayFull: _togglePlayFull,
@@ -194,7 +191,7 @@ class _EditorScreenState extends State<EditorScreen> {
                     ).animate(animation),
                     child: child,
                   ),
-                  child: _railVisible
+                  child: _controller.settingsPanelVisible
                       ? SettingsPanel(
                           key: const ValueKey('railVisible'),
                           controller: _controller,

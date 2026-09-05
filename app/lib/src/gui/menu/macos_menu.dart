@@ -2,19 +2,21 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
 import '../controller/app_controller.dart';
+import '../theme/app_tokens.dart' show AppThemeMode;
 import 'edit_actions.dart';
 
-/// Builds the native macOS menu bar — the [PlatformMenu] tree the app mounts
-/// through a [PlatformMenuBar] on macOS.
+/// Builds the macOS menu bar — the [PlatformMenu] tree the app mounts through a
+/// [PlatformMenuBar] on macOS (kept macOS-only for now; Linux/Windows bind the
+/// same controller slots to in-app menus later).
 ///
 /// Pure configuration over the controller's platform-neutral command slots and
 /// the app navigator: App (About/Preferences/Services/Hide/Quit), File
-/// (Open/Narrate/Close), Edit (undo/redo/cut/copy/paste/select all, dispatched
-/// to the focused text field by [EditActions]), View (Full Screen) and Window
+/// (Open/Save/Save As/Narrate/Close), Edit (undo/redo/cut/copy/paste/select
+/// all, dispatched to the focused text field by [EditActions]), View
+/// (Appearance, Toggle Settings Panel, Full Screen) and Window
 /// (Minimize/Zoom/Front). The menu items are *not* widgets; they are sent to
 /// the platform over the menu channel, so there is no [enabled] flag — the
-/// Narrate item guards in its handler instead of graying out, and Linux/Windows
-/// later bind the same controller slots to in-app menus.
+/// Narrate item guards in its handler instead of graying out.
 List<PlatformMenu> buildMacMenu({
   required AppController controller,
   required GlobalKey<NavigatorState> navigatorKey,
@@ -23,7 +25,7 @@ List<PlatformMenu> buildMacMenu({
     _appMenu(controller),
     _fileMenu(controller, navigatorKey),
     _editMenu(),
-    _viewMenu(),
+    _viewMenu(controller),
     _windowMenu(),
   ];
 }
@@ -201,14 +203,48 @@ PlatformMenu _editMenu() {
   );
 }
 
-PlatformMenu _viewMenu() {
+PlatformMenu _viewMenu(AppController controller) {
   return PlatformMenu(
     label: 'View',
-    menus: const <PlatformMenuItem>[
-      PlatformProvidedMenuItem(
+    menus: <PlatformMenuItem>[
+      PlatformMenuItemGroup(
+        members: <PlatformMenuItem>[
+          PlatformMenu(
+            label: 'Appearance',
+            menus: <PlatformMenuItem>[
+              _appearanceItem(controller, AppThemeMode.system, 'Auto'),
+              _appearanceItem(controller, AppThemeMode.light, 'Light'),
+              _appearanceItem(controller, AppThemeMode.dark, 'Dark'),
+            ],
+          ),
+          PlatformMenuItem(
+            label: 'Toggle Settings Panel',
+            shortcut: const SingleActivator(
+              LogicalKeyboardKey.backslash,
+              meta: true,
+            ),
+            onSelected: () => controller.onToggleSettingsPanel?.call(),
+          ),
+        ],
+      ),
+      const PlatformProvidedMenuItem(
         type: PlatformProvidedMenuItemType.toggleFullScreen,
       ),
     ],
+  );
+}
+
+/// A named appearance choice, with a leading checkmark when it is the active
+/// mode. The checkmark is a label affordance (platform menu items carry no
+/// checked flag); the menu rebuilds because AppRoot listens to the controller.
+PlatformMenuItem _appearanceItem(
+  AppController controller,
+  AppThemeMode mode,
+  String label,
+) {
+  return PlatformMenuItem(
+    label: controller.themeMode == mode ? '✓ $label' : label,
+    onSelected: () => controller.themeMode = mode,
   );
 }
 

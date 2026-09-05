@@ -800,6 +800,27 @@ void main() {
     });
   });
 
+  group('settings panel', () {
+    test('starts visible', () {
+      final c = makeController();
+      expect(c.settingsPanelVisible, isTrue);
+    });
+
+    test('toggleSettingsPanel flips the value and notifies listeners', () {
+      final c = makeController();
+      var notifications = 0;
+      c.addListener(() => notifications++);
+
+      c.toggleSettingsPanel();
+      expect(c.settingsPanelVisible, isFalse);
+      expect(notifications, 1);
+
+      c.toggleSettingsPanel();
+      expect(c.settingsPanelVisible, isTrue);
+      expect(notifications, 2);
+    });
+  });
+
   group('settings setters', () {
     test('every setting write notifies listeners once', () {
       final c = makeController();
