@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
@@ -728,6 +729,20 @@ class AppController extends ChangeNotifier {
   /// an in-app shortcut). Wired by the platform shell; the menu item and any
   /// key binding dispatch here.
   VoidCallback? onSetOutputFolder;
+
+  /// Opens the native directory picker for the output destination; leaves the
+  /// current directory unchanged when cancelled or when the picker fails.
+  Future<void> pickOutputFolder() async {
+    final String? path;
+    try {
+      path = await getDirectoryPath(initialDirectory: _outDir);
+    } catch (_) {
+      // Keep the current directory rather than crashing.
+      return;
+    }
+    if (path == null) return;
+    outDir = path;
+  }
 
   /// Returns null when narration may start, otherwise the reason it is
   /// blocked (empty text / already running). The Narrate entrypoints guard on

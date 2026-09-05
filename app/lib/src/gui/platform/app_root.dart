@@ -37,7 +37,7 @@ class _AppRootState extends State<AppRoot> {
     widget.controller.onOpen = _openDocument;
     widget.controller.onNarrate = _startNarration;
     widget.controller.onCancel = () => widget.controller.cancelRun();
-    widget.controller.onSetOutputFolder = _pickOutputFolder;
+    widget.controller.onSetOutputFolder = widget.controller.pickOutputFolder;
     widget.controller.saveLocationPicker = _pickSaveLocation;
     // Follow the system appearance live (CupertinoApp has no darkTheme/
     // themeMode, so the theme is rebuilt when the platform brightness flips).
@@ -78,13 +78,6 @@ class _AppRootState extends State<AppRoot> {
 
   /// Opens the native directory picker for the output destination; leaves the
   /// current directory unchanged when cancelled.
-  Future<void> _pickOutputFolder() async {
-    final path =
-        await getDirectoryPath(initialDirectory: widget.controller.outDir);
-    if (path == null) return;
-    widget.controller.outDir = path;
-  }
-
   Future<void> _openDocument() async {
     const group = XTypeGroup(label: 'Text', extensions: ['txt']);
     final file = await openFile(acceptedTypeGroups: const [group]);
