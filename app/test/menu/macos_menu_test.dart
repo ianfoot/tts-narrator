@@ -11,6 +11,8 @@ import 'package:tts_narrator/src/gui/menu/edit_actions.dart';
 import 'package:tts_narrator/src/gui/menu/macos_menu.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 
+import '../support/recording_cleanup_controller.dart';
+
 Future<AppController> makeController() async {
   final dir = Directory.systemTemp.createTempSync('tts_menu_test_');
   addTearDown(() => dir.deleteSync(recursive: true));
@@ -299,7 +301,7 @@ test('Preferences dispatches through the onPreferences slot', () async {
     });
 
     test('Clean Up Segments is a no-op before any run', () async {
-      final controller = _RecordingCleanupController()
+      final controller = RecordingCleanupController()
         ..overrideCleanup = () async {
           // Should never run: the guard returns first.
           fail('cleanup ran before any run');
@@ -311,112 +313,6 @@ test('Preferences dispatches through the onPreferences slot', () async {
 
       expect(controller.cleanups, 0);
       leafItem(file, 'Clean Up Segments…').onSelected?.call();
-      expect(controller.cleanups, 0);
-    });
-  });
-
-  group('cleanup through the controller', () {
-    testWidgets('Clean Up Segments deletes segments after confirmation', (
-      tester,
-    ) async {
-      final controller = _RecordingCleanupController()
-        ..cleanupUsable = true
-        ..runDir = 'the run dir'
-        ..overrideCleanup = () async => 2;
-
-      // Mount a navigator so the confirm dialog can resolve; the menu item
-      // targets it via [navigatorKey].
-      final navigatorKey = GlobalKey<NavigatorState>();
-      await tester.pumpWidget(
-        MaterialApp(
-          navigatorKey: navigatorKey,
-          home: const Scaffold(body: SizedBox()),
-        ),
-      );
-
-      final file = buildMacMenu(
-        controller: controller,
-        navigatorKey: navigatorKey,
-      )[1];
-      leafItem(file, 'Clean Up Segments…').onSelected?.call();
-
-      // Confirm dialog appears; dismiss it via "Delete".
-      await tester.pumpAndSettle();
-      expect(find.text('Delete segment files?'), findsOneWidget);
-      await tester.tap(find.text('Delete'));
-      await tester.pumpAndSettle();
-
-      expect(controller.cleanups, 1);
-      // summary dialog after the run
-      expect(find.text('Segments deleted'), findsOneWidget);
-      expect(find.textContaining('Removed 2 segment files'), findsOneWidget);
-    });
-
-    testWidgets('Clean Up Segments bails if a run starts while the dialog is '
-        'open', (tester) async {
-      final controller = _RecordingCleanupController()
-        ..cleanupUsable = true
-        ..runDir = 'original run dir'
-        ..overrideCleanup = () async {
-          // Should never run: the post-confirm guard returns first.
-          fail('cleanup ran despite a new run starting mid-dialog');
-        };
-      final navigatorKey = GlobalKey<NavigatorState>();
-      await tester.pumpWidget(
-        MaterialApp(
-          navigatorKey: navigatorKey,
-          home: const Scaffold(body: SizedBox()),
-        ),
-      );
-      final file = buildMacMenu(
-        controller: controller,
-        navigatorKey: navigatorKey,
-      )[1];
-      leafItem(file, 'Clean Up Segments…').onSelected?.call();
-      await tester.pumpAndSettle();
-      expect(find.text('Delete segment files?'), findsOneWidget);
-
-      // A new run supersedes the target while the user is still deciding.
-      controller
-        ..cleanupUsable = false
-        ..runDir = 'new run dir';
-      await tester.tap(find.text('Delete'));
-      await tester.pumpAndSettle();
-
-      expect(controller.cleanups, 0);
-      // No summary dialog: the cleanup never ran.
-      expect(find.text('Segments deleted'), findsNothing);
-    });
-
-    testWidgets('Clean Up Segments bails if the target dir moved while the '
-        'dialog is open', (tester) async {
-      final controller = _RecordingCleanupController()
-        ..cleanupUsable = true
-        ..runDir = 'original run dir'
-        ..overrideCleanup = () async {
-          fail('cleanup ran against a stale directory');
-        };
-      final navigatorKey = GlobalKey<NavigatorState>();
-      await tester.pumpWidget(
-        MaterialApp(
-          navigatorKey: navigatorKey,
-          home: const Scaffold(body: SizedBox()),
-        ),
-      );
-      final file = buildMacMenu(
-        controller: controller,
-        navigatorKey: navigatorKey,
-      )[1];
-      leafItem(file, 'Clean Up Segments…').onSelected?.call();
-      await tester.pumpAndSettle();
-      expect(find.text('Delete segment files?'), findsOneWidget);
-
-      // The user changed the out dir and ran again: cleanup is still available
-      // for the new run, but it is not the directory the dialog described.
-      controller.runDir = 'another run dir';
-      await tester.tap(find.text('Delete'));
-      await tester.pumpAndSettle();
-
       expect(controller.cleanups, 0);
     });
   });
@@ -550,45 +446,4 @@ test('Preferences dispatches through the onPreferences slot', () async {
       expect(controller.text, 'changed text');
     });
   });
-}
-
-/// Controller that overrides the cleanup surface so the menu handler can be
-/// tested without a real run or disk fixtures: [canCleanupSegments] reports
-/// [cleanupUsable] and [cleanupSegments] counts calls instead of deleting.
-class _RecordingCleanupController extends AppController {
-  _RecordingCleanupController() : super(loader: _emptyLoader());
-
-  /// What [canCleanupSegments] should report.
-  bool cleanupUsable = false;
-
-  /// What [lastRunOutputDir] should report; simulates a run's output dir.
-  String? runDir;
-
-  /// Replacement body for [cleanupSegments]; defaults to a counting stub.
-  Future<int> Function() overrideCleanup = () async => 0;
-
-  int _cleanups = 0;
-
-  /// How many times [cleanupSegments] ran.
-  int get cleanups => _cleanups;
-
-  @override
-  String? get lastRunOutputDir => runDir;
-
-  @override
-  bool get canCleanupSegments => cleanupUsable;
-
-  @override
-  Future<int> cleanupSegments() async {
-    _cleanups++;
-    return overrideCleanup();
-  }
-}
-
-/// A loader pointing at an empty temp config dir (the subclass constructor
-/// needs one that exists rather than the user's home config).
-VoiceConfigLoader _emptyLoader() {
-  final dir = Directory.systemTemp.createTempSync('tts_menu_loader_');
-  addTearDown(() => dir.deleteSync(recursive: true));
-  return VoiceConfigLoader(configDir: dir.path);
 }

@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import '../controller/app_controller.dart';
 import '../platform/platform_page.dart';
 
+import '../cleanup_segments_flow.dart';
 import '../platform/widgets/platform_text_field.dart';
 import '../settings/settings_panel.dart';
 import '../theme/app_tokens.dart';
@@ -137,6 +138,13 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
+  /// Runs the shared Clean Up Segments flow (confirm → delete → summary) with
+  /// this screen's context so the dialogs mount inside the editor route. The
+  /// same flow backs the macOS menu bar's File ▸ Clean Up Segments command.
+  void _cleanUpSegments() {
+    runCleanupSegmentsFlow(controller: _controller, context: context);
+  }
+
   AppTokens get _tokens => AppTokens.of(context);
 
   @override
@@ -153,6 +161,7 @@ class _EditorScreenState extends State<EditorScreen> {
             playingFull: _playingFull,
             onTogglePlayFull: _togglePlayFull,
             onShowGuard: _showGuard,
+            onCleanupSegments: _cleanUpSegments,
           ),
           if (_controller.configWarnings.isNotEmpty)
             _buildConfigWarningsBanner(_controller.configWarnings),
