@@ -4,6 +4,7 @@
   "format": "pcm",
   "sample_rate": 24000,
   "prompt_style": true,
+  "display_name": "Gemini 3.1 Flash TTS",
   "default_voice": "Charon",
   "pricing": {
     "input_usd_per_m_tokens": 1.0,

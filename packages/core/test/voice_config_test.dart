@@ -67,6 +67,29 @@ void main() {
       expect(m.sampleRate, isNull);
     });
 
+    test('parses an optional display_name into the profile', () {
+      writeModel(
+        'gemini',
+        '{"id": "google/gemini-3.1-flash-tts-preview", "provider": "openrouter", "display_name": "Gemini 3.1 Flash TTS"}',
+      );
+      final (cfg, _) = load();
+      final m = cfg.models['gemini']!;
+      expect(m.displayName, 'Gemini 3.1 Flash TTS');
+    });
+
+    test('display_name defaults to null when omitted', () {
+      writeModel('x', '{"id": "a/b", "provider": "openrouter"}');
+      final (cfg, _) = load();
+      expect(cfg.models['x']!.displayName, isNull);
+    });
+
+    test('a non-string display_name skips the model with a warning', () {
+      writeModel('x', '{"id": "a/b", "provider": "openrouter", "display_name": 7}');
+      final (cfg, warnings) = load();
+      expect(cfg.models.containsKey('x'), isFalse);
+      expect(warnings.join('\n'), contains('display_name'));
+    });
+
     test('parses per-model default_voice, pricing and voices', () {
       writeModel('fish', '''
 {
@@ -588,6 +611,7 @@ void main() {
               format: 'pcm',
               sampleRate: 24000,
               promptStyle: true,
+              displayName: 'Gemini 3.1 Flash TTS',
             ),
             'kokoro': const TtsModelProfile(
               alias: 'kokoro',
@@ -613,6 +637,7 @@ void main() {
       expect(cfg.models['gemini']?.id, 'google/gemini-3.1-flash-tts-preview');
       expect(cfg.models['gemini']?.sampleRate, 24000);
       expect(cfg.models['gemini']?.promptStyle, isTrue);
+      expect(cfg.models['gemini']?.displayName, 'Gemini 3.1 Flash TTS');
       expect(cfg.defaults['fish'], 'Narrator');
       expect(cfg.pricing['kokoro']?.usdPerMChars, 0.62);
       expect(cfg.voices['fish']?['Narrator']?.id, 'hex1');

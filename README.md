@@ -157,6 +157,11 @@ one the tools read:
   request wiring. Add a model or swap an id (e.g. replace the gemini preview)
   by adding/editing a file — no rebuild. Only the fish bootstrap is compiled
   in as the out-of-the-box default.
+- **Display names**: an optional `display_name` key (e.g.
+  `"Fish Audio S2.1 (Free)"`) sets the friendly label the GUI dropdown shows
+  for a model; without it the app falls back to `alias — id`. Fish's compiled
+  bootstrap carries its own name, so it reads nicely even before any config
+  exists.
 - **Default voices**: `default_voice` names the friendly alias (from `voices`)
   used when `--voice` / the GUI voice field is empty. With no config, fish
   falls back to its compiled default (`89f41ea2...`, "British Female

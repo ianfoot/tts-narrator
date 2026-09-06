@@ -20,6 +20,7 @@ class TtsModelProfile {
     this.sendsVoiceField = true,
     this.sampleRate,
     this.provider = 'openrouter',
+    this.displayName,
   });
 
   /// Short CLI name used for `--model <alias>`.
@@ -27,6 +28,10 @@ class TtsModelProfile {
 
   /// Full model identifier sent in the request body.
   final String id;
+
+  /// Optional friendly name for the GUI dropdown (e.g. "Fish Audio S2.1
+  /// (Free)"). Null falls back to the `alias — id` pairing in UI labels.
+  final String? displayName;
 
   /// Output encoding: `'pcm'` (wrapped in a WAV header) or `'mp3'` (raw).
   final String format;
@@ -58,6 +63,7 @@ class TtsModelProfile {
         sendsVoiceField: sendsVoiceField,
         sampleRate: sampleRate,
         provider: provider ?? this.provider,
+        displayName: displayName,
       );
 }
 
@@ -71,6 +77,7 @@ const kDefaultProfile = DefaultProfile(
     id: 'fish-audio/s2.1-pro-free',
     format: 'mp3',
     sendsVoiceField: true,
+    displayName: 'Fish Audio S2.1 (Free)',
   ),
   voice: '89f41ea230034706881f85a8227d6ab9',
   voiceLabel: 'British Female Narrator',
