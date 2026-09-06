@@ -111,6 +111,14 @@ class AppPalette {
   Color get accentPrimary =>
       isDark ? const Color(0xFF0A84FF) : const Color(0xFF007AFF);
 
+  /// Text and icons drawn on accent fills (e.g. `Narrate`, filled buttons).
+  ///
+  /// Pure white in both modes because the accent palette ([accentPrimary],
+  /// [accentSuccess], …) is saturated enough to hold white at any contrast
+  /// environment; kept as a token so a future accent change can't strand a
+  /// hard-coded white on it.
+  Color get textOnAccent => const Color(0xFFFFFFFF);
+
   /// Completed segment icons.
   Color get accentSuccess =>
       isDark ? const Color(0xFF30D158) : const Color(0xFF34C759);
@@ -122,6 +130,16 @@ class AppPalette {
   /// Alerts, validation warnings.
   Color get accentError =>
       isDark ? const Color(0xFFFF453A) : const Color(0xFFFF3B30);
+
+  /// Muted scrim for subtle drop shadows on floating "surface" elements.
+  ///
+  /// Light uses a soft 8%-black; dark shadows need a touch more ink to stay
+  /// visible on the near-black surfaces.
+  Color get overlayMuted =>
+      isDark ? const Color(0x33000000) : const Color(0x14000000);
+
+  /// Material 3 [ColorScheme.fromSeed] seed (theme-independent).
+  static const Color m3Seed = Color(0xFF5E5336);
 }
 
 /// Type scale + platform font stacks (spec §1).
@@ -166,6 +184,9 @@ class AppTypography {
 
   /// 11pt captions (sans).
   TextStyle get caption => const TextStyle(fontSize: 11);
+
+  /// 14pt settings/dropdown control text (sans).
+  TextStyle get control => const TextStyle(fontSize: 14);
 
   /// 15pt semibold section / header (sans).
   TextStyle get headerSemibold =>

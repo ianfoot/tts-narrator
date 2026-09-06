@@ -235,9 +235,8 @@ class _EditorToolbarState extends State<EditorToolbar> {
           const SizedBox(width: 4),
           Text(
             '⌘N',
-            style: TextStyle(
+            style: tokens.typography.caption.copyWith(
               color: tokens.colors.textPrimary.withValues(alpha: 0.75),
-              fontSize: 11,
             ),
           ),
         ],
