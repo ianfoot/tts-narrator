@@ -122,6 +122,7 @@ void main() {
       'format': 'pcm',
       'sample_rate': 24000,
       'prompt_style': true,
+      'display_name': 'Gemini 3.1 Flash TTS',
     };
 
     testWidgets('switching the model resets the voice to its default', (
@@ -138,7 +139,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('modelDropdown')));
       await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('google/gemini').last);
+      await tester.tap(find.textContaining('Gemini 3.1').last);
       await tester.pumpAndSettle();
 
       expect(c.modelAlias, 'gemini');
@@ -166,7 +167,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('modelDropdown')));
       await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('google/gemini').last);
+      await tester.tap(find.textContaining('Gemini 3.1').last);
       await tester.pumpAndSettle();
 
       expect(c.modelAlias, 'gemini');
@@ -302,6 +303,7 @@ void main() {
             'format': 'pcm',
             'sample_rate': 24000,
             'prompt_style': true,
+            'display_name': 'Gemini 3.1 Flash TTS',
           },
         },
         'defaults': {'gemini': 'Charon'},
@@ -562,6 +564,7 @@ void main() {
             'format': 'pcm',
             'sample_rate': 24000,
             'prompt_style': true,
+            'display_name': 'Gemini 3.1 Flash TTS',
           },
         },
         'defaults': {'gemini': 'Charon'},
@@ -601,7 +604,7 @@ void main() {
       // Open the native pop-up menu and pick gemini.
       await tester.tap(find.byKey(const Key('modelDropdown')));
       await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('google/gemini').last);
+      await tester.tap(find.textContaining('Gemini 3.1').last);
       await tester.pumpAndSettle();
 
       expect(c.modelAlias, 'gemini');

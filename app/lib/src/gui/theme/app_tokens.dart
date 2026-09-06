@@ -37,8 +37,8 @@ Brightness resolveBrightness(AppThemeMode mode, Brightness system) {
 /// fails the build on any drift.
 class AppTokens {
   AppTokens(this.brightness)
-      : colors = AppPalette.of(brightness),
-        typography = AppTypography(defaultTargetPlatform);
+    : colors = AppPalette.of(brightness),
+      typography = AppTypography(defaultTargetPlatform);
 
   /// The ambient brightness the tokens resolve for.
   final Brightness brightness;
@@ -87,9 +87,9 @@ class AppTokens {
 /// free in tests and hot paths.
 class AppPalette {
   const AppPalette(this.brightness)
-      : _gen = brightness == Brightness.dark
-            ? const _GeneratedPalette(isDark: true)
-            : const _GeneratedPalette(isDark: false);
+    : _gen = brightness == Brightness.dark
+          ? const _GeneratedPalette(isDark: true)
+          : const _GeneratedPalette(isDark: false);
 
   final Brightness brightness;
   final _GeneratedPalette _gen;
@@ -206,14 +206,15 @@ class AppTypography {
   TextStyle get headerSemibold => _t.headerSemibold;
 
   /// 12pt monospace metadata + readouts.
-  TextStyle get mono => TextStyle(fontSize: _t.mono.fontSize, fontFamily: monoFamily);
+  TextStyle get mono =>
+      TextStyle(fontSize: _t.mono.fontSize, fontFamily: monoFamily);
 
   /// 16pt / 1.6x serif editor body.
   TextStyle get editorBody => TextStyle(
-        fontSize: _t.editorBody.fontSize,
-        height: _t.editorBody.height,
-        fontFamily: editorSerifFamily,
-      );
+    fontSize: _t.editorBody.fontSize,
+    height: _t.editorBody.height,
+    fontFamily: editorSerifFamily,
+  );
 }
 
 /// Grid, shape, and dimension constants (spec §2).
@@ -250,6 +251,9 @@ class AppMetrics {
 
   /// Outer left/right padding framing the editor text column.
   static const double editorOuterPadding = 48;
+
+  /// Vertical padding framing the editor text column (top and bottom).
+  static const double editorVerticalPadding = 32;
 
   /// Minimum window size (spec §2).
   static const double minWindowWidth = 900;

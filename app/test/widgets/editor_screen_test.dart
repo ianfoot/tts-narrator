@@ -12,6 +12,7 @@ import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_text_field.dart';
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
+
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
 
@@ -44,7 +45,10 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
-        home: EditorScreen(controller: controller, pickDirectory: pickDirectory),
+        home: EditorScreen(
+          controller: controller,
+          pickDirectory: pickDirectory,
+        ),
       ),
     );
   }
@@ -69,31 +73,32 @@ void main() {
     expect(find.byKey(const Key('railNarrateButton')), findsNothing);
     expect(find.byKey(const Key('railToggleButton')), findsOneWidget);
     expect(find.byTooltip('Open text file (⌘O)'), findsOneWidget);
-    expect(find.text('⌘N'), findsOneWidget);
+    expect(find.byTooltip('Narrate (⌘N)'), findsOneWidget);
   });
 
-  testWidgets('the status bar spans the full window and hugs the estimate pill right', (
-    tester,
-  ) async {
-    final controller = await makeController();
-    await pumpEditor(tester, controller);
-    await tester.pumpAndSettle();
+  testWidgets(
+    'the status bar spans the full window and hugs the estimate pill right',
+    (tester) async {
+      final controller = await makeController();
+      await pumpEditor(tester, controller);
+      await tester.pumpAndSettle();
 
-    // The status bar is a sibling of the toolbar, not confined to the editor
-    // column, so it spans the full window like the toolbar does.
-    final screenRect = tester.getRect(find.byType(EditorScreen));
-    final barRect = tester.getRect(find.byKey(const Key('statusBar')));
-    expect(barRect.left, screenRect.left);
-    expect(barRect.right, closeTo(screenRect.right, 1));
+      // The status bar is a sibling of the toolbar, not confined to the editor
+      // column, so it spans the full window like the toolbar does.
+      final screenRect = tester.getRect(find.byType(EditorScreen));
+      final barRect = tester.getRect(find.byKey(const Key('statusBar')));
+      expect(barRect.left, screenRect.left);
+      expect(barRect.right, closeTo(screenRect.right, 1));
 
-    // The estimate pill announces the bar's right edge rather than floating
-    // at a hardcoded midpoint: the bar's 16px horizontal padding plus the
-    // pill's 4px inner padding inset the text from the window edge.
-    final estimateRight = tester.getBottomRight(
-      find.byKey(const Key('editorEstimate')),
-    );
-    expect(estimateRight.dx, closeTo(barRect.right - 16 - 4, 1));
-  });
+      // The estimate pill announces the bar's right edge rather than floating
+      // at a hardcoded midpoint: the bar's 16px horizontal padding plus the
+      // pill's 4px inner padding inset the text from the window edge.
+      final estimateRight = tester.getBottomRight(
+        find.byKey(const Key('editorEstimate')),
+      );
+      expect(estimateRight.dx, closeTo(barRect.right - 16 - 4, 1));
+    },
+  );
 
   testWidgets('the settings rail is visible by default and toggles away', (
     tester,
@@ -175,8 +180,10 @@ void main() {
   ) async {
     final controller = await makeController();
     final story = File('${dir.path}/story.txt')
-      ..writeAsStringSync('A freshly opened chapter with plenty of words in '
-          'it to narrate out loud.');
+      ..writeAsStringSync(
+        'A freshly opened chapter with plenty of words in '
+        'it to narrate out loud.',
+      );
     controller.loadFromFile(story.path);
 
     await pumpEditor(tester, controller);
@@ -433,11 +440,7 @@ void main() {
       tester,
     ) async {
       final controller = await makeController();
-      await pumpEditor(
-        tester,
-        controller,
-        pickDirectory: () async => null,
-      );
+      await pumpEditor(tester, controller, pickDirectory: () async => null);
 
       await tester.tap(find.byKey(const Key('outDirPickerButton')));
       await tester.pump();

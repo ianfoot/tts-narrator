@@ -465,6 +465,10 @@ _parseModelFile(String path, String alias) {
   if (provider is! String || provider.trim().isEmpty) {
     throw VoiceConfigError('needs a non-empty "provider"');
   }
+  final displayName = raw['display_name'];
+  if (displayName != null && displayName is! String) {
+    throw VoiceConfigError('"display_name" must be a string');
+  }
 
   String? defaultVoice;
   final defaultVoiceRaw = raw['default_voice'];
@@ -519,6 +523,7 @@ _parseModelFile(String path, String alias) {
       sendsVoiceField: sendsVoice ?? true,
       sampleRate: sampleRate?.toInt(),
       provider: provider.trim(),
+      displayName: displayName,
     ),
     defaultVoice: defaultVoice,
     pricing: pricing,
@@ -556,6 +561,7 @@ Map<String, Object?> _modelJson(
     {
       'id': p.id,
       'provider': p.provider,
+      if (p.displayName != null) 'display_name': p.displayName,
       if (p.format != 'mp3') 'format': p.format,
       if (p.sampleRate != null) 'sample_rate': p.sampleRate,
       if (p.promptStyle) 'prompt_style': p.promptStyle,
