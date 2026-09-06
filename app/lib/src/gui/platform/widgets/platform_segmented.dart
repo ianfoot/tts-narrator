@@ -76,11 +76,11 @@ class PlatformSegmentedControl<T> extends StatelessWidget {
                       borderRadius: BorderRadius.circular(
                         AppMetrics.controlRadius - 2,
                       ),
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
-                          color: Color(0x14000000),
+                          color: colors.overlayMuted,
                           blurRadius: 2,
-                          offset: Offset(0, 1),
+                          offset: const Offset(0, 1),
                         ),
                       ],
                     ),
@@ -149,7 +149,8 @@ class _SegmentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppTokens.of(context).colors;
+    final tokens = AppTokens.of(context);
+    final colors = tokens.colors;
     return Semantics(
       selected: selected,
       button: true,
@@ -159,8 +160,7 @@ class _SegmentButton extends StatelessWidget {
         child: Center(
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 13,
+            style: tokens.typography.body.copyWith(
               fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
               color: selected ? colors.textPrimary : colors.textSecondary,
             ),

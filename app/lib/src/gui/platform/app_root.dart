@@ -187,7 +187,7 @@ class _AppRootState extends State<AppRoot> {
     final palette = AppPalette.of(brightness);
     final scheme =
         ColorScheme.fromSeed(
-          seedColor: const Color(0xFF5E5336),
+          seedColor: AppPalette.m3Seed,
           brightness: brightness,
         ).copyWith(
           primary: palette.accentPrimary,

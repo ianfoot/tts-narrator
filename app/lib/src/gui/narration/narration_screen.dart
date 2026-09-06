@@ -388,7 +388,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
         child: Icon(
           _isMac ? CupertinoIcons.check_mark : Icons.check,
           size: 12,
-          color: Colors.white,
+          color: colors.textOnAccent,
         ),
       );
     } else {

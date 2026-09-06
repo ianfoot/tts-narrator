@@ -12,8 +12,8 @@ enum PlatformButtonStyle { filled, outlined }
 /// The filled style is a custom accent-primary container rather than
 /// `CupertinoButton.filled`, whose SDK-default geometry is taller than the
 /// app's 44px toolbar and clipped the toolbar Narrate button. The child is
-/// styled white through a `DefaultTextStyle` so a filled button renders white
-/// text/icons without every caller specifying the color.
+/// styled in `text-on-accent` through a `DefaultTextStyle` so a filled button
+/// renders white text/icons without every caller specifying the color.
 class PlatformButton extends StatelessWidget {
   const PlatformButton({
     super.key,
@@ -51,6 +51,8 @@ class PlatformButton extends StatelessWidget {
   }
 
   Widget _buildCupertino(BuildContext context) {
+    final tokens = AppTokens.of(context);
+    final onAccent = tokens.colors.textOnAccent;
     final label = icon == null
         ? child
         : Row(
@@ -72,7 +74,7 @@ class PlatformButton extends StatelessWidget {
           padding: pad,
           decoration: BoxDecoration(
             border: Border.all(
-              color: AppTokens.of(context).colors.borderSubtle,
+              color: tokens.colors.borderSubtle,
               width: 0.8,
             ),
             borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
@@ -81,17 +83,17 @@ class PlatformButton extends StatelessWidget {
         ),
       );
     }
-    final accent = AppTokens.of(context).colors.accentPrimary;
+    final accent = tokens.colors.accentPrimary;
     return CupertinoButton(
       onPressed: onPressed,
       padding: EdgeInsets.zero,
       child: DefaultTextStyle(
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: onAccent),
         // Icons resolve color from IconTheme, not DefaultTextStyle; without
         // this the root Cupertino IconTheme (accent-primary) would make icons
         // invisible on the same-colored fill.
         child: IconTheme(
-          data: const IconThemeData(color: Colors.white),
+          data: IconThemeData(color: onAccent),
           child: Container(
             padding: pad,
             decoration: BoxDecoration(

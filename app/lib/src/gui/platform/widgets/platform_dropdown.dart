@@ -60,7 +60,8 @@ class PlatformDropdown<T> extends StatelessWidget {
           ),
       ],
       builder: (context, controller, child) {
-        final colors = AppTokens.of(context).colors;
+        final tokens = AppTokens.of(context);
+        final colors = tokens.colors;
         return CupertinoButton(
           onPressed: controller.open,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -73,8 +74,7 @@ class PlatformDropdown<T> extends StatelessWidget {
                 child: Text(
                   selectedLabel,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14,
+                  style: tokens.typography.control.copyWith(
                     color: selectedIndex == -1
                         ? colors.textSecondary
                         : colors.textPrimary,
