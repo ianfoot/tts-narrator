@@ -386,11 +386,15 @@ app/                        # tts_narrator — Flutter macOS GUI
         app_root.dart         # CupertinoApp (macOS) / MaterialApp (elsewhere)
         platform_page.dart
         widgets/              # PlatformButton/TextField/Dropdown/Switch/Section/...
+      theme/                  # design tokens (see "Design tokens" below)
+  assets/theme/tokens.json    # color + typography source of truth (drives app_tokens.g.dart)
+  tool/generate_tokens.dart   # codegen: tokens.json → app_tokens.g.dart
   test/
     controller/               # app controller unit tests
     menu/                     # menu bar structure + dispatch tests
     widgets/                  # widget tests (flutter test)
     support/                  # shared test fixtures
+    theme/                    # token value tests + codegen golden test
 voice_config.example/       # sample config: config.json (providers/${ENV} refs, no secrets) + <alias>.json per model
 ```
 
@@ -436,6 +440,48 @@ fvm flutter build macos --release
   time. Note: a GUI app launched from the Finder doesn't inherit a shell's
   environment, so for double-click use write a literal key in
   `providers.openrouter` instead of a `${OPENROUTER_API_KEY}` reference.
+
+### Design tokens
+
+The GUI's colors, type sizes, and font weights live in
+`app/assets/theme/tokens.json` and are emitted into the private
+`app/lib/src/gui/theme/app_tokens.g.dart` (a `part of` of the public
+`app_tokens.dart`) by `app/tool/generate_tokens.dart`. Hand-editing the
+`.g.dart` file will be overwritten on the next regeneration, and CI
+fails any PR that changes the JSON without committing the regenerated
+output. `AppMetrics` (radii, gaps, the toolbar/status bar heights, the
+default/minimum window sizes) is intentionally **not** in the JSON —
+those are layout-grid constants that don't change with the brand.
+
+To change a color or a font size:
+
+```
+cd app
+# 1. Edit app/assets/theme/tokens.json.
+# 2. Regenerate the .g.dart from the JSON.
+fvm dart run tool/generate_tokens.dart
+# 3. Run the test suite — the golden test in
+#    test/theme/codegen_test.dart re-runs the codegen into a temp
+#    tree and asserts the output is byte-identical to the checked-in
+#    app_tokens.g.dart. It fails if you forgot step 2.
+fvm flutter test
+# 4. Commit both files.
+```
+
+The JSON shape:
+
+- `colors.<name>.{light,dark}` — hex strings including alpha, e.g.
+  `"0xFFFBFBF9"` or `"0x14000000"`. The codegen emits a `Color(int)` so
+  `0xAARRGGBB` form is required.
+- `m3Seed` — the Material 3 `ColorScheme.fromSeed` value (theme-
+  independent). Same hex format as the colors.
+- `typography.<name>` — at minimum a `fontSize` integer; optional
+  `height` (number), `fontWeight` (`"w600"` style — maps to
+  `FontWeight.w600`), and `fontFamily`. A `fontFamily` of
+  `"platform:mono"` or `"platform:editorSerif"` is a sentinel: the
+  family is resolved at runtime by `AppTypography.monoFamily` /
+  `.editorSerifFamily` against `defaultTargetPlatform`. Anything else
+  is treated as a literal family name.
 
 ## Notes / current behaviour
 
