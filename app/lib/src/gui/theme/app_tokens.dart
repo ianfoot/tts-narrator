@@ -251,6 +251,9 @@ class AppMetrics {
   /// Outer left/right padding framing the editor text column.
   static const double editorOuterPadding = 48;
 
+  /// Top (and bottom) padding framing the editor text column.
+  static const double editorTopPadding = 32;
+
   /// Minimum window size (spec §2).
   static const double minWindowWidth = 900;
   static const double minWindowHeight = 600;

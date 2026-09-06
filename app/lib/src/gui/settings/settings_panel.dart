@@ -48,9 +48,12 @@ class _SettingsPanelState extends State<SettingsPanel> {
 
   AppController get _controller => widget.controller;
 
+  /// Human-readable model display names, taken from the model's config file
+  /// (`display_name`). Unknown/custom aliases without one fall back to the
+  /// `alias — id` format.
   List<(String, String)> get _modelItems => [
     for (final p in effectiveModels(_controller.voiceConfig))
-      (p.alias, '${p.alias} — ${p.id}'),
+      (p.alias, p.displayName ?? '${p.alias} — ${p.id}'),
   ];
 
   List<(String, String)> get _voiceItems => _controller.voiceItems;
@@ -161,6 +164,17 @@ class _SettingsPanelState extends State<SettingsPanel> {
     ),
   );
 
+  /// Inline control label (e.g. "Sample mode", "Skip completed segments")
+  /// — 13pt body, semibold, primary text color, so it reads clearly next to
+  /// switches/sliders without looking like a sub-label or section header.
+  Widget _controlLabel(String text) => Text(
+    text,
+    style: _tokens.typography.body.copyWith(
+      fontWeight: FontWeight.w600,
+      color: _tokens.colors.textPrimary,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -168,7 +182,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
       width: AppMetrics.railWidth,
       decoration: BoxDecoration(
         border: Border(
-          right: BorderSide(color: _tokens.colors.borderSubtle, width: 0.5),
+          right: BorderSide(color: _tokens.colors.borderSubtle, width: 1.0),
         ),
       ),
       child: Column(
@@ -433,7 +447,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
             padding: const EdgeInsets.only(top: 12),
             child: Row(
               children: [
-                Expanded(child: Text('Sample mode')),
+                Expanded(child: _controlLabel('Sample mode')),
                 PlatformSwitch(
                   key: const Key('sampleSwitch'),
                   value: _sampleOn,
@@ -470,7 +484,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
             padding: const EdgeInsets.only(top: 12),
             child: Row(
               children: [
-                const Expanded(child: Text('Skip completed segments (Resume)')),
+                Expanded(child: _controlLabel('Skip completed segments (Resume)')),
                 PlatformSwitch(
                   key: const Key('resumeSwitch'),
                   value: _controller.resume,

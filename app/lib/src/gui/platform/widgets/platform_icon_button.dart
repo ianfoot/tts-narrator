@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../theme/app_tokens.dart';
+
 /// Platform-aware icon-only button: [CupertinoButton] (transparent) on macOS,
 /// [IconButton] elsewhere.
 ///
@@ -26,6 +28,14 @@ class PlatformIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = AppTokens.of(context);
+    final iconColor = tokens.colors.textPrimary.withValues(
+      alpha: onPressed == null ? 0.6 : 1.0,
+    );
+    final themedIcon = IconTheme(
+      data: IconThemeData(color: iconColor),
+      child: icon,
+    );
     final Widget button;
     if (defaultTargetPlatform == TargetPlatform.macOS) {
       button = CupertinoButton(
@@ -33,11 +43,11 @@ class PlatformIconButton extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         pressedOpacity: 0.6,
         borderRadius: BorderRadius.circular(6),
-        child: icon,
+        child: themedIcon,
       );
     } else {
       button = IconButton(
-        icon: icon,
+        icon: themedIcon,
         onPressed: onPressed,
       );
     }

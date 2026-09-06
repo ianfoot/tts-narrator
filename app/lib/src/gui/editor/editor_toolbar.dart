@@ -82,9 +82,11 @@ class _EditorToolbarState extends State<EditorToolbar> {
       key: const Key('appearanceToggleButton'),
       tooltip: 'Appearance: ${_themeModeLabel(currentMode)}',
       icon: Icon(switch (currentMode) {
-        AppThemeMode.light => _isMac ? CupertinoIcons.sun_max : Icons.light_mode,
+        AppThemeMode.light =>
+          _isMac ? CupertinoIcons.sun_max : Icons.light_mode,
         AppThemeMode.dark => _isMac ? CupertinoIcons.moon : Icons.dark_mode,
-        AppThemeMode.system => _isMac ? CupertinoIcons.circle_lefthalf_fill : Icons.brightness_auto,
+        AppThemeMode.system =>
+          _isMac ? CupertinoIcons.circle_lefthalf_fill : Icons.brightness_auto,
       }),
       onPressed: () {
         controller.themeMode = switch (controller.themeMode) {
@@ -117,7 +119,9 @@ class _EditorToolbarState extends State<EditorToolbar> {
     return PlatformIconButton(
       key: const Key('editorSaveButton'),
       tooltip: 'Save (⌘S)',
-      icon: Icon(_isMac ? CupertinoIcons.square_arrow_down : Icons.save_outlined),
+      icon: Icon(
+        _isMac ? CupertinoIcons.square_arrow_down : Icons.save_outlined,
+      ),
       onPressed: controller.dirty ? () => controller.save() : null,
     );
   }
@@ -156,8 +160,12 @@ class _EditorToolbarState extends State<EditorToolbar> {
     final label = widget.playingFull ? 'Stop' : 'Play Full';
     final btnIcon = Icon(
       _isMac
-          ? (widget.playingFull ? CupertinoIcons.stop_circle : CupertinoIcons.play_fill)
-          : (widget.playingFull ? Icons.stop_circle_outlined : Icons.play_arrow),
+          ? (widget.playingFull
+                ? CupertinoIcons.stop_circle
+                : CupertinoIcons.play_fill)
+          : (widget.playingFull
+                ? Icons.stop_circle_outlined
+                : Icons.play_arrow),
       size: 14,
       color: colors.textPrimary,
     );
@@ -173,7 +181,9 @@ class _EditorToolbarState extends State<EditorToolbar> {
             borderRadius: BorderRadius.circular(4),
           ),
           child: DefaultTextStyle(
-            style: tokens.typography.caption.copyWith(color: colors.textPrimary),
+            style: tokens.typography.caption.copyWith(
+              color: colors.textPrimary,
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [btnIcon, const SizedBox(width: 4), Text(label)],
@@ -213,33 +223,27 @@ class _EditorToolbarState extends State<EditorToolbar> {
   }
 
   Widget _buildNarrateButton(AppTokens tokens) {
-    return PlatformButton(
-      key: const Key('editorNarrateButton'),
-      onPressed: () {
-        final reason = controller.narrateBlockReason();
-        if (reason != null) {
-          widget.onShowGuard?.call(reason);
-          return;
-        }
-        controller.onNarrate?.call();
-      },
-      compact: true,
-      icon: Icon(
-        _isMac ? CupertinoIcons.play_fill : Icons.play_arrow,
-        size: 18,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Narrate'),
-          const SizedBox(width: 4),
-          Text(
-            '⌘N',
-            style: tokens.typography.caption.copyWith(
-              color: tokens.colors.textPrimary.withValues(alpha: 0.75),
-            ),
-          ),
-        ],
+    return Tooltip(
+      message: 'Narrate (⌘N)',
+      child: PlatformButton(
+        key: const Key('editorNarrateButton'),
+        onPressed: () {
+          final reason = controller.narrateBlockReason();
+          if (reason != null) {
+            widget.onShowGuard?.call(reason);
+            return;
+          }
+          controller.onNarrate?.call();
+        },
+        compact: true,
+        icon: Icon(
+          _isMac ? CupertinoIcons.play_fill : Icons.play_arrow,
+          size: 18,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [const Text('Narrate')],
+        ),
       ),
     );
   }
@@ -275,18 +279,18 @@ class _EditorToolbarState extends State<EditorToolbar> {
                 ),
                 onPressed: widget.onToggleRail,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               _buildAppearanceButton(tokens),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               PlatformIconButton(
                 key: const Key('editorOpenButton'),
                 tooltip: 'Open text file (⌘O)',
                 icon: Icon(_isMac ? CupertinoIcons.folder : Icons.folder_open),
                 onPressed: () => controller.onOpen?.call(),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               _buildOutputFolderButton(),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               _buildSaveButton(),
             ],
           ),
@@ -295,10 +299,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildNarrateButton(tokens),
-              if (fullPlay != null) ...[
-                const SizedBox(width: 8),
-                fullPlay,
-              ],
+              if (fullPlay != null) ...[const SizedBox(width: 8), fullPlay],
               if (controller.canCleanupSegments) ...[
                 const SizedBox(width: 8),
                 _buildCleanupButton(),
