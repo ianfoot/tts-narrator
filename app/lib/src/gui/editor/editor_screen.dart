@@ -224,9 +224,9 @@ class _EditorScreenState extends State<EditorScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppMetrics.editorOuterPadding,
-        AppMetrics.editorTopPadding,
+        AppMetrics.editorVerticalPadding,
         AppMetrics.editorOuterPadding,
-        AppMetrics.editorTopPadding,
+        AppMetrics.editorVerticalPadding,
       ),
       child: PlatformTextField(
         key: const Key('editorTextField'),

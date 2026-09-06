@@ -17,10 +17,7 @@ import '../theme/app_tokens.dart';
 /// the editor so the status-bar estimate stays live. The rail is hidden via the
 /// editor toolbar's toggle; narration is initiated from the toolbar, not here.
 class SettingsPanel extends StatefulWidget {
-  const SettingsPanel({
-    super.key,
-    required this.controller,
-  });
+  const SettingsPanel({super.key, required this.controller});
 
   final AppController controller;
 
@@ -135,7 +132,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
   void _onSampleLenChanged(String value) {
     if (_syncing) return;
     final trimmed = value.trim();
-    if (trimmed.isEmpty) return; // clearing the field to retype; keep sample mode on
+    if (trimmed.isEmpty) {
+      return; // clearing the field to retype; keep sample mode on
+    }
     final parsed = int.tryParse(trimmed);
     if (parsed == null) return;
     _controller.sampleLen = parsed;
@@ -484,7 +483,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
             padding: const EdgeInsets.only(top: 12),
             child: Row(
               children: [
-                Expanded(child: _controlLabel('Skip completed segments (Resume)')),
+                Expanded(
+                  child: _controlLabel('Skip completed segments (Resume)'),
+                ),
                 PlatformSwitch(
                   key: const Key('resumeSwitch'),
                   value: _controller.resume,
