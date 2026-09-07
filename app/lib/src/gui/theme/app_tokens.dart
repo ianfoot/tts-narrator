@@ -270,4 +270,9 @@ class AppMetrics {
   /// Default window size (spec §2).
   static const double defaultWindowWidth = 1100;
   static const double defaultWindowHeight = 750;
+
+  /// Uniform scale for interactive control circles (slider thumb). Cupertino
+  /// native shapes don't expose size parameters, so the whole control is
+  /// scaled down slightly for a tighter look.
+  static const double controlKnobScale = 0.7;
 }

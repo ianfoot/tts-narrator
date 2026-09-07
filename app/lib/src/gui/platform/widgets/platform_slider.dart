@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../theme/app_tokens.dart';
+
 /// Platform-aware slider: [CupertinoSlider] on macOS, [Slider] elsewhere.
 class PlatformSlider extends StatelessWidget {
   const PlatformSlider({
@@ -32,12 +34,16 @@ class PlatformSlider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (defaultTargetPlatform == TargetPlatform.macOS) {
-      return CupertinoSlider(
-        value: value,
-        onChanged: onChanged,
-        min: min,
-        max: max,
-        divisions: divisions,
+      return Transform.scale(
+        alignment: Alignment.centerLeft,
+        scale: AppMetrics.controlKnobScale,
+        child: CupertinoSlider(
+          value: value,
+          onChanged: onChanged,
+          min: min,
+          max: max,
+          divisions: divisions,
+        ),
       );
     }
     return Slider(
