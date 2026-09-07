@@ -77,7 +77,7 @@ void main() {
   });
 
   testWidgets(
-    'the status bar spans the full window and hugs the estimate pill right',
+    'the status bar spans the full window and hugs the estimate readout right',
     (tester) async {
       final controller = await makeController();
       await pumpEditor(tester, controller);
@@ -90,13 +90,13 @@ void main() {
       expect(barRect.left, screenRect.left);
       expect(barRect.right, closeTo(screenRect.right, 1));
 
-      // The estimate pill announces the bar's right edge rather than floating
-      // at a hardcoded midpoint: the bar's 16px horizontal padding plus the
-      // pill's 4px inner padding inset the text from the window edge.
+      // The estimate readout announces the bar's right edge rather than
+      // floating at a hardcoded midpoint: the bar's 16px horizontal padding
+      // insets the text from the window edge.
       final estimateRight = tester.getBottomRight(
         find.byKey(const Key('editorEstimate')),
       );
-      expect(estimateRight.dx, closeTo(barRect.right - 16 - 4, 1));
+      expect(estimateRight.dx, closeTo(barRect.right - 16, 1));
     },
   );
 

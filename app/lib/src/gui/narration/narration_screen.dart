@@ -219,8 +219,10 @@ class _NarrationScreenState extends State<NarrationScreen> {
             if (controller.runPlanError != null)
               _buildMessageCard(controller.runPlanError!, isError: true)
             else if (controller.runError != null)
-              _buildMessageCard('Narration failed: ${controller.runError}',
-                  isError: true)
+              _buildMessageCard(
+                'Narration failed: ${controller.runError}',
+                isError: true,
+              )
             else if (controller.runStopped)
               _buildMessageCard('Narration was stopped.')
             else if (controller.runFinished)
@@ -307,11 +309,11 @@ class _NarrationScreenState extends State<NarrationScreen> {
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(
-        message,
-        style: _tokens.typography.body.copyWith(color: fg),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
       ),
+      child: Text(message, style: _tokens.typography.body.copyWith(color: fg)),
     );
   }
 
@@ -441,7 +443,8 @@ class _NarrationScreenState extends State<NarrationScreen> {
 
   Widget _actionColumn(NarrationRunSegment segment) {
     final colors = _tokens.colors;
-    final playable = segment.filePath != null && File(segment.filePath!).existsSync();
+    final playable =
+        segment.filePath != null && File(segment.filePath!).existsSync();
     final isPlaying = _playingIndex == segment.index;
     final Widget child;
     if (!playable) {

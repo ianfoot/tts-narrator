@@ -30,6 +30,7 @@ void main() {
       expect(light.borderSubtle, isNot(dark.borderSubtle));
       expect(light.textPrimary, isNot(dark.textPrimary));
       expect(light.textSecondary, isNot(dark.textSecondary));
+      expect(light.textTertiary, isNot(dark.textTertiary));
     });
 
     test('spot-checks the spec hex values (spec §1)', () {
@@ -59,10 +60,15 @@ void main() {
       expect(AppPalette.dark.textPrimary, const Color(0xFFEDEDED));
       expect(AppPalette.light.textSecondary, const Color(0xFF6E6E73));
       expect(AppPalette.dark.textSecondary, const Color(0xFF8E8E93));
+      expect(AppPalette.light.textTertiary, const Color(0xFF4D4D52));
+      expect(AppPalette.dark.textTertiary, const Color(0xFFADADB2));
     });
 
     test('of() returns the canonical palette for each brightness', () {
-      expect(identical(AppPalette.of(Brightness.dark), AppPalette.dark), isTrue);
+      expect(
+        identical(AppPalette.of(Brightness.dark), AppPalette.dark),
+        isTrue,
+      );
       expect(
         identical(AppPalette.of(Brightness.light), AppPalette.light),
         isTrue,
@@ -72,10 +78,22 @@ void main() {
 
   group('resolveBrightness', () {
     test('pins the brightness for light and dark modes', () {
-      expect(resolveBrightness(AppThemeMode.light, Brightness.dark), Brightness.light);
-      expect(resolveBrightness(AppThemeMode.light, Brightness.light), Brightness.light);
-      expect(resolveBrightness(AppThemeMode.dark, Brightness.light), Brightness.dark);
-      expect(resolveBrightness(AppThemeMode.dark, Brightness.dark), Brightness.dark);
+      expect(
+        resolveBrightness(AppThemeMode.light, Brightness.dark),
+        Brightness.light,
+      );
+      expect(
+        resolveBrightness(AppThemeMode.light, Brightness.light),
+        Brightness.light,
+      );
+      expect(
+        resolveBrightness(AppThemeMode.dark, Brightness.light),
+        Brightness.dark,
+      );
+      expect(
+        resolveBrightness(AppThemeMode.dark, Brightness.dark),
+        Brightness.dark,
+      );
     });
 
     test('delegates to the system brightness in system mode', () {
@@ -97,10 +115,7 @@ void main() {
         AppTypography(TargetPlatform.windows).editorSerifFamily,
         'Georgia',
       );
-      expect(
-        AppTypography(TargetPlatform.android).editorSerifFamily,
-        'serif',
-      );
+      expect(AppTypography(TargetPlatform.android).editorSerifFamily, 'serif');
       expect(AppTypography(TargetPlatform.macOS).monoFamily, 'Menlo');
       expect(AppTypography(TargetPlatform.windows).monoFamily, 'Consolas');
       expect(AppTypography(TargetPlatform.linux).monoFamily, 'monospace');
@@ -145,8 +160,7 @@ void main() {
           home: const _Probe(),
         ),
       );
-      final tokens =
-          tester.state<_ProbeState>(find.byType(_Probe)).tokens!;
+      final tokens = tester.state<_ProbeState>(find.byType(_Probe)).tokens!;
       expect(tokens.colors.isDark, isFalse);
       expect(tokens.colors.bgApp, AppPalette.light.bgApp);
     });
@@ -158,8 +172,7 @@ void main() {
           home: const _Probe(),
         ),
       );
-      final tokens =
-          tester.state<_ProbeState>(find.byType(_Probe)).tokens!;
+      final tokens = tester.state<_ProbeState>(find.byType(_Probe)).tokens!;
       expect(tokens.colors.isDark, isTrue);
       expect(tokens.colors.bgApp, AppPalette.dark.bgApp);
     });
@@ -173,8 +186,7 @@ void main() {
           home: const _Probe(),
         ),
       );
-      final tokens =
-          tester.state<_ProbeState>(find.byType(_Probe)).tokens!;
+      final tokens = tester.state<_ProbeState>(find.byType(_Probe)).tokens!;
       expect(tokens.colors.isDark, isTrue);
       expect(tokens.colors.bgApp, AppPalette.dark.bgApp);
     });

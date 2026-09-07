@@ -17,8 +17,10 @@ Future<void> pumpFlowHost(
       home: Scaffold(
         body: Builder(
           builder: (context) => TextButton(
-            onPressed: () =>
-                runCleanupSegmentsFlow(controller: controller, context: context),
+            onPressed: () => runCleanupSegmentsFlow(
+              controller: controller,
+              context: context,
+            ),
             child: const Text('run'),
           ),
         ),
@@ -98,27 +100,28 @@ void main() {
       expect(find.text('Segments deleted'), findsNothing);
     });
 
-    testWidgets('bails if the target directory moves while the dialog is open', (
-      tester,
-    ) async {
-      final controller = RecordingCleanupController()
-        ..cleanupUsable = true
-        ..runDir = 'original run dir'
-        ..overrideCleanup = () async {
-          fail('cleanup ran against a stale directory');
-        };
-      await pumpFlowHost(tester, controller);
+    testWidgets(
+      'bails if the target directory moves while the dialog is open',
+      (tester) async {
+        final controller = RecordingCleanupController()
+          ..cleanupUsable = true
+          ..runDir = 'original run dir'
+          ..overrideCleanup = () async {
+            fail('cleanup ran against a stale directory');
+          };
+        await pumpFlowHost(tester, controller);
 
-      await tester.tap(find.text('run'));
-      await tester.pumpAndSettle();
-      expect(find.text('Delete segment files?'), findsOneWidget);
+        await tester.tap(find.text('run'));
+        await tester.pumpAndSettle();
+        expect(find.text('Delete segment files?'), findsOneWidget);
 
-      controller.runDir = 'another run dir';
-      await tester.tap(find.text('Delete'));
-      await tester.pumpAndSettle();
+        controller.runDir = 'another run dir';
+        await tester.tap(find.text('Delete'));
+        await tester.pumpAndSettle();
 
-      expect(controller.cleanups, 0);
-    });
+        expect(controller.cleanups, 0);
+      },
+    );
 
     testWidgets('surfaces a cleanup failure instead of crashing', (
       tester,
@@ -137,7 +140,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Cleanup failed'), findsOneWidget);
-      expect(find.textContaining("can't read segment manifest"), findsOneWidget);
+      expect(
+        find.textContaining("can't read segment manifest"),
+        findsOneWidget,
+      );
     });
   });
 }

@@ -16,8 +16,7 @@ import 'dart:io';
 void main(List<String> args) {
   final packageRoot = _packageRoot();
   final jsonPath = '$packageRoot/assets/theme/tokens.json';
-  final outPath =
-      '$packageRoot/lib/src/gui/theme/app_tokens.g.dart';
+  final outPath = '$packageRoot/lib/src/gui/theme/app_tokens.g.dart';
 
   final jsonFile = File(jsonPath);
   if (!jsonFile.existsSync()) {
@@ -53,7 +52,11 @@ String _packageRoot() {
 
 /// Parsed and validated token manifest.
 class TokenSpec {
-  TokenSpec({required this.colors, required this.m3Seed, required this.typography});
+  TokenSpec({
+    required this.colors,
+    required this.m3Seed,
+    required this.typography,
+  });
 
   /// Color entries in declaration order (so the generated output is stable).
   final List<ColorEntry> colors;
@@ -67,12 +70,16 @@ class TokenSpec {
     }
     final colors = <ColorEntry>[];
     for (final entry in colorsRaw.entries) {
-      colors.add(ColorEntry.fromJson(entry.key, entry.value as Map<String, dynamic>));
+      colors.add(
+        ColorEntry.fromJson(entry.key, entry.value as Map<String, dynamic>),
+      );
     }
 
     final m3SeedRaw = json['m3Seed'];
     if (m3SeedRaw is! String) {
-      throw const FormatException('`m3Seed` must be a string like "0xFF5E5336".');
+      throw const FormatException(
+        '`m3Seed` must be a string like "0xFF5E5336".',
+      );
     }
     _parseHex(m3SeedRaw, name: 'm3Seed');
 
@@ -82,7 +89,9 @@ class TokenSpec {
     }
     final typography = <TypeEntry>[];
     for (final entry in typoRaw.entries) {
-      typography.add(TypeEntry.fromJson(entry.key, entry.value as Map<String, dynamic>));
+      typography.add(
+        TypeEntry.fromJson(entry.key, entry.value as Map<String, dynamic>),
+      );
     }
 
     return TokenSpec(colors: colors, m3Seed: m3SeedRaw, typography: typography);
@@ -131,7 +140,8 @@ class TypeEntry {
   /// to the AppTypography getter) or is a literal family name, or null.
   final String? fontFamily;
 
-  bool get isPlatformFamily => fontFamily != null && fontFamily!.startsWith('platform:');
+  bool get isPlatformFamily =>
+      fontFamily != null && fontFamily!.startsWith('platform:');
 
   /// The setter name the codegen uses for the platform-family getter on
   /// `AppTypography` (e.g. `monoFamily` for `platform:mono`).
@@ -159,7 +169,9 @@ class TypeEntry {
     final fontWeight = json['fontWeight'];
     if (fontWeight != null) {
       if (fontWeight is! String || !RegExp(r'^w\d{3}$').hasMatch(fontWeight)) {
-        throw FormatException('Typography `$name.fontWeight` must look like "w600".');
+        throw FormatException(
+          'Typography `$name.fontWeight` must look like "w600".',
+        );
       }
     }
     final fontFamily = json['fontFamily'];

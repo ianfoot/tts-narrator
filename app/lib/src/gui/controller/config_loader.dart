@@ -8,7 +8,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 /// references expanded from the runtime environment.
 class VoiceConfigLoader {
   VoiceConfigLoader({String? configDir})
-      : configDir = configDir ?? defaultConfigDir();
+    : configDir = configDir ?? defaultConfigDir();
 
   /// Absolute path of the config directory (defaults to the platform path).
   final String configDir;

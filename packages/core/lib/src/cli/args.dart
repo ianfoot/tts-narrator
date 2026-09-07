@@ -76,14 +76,18 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
         final v = take(arg);
         final n = int.tryParse(v);
         if (n == null || n < 1) {
-          throw CliUsageError('--sample-len must be a positive integer, got "$v".');
+          throw CliUsageError(
+            '--sample-len must be a positive integer, got "$v".',
+          );
         }
         sampleLen = n;
       case '--min-words':
         final v = take(arg);
         final n = int.tryParse(v);
         if (n == null || n < 1) {
-          throw CliUsageError('--min-words must be a positive integer, got "$v".');
+          throw CliUsageError(
+            '--min-words must be a positive integer, got "$v".',
+          );
         }
         minWords = n;
       case '--dry-run':
@@ -135,7 +139,9 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
   if (modelArg != null) {
     final resolved = profileFor(modelArg, voiceConfig);
     if (resolved == null) {
-      final aliases = effectiveModels(voiceConfig).map((p) => p.alias).join(', ');
+      final aliases = effectiveModels(voiceConfig)
+          .map((p) => p.alias)
+          .join(', ');
       throw CliUsageError(
         'Unknown model "$modelArg". Available: $aliases '
         '(or pass a full model id).',
@@ -187,7 +193,10 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
     providerSettings = const {};
   } else {
     try {
-      providerSettings = resolveSettings(rawSettings, env: Platform.environment);
+      providerSettings = resolveSettings(
+        rawSettings,
+        env: Platform.environment,
+      );
     } on StateError catch (e) {
       throw CliUsageError(e.message);
     }
@@ -224,15 +233,18 @@ List<String> expandInputFiles(String inputPath) {
   if (!Directory(inputPath).existsSync()) {
     return [inputPath];
   }
-  final files = Directory(inputPath)
-      .listSync()
-      .whereType<File>()
-      .where((f) =>
-          f.path.toLowerCase().endsWith('.txt') &&
-          !f.path.split(Platform.pathSeparator).last.startsWith('.'))
-      .map((f) => f.path)
-      .toList()
-    ..sort();
+  final files =
+      Directory(inputPath)
+          .listSync()
+          .whereType<File>()
+          .where(
+            (f) =>
+                f.path.toLowerCase().endsWith('.txt') &&
+                !f.path.split(Platform.pathSeparator).last.startsWith('.'),
+          )
+          .map((f) => f.path)
+          .toList()
+        ..sort();
   if (files.isEmpty) {
     throw CliUsageError('No .txt files found in "$inputPath".');
   }
@@ -259,11 +271,13 @@ String renderVoiceListing({
     }
     final voices = config.voices[p.alias] ?? const <String, Voice>{};
     if (voices.isNotEmpty) {
-      final shown = voices.entries.map((e) {
-        final g = e.value.gender;
-        final tag = g == null ? '' : ' [${g.shorthand}]';
-        return '${e.key} → ${e.value.id}$tag';
-      }).join(', ');
+      final shown = voices.entries
+          .map((e) {
+            final g = e.value.gender;
+            final tag = g == null ? '' : ' [${g.shorthand}]';
+            return '${e.key} → ${e.value.id}$tag';
+          })
+          .join(', ');
       out.writeln('  aliases:        $shown');
     } else {
       out.writeln(

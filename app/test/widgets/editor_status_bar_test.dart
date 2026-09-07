@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_status_bar.dart';
+import 'package:tts_narrator/src/gui/theme/app_tokens.dart';
 
 void main() {
   late Directory dir;
@@ -27,11 +28,13 @@ void main() {
     WidgetTester tester,
     AppController controller, {
     Size size = const Size(1000, 800),
+    Brightness brightness = Brightness.light,
   }) async {
     await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
+        theme: ThemeData(brightness: brightness),
         home: Scaffold(body: EditorStatusBar(controller: controller)),
       ),
     );
@@ -39,6 +42,10 @@ void main() {
 
   String statusOutDirText(WidgetTester tester) =>
       (tester.widget<Text>(find.byKey(const Key('statusOutDir'))).data)!;
+
+  /// The [Text] style color for the named readout.
+  Color readoutColor(WidgetTester tester, Key key) =>
+      tester.widget<Text>(find.byKey(key)).style!.color!;
 
   testWidgets('boots with zeroed counts and the default output folder', (
     tester,
@@ -70,7 +77,8 @@ void main() {
     tester,
   ) async {
     final controller = makeController();
-    const longPath = '/a/very/long/prefix/that/will/not/fit/in/any/window/width/finalLeaf';
+    const longPath =
+        '/a/very/long/prefix/that/will/not/fit/in/any/window/width/finalLeaf';
     controller.outDir = longPath;
     await pumpStatusBar(tester, controller);
 
@@ -104,7 +112,7 @@ void main() {
     expect(find.textContaining('1 segment'), findsOneWidget);
   });
 
-  testWidgets('anchors the estimate pill at the right edge of the bar', (
+  testWidgets('anchors the estimate readout at the right edge of the bar', (
     tester,
   ) async {
     final controller = makeController();
@@ -115,7 +123,35 @@ void main() {
     final estimateRight = tester.getBottomRight(
       find.byKey(const Key('editorEstimate')),
     );
-    // Bar padding 16px + pill padding 4px inset the text from the edge.
-    expect(estimateRight.dx, closeTo(barRect.right - 16 - 4, 1));
+    // Bar padding 16px insets the text from the edge (no pill padding anymore).
+    expect(estimateRight.dx, closeTo(barRect.right - 16, 1));
+  });
+
+  testWidgets('readouts use the quiet secondary grey in light mode', (
+    tester,
+  ) async {
+    final controller = makeController();
+    await pumpStatusBar(tester, controller);
+
+    final expected = AppPalette.light.textSecondary;
+    expect(
+      tester.widget<Text>(find.textContaining(' words · ')).style!.color,
+      expected,
+    );
+    expect(readoutColor(tester, const Key('statusOutDir')), expected);
+    expect(readoutColor(tester, const Key('editorEstimate')), expected);
+  });
+
+  testWidgets('readouts lift to textTertiary in dark mode', (tester) async {
+    final controller = makeController();
+    await pumpStatusBar(tester, controller, brightness: Brightness.dark);
+
+    final expected = AppPalette.dark.textTertiary;
+    expect(
+      tester.widget<Text>(find.textContaining(' words · ')).style!.color,
+      expected,
+    );
+    expect(readoutColor(tester, const Key('statusOutDir')), expected);
+    expect(readoutColor(tester, const Key('editorEstimate')), expected);
   });
 }

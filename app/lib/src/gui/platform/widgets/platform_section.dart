@@ -7,11 +7,7 @@ import '../../theme/app_tokens.dart';
 /// group styling on macOS (Cupertino-like section) and a plain labeled column
 /// elsewhere.
 class PlatformSection extends StatelessWidget {
-  const PlatformSection({
-    super.key,
-    required this.title,
-    required this.child,
-  });
+  const PlatformSection({super.key, required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -34,9 +30,9 @@ class PlatformSection extends StatelessWidget {
           child: Text(
             title.toUpperCase(),
             style: AppTokens.of(context).typography.caption.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: colors.textSecondary,
-                ),
+              fontWeight: FontWeight.w500,
+              color: colors.textSecondary,
+            ),
           ),
         ),
         Container(

@@ -9,6 +9,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
+
 import '../support/fake_tts_provider.dart';
 
 void main() {
@@ -104,17 +105,20 @@ void main() {
       expect(c.documentName, 'untitled.txt');
     });
 
-    test('loadFromFile reads the file, sets the path, clears the dirty flag', () {
-      final story = File('${dir.path}/story.txt')
-        ..writeAsStringSync('Once upon a time there was a very long story.');
-      final c = makeController();
-      c.loadFromFile(story.path);
-      expect(c.text, 'Once upon a time there was a very long story.');
-      expect(c.documentPath, story.absolute.path);
-      expect(c.documentName, 'story.txt');
-      expect(c.dirty, isFalse);
-      expect(c.narrateBlockReason(), isNull);
-    });
+    test(
+      'loadFromFile reads the file, sets the path, clears the dirty flag',
+      () {
+        final story = File('${dir.path}/story.txt')
+          ..writeAsStringSync('Once upon a time there was a very long story.');
+        final c = makeController();
+        c.loadFromFile(story.path);
+        expect(c.text, 'Once upon a time there was a very long story.');
+        expect(c.documentPath, story.absolute.path);
+        expect(c.documentName, 'story.txt');
+        expect(c.dirty, isFalse);
+        expect(c.narrateBlockReason(), isNull);
+      },
+    );
 
     test('loadFromFile throws when the file is missing', () {
       final c = makeController();
@@ -126,15 +130,19 @@ void main() {
   });
 
   group('save', () {
-    test('saveTo writes the text, adopts the path and clears the dirty flag', () {
-      final c = makeController()..setText('Saved text. Enough words to count.');
-      final target = File('${dir.path}/saved.txt');
-      c.saveTo(target.path);
-      expect(File(target.absolute.path).readAsStringSync(), c.text);
-      expect(c.documentPath, target.absolute.path);
-      expect(c.documentName, 'saved.txt');
-      expect(c.dirty, isFalse);
-    });
+    test(
+      'saveTo writes the text, adopts the path and clears the dirty flag',
+      () {
+        final c = makeController()
+          ..setText('Saved text. Enough words to count.');
+        final target = File('${dir.path}/saved.txt');
+        c.saveTo(target.path);
+        expect(File(target.absolute.path).readAsStringSync(), c.text);
+        expect(c.documentPath, target.absolute.path);
+        expect(c.documentName, 'saved.txt');
+        expect(c.dirty, isFalse);
+      },
+    );
 
     test('saveAs picks a location, writes and adopts it', () async {
       final c = makeController()..setText('Via save as. Enough words.');
@@ -227,9 +235,7 @@ void main() {
             'prompt_style': true,
           },
         },
-        'defaults': {
-          'gemini': 'Charon',
-        },
+        'defaults': {'gemini': 'Charon'},
         'voices': {
           'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
         },
@@ -251,9 +257,7 @@ void main() {
             'prompt_style': true,
           },
         },
-        'defaults': {
-          'gemini': 'Charon',
-        },
+        'defaults': {'gemini': 'Charon'},
         'voices': {
           'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
         },
@@ -275,9 +279,7 @@ void main() {
             'prompt_style': true,
           },
         },
-        'defaults': {
-          'gemini': 'Charon',
-        },
+        'defaults': {'gemini': 'Charon'},
         'voices': {
           'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
           'fish': {'Narrator': 'hex123'},
@@ -317,9 +319,7 @@ void main() {
         'models': {
           'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
         },
-        'defaults': {
-          'kokoro': 'Emma',
-        },
+        'defaults': {'kokoro': 'Emma'},
         'voices': {
           'kokoro': {
             'Alice': {'id': 'bf_alice', 'gender': 'female'},
@@ -341,9 +341,7 @@ void main() {
             'prompt_style': true,
           },
         },
-        'defaults': {
-          'gemini': 'Charon',
-        },
+        'defaults': {'gemini': 'Charon'},
         'voices': {
           'gemini': {'Charon': 'Charon'},
         },
@@ -445,9 +443,7 @@ void main() {
         'models': {
           'single': {'id': 'example/single', 'format': 'mp3'},
         },
-        'defaults': {
-          'single': 'Alice',
-        },
+        'defaults': {'single': 'Alice'},
         'voices': {
           'single': {
             'Alice': {'id': 'a', 'gender': 'female'},
@@ -615,8 +611,7 @@ void main() {
       expect(c.runStopped, isTrue);
     });
 
-    test('a successor run is not clobbered by the cancelled predecessor',
-        () async {
+    test('a successor run is not clobbered by the cancelled predecessor', () async {
       final c = makeController();
       c.setText(
         'First paragraph with enough words to become its own segment on its '
@@ -707,7 +702,10 @@ void main() {
       final removed = await c.cleanupSegments();
 
       expect(removed, 1); // one paragraph -> one segment file.
-      expect(outDir.listSync().whereType<File>().length, 2); // combined + manifest
+      expect(
+        outDir.listSync().whereType<File>().length,
+        2,
+      ); // combined + manifest
       expect(c.canCleanupSegments, isFalse);
       // Tiles no longer point at deleted files.
       expect(c.runSegments.single.filePath, isNull);
@@ -746,7 +744,11 @@ void main() {
       final fake = FakeTtsProvider()
         ..specsByAlias['fish'] = const ModelUiSpec([
           ModelUiOption(key: 'accent', label: 'Accent'),
-          ModelUiOption(key: 'useCalmTag', label: '[calm]', type: ModelUiOptionType.bool),
+          ModelUiOption(
+            key: 'useCalmTag',
+            label: '[calm]',
+            type: ModelUiOptionType.bool,
+          ),
         ]);
       fake.register();
       final c = makeController();

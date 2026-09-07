@@ -22,6 +22,9 @@ class PlatformPage extends StatelessWidget {
         child: SafeArea(child: child),
       );
     }
-    return Scaffold(backgroundColor: bgApp, body: SafeArea(child: child));
+    return Scaffold(
+      backgroundColor: bgApp,
+      body: SafeArea(child: child),
+    );
   }
 }

@@ -76,7 +76,10 @@ double estimateCostUsd(AudioPricing pricing, List<String> segments) {
   final textTokens = (chars / 4).ceil();
   final inputCost = textTokens / 1e6 * (pricing.inputUsdPerMTokens ?? 0);
   final estSeconds = estimateMinutes(segments) * 60;
-  final outputCost = estSeconds * _geminiTokensPerSecond / 1e6 *
+  final outputCost =
+      estSeconds *
+      _geminiTokensPerSecond /
+      1e6 *
       (pricing.outputUsdPerMTokens ?? 0);
   return inputCost + outputCost;
 }

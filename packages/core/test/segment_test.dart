@@ -9,19 +9,25 @@ import 'package:tts_narrator_core/src/narration/narration.dart';
 void main() {
   group('segmentText', () {
     test('splits paragraphs on blank lines and trims (minWords 1)', () {
-      final segments = segmentText('Para one.\n\n\n  Para two.  \n\nPara three.',
-          minWords: 1);
+      final segments = segmentText(
+        'Para one.\n\n\n  Para two.  \n\nPara three.',
+        minWords: 1,
+      );
       expect(segments, ['Para one.', 'Para two.', 'Para three.']);
     });
 
     test('default minWords merges short paragraphs together', () {
-      final segments = segmentText('Para one.\n\n\n  Para two.  \n\nPara three.');
+      final segments = segmentText(
+        'Para one.\n\n\n  Para two.  \n\nPara three.',
+      );
       expect(segments, ['Para one. Para two. Para three.']);
     });
 
     test('normalizes CRLF; lone CR becomes a newline within a paragraph', () {
-      expect(segmentText('One.\r\n\r\nTwo.\rThree.', minWords: 1),
-          ['One.', 'Two.\nThree.']);
+      expect(segmentText('One.\r\n\r\nTwo.\rThree.', minWords: 1), [
+        'One.',
+        'Two.\nThree.',
+      ]);
     });
 
     test('drops empty paragraphs and returns nothing for blank input', () {
@@ -30,7 +36,9 @@ void main() {
 
     test('merges a short paragraph into the following long one', () {
       final segments = segmentText(
-          'Alpha\n\nBeta beta beta. And more words here.', minWords: 5);
+        'Alpha\n\nBeta beta beta. And more words here.',
+        minWords: 5,
+      );
       expect(segments, ['Alpha Beta beta beta. And more words here.']);
     });
 
@@ -42,15 +50,22 @@ void main() {
       final longPar = List.generate(30, (i) => 'following$i').join(' ');
       final segments = segmentText('$shortLead\n\n$longPar');
       expect(segments, hasLength(1));
-      expect(segments.single.split(RegExp(r'\s+')).length, greaterThanOrEqualTo(30));
+      expect(
+        segments.single.split(RegExp(r'\s+')).length,
+        greaterThanOrEqualTo(30),
+      );
       expect(segments.single.startsWith('word0'), isTrue);
     });
 
     test('merges a short paragraph that follows a long one', () {
       final segments = segmentText(
-          'one two three four five\n\nshort\n\nanother long paragraph here ok',
-          minWords: 5);
-      expect(segments, ['one two three four five short', 'another long paragraph here ok']);
+        'one two three four five\n\nshort\n\nanother long paragraph here ok',
+        minWords: 5,
+      );
+      expect(segments, [
+        'one two three four five short',
+        'another long paragraph here ok',
+      ]);
     });
 
     test('consecutive short paragraphs accumulate past the minimum', () {
@@ -62,7 +77,11 @@ void main() {
   group('segmentText long split', () {
     test('splits an over-cap paragraph at sentence boundaries', () {
       // Deterministic long paragraph: 300 short sentences.
-      final sentences = List.generate(300, (i) => 'This is sentence $i.', growable: true);
+      final sentences = List.generate(
+        300,
+        (i) => 'This is sentence $i.',
+        growable: true,
+      );
       final para = sentences.join(' ');
       expect(para.length, greaterThan(4000));
 
@@ -85,8 +104,10 @@ void main() {
 
   group('inputStem', () {
     test('strips directory and extension, lowercases, slugs non-alnum', () {
-      expect(inputStem('/foo/bar/A Shorts Story Draft 5.txt'),
-          'a_shorts_story_draft_5');
+      expect(
+        inputStem('/foo/bar/A Shorts Story Draft 5.txt'),
+        'a_shorts_story_draft_5',
+      );
     });
 
     test('handles no extension and trailing separator', () {
@@ -103,11 +124,11 @@ void main() {
       sampleRate: 24000,
     );
     NarrationConfig cfg(String input, String out) => NarrationConfig(
-          inputPath: input,
-          profile: gemini,
-          voice: 'Callirrhoe',
-          outDir: out,
-        );
+      inputPath: input,
+      profile: gemini,
+      voice: 'Callirrhoe',
+      outDir: out,
+    );
 
     test('outDirBasename takes the last component', () {
       expect(outDirBasename('/a/b/c'), 'c');
@@ -139,11 +160,16 @@ void main() {
   group('resumeMatch', () {
     late Directory dir;
 
-    setUp(() => dir = Directory.systemTemp.createTempSync('tts_narrator_test_'));
+    setUp(
+      () => dir = Directory.systemTemp.createTempSync('tts_narrator_test_'),
+    );
     tearDown(() => dir.deleteSync(recursive: true));
 
-    Map<String, Object?> record(int index, String prompt, String wav) =>
-        {'index': index, 'prompt': prompt, 'wav': wav};
+    Map<String, Object?> record(int index, String prompt, String wav) => {
+      'index': index,
+      'prompt': prompt,
+      'wav': wav,
+    };
 
     test('matches on index+prompt when the file exists', () {
       File('${dir.path}/story_1.mp3').writeAsStringSync('x');
@@ -173,7 +199,9 @@ void main() {
   group('readManifestRecords', () {
     late Directory dir;
 
-    setUp(() => dir = Directory.systemTemp.createTempSync('tts_narrator_manifest_'));
+    setUp(
+      () => dir = Directory.systemTemp.createTempSync('tts_narrator_manifest_'),
+    );
     tearDown(() => dir.deleteSync(recursive: true));
 
     test('returns empty when no manifest exists', () {
@@ -186,12 +214,14 @@ void main() {
     });
 
     test('parses records from a valid manifest', () {
-      File('${dir.path}/manifest.json').writeAsStringSync(jsonEncode({
-        'paragraphs': [
-          {'index': 1, 'prompt': 'A.', 'wav': 'story_1.mp3'},
-          {'index': 2, 'prompt': 'B.', 'wav': 'story_2.mp3'},
-        ],
-      }));
+      File('${dir.path}/manifest.json').writeAsStringSync(
+        jsonEncode({
+          'paragraphs': [
+            {'index': 1, 'prompt': 'A.', 'wav': 'story_1.mp3'},
+            {'index': 2, 'prompt': 'B.', 'wav': 'story_2.mp3'},
+          ],
+        }),
+      );
       final records = readManifestRecords(dir);
       expect(records, hasLength(2));
       expect(records.first['index'], 1);
