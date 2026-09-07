@@ -20,14 +20,12 @@ class PlatformSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return switch (defaultTargetPlatform) {
-      TargetPlatform.macOS => Transform.scale(
+    if (defaultTargetPlatform == TargetPlatform.macOS) {
+      return Transform.scale(
         scale: AppMetrics.controlKnobScale,
         child: CupertinoSwitch(value: value, onChanged: onChanged),
-      ),
-      TargetPlatform.windows ||
-      TargetPlatform.linux => Switch(value: value, onChanged: onChanged),
-      _ => throw UnimplementedError(),
-    };
+      );
+    }
+    return Switch(value: value, onChanged: onChanged);
   }
 }

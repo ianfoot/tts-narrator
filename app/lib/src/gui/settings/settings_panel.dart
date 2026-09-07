@@ -152,24 +152,26 @@ class _SettingsPanelState extends State<SettingsPanel> {
 
   AppTokens get _tokens => AppTokens.of(context);
 
+  /// Tier 2 field title (e.g. "Model", "Voice alias"): 13pt Medium primary,
+  /// sitting 4px above its control and 12px below the preceding one.
   Widget _label(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 4, top: 8),
+    padding: const EdgeInsets.only(bottom: 4, top: 12),
     child: Text(
       text,
-      style: _tokens.typography.caption.copyWith(
+      style: _tokens.typography.body.copyWith(
         fontWeight: FontWeight.w500,
-        color: _tokens.colors.textSecondary,
+        color: _tokens.colors.textPrimary,
       ),
     ),
   );
 
-  /// Inline control label (e.g. "Sample mode", "Skip completed segments")
-  /// — 13pt body, semibold, primary text color, so it reads clearly next to
-  /// switches/sliders without looking like a sub-label or section header.
+  /// Inline control label (e.g. "Sample mode", "Skip completed segments") —
+  /// Tier 2: 13pt Medium primary, matching the field titles so toggle labels
+  /// (previously 14pt/bold) sit at the same visual weight.
   Widget _controlLabel(String text) => Text(
     text,
     style: _tokens.typography.body.copyWith(
-      fontWeight: FontWeight.w600,
+      fontWeight: FontWeight.w500,
       color: _tokens.colors.textPrimary,
     ),
   );
@@ -222,7 +224,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     return PlatformSection(
       title: 'Model & voice',
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _label('Model'),
           PlatformDropdown<String>(
@@ -233,7 +235,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
           ),
           _label('Voice alias'),
           if (_controller.hasGenderTags) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             PlatformSegmentedControl<VoiceGender?>(
               key: const Key('genderControl'),
               value: _controller.voiceGenderFilter,
@@ -244,7 +246,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
               ],
               onChanged: (g) => _controller.voiceGenderFilter = g,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
           ],
           PlatformDropdown<String>(
             key: const Key('voiceDropdown'),
@@ -321,7 +323,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
           padding: const EdgeInsets.only(top: 12),
           child: Row(
             children: [
-              Expanded(child: Text(option.label)),
+              Expanded(child: _controlLabel(option.label)),
               PlatformSwitch(
                 key: Key('${option.key}Switch'),
                 value: _modelOptionBool(option.key),
@@ -462,8 +464,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Narrate first [ $sampleCount ] segments only',
-                      key: ValueKey('sampleCount-$sampleCount'),
+                      'Narrate first segments only',
+                      style: _tokens.typography.body.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: _tokens.colors.textPrimary,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -500,6 +505,4 @@ class _SettingsPanelState extends State<SettingsPanel> {
   }
 
   int get minWords => _controller.minWords;
-
-  String get sampleCount => (_controller.sampleLen ?? 1).toString();
 }
