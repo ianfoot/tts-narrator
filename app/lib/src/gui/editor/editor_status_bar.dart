@@ -48,12 +48,12 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
   @override
   Widget build(BuildContext context) {
     final colors = tokens.colors;
-    // Dark mode lifts the readouts one tier so they hold their own against the
-    // near-black footer; light mode keeps the quiet secondary grey.
-    final readoutColor = colors.isDark
-        ? colors.textTertiary
-        : colors.textSecondary;
-    final monoReadout = tokens.typography.mono.copyWith(color: readoutColor);
+    // Readouts (word/char counts, output path, estimate) share one Tier 3
+    // metric style: monospace textSecondary at 75%, so the middle path matches
+    // the flanking metrics instead of blending into the footer.
+    final monoReadout = tokens.typography.mono.copyWith(
+      color: colors.textSecondary.withValues(alpha: 0.75),
+    );
     final words = _countFormat.format(controller.wordCount);
     final chars = _countFormat.format(controller.charCount);
     final segments = controller.plannedSegments.length;

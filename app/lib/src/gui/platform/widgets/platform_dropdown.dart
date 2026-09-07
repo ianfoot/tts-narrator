@@ -85,7 +85,7 @@ class PlatformDropdown<T> extends StatelessWidget {
               Icon(
                 CupertinoIcons.chevron_down,
                 size: 14,
-                color: colors.textTertiary,
+                color: colors.textPrimary.withValues(alpha: 0.85),
               ),
             ],
           ),
@@ -108,7 +108,7 @@ class PlatformDropdown<T> extends StatelessWidget {
           value: value,
           isExpanded: true,
           isDense: true,
-          iconEnabledColor: colors.textTertiary,
+          iconEnabledColor: colors.textPrimary.withValues(alpha: 0.85),
           hint: hint == null
               ? null
               : Text(hint!, overflow: TextOverflow.ellipsis),

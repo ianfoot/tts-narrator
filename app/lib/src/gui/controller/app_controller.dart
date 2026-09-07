@@ -253,12 +253,30 @@ class AppController extends ChangeNotifier {
 
   /// The user's appearance choice ([AppThemeMode.system] follows the OS).
   /// Session-only; defaults to the OS setting so the app boots as before.
+  ///
+  /// Backed by [themeNotifier] so appearance-only widgets (e.g. the app root
+  /// theme resolution) can subscribe without rebuilding on every other
+  /// controller write; the [ChangeNotifier] notification is still fired for
+  /// widgets that display the current label.
   AppThemeMode get themeMode => _themeMode;
+
+  /// Fires when [themeMode] changes. Subscribe here (not the whole
+  /// controller) for widgets that depend only on the appearance.
+  ValueNotifier<AppThemeMode> get themeNotifier => _themeNotifier;
+  final ValueNotifier<AppThemeMode> _themeNotifier =
+      ValueNotifier<AppThemeMode>(AppThemeMode.system);
 
   set themeMode(AppThemeMode value) {
     if (value == _themeMode) return;
     _themeMode = value;
+    _themeNotifier.value = value;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _themeNotifier.dispose();
+    super.dispose();
   }
 
   // --- Settings panel -----------------------------------------------

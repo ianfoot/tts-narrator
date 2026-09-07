@@ -234,7 +234,9 @@ class _EditorScreenState extends State<EditorScreen> {
         onChanged: _onTextChanged,
         hintText: 'Type, paste text, or open a .txt file...',
         hintStyle: _tokens.typography.editorBody.copyWith(
-          color: colors.textSecondary.withValues(alpha: 0.75),
+          color: colors.textSecondary.withValues(
+            alpha: _tokens.colors.isDark ? 0.45 : 0.75,
+          ),
         ),
         maxLines: null,
         expands: true,

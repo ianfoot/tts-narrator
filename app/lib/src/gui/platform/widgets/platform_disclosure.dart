@@ -41,7 +41,11 @@ class PlatformDisclosure extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(_chevron(context), size: 16, color: colors.textTertiary),
+          Icon(
+            _chevron(context),
+            size: 16,
+            color: colors.textPrimary.withValues(alpha: 0.85),
+          ),
           const SizedBox(width: 8),
           Text(label, style: textStyle),
         ],
