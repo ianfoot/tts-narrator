@@ -45,14 +45,12 @@ class _AppRootState extends State<AppRoot> {
     // themeMode, so the theme is rebuilt when the platform brightness flips).
     WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged =
         _onPlatformBrightnessChanged;
-    widget.controller.addListener(_onControllerChanged);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged =
         null;
-    widget.controller.removeListener(_onControllerChanged);
     widget.controller.onOpen = null;
     widget.controller.onNarrate = null;
     widget.controller.onCancel = null;
@@ -60,10 +58,6 @@ class _AppRootState extends State<AppRoot> {
     widget.controller.onToggleSettingsPanel = null;
     widget.controller.saveLocationPicker = null;
     super.dispose();
-  }
-
-  void _onControllerChanged() {
-    if (mounted) setState(() {});
   }
 
   void _onPlatformBrightnessChanged() {
@@ -135,50 +129,58 @@ class _AppRootState extends State<AppRoot> {
 
   @override
   Widget build(BuildContext context) {
-    final home = EditorScreen(controller: widget.controller);
-    if (_isMac) {
-      final dark =
-          resolveBrightness(
-            widget.controller.themeMode,
-            WidgetsBinding.instance.platformDispatcher.platformBrightness,
-          ) ==
-          Brightness.dark;
-      final palette = AppPalette.of(dark ? Brightness.dark : Brightness.light);
-      return CupertinoApp(
-        title: 'TTS Narrator',
-        navigatorKey: _navigatorKey,
-        debugShowCheckedModeBanner: false,
-        theme: CupertinoThemeData(
-          // Follows the system appearance (see the platformBrightness listener).
-          brightness: dark ? Brightness.dark : Brightness.light,
-          primaryColor: palette.accentPrimary,
-        ),
-        // The native macOS menu bar lives above the editor route, so it stays
-        // mounted (and functional) while the narration run view is pushed on
-        // top. Home stays mounted under the pushed route.
-        home: PlatformMenuBar(
-          menus: buildMacMenu(
-            controller: widget.controller,
+    return ValueListenableBuilder<AppThemeMode>(
+      valueListenable: widget.controller.themeNotifier,
+      builder: (context, themeMode, _) {
+        final home = EditorScreen(controller: widget.controller);
+        if (_isMac) {
+          final dark =
+              resolveBrightness(
+                themeMode,
+                WidgetsBinding.instance.platformDispatcher.platformBrightness,
+              ) ==
+              Brightness.dark;
+          final palette = AppPalette.of(
+            dark ? Brightness.dark : Brightness.light,
+          );
+          return CupertinoApp(
+            title: 'TTS Narrator',
             navigatorKey: _navigatorKey,
-          ),
-          child: home,
-        ),
-      );
-    }
-    final light = _materialTheme(Brightness.light);
-    final dark = _materialTheme(Brightness.dark);
-    return MaterialApp(
-      title: 'TTS Narrator',
-      navigatorKey: _navigatorKey,
-      debugShowCheckedModeBanner: false,
-      theme: light,
-      darkTheme: dark,
-      themeMode: switch (widget.controller.themeMode) {
-        AppThemeMode.light => ThemeMode.light,
-        AppThemeMode.dark => ThemeMode.dark,
-        AppThemeMode.system => ThemeMode.system,
+            debugShowCheckedModeBanner: false,
+            theme: CupertinoThemeData(
+              // Follows the system appearance (see the platformBrightness
+              // listener).
+              brightness: dark ? Brightness.dark : Brightness.light,
+              primaryColor: palette.accentPrimary,
+            ),
+            // The native macOS menu bar lives above the editor route, so it
+            // stays mounted (and functional) while the narration run view is
+            // pushed on top. Home stays mounted under the pushed route.
+            home: PlatformMenuBar(
+              menus: buildMacMenu(
+                controller: widget.controller,
+                navigatorKey: _navigatorKey,
+              ),
+              child: home,
+            ),
+          );
+        }
+        final light = _materialTheme(Brightness.light);
+        final dark = _materialTheme(Brightness.dark);
+        return MaterialApp(
+          title: 'TTS Narrator',
+          navigatorKey: _navigatorKey,
+          debugShowCheckedModeBanner: false,
+          theme: light,
+          darkTheme: dark,
+          themeMode: switch (themeMode) {
+            AppThemeMode.light => ThemeMode.light,
+            AppThemeMode.dark => ThemeMode.dark,
+            AppThemeMode.system => ThemeMode.system,
+          },
+          home: home,
+        );
       },
-      home: home,
     );
   }
 
