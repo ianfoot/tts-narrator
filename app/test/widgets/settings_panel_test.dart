@@ -510,7 +510,7 @@ void main() {
       await tester.pump();
       expect(c.sampleLen, 1);
       expect(find.byKey(const Key('sampleLenField')), findsOneWidget);
-      expect(find.text('Narrate first [ 1 ] segments only'), findsOneWidget);
+      expect(find.text('Narrate first segments only'), findsOneWidget);
 
       await tester.enterText(
         find.descendant(
