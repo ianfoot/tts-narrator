@@ -127,13 +127,11 @@ void main() {
     expect(estimateRight.dx, closeTo(barRect.right - 16, 1));
   });
 
-  testWidgets('readouts use the quiet secondary grey in light mode', (
-    tester,
-  ) async {
+  testWidgets('readouts use textSecondary at 75% in light mode', (tester) async {
     final controller = makeController();
     await pumpStatusBar(tester, controller);
 
-    final expected = AppPalette.light.textSecondary;
+    final expected = AppPalette.light.textSecondary.withValues(alpha: 0.75);
     expect(
       tester.widget<Text>(find.textContaining(' words · ')).style!.color,
       expected,
@@ -142,11 +140,11 @@ void main() {
     expect(readoutColor(tester, const Key('editorEstimate')), expected);
   });
 
-  testWidgets('readouts lift to textTertiary in dark mode', (tester) async {
+  testWidgets('readouts use textSecondary at 75% in dark mode', (tester) async {
     final controller = makeController();
     await pumpStatusBar(tester, controller, brightness: Brightness.dark);
 
-    final expected = AppPalette.dark.textTertiary;
+    final expected = AppPalette.dark.textSecondary.withValues(alpha: 0.75);
     expect(
       tester.widget<Text>(find.textContaining(' words · ')).style!.color,
       expected,
