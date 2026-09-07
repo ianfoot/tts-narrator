@@ -22,10 +22,10 @@ enum VoiceGender {
 
   /// Single-letter shorthand for compact UI labels: `m`/`f`/`n`.
   String get shorthand => switch (this) {
-        VoiceGender.male => 'm',
-        VoiceGender.female => 'f',
-        VoiceGender.neutral => 'n',
-      };
+    VoiceGender.male => 'm',
+    VoiceGender.female => 'f',
+    VoiceGender.neutral => 'n',
+  };
 }
 
 /// Parses the config-string form to a [VoiceGender], or null for anything
@@ -45,10 +45,7 @@ VoiceGender? parseVoiceGender(String? value) {
 /// more fields later) — one entry per voice, so a voice's fields live
 /// together instead of being split across parallel blocks.
 class Voice {
-  const Voice({
-    required this.id,
-    this.gender,
-  });
+  const Voice({required this.id, this.gender});
 
   /// Provider voice id sent in the request body.
   final String id;
@@ -148,7 +145,8 @@ class VoiceConfig {
       voices.isEmpty;
 
   /// Pricing for [modelAlias], or [freePricing] when unconfigured.
-  AudioPricing pricingFor(String modelAlias) => pricing[modelAlias] ?? freePricing;
+  AudioPricing pricingFor(String modelAlias) =>
+      pricing[modelAlias] ?? freePricing;
 
   /// Resolves a `--voice` value to the provider voice id for [modelAlias].
   ///
@@ -284,7 +282,8 @@ List<VoiceEntry> voiceEntries({
       );
     }
 
-    for (final e in (config.voices[p.alias] ?? const <String, Voice>{}).entries) {
+    for (final e
+        in (config.voices[p.alias] ?? const <String, Voice>{}).entries) {
       add(e.value.id, e.key, true);
     }
     try {
@@ -335,19 +334,21 @@ String defaultConfigDir() {
   final warnings = <String>[];
   final separator = Platform.pathSeparator;
   final global = File('$configDir${separator}config.json');
-  final globalConfig =
-      global.existsSync() ? _loadGlobalConfig(global.path) : const VoiceConfig();
+  final globalConfig = global.existsSync()
+      ? _loadGlobalConfig(global.path)
+      : const VoiceConfig();
 
   final configDirEntry = Directory(configDir);
   if (!configDirEntry.existsSync()) return (globalConfig, warnings);
 
-  final files = configDirEntry
-      .listSync()
-      .whereType<File>()
-      .where((f) => f.path.toLowerCase().endsWith('.json'))
-      .where((f) => !f.path.toLowerCase().endsWith('config.json'))
-      .toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  final files =
+      configDirEntry
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.toLowerCase().endsWith('.json'))
+          .where((f) => !f.path.toLowerCase().endsWith('config.json'))
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
 
   final models = <String, TtsModelProfile>{};
   final defaults = <String, String>{};
@@ -376,7 +377,8 @@ String defaultConfigDir() {
   );
 
   final configuredDefault = config.defaultModel;
-  if (configuredDefault != null && configuredDefault.trim().isNotEmpty &&
+  if (configuredDefault != null &&
+      configuredDefault.trim().isNotEmpty &&
       profileFor(configuredDefault.trim(), config) == null) {
     warnings.add(
       'default_model "$configuredDefault" is not a configured model; '
@@ -434,8 +436,12 @@ VoiceConfig _loadGlobalConfig(String path) {
 /// Parses a single ``<alias>.json`` model file into a model profile plus its
 /// default voice, pricing, and voice library. Throws a [VoiceConfigError] for
 /// anything that makes the model unusable (skipped by the caller).
-({TtsModelProfile profile, String? defaultVoice, AudioPricing? pricing,
-    Map<String, Voice> voices})
+({
+  TtsModelProfile profile,
+  String? defaultVoice,
+  AudioPricing? pricing,
+  Map<String, Voice> voices,
+})
 _parseModelFile(String path, String alias) {
   final raw = _readJson(path);
   if (raw is! Map<String, dynamic>) {
@@ -509,7 +515,9 @@ _parseModelFile(String path, String alias) {
       if (id is! String || id.isEmpty) return; // skip entries without an id
       voices[label] = Voice(
         id: id,
-        gender: parseVoiceGender(value['gender'] is String ? value['gender'] : null),
+        gender: parseVoiceGender(
+          value['gender'] is String ? value['gender'] : null,
+        ),
       );
     });
   }
@@ -554,40 +562,34 @@ String _stemOf(String path) {
 /// each file is self-describing (models route to their provider without any
 /// global fallback); other fields elide values that merely restate defaults so
 /// a hand-written file can stay minimal.
-Map<String, Object?> _modelJson(
-  TtsModelProfile p,
-  VoiceConfig config,
-) =>
-    {
-      'id': p.id,
-      'provider': p.provider,
-      if (p.displayName != null) 'display_name': p.displayName,
-      if (p.format != 'mp3') 'format': p.format,
-      if (p.sampleRate != null) 'sample_rate': p.sampleRate,
-      if (p.promptStyle) 'prompt_style': p.promptStyle,
-      if (!p.sendsVoiceField) 'sends_voice': p.sendsVoiceField,
-      if (config.defaults[p.alias] != null)
-        'default_voice': config.defaults[p.alias],
-      if (config.pricing[p.alias] != null)
-        'pricing': {
-          if (config.pricing[p.alias]!.usdPerMChars != null)
-            'usd_per_m_chars': config.pricing[p.alias]!.usdPerMChars,
-          if (config.pricing[p.alias]!.inputUsdPerMTokens != null)
-            'input_usd_per_m_tokens':
-                config.pricing[p.alias]!.inputUsdPerMTokens,
-          if (config.pricing[p.alias]!.outputUsdPerMTokens != null)
-            'output_usd_per_m_tokens':
-                config.pricing[p.alias]!.outputUsdPerMTokens,
+Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
+  'id': p.id,
+  'provider': p.provider,
+  if (p.displayName != null) 'display_name': p.displayName,
+  if (p.format != 'mp3') 'format': p.format,
+  if (p.sampleRate != null) 'sample_rate': p.sampleRate,
+  if (p.promptStyle) 'prompt_style': p.promptStyle,
+  if (!p.sendsVoiceField) 'sends_voice': p.sendsVoiceField,
+  if (config.defaults[p.alias] != null)
+    'default_voice': config.defaults[p.alias],
+  if (config.pricing[p.alias] != null)
+    'pricing': {
+      if (config.pricing[p.alias]!.usdPerMChars != null)
+        'usd_per_m_chars': config.pricing[p.alias]!.usdPerMChars,
+      if (config.pricing[p.alias]!.inputUsdPerMTokens != null)
+        'input_usd_per_m_tokens': config.pricing[p.alias]!.inputUsdPerMTokens,
+      if (config.pricing[p.alias]!.outputUsdPerMTokens != null)
+        'output_usd_per_m_tokens': config.pricing[p.alias]!.outputUsdPerMTokens,
+    },
+  if (config.voices[p.alias] != null && config.voices[p.alias]!.isNotEmpty)
+    'voices': {
+      for (final e in config.voices[p.alias]!.entries)
+        e.key: {
+          'id': e.value.id,
+          if (e.value.gender != null) 'gender': e.value.gender!.label,
         },
-      if (config.voices[p.alias] != null && config.voices[p.alias]!.isNotEmpty)
-        'voices': {
-          for (final e in config.voices[p.alias]!.entries)
-            e.key: {
-              'id': e.value.id,
-              if (e.value.gender != null) 'gender': e.value.gender!.label,
-            },
-        },
-    };
+    },
+};
 
 /// Writes [config] to [configDir] as the shared config-directory schema,
 /// creating the directory as needed: a `config.json` with `default_model` +
@@ -600,8 +602,7 @@ Map<String, Object?> _modelJson(
 /// Throws a [VoiceConfigError] when a file cannot be written.
 void writeVoiceConfig(String configDir, VoiceConfig config) {
   final globalJson = <String, Object?>{
-    if (config.defaultModel != null)
-      'default_model': config.defaultModel,
+    if (config.defaultModel != null) 'default_model': config.defaultModel,
     if (config.providers.isNotEmpty) 'providers': config.providers,
   };
   try {
@@ -622,9 +623,9 @@ void writeVoiceConfig(String configDir, VoiceConfig config) {
     try {
       File('$configDir${Platform.pathSeparator}${entry.key}.json')
           .writeAsStringSync(
-        const JsonEncoder.withIndent('  ').convert(modelJson),
-        flush: true,
-      );
+            const JsonEncoder.withIndent('  ').convert(modelJson),
+            flush: true,
+          );
     } on FileSystemException catch (e) {
       throw VoiceConfigError('Cannot write voice config "$configDir": $e');
     }

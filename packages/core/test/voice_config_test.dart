@@ -41,7 +41,10 @@ void main() {
   "sample_rate": 24000,
   "prompt_style": true
 }''');
-      writeModel('kokoro', '{"id": "hexgrad/kokoro-82m", "provider": "openrouter", "format": "mp3"}');
+      writeModel(
+        'kokoro',
+        '{"id": "hexgrad/kokoro-82m", "provider": "openrouter", "format": "mp3"}',
+      );
       writeModel(
         'fish',
         '{"id": "fish-audio/s2.1-pro-free", "provider": "openrouter", "format": "mp3"}',
@@ -84,7 +87,10 @@ void main() {
     });
 
     test('a non-string display_name skips the model with a warning', () {
-      writeModel('x', '{"id": "a/b", "provider": "openrouter", "display_name": 7}');
+      writeModel(
+        'x',
+        '{"id": "a/b", "provider": "openrouter", "display_name": 7}',
+      );
       final (cfg, warnings) = load();
       expect(cfg.models.containsKey('x'), isFalse);
       expect(warnings.join('\n'), contains('display_name'));
@@ -99,7 +105,10 @@ void main() {
   "pricing": {"usd_per_m_chars": 0.62},
   "voices": {"Narrator": "hex1", "Emma": "bf_emma"}
 }''');
-      writeModel('kokoro', '{"id": "hexgrad/kokoro-82m", "provider": "openrouter", "voices": {"Emma": "bf_emma"}}');
+      writeModel(
+        'kokoro',
+        '{"id": "hexgrad/kokoro-82m", "provider": "openrouter", "voices": {"Emma": "bf_emma"}}',
+      );
       final (cfg, _) = load();
       expect(cfg.defaults['fish'], 'Narrator');
       expect(cfg.pricing['fish']?.usdPerMChars, 0.62);
@@ -176,7 +185,10 @@ void main() {
     });
 
     test('rejects a non-object voices block', () {
-      writeModel('x', '{"id": "a/b", "provider": "openrouter", "voices": ["female"]}');
+      writeModel(
+        'x',
+        '{"id": "a/b", "provider": "openrouter", "voices": ["female"]}',
+      );
       final (cfg, warnings) = load();
       expect(cfg.models, isEmpty);
       expect(warnings.single, contains('"voices"'));
@@ -211,12 +223,14 @@ void main() {
       expect(cfg.models.keys.toList(), ['alph', 'zebra']);
     });
 
-    test('accepts a directory with only an empty config.json and no models',
-        () {
-      writeGlobal('{}');
-      final (cfg, _) = load();
-      expect(cfg.isEmpty, isTrue);
-    });
+    test(
+      'accepts a directory with only an empty config.json and no models',
+      () {
+        writeGlobal('{}');
+        final (cfg, _) = load();
+        expect(cfg.isEmpty, isTrue);
+      },
+    );
 
     test(r'parses default_model and the providers block verbatim', () {
       writeGlobal('''{
@@ -259,21 +273,23 @@ void main() {
     });
 
     test('parses the required model-file provider', () {
-        writeModel('gemini', '{"id": "a/b", "provider": "google"}');
-        writeModel('fish', '{"id": "a/b", "provider": "openrouter"}');
-        final (cfg, _) = load();
-        expect(cfg.models['gemini']?.provider, 'google');
-        expect(cfg.models['fish']?.provider, 'openrouter');
+      writeModel('gemini', '{"id": "a/b", "provider": "google"}');
+      writeModel('fish', '{"id": "a/b", "provider": "openrouter"}');
+      final (cfg, _) = load();
+      expect(cfg.models['gemini']?.provider, 'google');
+      expect(cfg.models['fish']?.provider, 'openrouter');
+    });
+
+    test(
+      'skips a model file with a missing provider and reports a warning',
+      () {
+        writeModel('x', '{"id": "a/b"}');
+        final (cfg, warnings) = load();
+        expect(cfg.models, isEmpty);
+        expect(warnings.single, contains('Skipped model "x"'));
+        expect(warnings.single, contains('"provider"'));
       },
     );
-
-    test('skips a model file with a missing provider and reports a warning', () {
-      writeModel('x', '{"id": "a/b"}');
-      final (cfg, warnings) = load();
-      expect(cfg.models, isEmpty);
-      expect(warnings.single, contains('Skipped model "x"'));
-      expect(warnings.single, contains('"provider"'));
-    });
 
     test('an unknown default_model warns and keeps the fish fallback', () {
       writeGlobal('{"default_model": "bogus"}');
@@ -578,9 +594,8 @@ void main() {
         model: const TtsModelProfile(alias: 'kokoro', id: 'hexgrad/kokoro-82m'),
         config: cfg,
       );
-      VoiceEntry entryFor(String label) => entries.firstWhere(
-        (e) => e.label == label,
-      );
+      VoiceEntry entryFor(String label) =>
+          entries.firstWhere((e) => e.label == label);
       expect(entryFor('Emma').gender, VoiceGender.female);
       expect(entryFor('Daniel').gender, VoiceGender.male);
       expect(entryFor('Fable').gender, VoiceGender.male);
@@ -632,8 +647,10 @@ void main() {
       final (cfg, warnings) = read();
       expect(warnings, isEmpty);
       expect(cfg.defaultModel, 'fish');
-      expect(cfg.providers['openrouter']?['OPENROUTER_API_KEY'],
-          r'${OPENROUTER_API_KEY}');
+      expect(
+        cfg.providers['openrouter']?['OPENROUTER_API_KEY'],
+        r'${OPENROUTER_API_KEY}',
+      );
       expect(cfg.models['gemini']?.id, 'google/gemini-3.1-flash-tts-preview');
       expect(cfg.models['gemini']?.sampleRate, 24000);
       expect(cfg.models['gemini']?.promptStyle, isTrue);
@@ -719,9 +736,8 @@ void main() {
           },
         ),
       );
-      final raw = File(
-        '${dir.path}/cfg${Platform.pathSeparator}gemini.json',
-      ).readAsStringSync();
+      final raw = File('${dir.path}/cfg${Platform.pathSeparator}gemini.json')
+          .readAsStringSync();
       expect(raw, contains('"provider": "openrouter"'));
       expect(read().$1.models['gemini']?.provider, 'openrouter');
     });
@@ -751,9 +767,8 @@ void main() {
       expect(cfg.voices['kokoro']?['Emma']?.gender, VoiceGender.female);
       expect(cfg.voices['kokoro']?['Daniel']?.gender, VoiceGender.male);
       expect(cfg.voices['kokoro']?['Fable']?.gender, isNull);
-      final raw = File(
-        '${dir.path}/cfg${Platform.pathSeparator}kokoro.json',
-      ).readAsStringSync();
+      final raw = File('${dir.path}/cfg${Platform.pathSeparator}kokoro.json')
+          .readAsStringSync();
       expect(raw, contains('"id": "bf_emma"'));
       expect(raw, contains('"gender": "female"'));
       // No legacy parallel gender block.

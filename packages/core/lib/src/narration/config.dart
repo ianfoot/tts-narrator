@@ -12,8 +12,7 @@ class NarrationConfig {
     this.accent = 'southern British English, neutral and clear',
     this.style = 'warm, composed, restrained, literary',
     this.useCalmTag = false,
-    this.passagePrefix =
-        'Narrate this passage for an audiobook. You are a warm, composed female narrator.',
+    this.passagePrefix = 'Narrate this passage for an audiobook. You are a warm, composed female narrator.',
     this.minWords = 30,
     this.sampleLen,
     this.outDir = 'output',
@@ -86,21 +85,21 @@ class NarrationConfig {
   /// Copy of this config with [inputPath] replaced (used to narrate each file
   /// in a batch directory through the same single-file pipeline).
   NarrationConfig copyWith({required String inputPath}) => NarrationConfig(
-        inputPath: inputPath,
-        sourceText: sourceText,
-        profile: profile,
-        voice: voice,
-        voiceLabel: voiceLabel,
-        accent: accent,
-        style: style,
-        useCalmTag: useCalmTag,
-        passagePrefix: passagePrefix,
-        minWords: minWords,
-        sampleLen: sampleLen,
-        outDir: outDir,
-        dryRun: dryRun,
-        resume: resume,
-        pricing: pricing,
-        providerSettings: providerSettings,
-      );
+    inputPath: inputPath,
+    sourceText: sourceText,
+    profile: profile,
+    voice: voice,
+    voiceLabel: voiceLabel,
+    accent: accent,
+    style: style,
+    useCalmTag: useCalmTag,
+    passagePrefix: passagePrefix,
+    minWords: minWords,
+    sampleLen: sampleLen,
+    outDir: outDir,
+    dryRun: dryRun,
+    resume: resume,
+    pricing: pricing,
+    providerSettings: providerSettings,
+  );
 }

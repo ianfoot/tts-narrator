@@ -52,7 +52,8 @@ void main() {
 
   tearDown(() => dir.deleteSync(recursive: true));
 
-  NarrationConfig parse(List<String> args) => parseArgs([...args, '--config', cfgPath]);
+  NarrationConfig parse(List<String> args) =>
+      parseArgs([...args, '--config', cfgPath]);
 
   test('requires --input', () {
     expect(() => parse(['--model', 'fish']), throwsA(isA<CliUsageError>()));
@@ -60,32 +61,47 @@ void main() {
   });
 
   test('rejects unknown flags and unknown models', () {
-    expect(() => parse(['--input', 's', '--nope']), throwsA(isA<CliUsageError>()));
-    expect(() => parse(['--input', 's', '--model', 'bogus']), throwsA(isA<CliUsageError>()));
+    expect(
+      () => parse(['--input', 's', '--nope']),
+      throwsA(isA<CliUsageError>()),
+    );
+    expect(
+      () => parse(['--input', 's', '--model', 'bogus']),
+      throwsA(isA<CliUsageError>()),
+    );
   });
 
   test('invalid --tags value errors', () {
-    expect(() => parse(['--input', 's', '--tags', 'maybe']), throwsA(isA<CliUsageError>()));
+    expect(
+      () => parse(['--input', 's', '--tags', 'maybe']),
+      throwsA(isA<CliUsageError>()),
+    );
   });
 
-  test('defaults: fish profile (free), compiled free default, no resumption', () {
-    final cfg = parse(['--input', 's']);
-    expect(cfg.profile.alias, 'fish');
-    expect(cfg.voice, '89f41ea230034706881f85a8227d6ab9');
-    expect(cfg.voiceLabel, 'British Female Narrator');
-    expect(cfg.pricing.isFree, isTrue);
-    expect(cfg.resume, isFalse);
-    expect(cfg.dryRun, isFalse);
-  });
+  test(
+    'defaults: fish profile (free), compiled free default, no resumption',
+    () {
+      final cfg = parse(['--input', 's']);
+      expect(cfg.profile.alias, 'fish');
+      expect(cfg.voice, '89f41ea230034706881f85a8227d6ab9');
+      expect(cfg.voiceLabel, 'British Female Narrator');
+      expect(cfg.pricing.isFree, isTrue);
+      expect(cfg.resume, isFalse);
+      expect(cfg.dryRun, isFalse);
+    },
+  );
 
-  test('providers.<id>.api_key is the effective setting when no --api-key given',
-      () {
-    expect(parse(['--input', 's']).providerSettings['api_key'], 'sk-cfg');
-  });
+  test(
+    'providers.<id>.api_key is the effective setting when no --api-key given',
+    () {
+      expect(parse(['--input', 's']).providerSettings['api_key'], 'sk-cfg');
+    },
+  );
 
   test('--api-key overrides the config provider api_key', () {
     expect(
-      parse(['--input', 's', '--api-key', 'sk-flag']).providerSettings['api_key'],
+      parse(['--input', 's', '--api-key', 'sk-flag'])
+          .providerSettings['api_key'],
       'sk-flag',
     );
   });
@@ -112,7 +128,8 @@ void main() {
   }
 }''');
     File('$cfg/fish.json').writeAsStringSync(
-        '{"id": "fish-audio/s2.1-pro-free", "provider": "openrouter", "format": "mp3"}');
+      '{"id": "fish-audio/s2.1-pro-free", "provider": "openrouter", "format": "mp3"}',
+    );
     expect(
       () => parseArgs(['--input', 's', '--config', cfg]),
       throwsA(
@@ -138,7 +155,8 @@ void main() {
   }
 }''');
     File('$cfg/fish.json').writeAsStringSync(
-        '{"id": "fish-audio/s2.1-pro-free", "provider": "openrouter", "format": "mp3"}');
+      '{"id": "fish-audio/s2.1-pro-free", "provider": "openrouter", "format": "mp3"}',
+    );
     // Dry run parses fine with empty provider settings — no key needed.
     final parsed = parseArgs(['--input', 's', '--dry-run', '--config', cfg]);
     expect(parsed.dryRun, isTrue);
@@ -159,20 +177,41 @@ void main() {
   });
 
   test('resolves a friendly fish voice via config and records the label', () {
-    final cfg = parse(['--input', 's', '--model', 'fish', '--voice', 'British Female Narrator (good)']);
+    final cfg = parse([
+      '--input',
+      's',
+      '--model',
+      'fish',
+      '--voice',
+      'British Female Narrator (good)',
+    ]);
     expect(cfg.voice, '89f41ea');
     expect(cfg.voiceLabel, 'British Female Narrator (good)');
   });
 
   test('passes through unknown kokoro voice id freely', () {
-    final cfg = parse(['--input', 's', '--model', 'kokoro', '--voice', 'bm_lewis']);
+    final cfg = parse([
+      '--input',
+      's',
+      '--model',
+      'kokoro',
+      '--voice',
+      'bm_lewis',
+    ]);
     expect(cfg.voice, 'bm_lewis');
     // Raw id equals its label, so no friendly label is recorded.
     expect(cfg.voiceLabel, isNull);
   });
 
   test('explicit voice is never validated (testing arbitrary ids)', () {
-    final cfg = parse(['--input', 's', '--model', 'gemini', '--voice', 'NotAVoice']);
+    final cfg = parse([
+      '--input',
+      's',
+      '--model',
+      'gemini',
+      '--voice',
+      'NotAVoice',
+    ]);
     expect(cfg.voice, 'NotAVoice');
     expect(cfg.voiceLabel, isNull);
   });
@@ -204,29 +243,62 @@ void main() {
   "voices": {"Emma": "bf_emma"}
 }''');
     expect(
-      () => parseArgs(['--input', 's', '--model', 'kokoro', '--config', noDefaults]),
+      () => parseArgs([
+        '--input',
+        's',
+        '--model',
+        'kokoro',
+        '--config',
+        noDefaults,
+      ]),
       throwsA(isA<CliUsageError>()),
     );
     final explicit = parseArgs([
-      '--input', 's', '--model', 'kokoro', '--voice', 'bf_emma',
-      '--config', noDefaults,
+      '--input',
+      's',
+      '--model',
+      'kokoro',
+      '--voice',
+      'bf_emma',
+      '--config',
+      noDefaults,
     ]);
     expect(explicit.voice, 'bf_emma');
   });
 
   test('pricing comes from the config, free when unconfigured', () {
-    final kokoro = parse(['--input', 's', '--model', 'kokoro', '--voice', 'Emma']);
+    final kokoro = parse([
+      '--input',
+      's',
+      '--model',
+      'kokoro',
+      '--voice',
+      'Emma',
+    ]);
     expect(kokoro.pricing, const AudioPricing(usdPerMChars: 0.62));
     final fish = parse(['--input', 's']);
     expect(fish.pricing, freePricing);
   });
 
   test('--sample-len and --min-words parse numerically and reject junk', () {
-    final cfg = parse(['--input', 's', '--sample-len', '3', '--min-words', '10']);
+    final cfg = parse([
+      '--input',
+      's',
+      '--sample-len',
+      '3',
+      '--min-words',
+      '10',
+    ]);
     expect(cfg.sampleLen, 3);
     expect(cfg.minWords, 10);
-    expect(() => parse(['--input', 's', '--sample-len', 'x']), throwsA(isA<CliUsageError>()));
-    expect(() => parse(['--input', 's', '--min-words', '0']), throwsA(isA<CliUsageError>()));
+    expect(
+      () => parse(['--input', 's', '--sample-len', 'x']),
+      throwsA(isA<CliUsageError>()),
+    );
+    expect(
+      () => parse(['--input', 's', '--min-words', '0']),
+      throwsA(isA<CliUsageError>()),
+    );
   });
 
   test('--dry-run and --resume flags set', () {
@@ -278,13 +350,16 @@ void main() {
   });
 
   group('renderVoiceListing', () {
-    test('lists all models, but only those configured, when no model is given', () {
-      final out = renderVoiceListing(config: const VoiceConfig());
-      // Only fish bootstraps when nothing is configured.
-      expect(out, contains('fish —'));
-      expect(out, isNot(contains('gemini —')));
-      expect(out, isNot(contains('kokoro —')));
-    });
+    test(
+      'lists all models, but only those configured, when no model is given',
+      () {
+        final out = renderVoiceListing(config: const VoiceConfig());
+        // Only fish bootstraps when nothing is configured.
+        expect(out, contains('fish —'));
+        expect(out, isNot(contains('gemini —')));
+        expect(out, isNot(contains('kokoro —')));
+      },
+    );
 
     test('lists a single model with its configured default', () {
       final cfg = VoiceConfig(
@@ -296,12 +371,11 @@ void main() {
           ),
         },
         defaults: const {'gemini': 'Charon'},
-        voices: const {'gemini': {'Charon': Voice(id: 'Charon')}},
+        voices: const {
+          'gemini': {'Charon': Voice(id: 'Charon')},
+        },
       );
-      final out = renderVoiceListing(
-        model: cfg.models['gemini'],
-        config: cfg,
-      );
+      final out = renderVoiceListing(model: cfg.models['gemini'], config: cfg);
       expect(out, contains('google/gemini-3.1-flash-tts-preview'));
       expect(out, contains('default voice:  Charon'));
       expect(out, contains('Charon → Charon'));
@@ -313,9 +387,17 @@ void main() {
         model: kDefaultProfile.profile,
         config: const VoiceConfig(),
       );
-      expect(out, contains('default voice:  British Female Narrator '
-          '(89f41ea230034706881f85a8227d6ab9)'));
-      expect(out, contains('none configured — add "fish" aliases in the voice config'));
+      expect(
+        out,
+        contains(
+          'default voice:  British Female Narrator '
+          '(89f41ea230034706881f85a8227d6ab9)',
+        ),
+      );
+      expect(
+        out,
+        contains('none configured — add "fish" aliases in the voice config'),
+      );
     });
 
     test('shows a default voice when the config has none', () {
@@ -354,7 +436,14 @@ void main() {
 
   group('NarrationConfig.copyWith', () {
     test('replaces inputPath and keeps everything else', () {
-      final base = parse(['--input', 's', '--model', 'fish', '--out', '/tmp/x']);
+      final base = parse([
+        '--input',
+        's',
+        '--model',
+        'fish',
+        '--out',
+        '/tmp/x',
+      ]);
       final copy = base.copyWith(inputPath: '/other.txt');
       expect(copy.inputPath, '/other.txt');
       expect(copy.profile, base.profile);

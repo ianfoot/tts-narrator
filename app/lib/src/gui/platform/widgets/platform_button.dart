@@ -57,11 +57,7 @@ class PlatformButton extends StatelessWidget {
         ? child
         : Row(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              icon!,
-              const SizedBox(width: 6),
-              child,
-            ],
+            children: [icon!, const SizedBox(width: 6), child],
           );
     final pad = EdgeInsets.symmetric(
       horizontal: compact ? 8 : 14,
@@ -73,10 +69,7 @@ class PlatformButton extends StatelessWidget {
         child: Container(
           padding: pad,
           decoration: BoxDecoration(
-            border: Border.all(
-              color: tokens.colors.borderSubtle,
-              width: 0.8,
-            ),
+            border: Border.all(color: tokens.colors.borderSubtle, width: 0.8),
             borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
           ),
           child: label,
@@ -110,14 +103,15 @@ class PlatformButton extends StatelessWidget {
   Widget _buildMaterial() {
     final ButtonStyle? buttonStyle;
     if (compact) {
-      buttonStyle = (style == PlatformButtonStyle.outlined
-              ? OutlinedButton.styleFrom
-              : FilledButton.styleFrom)(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        minimumSize: const Size(0, 0),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-      );
+      buttonStyle =
+          (style == PlatformButtonStyle.outlined
+          ? OutlinedButton.styleFrom
+          : FilledButton.styleFrom)(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: const Size(0, 0),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
+          );
     } else {
       buttonStyle = null;
     }

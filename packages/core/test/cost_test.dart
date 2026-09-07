@@ -4,7 +4,10 @@ import 'package:tts_narrator_core/src/narration/cost.dart';
 void main() {
   group('estimateMinutes', () {
     test('word count over 160 wpm', () {
-      expect(estimateMinutes(['one two three four five']), closeTo(5 / 160, 1e-9));
+      expect(
+        estimateMinutes(['one two three four five']),
+        closeTo(5 / 160, 1e-9),
+      );
     });
 
     test('empty segments estimate zero', () {
@@ -12,7 +15,10 @@ void main() {
     });
 
     test('handles multiple segments', () {
-      expect(estimateMinutes(['a b c', 'd e f g h i j k l m']), closeTo(13 / 160, 1e-9));
+      expect(
+        estimateMinutes(['a b c', 'd e f g h i j k l m']),
+        closeTo(13 / 160, 1e-9),
+      );
     });
   });
 
@@ -23,10 +29,7 @@ void main() {
 
     test('kokoro bills by character', () {
       expect(
-        estimateCostUsd(
-          const AudioPricing(usdPerMChars: 0.62),
-          ['abc'],
-        ),
+        estimateCostUsd(const AudioPricing(usdPerMChars: 0.62), ['abc']),
         closeTo(3 / 1e6 * 0.62, 1e-12),
       );
     });
@@ -49,7 +52,10 @@ void main() {
         inputUsdPerMTokens: 1.0,
         outputUsdPerMTokens: 20.0,
       );
-      final segments = List.generate(10, (i) => 'Wordy paragraph number $i here.');
+      final segments = List.generate(
+        10,
+        (i) => 'Wordy paragraph number $i here.',
+      );
       expect(
         estimateCostUsd(pricing, segments),
         greaterThan(estimateCostUsd(pricing, ['A'])),

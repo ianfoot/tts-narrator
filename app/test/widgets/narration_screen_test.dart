@@ -10,6 +10,7 @@ import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/narration/narration_screen.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
+
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
 
@@ -84,7 +85,10 @@ void main() {
 
   /// Pumps the run view as a *pushed* route above an editor placeholder so a
   /// confirmed Back actually pops the view (the `home:` variant cannot pop).
-  Future<void> pumpPushedRun(WidgetTester tester, AppController controller) async {
+  Future<void> pumpPushedRun(
+    WidgetTester tester,
+    AppController controller,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(1000, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
@@ -98,7 +102,9 @@ void main() {
     );
     final navigator = tester.state<NavigatorState>(find.byType(Navigator));
     navigator.push(
-      MaterialPageRoute<void>(builder: (_) => NarrationScreen(controller: controller)),
+      MaterialPageRoute<void>(
+        builder: (_) => NarrationScreen(controller: controller),
+      ),
     );
     // Fixed pumps, not pumpAndSettle: an active run renders an ever-animating
     // spinner that would never settle.
@@ -162,8 +168,7 @@ void main() {
     // Recast the two real segments plus two synthetic ones to cover every state.
     c.runSegments[0].filePath = null; // pending
     // segment 1 stays completed (its clip landed on disk during the run).
-    final resumedFile = File('${dir.path}/resumed.wav')
-      ..writeAsStringSync('x');
+    final resumedFile = File('${dir.path}/resumed.wav')..writeAsStringSync('x');
     c.runSegments.addAll([
       NarrationRunSegment(index: 2, paragraph: 'A third passage is processing.')
         ..running = true,
@@ -277,7 +282,7 @@ void main() {
         matching: find.text('Cancel Run'),
       ),
     );
-await tester.pump();
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump(const Duration(milliseconds: 400));
@@ -286,52 +291,53 @@ await tester.pump();
     expect(c.text, isNotEmpty);
   });
 
-  testWidgets('system pop while a run is active prompts, then leaves on confirm', (
-    tester,
-  ) async {
-    _BlockingProvider().register();
-    final c = makeController()..sampleLen = 3;
-    c.startRun();
-    await pumpPushedRun(tester, c);
+  testWidgets(
+    'system pop while a run is active prompts, then leaves on confirm',
+    (tester) async {
+      _BlockingProvider().register();
+      final c = makeController()..sampleLen = 3;
+      c.startRun();
+      await pumpPushedRun(tester, c);
 
-    // A system back (macOS ⌘W / Close menu) while generating must not pop the
-    // view silently - it funnels through the same confirmation.
-    await tester.binding.handlePopRoute();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Cancel active narration run?'), findsOneWidget);
-    expect(find.byKey(const Key('editorHost')), findsNothing);
-    expect(c.narrating, isTrue);
+      // A system back (macOS ⌘W / Close menu) while generating must not pop the
+      // view silently - it funnels through the same confirmation.
+      await tester.binding.handlePopRoute();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Cancel active narration run?'), findsOneWidget);
+      expect(find.byKey(const Key('editorHost')), findsNothing);
+      expect(c.narrating, isTrue);
 
-    // Deferring keeps the run on screen and generating.
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.text('Back'),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Cancel active narration run?'), findsNothing);
-    expect(c.runStopped, isFalse);
-    expect(find.byKey(const Key('runHeaderTitle')), findsOneWidget);
+      // Deferring keeps the run on screen and generating.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Back'),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Cancel active narration run?'), findsNothing);
+      expect(c.runStopped, isFalse);
+      expect(find.byKey(const Key('runHeaderTitle')), findsOneWidget);
 
-    // Confirming cancelRun stops generation and pops back to the editor.
-    await tester.binding.handlePopRoute();
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.text('Cancel Run'),
-      ),
-    );
-await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(c.runStopped, isTrue);
-    expect(find.byKey(const Key('runHeaderTitle')), findsNothing);
-    expect(find.byKey(const Key('editorHost')), findsOneWidget);
-  });
+      // Confirming cancelRun stops generation and pops back to the editor.
+      await tester.binding.handlePopRoute();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Cancel Run'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(c.runStopped, isTrue);
+      expect(find.byKey(const Key('runHeaderTitle')), findsNothing);
+      expect(find.byKey(const Key('editorHost')), findsOneWidget);
+    },
+  );
 
   testWidgets('double-tap Back while running shows a single confirm dialog', (
     tester,

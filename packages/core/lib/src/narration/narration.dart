@@ -120,8 +120,8 @@ typedef NarrationSegmentComplete = void Function(
 
 /// Reads [config]'s source text: the in-memory [NarrationConfig.sourceText]
 /// when set, else the file at [NarrationConfig.inputPath].
-String _sourceText(NarrationConfig config) => config.sourceText ??
-    File(config.inputPath).readAsStringSync();
+String _sourceText(NarrationConfig config) =>
+    config.sourceText ?? File(config.inputPath).readAsStringSync();
 
 /// Returns the narration segment plan (scenes/paragraphs to narrate, after
 /// min-word merge and length split) for [config], reading from
@@ -262,15 +262,25 @@ Future<void> narrate(
       '${outDir.path}${Platform.pathSeparator}${r['wav']}',
   ];
   final combinedFile = '${stem}_full.$extension';
-  final combinedBytes = File(concatSegments(
-    segmentPaths,
-    outputPath: '${outDir.path}${Platform.pathSeparator}$combinedFile',
-    format: config.profile.format,
-    sampleRate: rate ?? 24000,
-  )).lengthSync();
+  final combinedBytes = File(
+    concatSegments(
+      segmentPaths,
+      outputPath: '${outDir.path}${Platform.pathSeparator}$combinedFile',
+      format: config.profile.format,
+      sampleRate: rate ?? 24000,
+    ),
+  ).lengthSync();
 
-  _writeManifest(outDir, config, records, paragraphs.length, count, rate,
-      combinedFile: combinedFile, combinedBytes: combinedBytes);
+  _writeManifest(
+    outDir,
+    config,
+    records,
+    paragraphs.length,
+    count,
+    rate,
+    combinedFile: combinedFile,
+    combinedBytes: combinedBytes,
+  );
 }
 
 /// Returns the prior record for [index] from [existing] when `--resume` can

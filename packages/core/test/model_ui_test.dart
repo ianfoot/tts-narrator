@@ -34,8 +34,7 @@ class _SpecProvider implements TtsProvider {
     required String responseFormat,
     required Map<String, String> settings,
     AbortToken? abort,
-  }) async =>
-      ProviderAudio(bytes: input.codeUnits);
+  }) async => ProviderAudio(bytes: input.codeUnits);
 }
 
 void main() {

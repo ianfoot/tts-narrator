@@ -6,7 +6,7 @@ import '../controller/app_controller.dart';
 import '../theme/app_tokens.dart';
 
 /// Bottom status bar (JSON UI Schema `status_bar`): the word/char counts, the
-/// current output folder (left-truncated when tight), and the estimate pill.
+/// current output folder (left-truncated when tight), and the estimate readout.
 /// Listens to [AppController] so the readouts stay live without the parent
 /// rebuilding, mirroring [EditorToolbar].
 class EditorStatusBar extends StatefulWidget {
@@ -48,6 +48,12 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
   @override
   Widget build(BuildContext context) {
     final colors = tokens.colors;
+    // Dark mode lifts the readouts one tier so they hold their own against the
+    // near-black footer; light mode keeps the quiet secondary grey.
+    final readoutColor = colors.isDark
+        ? colors.textTertiary
+        : colors.textSecondary;
+    final monoReadout = tokens.typography.mono.copyWith(color: readoutColor);
     final words = _countFormat.format(controller.wordCount);
     final chars = _countFormat.format(controller.charCount);
     final segments = controller.plannedSegments.length;
@@ -71,9 +77,7 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
                 maxLines: 1,
                 softWrap: false,
                 overflow: TextOverflow.ellipsis,
-                style: tokens.typography.mono.copyWith(
-                  color: colors.textSecondary,
-                ),
+                style: monoReadout,
               ),
             ),
           ),
@@ -81,12 +85,9 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final monoStyle = tokens.typography.mono.copyWith(
-                  color: colors.textSecondary,
-                );
                 final text = _leftTruncate(
                   controller.outDir,
-                  monoStyle,
+                  monoReadout,
                   constraints.maxWidth,
                 );
                 return Text(
@@ -95,7 +96,7 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
                   maxLines: 1,
                   softWrap: false,
                   overflow: TextOverflow.clip,
-                  style: monoStyle,
+                  style: monoReadout,
                 );
               },
             ),
@@ -103,22 +104,15 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
           const SizedBox(width: 12),
           AnimatedSwitcher(
             duration: _tickerDuration,
-            child: Container(
+            child: KeyedSubtree(
               key: ValueKey('$segments-$minutes-$cost'),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: colors.bgSurfaceElevated,
-                borderRadius: BorderRadius.circular(4),
-              ),
               child: Text(
                 '$segments segments · ~$minutes mins · ~$cost est.',
                 key: const Key('editorEstimate'),
                 maxLines: 1,
                 softWrap: false,
                 overflow: TextOverflow.ellipsis,
-                style: tokens.typography.mono.copyWith(
-                  color: colors.textSecondary,
-                ),
+                style: monoReadout,
               ),
             ),
           ),

@@ -194,8 +194,9 @@ void main() {
       );
       expect(leafItems(app).any((m) => m.label == 'Preferences…'), isTrue);
 
-      final viewProvided =
-          leafItems(view).whereType<PlatformProvidedMenuItem>().map((m) => m.type);
+      final viewProvided = leafItems(view)
+          .whereType<PlatformProvidedMenuItem>()
+          .map((m) => m.type);
       expect(viewProvided, <PlatformProvidedMenuItemType>[
         PlatformProvidedMenuItemType.toggleFullScreen,
       ]);
@@ -268,7 +269,7 @@ void main() {
       },
     );
 
-test('Preferences dispatches through the onPreferences slot', () async {
+    test('Preferences dispatches through the onPreferences slot', () async {
       final controller = await makeController();
       var opened = false;
       controller.onPreferences = () => opened = true;
@@ -276,7 +277,6 @@ test('Preferences dispatches through the onPreferences slot', () async {
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
       )[0];
-
 
       leafItem(app, 'Preferences…').onSelected?.call();
       expect(opened, isTrue);
@@ -318,31 +318,33 @@ test('Preferences dispatches through the onPreferences slot', () async {
   });
 
   group('View menu commands', () {
-    test('View has an Appearance submenu and a Toggle Settings Panel item',
-        () async {
-      final view = buildMacMenu(
-        controller: await makeController(),
-        navigatorKey: GlobalKey<NavigatorState>(),
-      )[3];
+    test(
+      'View has an Appearance submenu and a Toggle Settings Panel item',
+      () async {
+        final view = buildMacMenu(
+          controller: await makeController(),
+          navigatorKey: GlobalKey<NavigatorState>(),
+        )[3];
 
-      final appearance = view.menus
-          .whereType<PlatformMenuItemGroup>()
-          .single
-          .members
-          .whereType<PlatformMenu>()
-          .single;
-      // Defaults to the system mode, so Auto carries the checkmark prefix but
-      // the bare labels stay Auto/Light/Dark.
-      expect(appearance.menus.map(bareLabel).toList(), [
-        'Auto',
-        'Light',
-        'Dark',
-      ]);
-      expectMetaShortcut(
-        leafItem(view, 'Toggle Settings Panel'),
-        LogicalKeyboardKey.backslash,
-      );
-    });
+        final appearance = view.menus
+            .whereType<PlatformMenuItemGroup>()
+            .single
+            .members
+            .whereType<PlatformMenu>()
+            .single;
+        // Defaults to the system mode, so Auto carries the checkmark prefix but
+        // the bare labels stay Auto/Light/Dark.
+        expect(appearance.menus.map(bareLabel).toList(), [
+          'Auto',
+          'Light',
+          'Dark',
+        ]);
+        expectMetaShortcut(
+          leafItem(view, 'Toggle Settings Panel'),
+          LogicalKeyboardKey.backslash,
+        );
+      },
+    );
 
     test('Appearance items set the theme mode', () async {
       final controller = await makeController();

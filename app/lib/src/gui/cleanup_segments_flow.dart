@@ -35,9 +35,11 @@ Future<void> runCleanupSegmentsFlow({
   try {
     final removed = await controller.cleanupSegments();
     if (!context.mounted) return;
-    _showInfoDialog(context,
-        title: 'Segments deleted',
-        message: 'Removed $removed segment ${removed == 1 ? 'file' : 'files'}.');
+    _showInfoDialog(
+      context,
+      title: 'Segments deleted',
+      message: 'Removed $removed segment ${removed == 1 ? 'file' : 'files'}.',
+    );
   } catch (e) {
     if (!context.mounted) return;
     _showInfoDialog(context, title: 'Cleanup failed', message: '$e');

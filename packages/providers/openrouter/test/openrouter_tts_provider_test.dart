@@ -24,33 +24,35 @@ void main() {
       );
     });
 
-    test('cancelling while a request is in flight aborts the live HTTP call',
-        () async {
-      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-      final requestArrived = Completer<void>();
-      final serverDone = server.listen((request) {
-        // Never respond: hold the connection open until the client aborts.
-        requestArrived.complete();
-      });
-      final token = AbortToken();
-      final provider = OpenRouterTtsProvider(
-        environment: const {},
-        endpoint: 'http://${server.address.address}:${server.port}',
-      );
-      final future = provider.synthesize(
-        model: 'test/model',
-        voice: null,
-        responseFormat: 'mp3',
-        input: 'hello',
-        settings: const {'api_key': 'sk-test'},
-        abort: token,
-      );
-      await requestArrived.future;
-      token.cancel();
-      await expectLater(future, throwsA(isA<AbortException>()));
-      await serverDone.cancel();
-      await server.close(force: true);
-    });
+    test(
+      'cancelling while a request is in flight aborts the live HTTP call',
+      () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        final requestArrived = Completer<void>();
+        final serverDone = server.listen((request) {
+          // Never respond: hold the connection open until the client aborts.
+          requestArrived.complete();
+        });
+        final token = AbortToken();
+        final provider = OpenRouterTtsProvider(
+          environment: const {},
+          endpoint: 'http://${server.address.address}:${server.port}',
+        );
+        final future = provider.synthesize(
+          model: 'test/model',
+          voice: null,
+          responseFormat: 'mp3',
+          input: 'hello',
+          settings: const {'api_key': 'sk-test'},
+          abort: token,
+        );
+        await requestArrived.future;
+        token.cancel();
+        await expectLater(future, throwsA(isA<AbortException>()));
+        await serverDone.cancel();
+        await server.close(force: true);
+      },
+    );
   });
 
   group('API key resolution', () {
@@ -70,10 +72,7 @@ void main() {
           isA<StateError>().having(
             (e) => e.message,
             'message',
-            allOf(
-              contains('api_key'),
-              contains('OPENROUTER_API_KEY'),
-            ),
+            allOf(contains('api_key'), contains('OPENROUTER_API_KEY')),
           ),
         ),
       );
@@ -89,10 +88,13 @@ void main() {
       );
       final spec = OpenRouterTtsProvider().modelUiSpecFor(styled);
       expect(spec.isEmpty, isFalse);
-      expect(
-        spec.options.map((o) => o.key),
-        ['gender', 'accent', 'style', 'passagePrefix', 'useCalmTag'],
-      );
+      expect(spec.options.map((o) => o.key), [
+        'gender',
+        'accent',
+        'style',
+        'passagePrefix',
+        'useCalmTag',
+      ]);
       expect(
         spec.options.firstWhere((o) => o.key == 'gender').type,
         ModelUiOptionType.gender,
@@ -122,7 +124,10 @@ void main() {
 
     test('models without prompt styling declare nothing', () {
       final provider = OpenRouterTtsProvider();
-      const fish = TtsModelProfile(alias: 'fish', id: 'fish-audio/s2.1-pro-free');
+      const fish = TtsModelProfile(
+        alias: 'fish',
+        id: 'fish-audio/s2.1-pro-free',
+      );
       const kokoro = TtsModelProfile(alias: 'kokoro', id: 'hexgrad/kokoro-82m');
       expect(provider.modelUiSpecFor(fish).isEmpty, isTrue);
       expect(provider.modelUiSpecFor(kokoro).isEmpty, isTrue);

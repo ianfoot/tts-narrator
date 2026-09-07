@@ -137,7 +137,8 @@ class _AppRootState extends State<AppRoot> {
   Widget build(BuildContext context) {
     final home = EditorScreen(controller: widget.controller);
     if (_isMac) {
-      final dark = resolveBrightness(
+      final dark =
+          resolveBrightness(
             widget.controller.themeMode,
             WidgetsBinding.instance.platformDispatcher.platformBrightness,
           ) ==

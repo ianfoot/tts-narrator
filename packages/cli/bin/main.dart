@@ -55,12 +55,14 @@ Future<int> main(List<String> args) async {
   stdout.writeln('Voice:  $label');
   stdout.writeln('Provider: ${config.profile.provider}');
   stdout.writeln('Format: ${config.profile.format}');
-  stdout.writeln('Input:  ${inputs.length == 1 ? inputs.first : '${inputs.length} files (${config.inputPath})'}');
   stdout.writeln(
-    'Tags:   ${config.useCalmTag ? 'on ([calm])' : 'off'}',
+    'Input:  ${inputs.length == 1 ? inputs.first : '${inputs.length} files (${config.inputPath})'}',
   );
+  stdout.writeln('Tags:   ${config.useCalmTag ? 'on ([calm])' : 'off'}');
   if (config.resume) {
-    stdout.writeln('Resume: on (skips segments matching the existing manifest)');
+    stdout.writeln(
+      'Resume: on (skips segments matching the existing manifest)',
+    );
   }
   if (!config.profile.promptStyle &&
       (config.accent.trim().isNotEmpty ||
@@ -93,7 +95,9 @@ Future<int> main(List<String> args) async {
           final preview = segments[i].length > 70
               ? '${segments[i].substring(0, 70)}…'
               : segments[i];
-          stdout.writeln('${i + 1}. ($words words) ${preview.split('\n').first}');
+          stdout.writeln(
+            '${i + 1}. ($words words) ${preview.split('\n').first}',
+          );
         }
         stdout.writeln(
           '  Output: ${outputDirPath(fileConfig)}'

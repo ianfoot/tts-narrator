@@ -40,7 +40,7 @@ class PlatformDropdown<T> extends StatelessWidget {
     if (defaultTargetPlatform == TargetPlatform.macOS) {
       return _buildCupertino();
     }
-    return _buildMaterial();
+    return _buildMaterial(context);
   }
 
   Widget _buildCupertino() {
@@ -85,7 +85,7 @@ class PlatformDropdown<T> extends StatelessWidget {
               Icon(
                 CupertinoIcons.chevron_down,
                 size: 14,
-                color: colors.textSecondary,
+                color: colors.textTertiary,
               ),
             ],
           ),
@@ -94,7 +94,8 @@ class PlatformDropdown<T> extends StatelessWidget {
     );
   }
 
-  Widget _buildMaterial() {
+  Widget _buildMaterial(BuildContext context) {
+    final colors = AppTokens.of(context).colors;
     return InputDecorator(
       decoration: InputDecoration(
         labelText: label,
@@ -107,7 +108,10 @@ class PlatformDropdown<T> extends StatelessWidget {
           value: value,
           isExpanded: true,
           isDense: true,
-          hint: hint == null ? null : Text(hint!, overflow: TextOverflow.ellipsis),
+          iconEnabledColor: colors.textTertiary,
+          hint: hint == null
+              ? null
+              : Text(hint!, overflow: TextOverflow.ellipsis),
           items: [
             for (final item in items)
               DropdownMenuItem<T>(

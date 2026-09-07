@@ -72,31 +72,36 @@ void main() {
       expect(registry.resolveOrNull('beta'), isNotNull);
     });
 
-    test('resolve throws for an unknown id, naming it and the registered set', () {
-      final registry = TtsProviderRegistry()
-        ..register('alpha', () => _alpha)
-        ..register('beta', () => _beta);
-      expect(
-        () => registry.resolve('gamma'),
-        throwsA(
-          isA<StateError>().having(
-            (e) => e.message,
-            'message',
-            allOf(
-              contains('"gamma"'),
-              contains('alpha'),
-              contains('beta'),
+    test(
+      'resolve throws for an unknown id, naming it and the registered set',
+      () {
+        final registry = TtsProviderRegistry()
+          ..register('alpha', () => _alpha)
+          ..register('beta', () => _beta);
+        expect(
+          () => registry.resolve('gamma'),
+          throwsA(
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              allOf(contains('"gamma"'), contains('alpha'), contains('beta')),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
 
     test('resolve lists only registered ids (none when empty)', () {
       final registry = TtsProviderRegistry();
       expect(
         () => registry.resolve('x'),
-        throwsA(isA<StateError>().having((e) => e.message, 'message', contains('(none)'))),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('(none)'),
+          ),
+        ),
       );
     });
   });
@@ -111,21 +116,22 @@ void main() {
     });
 
     test('literal values pass through untouched', () {
-      final out = resolveSettings(
-        {'api_key': 'sk-literal', 'model': 'fish'},
-        env: const {},
-      );
+      final out = resolveSettings({
+        'api_key': 'sk-literal',
+        'model': 'fish',
+      }, env: const {});
       expect(out, {'api_key': 'sk-literal', 'model': 'fish'});
     });
 
     test(r'a missing env var throws naming the variable', () {
       expect(
-        () => resolveSettings(
-          {'api_key': r'${MISSING_VAR}'},
-          env: const {},
-        ),
+        () => resolveSettings({'api_key': r'${MISSING_VAR}'}, env: const {}),
         throwsA(
-          isA<StateError>().having((e) => e.message, 'message', contains('MISSING_VAR')),
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('MISSING_VAR'),
+          ),
         ),
       );
     });
@@ -145,13 +151,17 @@ void main() {
           {'api_key': r'${EMPTY_VAR}'},
           env: {'EMPTY_VAR': ''},
         ),
-        throwsA(isA<StateError>().having((e) => e.message, 'message', contains('EMPTY_VAR'))),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('EMPTY_VAR'),
+          ),
+        ),
       );
       expect(
-        () => resolveSettings(
-          {'api_key': r'${WS_VAR}'},
-          env: {'WS_VAR': '   '},
-        ),
+        () =>
+            resolveSettings({'api_key': r'${WS_VAR}'}, env: {'WS_VAR': '   '}),
         throwsA(isA<StateError>()),
       );
     });
