@@ -418,7 +418,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
         children: [
           _label('Min words per segment'),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: PlatformSlider(
