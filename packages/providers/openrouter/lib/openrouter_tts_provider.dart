@@ -53,7 +53,8 @@ class OpenRouterTtsProvider implements TtsProvider {
       ModelUiOption(
         key: 'passagePrefix',
         label: 'Passage prefix',
-        hint: 'An opening directive woven into the first passage, read aloud '
+        hint:
+            'An opening directive woven into the first passage, read aloud '
             'before the story starts.',
         type: ModelUiOptionType.multiline,
       ),
@@ -131,7 +132,9 @@ class OpenRouterTtsProvider implements TtsProvider {
         return ProviderAudio(bytes: bytes, generationId: generationId);
       }
       // Non-2xx: fail fast unless 5xx (retryable).
-      if (statusCode == 502 || statusCode == 500 || statusCode == 503 ||
+      if (statusCode == 502 ||
+          statusCode == 500 ||
+          statusCode == 503 ||
           statusCode == 529) {
         if (attempt <= _retries) {
           await _backoff(attempt);

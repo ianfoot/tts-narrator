@@ -14,16 +14,20 @@ const _gemini = TtsModelProfile(
 void main() {
   const prefix = 'Narrate this passage for an audiobook.';
 
-  NarrationConfig cfg({bool tags = false, String accent = 'RP', String style = 'warm', String? customPrefix}) =>
-      NarrationConfig(
-        inputPath: 'story.txt',
-        profile: _gemini,
-        voice: 'Callirrhoe',
-        useCalmTag: tags,
-        accent: accent,
-        style: style,
-        passagePrefix: customPrefix ?? prefix,
-      );
+  NarrationConfig cfg({
+    bool tags = false,
+    String accent = 'RP',
+    String style = 'warm',
+    String? customPrefix,
+  }) => NarrationConfig(
+    inputPath: 'story.txt',
+    profile: _gemini,
+    voice: 'Callirrhoe',
+    useCalmTag: tags,
+    accent: accent,
+    style: style,
+    passagePrefix: customPrefix ?? prefix,
+  );
 
   test('wraps passage with prefix, accent, style and read directive', () {
     final p = buildPrompt(cfg(), 'The text.');

@@ -51,20 +51,16 @@ class TtsModelProfile {
   /// a default value, not special provider treatment.
   final String provider;
 
-  TtsModelProfile copyWith({
-    String? id,
-    String? provider,
-  }) =>
-      TtsModelProfile(
-        alias: alias,
-        id: id ?? this.id,
-        format: format,
-        promptStyle: promptStyle,
-        sendsVoiceField: sendsVoiceField,
-        sampleRate: sampleRate,
-        provider: provider ?? this.provider,
-        displayName: displayName,
-      );
+  TtsModelProfile copyWith({String? id, String? provider}) => TtsModelProfile(
+    alias: alias,
+    id: id ?? this.id,
+    format: format,
+    promptStyle: promptStyle,
+    sendsVoiceField: sendsVoiceField,
+    sampleRate: sampleRate,
+    provider: provider ?? this.provider,
+    displayName: displayName,
+  );
 }
 
 /// The app's out-of-the-box default: the fish model + its free default voice,

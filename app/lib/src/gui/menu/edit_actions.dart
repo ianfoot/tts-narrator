@@ -33,7 +33,8 @@ abstract final class EditActions {
 
   static void copy() => dispatch(CopySelectionTextIntent.copy);
 
-  static void paste() => dispatch(PasteTextIntent(SelectionChangedCause.toolbar));
+  static void paste() =>
+      dispatch(PasteTextIntent(SelectionChangedCause.toolbar));
 
   static void selectAll() =>
       dispatch(SelectAllTextIntent(SelectionChangedCause.toolbar));

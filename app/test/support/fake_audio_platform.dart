@@ -82,7 +82,10 @@ class FakeAudioPlatform extends AudioplayersPlatformInterface {
   Future<void> setPlaybackRate(String playerId, double playbackRate) async {}
 
   @override
-  Future<void> setAudioContext(String playerId, AudioContext audioContext) async {}
+  Future<void> setAudioContext(
+    String playerId,
+    AudioContext audioContext,
+  ) async {}
 
   @override
   Future<void> setPlayerMode(String playerId, PlayerMode playerMode) async {}

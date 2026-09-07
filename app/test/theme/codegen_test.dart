@@ -20,7 +20,9 @@ void main() {
     final appRoot = _appRoot();
     final script = p.join(appRoot, 'tool', 'generate_tokens.dart');
     final tokensJson = File(p.join(appRoot, 'assets', 'theme', 'tokens.json'));
-    final golden = File(p.join(appRoot, 'lib', 'src', 'gui', 'theme', 'app_tokens.g.dart'));
+    final golden = File(
+      p.join(appRoot, 'lib', 'src', 'gui', 'theme', 'app_tokens.g.dart'),
+    );
 
     if (!File(script).existsSync()) {
       fail('Codegen script not found at $script');
@@ -48,10 +50,7 @@ void main() {
       _resolveDartBinary(),
       ['run', script],
       workingDirectory: appRoot,
-      environment: {
-        ...Platform.environment,
-        'TOKENS_PACKAGE_ROOT': temp.path,
-      },
+      environment: {...Platform.environment, 'TOKENS_PACKAGE_ROOT': temp.path},
     );
 
     if (result.exitCode != 0) {
@@ -61,7 +60,9 @@ void main() {
       );
     }
 
-    final produced = File(p.join(temp.path, 'lib', 'src', 'gui', 'theme', 'app_tokens.g.dart'));
+    final produced = File(
+      p.join(temp.path, 'lib', 'src', 'gui', 'theme', 'app_tokens.g.dart'),
+    );
     if (!produced.existsSync()) {
       fail('Codegen did not produce ${produced.path}.');
     }

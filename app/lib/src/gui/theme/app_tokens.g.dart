@@ -15,6 +15,7 @@ class _GeneratedPalette {
   Color get borderSubtle => isDark ? const Color(0xFF2C2C30) : const Color(0xFFE5E5E2);
   Color get textPrimary => isDark ? const Color(0xFFEDEDED) : const Color(0xFF1C1C1E);
   Color get textSecondary => isDark ? const Color(0xFF8E8E93) : const Color(0xFF6E6E73);
+  Color get textTertiary => isDark ? const Color(0xFFADADB2) : const Color(0xFF4D4D52);
   Color get accentPrimary => isDark ? const Color(0xFF0A84FF) : const Color(0xFF007AFF);
   Color get accentSuccess => isDark ? const Color(0xFF30D158) : const Color(0xFF34C759);
   Color get accentWarning => isDark ? const Color(0xFFFF9F0A) : const Color(0xFFFF9500);

@@ -76,6 +76,7 @@ class AppTokens {
 /// | `border-subtle` | `#E5E5E2` | `#2C2C30` |
 /// | `text-primary` | `#1C1C1E` | `#EDEDED` |
 /// | `text-secondary` | `#6E6E73` | `#8E8E93` |
+/// | `text-tertiary` | `#4D4D52` | `#ADADB2` |
 /// | `accent-primary` | `#007AFF` | `#0A84FF` |
 /// | `accent-success` | `#34C759` | `#30D158` |
 /// | `accent-warning` | `#FF9500` | `#FF9F0A` |
@@ -120,6 +121,13 @@ class AppPalette {
 
   /// Metadata, character counts, placeholders.
   Color get textSecondary => _gen.textSecondary;
+
+  /// Interactive control affordances: dropdown chevrons, disclosure arrows.
+  ///
+  /// Sits between [textPrimary] and [textSecondary]: bright enough to signal
+  /// an interactable handle at a glance, but quiet enough that it never
+  /// competes with the control's label (which stays [textPrimary]).
+  Color get textTertiary => _gen.textTertiary;
 
   /// Primary action buttons (`Narrate`), focus rings.
   Color get accentPrimary => _gen.accentPrimary;

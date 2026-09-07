@@ -156,12 +156,14 @@ class AppController extends ChangeNotifier {
     if (_voiceGender == null) return all;
     // Untagged models have nothing to filter against: a gender set via a
     // prompt-style model's option still keeps the full voice list.
-    final tagged = _voiceConfig.voices[p.alias]?.values.any(
-          (v) => v.gender != null,
-        ) ??
+    final tagged =
+        _voiceConfig.voices[p.alias]?.values.any((v) => v.gender != null) ??
         false;
     if (!tagged) return all;
-    return [for (final e in all) if (e.gender == _voiceGender) e];
+    return [
+      for (final e in all)
+        if (e.gender == _voiceGender) e,
+    ];
   }
 
   /// Applies the consequences of a narrator-gender change: for prompt-style
@@ -217,13 +219,13 @@ class AppController extends ChangeNotifier {
   /// `male narrator` phrases are swapped — custom prefixes are left alone.
   void _syncNarratorGenderToPrefix(VoiceGender g) {
     if (!profile.promptStyle) return;
-    if (g == VoiceGender.male &&
-        _passagePrefix.contains(_genderFemalePhrase)) {
+    if (g == VoiceGender.male && _passagePrefix.contains(_genderFemalePhrase)) {
       _passagePrefix = _passagePrefix.replaceAll(
         _genderFemalePhrase,
         _genderMalePhrase,
       );
-    } else if (g == VoiceGender.female && _hasMaleNarratorPhrase(_passagePrefix)) {
+    } else if (g == VoiceGender.female &&
+        _hasMaleNarratorPhrase(_passagePrefix)) {
       _passagePrefix = _passagePrefix.replaceAll(
         _genderMalePhrase,
         _genderFemalePhrase,

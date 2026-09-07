@@ -11,6 +11,7 @@ import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_segmented.dart';
+
 import '../support/fake_tts_provider.dart';
 
 void main() {
@@ -131,7 +132,9 @@ void main() {
       writeConfig({
         'models': {'gemini': gemini},
         'defaults': {'gemini': 'Charon'},
-        'voices': {'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'}},
+        'voices': {
+          'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
+        },
       });
       final c = makeController();
       await pumpRail(tester, c);
@@ -159,7 +162,9 @@ void main() {
       writeConfig({
         'models': {'gemini': gemini},
         'defaults': {'gemini': 'Charon'},
-        'voices': {'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'}},
+        'voices': {
+          'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
+        },
       });
       final c = makeController();
       c.setVoice('my_custom_voice');
@@ -179,7 +184,9 @@ void main() {
         'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
         },
-        'voices': {'fish': {'Narrator': 'hex123'}},
+        'voices': {
+          'fish': {'Narrator': 'hex123'},
+        },
       });
       final c = makeController();
       await pumpRail(tester, c);
@@ -236,7 +243,9 @@ void main() {
       tester,
     ) async {
       writeConfig({
-        'models': {'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'}},
+        'models': {
+          'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+        },
         'defaults': {'kokoro': 'Emma'},
         'voices': {
           'kokoro': {
@@ -307,7 +316,9 @@ void main() {
           },
         },
         'defaults': {'gemini': 'Charon'},
-        'voices': {'gemini': {'Charon': 'Charon'}},
+        'voices': {
+          'gemini': {'Charon': 'Charon'},
+        },
       });
       // The real openrouter plugin surfaces gender as a Model option for
       // prompt-styled models; emulate that spec via the fake provider.
@@ -517,7 +528,9 @@ void main() {
       expect(find.byKey(const Key('sampleLenField')), findsNothing);
     });
 
-    testWidgets('clearing the sample count keeps sample mode on', (tester) async {
+    testWidgets('clearing the sample count keeps sample mode on', (
+      tester,
+    ) async {
       writeConfig({});
       final c = makeController();
       await pumpRail(tester, c);
@@ -568,7 +581,9 @@ void main() {
           },
         },
         'defaults': {'gemini': 'Charon'},
-        'voices': {'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'}},
+        'voices': {
+          'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
+        },
       });
       // The fake stands in for the openrouter plugin: gemini declares its
       // styling options; the default fish model declares none.
@@ -591,9 +606,7 @@ void main() {
       final c = makeController();
       await tester.binding.setSurfaceSize(const Size(1200, 1800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(
-        CupertinoApp(home: SettingsPanel(controller: c)),
-      );
+      await tester.pumpWidget(CupertinoApp(home: SettingsPanel(controller: c)));
 
       expect(find.byKey(const Key('settingsPanel')), findsOneWidget);
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
