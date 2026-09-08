@@ -97,6 +97,19 @@ PlatformMenu _fileMenu(
           controller.commands.onNarrate?.call();
         },
       ),
+      PlatformMenuItem(
+        label: 'Clear',
+        shortcut: const SingleActivator(
+          LogicalKeyboardKey.keyL,
+          meta: true,
+          shift: true,
+        ),
+        onSelected: () {
+          // Guard: only clear when there's text and not narrating.
+          if (!controller.canClearText) return;
+          controller.clearText();
+        },
+      ),
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenuItem(

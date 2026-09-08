@@ -130,6 +130,17 @@ class _EditorToolbarState extends State<EditorToolbar> {
     );
   }
 
+  /// Clears the document; greyed out (null onPressed) when text is empty or
+  /// narration is in progress.
+  Widget _buildClearButton() {
+    return PlatformIconButton(
+      key: const Key('editorClearButton'),
+      tooltip: 'Clear text (⌘⇧L)',
+      icon: Icon(_isMac ? CupertinoIcons.delete_left : Icons.clear),
+      onPressed: controller.canClearText ? () => controller.clearText() : null,
+    );
+  }
+
   Widget _buildDocumentTitle(AppTokens tokens) {
     final colors = tokens.colors;
     return Row(
@@ -298,6 +309,8 @@ class _EditorToolbarState extends State<EditorToolbar> {
               _buildOutputFolderButton(),
               const SizedBox(width: 6),
               _buildSaveButton(),
+              const SizedBox(width: 6),
+              _buildClearButton(),
             ],
           ),
           Expanded(child: Center(child: _buildDocumentTitle(tokens))),

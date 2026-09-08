@@ -101,4 +101,13 @@ class DocumentController extends ChangeNotifier {
       _text.trim().isEmpty ? 0 : _text.trim().split(RegExp(r'\s+')).length;
 
   int get charCount => _text.length;
+
+  /// Clears the document text. Disabled (greyed) when no text to clear.
+  /// Marks document dirty so the cleared state can be saved.
+  void clearText() {
+    if (_text.isEmpty) return;
+    _text = '';
+    _dirty = true;
+    notifyListeners();
+  }
 }

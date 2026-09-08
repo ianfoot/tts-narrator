@@ -419,4 +419,15 @@ class AppController extends ChangeNotifier {
   /// blocked (empty text / already running). The Narrate entrypoints guard on
   /// this before dispatching to [PlatformCommands.onNarrate].
   String? narrateBlockReason() => _run.narrateBlockReason();
+
+  /// Clears the document text. Disabled when no text or while narrating.
+  /// Marks document dirty so the cleared state can be saved.
+  void clearText() {
+    if (narrating) return; // Block while narration is active
+    if (text.isEmpty) return; // Nothing to clear
+    _document.clearText();
+  }
+
+  /// Whether the clear action should be enabled (text non-empty, not narrating).
+  bool get canClearText => text.isNotEmpty && !narrating;
 }
