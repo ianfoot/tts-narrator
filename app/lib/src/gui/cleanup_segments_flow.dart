@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'controller/app_controller.dart';
+import 'theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 
 /// Runs the "Clean Up Segments…" flow: asks for confirmation (deleting the
 /// per-segment files forfeits `--resume` reuse — a re-run would re-bill them),
@@ -37,12 +38,24 @@ Future<void> runCleanupSegmentsFlow({
     if (!context.mounted) return;
     _showInfoDialog(
       context,
-      title: 'Segments deleted',
-      message: 'Removed $removed segment ${removed == 1 ? 'file' : 'files'}.',
+      title: TextTokens.gui_cleanup_deletedTitle,
+      message: fillTextTemplate(
+        TextTokens.gui_cleanup_removedMessage,
+        {
+          'removedCount': removed,
+          'fileWord': removed == 1
+              ? TextTokens.core_plurals_file
+              : TextTokens.core_plurals_files,
+        },
+      ),
     );
   } catch (e) {
     if (!context.mounted) return;
-    _showInfoDialog(context, title: 'Cleanup failed', message: '$e');
+    _showInfoDialog(
+      context,
+      title: TextTokens.gui_cleanup_cleanupFailedTitle,
+      message: '$e',
+    );
   }
 }
 
@@ -51,11 +64,8 @@ bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
 /// Platform-aware confirmation dialog; returns true only when the user
 /// confirmed deletion.
 Future<bool?> _confirmDeletion(BuildContext context) {
-  const title = 'Delete segment files?';
-  const message =
-      'This deletes the per-segment audio clips. The combined track and the '
-      'manifest are kept. Deleted segments can\'t be reused by --resume, so '
-      'a re-run narrates them again.';
+  const title = TextTokens.gui_cleanup_confirmTitle;
+  const message = TextTokens.gui_cleanup_confirmMessage;
   if (_isMac) {
     return showCupertinoDialog<bool>(
       context: context,
@@ -65,12 +75,12 @@ Future<bool?> _confirmDeletion(BuildContext context) {
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: const Text(TextTokens.gui_cleanup_cancel),
           ),
           CupertinoDialogAction(
             isDefaultAction: true,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Delete'),
+            child: const Text(TextTokens.gui_cleanup_delete),
           ),
         ],
       ),
@@ -84,11 +94,11 @@ Future<bool?> _confirmDeletion(BuildContext context) {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('Cancel'),
+          child: const Text(TextTokens.gui_cleanup_cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text('Delete'),
+          child: const Text(TextTokens.gui_cleanup_delete),
         ),
       ],
     ),
@@ -110,7 +120,7 @@ void _showInfoDialog(
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('OK'),
+            child: const Text(TextTokens.gui_cleanup_ok),
           ),
         ],
       ),
@@ -125,7 +135,7 @@ void _showInfoDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('OK'),
+          child: const Text(TextTokens.gui_cleanup_ok),
         ),
       ],
     ),

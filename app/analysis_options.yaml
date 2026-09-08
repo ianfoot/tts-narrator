@@ -9,3 +9,4 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+    - lib/src/gui/theme/*.g.dart

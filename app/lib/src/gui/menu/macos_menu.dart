@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../cleanup_segments_flow.dart';
 import '../controller/app_controller.dart';
+import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart' show AppThemeMode;
 import 'edit_actions.dart';
 
@@ -33,13 +34,13 @@ List<PlatformMenu> buildMacMenu({
 
 PlatformMenu _appMenu(AppController controller) {
   return PlatformMenu(
-    label: 'TTS Narrator',
+    label: TextTokens.gui_menu_appMenu,
     menus: <PlatformMenuItem>[
       const PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.about),
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenuItem(
-            label: 'Preferences…',
+            label: TextTokens.gui_menu_preferences,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.comma,
               meta: true,
@@ -76,20 +77,20 @@ PlatformMenu _fileMenu(
   GlobalKey<NavigatorState> navigatorKey,
 ) {
   return PlatformMenu(
-    label: 'File',
+    label: TextTokens.gui_menu_file,
     menus: <PlatformMenuItem>[
       PlatformMenuItem(
-        label: 'Open Text…',
+        label: TextTokens.gui_menu_openText,
         shortcut: const SingleActivator(LogicalKeyboardKey.keyO, meta: true),
         onSelected: () => controller.onOpen?.call(),
       ),
       PlatformMenuItem(
-        label: 'Output Folder…',
+        label: TextTokens.gui_menu_outputFolder,
         shortcut: const SingleActivator(LogicalKeyboardKey.keyE, meta: true),
         onSelected: () => controller.onSetOutputFolder?.call(),
       ),
       PlatformMenuItem(
-        label: 'Narrate',
+        label: TextTokens.gui_menu_narrate,
         shortcut: const SingleActivator(LogicalKeyboardKey.keyN, meta: true),
         onSelected: () {
           if (controller.narrateBlockReason() != null) return;
@@ -99,7 +100,7 @@ PlatformMenu _fileMenu(
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenuItem(
-            label: 'Save',
+            label: TextTokens.gui_menu_save,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyS,
               meta: true,
@@ -107,7 +108,7 @@ PlatformMenu _fileMenu(
             onSelected: () => controller.save(),
           ),
           PlatformMenuItem(
-            label: 'Save As…',
+            label: TextTokens.gui_menu_saveAs,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyS,
               meta: true,
@@ -120,7 +121,7 @@ PlatformMenu _fileMenu(
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenuItem(
-            label: 'Clean Up Segments…',
+            label: TextTokens.gui_menu_cleanUpSegments,
             onSelected: () {
               // Menu items have no [enabled] flag; guard here so the command
               // is a no-op before any run leaves cleanable segments behind.
@@ -136,7 +137,7 @@ PlatformMenu _fileMenu(
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenuItem(
-            label: 'Close',
+            label: TextTokens.gui_menu_close,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyW,
               meta: true,
@@ -151,15 +152,15 @@ PlatformMenu _fileMenu(
 
 PlatformMenu _editMenu() {
   return PlatformMenu(
-    label: 'Edit',
+    label: TextTokens.gui_menu_edit,
     menus: <PlatformMenuItem>[
       PlatformMenuItem(
-        label: 'Undo',
+        label: TextTokens.gui_menu_undo,
         shortcut: const SingleActivator(LogicalKeyboardKey.keyZ, meta: true),
         onSelected: EditActions.undo,
       ),
       PlatformMenuItem(
-        label: 'Redo',
+        label: TextTokens.gui_menu_redo,
         shortcut: const SingleActivator(
           LogicalKeyboardKey.keyZ,
           meta: true,
@@ -170,7 +171,7 @@ PlatformMenu _editMenu() {
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenuItem(
-            label: 'Cut',
+            label: TextTokens.gui_menu_cut,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyX,
               meta: true,
@@ -178,7 +179,7 @@ PlatformMenu _editMenu() {
             onSelected: EditActions.cut,
           ),
           PlatformMenuItem(
-            label: 'Copy',
+            label: TextTokens.gui_menu_copy,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyC,
               meta: true,
@@ -186,7 +187,7 @@ PlatformMenu _editMenu() {
             onSelected: EditActions.copy,
           ),
           PlatformMenuItem(
-            label: 'Paste',
+            label: TextTokens.gui_menu_paste,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyV,
               meta: true,
@@ -194,7 +195,7 @@ PlatformMenu _editMenu() {
             onSelected: EditActions.paste,
           ),
           PlatformMenuItem(
-            label: 'Select All',
+            label: TextTokens.gui_menu_selectAll,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyA,
               meta: true,
@@ -209,20 +210,20 @@ PlatformMenu _editMenu() {
 
 PlatformMenu _viewMenu(AppController controller) {
   return PlatformMenu(
-    label: 'View',
+    label: TextTokens.gui_menu_view,
     menus: <PlatformMenuItem>[
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenu(
-            label: 'Appearance',
+            label: TextTokens.gui_menu_appearance,
             menus: <PlatformMenuItem>[
-              _appearanceItem(controller, AppThemeMode.system, 'Auto'),
-              _appearanceItem(controller, AppThemeMode.light, 'Light'),
-              _appearanceItem(controller, AppThemeMode.dark, 'Dark'),
+              _appearanceItem(controller, AppThemeMode.system, TextTokens.gui_menu_themeModeAuto),
+              _appearanceItem(controller, AppThemeMode.light, TextTokens.gui_menu_themeModeLight),
+              _appearanceItem(controller, AppThemeMode.dark, TextTokens.gui_menu_themeModeDark),
             ],
           ),
           PlatformMenuItem(
-            label: 'Toggle Settings Panel',
+            label: TextTokens.gui_menu_toggleSettingsPanel,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.backslash,
               meta: true,
@@ -247,14 +248,16 @@ PlatformMenuItem _appearanceItem(
   String label,
 ) {
   return PlatformMenuItem(
-    label: controller.themeMode == mode ? '✓ $label' : label,
+    label: controller.themeMode == mode
+        ? '${TextTokens.gui_menu_checkmarkPrefix}$label'
+        : label,
     onSelected: () => controller.themeMode = mode,
   );
 }
 
 PlatformMenu _windowMenu() {
   return PlatformMenu(
-    label: 'Window',
+    label: TextTokens.gui_menu_window,
     menus: const <PlatformMenuItem>[
       PlatformProvidedMenuItem(
         type: PlatformProvidedMenuItemType.minimizeWindow,

@@ -13,6 +13,7 @@ import '../platform/platform_page.dart';
 import '../cleanup_segments_flow.dart';
 import '../platform/widgets/platform_text_field.dart';
 import '../settings/settings_panel.dart';
+import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart';
 import 'editor_status_bar.dart';
 import 'editor_toolbar.dart';
@@ -232,7 +233,7 @@ class _EditorScreenState extends State<EditorScreen> {
         key: const Key('editorTextField'),
         controller: _textController,
         onChanged: _onTextChanged,
-        hintText: 'Type, paste text, or open a .txt file...',
+        hintText: TextTokens.gui_editor_hintText,
         hintStyle: _tokens.typography.editorBody.copyWith(
           color: colors.textSecondary.withValues(
             alpha: _tokens.colors.isDark ? 0.45 : 0.75,
@@ -268,7 +269,10 @@ class _EditorScreenState extends State<EditorScreen> {
           ),
           const SizedBox(width: 8),
           Text(
-            'Cannot narrate: $message',
+            fillTextTemplate(
+              TextTokens.gui_editor_cannotNarratePrefix,
+              {'message': message},
+            ),
             key: const Key('narrateGuardMessage'),
             style: _tokens.typography.body.copyWith(color: foreground),
           ),

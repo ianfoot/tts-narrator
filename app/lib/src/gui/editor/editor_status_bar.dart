@@ -3,6 +3,7 @@ import 'package:intl/intl.dart' show NumberFormat;
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
+import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart';
 
 /// Bottom status bar (JSON UI Schema `status_bar`): the word/char counts, the
@@ -59,7 +60,10 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
     final segments = controller.plannedSegments.length;
     final minutes = controller.estimatedMinutes.round();
     final cost = formatCostUsd(controller.estimatedCostUsd);
-    final segmentLabel = segments == 1 ? 'segment' : 'segments';
+    final segmentLabel =
+        segments == 1
+            ? TextTokens.core_plurals_segment
+            : TextTokens.core_plurals_segments;
     return Container(
       key: const Key('statusBar'),
       height: AppMetrics.statusBarHeight,
@@ -73,7 +77,10 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
             child: AnimatedSwitcher(
               duration: _tickerDuration,
               child: Text(
-                '$words words · $chars characters',
+                fillTextTemplate(
+                  TextTokens.gui_editor_statusBar_wordCharCount,
+                  {'words': words, 'chars': chars},
+                ),
                 key: ValueKey('$words-$chars'),
                 maxLines: 1,
                 softWrap: false,
@@ -108,7 +115,15 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
             child: KeyedSubtree(
               key: ValueKey('$segments-$minutes-$cost'),
               child: Text(
-                '$segments $segmentLabel · ~$minutes mins · ~$cost est.',
+                fillTextTemplate(
+                  TextTokens.gui_editor_statusBar_estimate,
+                  {
+                    'segments': segments,
+                    'segmentLabel': segmentLabel,
+                    'minutes': minutes,
+                    'cost': cost,
+                  },
+                ),
                 key: const Key('editorEstimate'),
                 maxLines: 1,
                 softWrap: false,

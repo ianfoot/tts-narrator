@@ -1,9 +1,10 @@
-// Golden test for the design-token codegen.
+// Golden test for the design-token + text-token codegen.
 //
-// Regenerates `app/lib/src/gui/theme/app_tokens.g.dart` from the
-// `app/assets/theme/tokens.json` source of truth and asserts the output is
-// byte-identical to the checked-in file. A failure here means somebody
-// edited the JSON (or the generator) and forgot to commit the regenerated
+// Regenerates `app/lib/src/gui/theme/app_tokens.g.dart` and
+// `app_text_tokens.g.dart` from the `app/assets/theme/tokens.json` and
+// `app/assets/text_tokens.json` sources of truth and asserts the output is
+// byte-identical to the checked-in files. A failure here means somebody
+// edited a JSON file (or the generator) and forgot to commit the regenerated
 // `.g.dart` — or the generator isn't producing deterministic output.
 //
 // The test invokes the generator in a child `dart` process so the codegen
@@ -16,12 +17,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 void main() {
-  test('codegen output is byte-identical to the checked-in .g.dart', () async {
+  test('codegen output is byte-identical to the checked-in .g.dart files', () async {
     final appRoot = _appRoot();
     final script = p.join(appRoot, 'tool', 'generate_tokens.dart');
     final tokensJson = File(p.join(appRoot, 'assets', 'theme', 'tokens.json'));
-    final golden = File(
+    final textTokensJson = File(
+      p.join(appRoot, 'assets', 'text_tokens.json'),
+    );
+    final tokensGolden = File(
       p.join(appRoot, 'lib', 'src', 'gui', 'theme', 'app_tokens.g.dart'),
+    );
+    final textTokensGolden = File(
+      p.join(appRoot, 'lib', 'src', 'gui', 'theme', 'app_text_tokens.g.dart'),
     );
 
     if (!File(script).existsSync()) {
@@ -30,8 +37,14 @@ void main() {
     if (!tokensJson.existsSync()) {
       fail('tokens.json not found at ${tokensJson.path}');
     }
-    if (!golden.existsSync()) {
-      fail('Golden .g.dart not found at ${golden.path}');
+    if (!textTokensJson.existsSync()) {
+      fail('text_tokens.json not found at ${textTokensJson.path}');
+    }
+    if (!tokensGolden.existsSync()) {
+      fail('Golden .g.dart not found at ${tokensGolden.path}');
+    }
+    if (!textTokensGolden.existsSync()) {
+      fail('Golden app_text_tokens.g.dart not found at ${textTokensGolden.path}');
     }
 
     final temp = Directory.systemTemp.createTempSync('tts_tokens_codegen_');
@@ -40,11 +53,14 @@ void main() {
     });
 
     // Mirror the package layout: the codegen reads
-    // <TOKENS_PACKAGE_ROOT>/assets/theme/tokens.json and writes
-    // <TOKENS_PACKAGE_ROOT>/lib/src/gui/theme/app_tokens.g.dart.
+    // <TOKENS_PACKAGE_ROOT>/assets/theme/tokens.json and
+    // <TOKENS_PACKAGE_ROOT>/assets/text_tokens.json, writing
+    // <TOKENS_PACKAGE_ROOT>/lib/src/gui/theme/app_tokens.g.dart and
+    // app_text_tokens.g.dart.
     final assetsDir = Directory(p.join(temp.path, 'assets', 'theme'))
       ..createSync(recursive: true);
     tokensJson.copySync(p.join(assetsDir.path, 'tokens.json'));
+    textTokensJson.copySync(p.join(temp.path, 'assets', 'text_tokens.json'));
 
     final result = await Process.run(
       _resolveDartBinary(),
@@ -60,24 +76,39 @@ void main() {
       );
     }
 
-    final produced = File(
+    final producedTokens = File(
       p.join(temp.path, 'lib', 'src', 'gui', 'theme', 'app_tokens.g.dart'),
     );
-    if (!produced.existsSync()) {
-      fail('Codegen did not produce ${produced.path}.');
+    if (!producedTokens.existsSync()) {
+      fail('Codegen did not produce ${producedTokens.path}.');
     }
 
-    final expected = golden.readAsStringSync();
-    final actual = produced.readAsStringSync();
-
-    if (expected != actual) {
-      fail(
-        'Codegen output drifted from the checked-in app_tokens.g.dart.\n'
-        'Re-run `dart run tool/generate_tokens.dart` and commit the result.\n'
-        'First divergence (expected vs actual):\n${_firstDiff(expected, actual)}',
-      );
+    final producedTextTokens = File(
+      p.join(temp.path, 'lib', 'src', 'gui', 'theme', 'app_text_tokens.g.dart'),
+    );
+    if (!producedTextTokens.existsSync()) {
+      fail('Codegen did not produce ${producedTextTokens.path}.');
     }
+
+    _assertIdentical(tokensGolden, producedTokens, 'app_tokens.g.dart');
+    _assertIdentical(
+      textTokensGolden,
+      producedTextTokens,
+      'app_text_tokens.g.dart',
+    );
   });
+}
+
+void _assertIdentical(File golden, File produced, String name) {
+  final expected = golden.readAsStringSync();
+  final actual = produced.readAsStringSync();
+  if (expected != actual) {
+    fail(
+      'Codegen output drifted from the checked-in $name.\n'
+      'Re-run `dart run tool/generate_tokens.dart` and commit the result.\n'
+      'First divergence (expected vs actual):\n${_firstDiff(expected, actual)}',
+    );
+  }
 }
 
 String _appRoot() {
