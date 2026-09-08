@@ -35,7 +35,7 @@ abstract class TtsProvider {
   /// The provider package is the model's plugin: it decides which controls a
   /// model gets in the GUI and the app renders them generically. Core ships no
   /// model-specific UI knowledge — the keys are the shared
-  /// `accent`/`style`/`passagePrefix`/`useCalmTag` convention. The plugin
+  /// `accent`/`style`/`passagePrefix` convention. The plugin
   /// receives the full [TtsModelProfile] so it can key its UI off request
   /// shape (id, prompt styling) rather than the user-editable alias.
   ModelUiSpec modelUiSpecFor(TtsModelProfile model) =>

@@ -27,7 +27,6 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
   var voiceSpecified = false;
   var accent = 'southern British English, neutral and clear';
   var style = 'warm, composed, restrained, literary';
-  var tags = false;
   var prefix =
       'Narrate this passage for an audiobook. You are a warm, composed female narrator.';
   var minWords = 30;
@@ -97,15 +96,6 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
         dryRun = true;
       case '--resume':
         resume = true;
-      case '--tags':
-        final v = take(arg);
-        if (v == 'off' || v == 'false' || v == '0') {
-          tags = false;
-        } else if (v == 'on' || v == 'true' || v == '1') {
-          tags = true;
-        } else {
-          throw InvalidCliArgumentError('--tags must be on or off, got "$v".');
-        }
       case '--help':
       case '-h':
         throw InvalidCliArgumentError(usage);
@@ -212,7 +202,6 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
     voiceLabel: voiceId == voiceLabel ? null : voiceLabel,
     accent: accent,
     style: style,
-    useCalmTag: tags,
     passagePrefix: prefix,
     minWords: minWords,
     sendWholeFile: sendWholeFile,
@@ -318,8 +307,7 @@ Options:
                             (gemini only; ignored by kokoro).
   --style <text>            Style/register description in prompt (gemini only;
                             ignored by kokoro).
-  --tags on|off             Prepend a [calm] tag (gemini only; default: off).
-  --passage-prefix <text>   Pooled preamble applied to each paragraph.
+  --passage-prefix <text>   Pooled preamble applied to each paragraph. Add
   --min-words <n>           Merge paragraphs shorter than n words into the next
                             (default: 30).
   --send-whole-file         Narrate the whole file in a single TTS call instead

@@ -298,7 +298,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
   }
 
   /// Renders the active model's plugin-declared options one per row. Built-in
-  /// keys (`accent`, `style`, `passagePrefix`, `useCalmTag`) bind to the
+  /// keys (`accent`, `style`, `passagePrefix`) bind to the
   /// narration settings the controller owns; any other key is ignored — the
   /// app interprets the shared convention, never model-specific knowledge.
   Widget _buildModelOptionsSection(ModelUiSpec spec) {
@@ -321,25 +321,12 @@ class _SettingsPanelState extends State<SettingsPanel> {
     'accent',
     'style',
     'passagePrefix',
-    'useCalmTag',
   };
 
   Widget _buildModelOption(ModelUiControl option) {
     switch (option.type) {
       case ModelUiOptionType.bool:
-        return Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Row(
-            children: [
-              Expanded(child: _controlLabel(option.label)),
-              PlatformSwitch(
-                key: Key('${option.key}Switch'),
-                value: _modelOptionBool(option.key),
-                onChanged: (v) => _setModelOptionBool(option.key, v),
-              ),
-            ],
-          ),
-        );
+        throw UnsupportedError('bool model options removed (use passagePrefix for [calm])');
       case ModelUiOptionType.gender:
         final g = _controller.voiceGenderFilter;
         return Padding(
@@ -406,18 +393,6 @@ class _SettingsPanelState extends State<SettingsPanel> {
         _onPrefixChanged(value);
         break;
     }
-  }
-
-  bool _modelOptionBool(String key) {
-    switch (key) {
-      case 'useCalmTag':
-        return _controller.useCalmTag;
-    }
-    throw ArgumentError('No binding for bool model option "$key"');
-  }
-
-  void _setModelOptionBool(String key, bool value) {
-    if (key == 'useCalmTag') _controller.useCalmTag = value;
   }
 
   Widget _buildRunSection() {

@@ -55,13 +55,8 @@ class OpenRouterTtsProvider implements TtsProvider {
         label: 'Passage prefix',
         hint:
             'An opening directive woven into the first passage, read aloud '
-            'before the story starts.',
+            'before the story starts. Add `[calm] ` here for a calm style.',
         type: ModelUiOptionType.multiline,
-      ),
-      ModelUiControl(
-        key: 'useCalmTag',
-        label: 'Prepend [calm] directive',
-        type: ModelUiOptionType.bool,
       ),
     ]);
   }

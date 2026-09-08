@@ -64,7 +64,6 @@ class SettingsController extends ChangeNotifier {
   // --- Narration settings -------------------------------------------
 
   String _accent = TextTokens.defaults_accent;
-  bool _useCalmTag = false;
   int _minWords = TextTokens.defaults_minWords;
   bool _sendWholeFile = false;
   int? _sampleLen;
@@ -94,14 +93,6 @@ class SettingsController extends ChangeNotifier {
   set passagePrefix(String value) {
     if (value == _passagePrefix) return;
     _passagePrefix = value;
-    notifyListeners();
-  }
-
-  bool get useCalmTag => _useCalmTag;
-
-  set useCalmTag(bool value) {
-    if (value == _useCalmTag) return;
-    _useCalmTag = value;
     notifyListeners();
   }
 
@@ -256,7 +247,6 @@ class SettingsController extends ChangeNotifier {
       voiceLabel: label,
       accent: accent,
       style: style,
-      useCalmTag: useCalmTag,
       passagePrefix: passagePrefix,
       minWords: minWords,
       sendWholeFile: sendWholeFile,

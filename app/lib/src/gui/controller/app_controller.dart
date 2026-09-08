@@ -190,12 +190,6 @@ class AppController extends ChangeNotifier {
     _settings.passagePrefix = value;
   }
 
-  bool get useCalmTag => _settings.useCalmTag;
-
-  set useCalmTag(bool value) {
-    _settings.useCalmTag = value;
-  }
-
   /// Minimum words per segment (clamped to the settings rail's 10-100 slider
   /// range). Changing it revises the live segment plan and estimate the editor
   /// shows.

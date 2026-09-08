@@ -6,13 +6,12 @@
 /// ships no model-specific UI knowledge and the app has no per-model branches.
 ///
 /// Option keys are a convention the app interprets against the model-agnostic
-/// narration settings: `accent`, `style`, `passagePrefix`, and `useCalmTag`
+/// narration settings: `accent`, `style`, `passagePrefix` bind to the
 /// bind to the corresponding `NarrationConfig` fields. A model whose plugin
 /// declares no spec gets no model-option controls.
 /// Options binding conventions the app interprets (see the rail):
 ///   `accent`/`style`/`passagePrefix` — editable text against the matching
 ///   narration settings;
-///   `useCalmTag` — a bool toggle against the matching setting;
 ///   `gender` — a narrator-gender (male/female/any) segmented control that the
 ///   app wires to its voice/narrator gender state.
 ///
@@ -38,7 +37,7 @@ class ModelUiControl {
   });
 
   /// Declarative key the app binds against a narration setting or narrator
-  /// state (`accent`, `style`, `passagePrefix`, `useCalmTag`, `gender`).
+  /// state (`accent`, `style`, `passagePrefix`, `gender`).
   final String key;
 
   /// User-facing label for the control.

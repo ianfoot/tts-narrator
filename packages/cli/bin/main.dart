@@ -58,7 +58,6 @@ Future<int> main(List<String> args) async {
   stdout.writeln(
     'Input:  ${inputs.length == 1 ? inputs.first : '${inputs.length} files (${config.inputPath})'}',
   );
-  stdout.writeln('Tags:   ${config.useCalmTag ? 'on ([calm])' : 'off'}');
   stdout.writeln(
     'Mode:   ${config.sendWholeFile ? 'whole file (single call)' : 'segmented'}',
   );
@@ -69,12 +68,11 @@ Future<int> main(List<String> args) async {
   }
   if (!config.profile.promptStyle &&
       (config.accent.trim().isNotEmpty ||
-          config.style.trim().isNotEmpty ||
-          config.useCalmTag)) {
+          config.style.trim().isNotEmpty)) {
     stdout.writeln();
     stdout.writeln(
       'Note: ${config.profile.alias} does not support prompt styling — '
-      '--accent/--style/--tags are ignored.',
+      '--accent/--style are ignored.',
     );
   }
 
