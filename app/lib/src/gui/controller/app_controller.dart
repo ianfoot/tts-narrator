@@ -5,6 +5,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'config_loader.dart';
 import 'document_controller.dart';
+import 'model_profile_voice_controller.dart';
 import 'theme_controller.dart';
 import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart' show AppThemeMode;
@@ -17,18 +18,15 @@ import '../theme/app_tokens.dart' show AppThemeMode;
 /// here and subscribes via [ChangeNotifier]. Model/voice handling reuses the
 /// core's config resolution so the GUI and CLI agree on defaults.
 ///
-/// Document management lives in [DocumentController] and the appearance in
-/// [ThemeController]; this controller forwards their surfaces and re-broadcasts
-/// their notifications so callers keep a single change stream.
+/// Document management lives in [DocumentController], the appearance in
+/// [ThemeController], and the model/voice state in [ModelProfileVoiceController];
+/// this
+/// controller forwards their surfaces and re-broadcasts their notifications so
+/// callers keep a single change stream.
 class AppController extends ChangeNotifier {
   AppController({VoiceConfigLoader? loader, SharedPreferences? prefs})
     : _prefs = prefs,
-      _loader = loader ?? VoiceConfigLoader() {
-    _voiceConfig = _loader.load();
-    _modelAlias = defaultModelFor(_voiceConfig).alias;
-    final def = _defaultVoiceFor(profile);
-    _voice = def?.$1 ?? kDefaultProfile.voice;
-    _voiceLabel = def?.$2;
+      _model = ModelProfileVoiceController(loader: loader) {
     final savedOutDir = prefs?.getString(_outDirPrefsKey);
     if (savedOutDir != null && savedOutDir.trim().isNotEmpty) {
       _outDir = savedOutDir;
@@ -43,7 +41,8 @@ class AppController extends ChangeNotifier {
   /// The persistent preference store; null when the host has none (tests).
   final SharedPreferences? _prefs;
 
-  final VoiceConfigLoader _loader;
+  /// The model & voice state (active profile, selected voice, gender filter).
+  final ModelProfileVoiceController _model;
 
   /// The in-memory document (text, path, dirty flag, save/load surface).
   final DocumentController _document = DocumentController();
@@ -51,170 +50,78 @@ class AppController extends ChangeNotifier {
   /// The appearance state and its notifier.
   final ThemeController _theme = ThemeController();
 
-  /// The preset default model (fish's compiled bootstrap unless `default_model`
-  /// in the config names another); [changeModel] moves to other configured
-  /// models.
-  late String _modelAlias;
-  late VoiceConfig _voiceConfig;
-
   // --- Model & voice ------------------------------------------------
 
   /// The active model profile (alias resolved against the loaded config).
-  TtsModelProfile get profile =>
-      profileFor(_modelAlias, _voiceConfig) ?? kDefaultProfile.profile;
+  TtsModelProfile get profile => _model.profile;
 
-  VoiceConfig get voiceConfig => _voiceConfig;
+  VoiceConfig get voiceConfig => _model.voiceConfig;
 
   /// Warnings surfaced while loading the voice config (e.g. a skipped
   /// malformed model file). Rendered as a persistent, non-fatal banner.
-  List<String> get configWarnings => _loader.warnings;
+  List<String> get configWarnings => _model.configWarnings;
 
-  String get modelAlias => _modelAlias;
+  String get modelAlias => _model.modelAlias;
 
   /// Raw provider voice id; an empty string means "use the model default".
-  String _voice = kDefaultProfile.voice;
+  String get voice => _model.voice;
 
   /// Friendly voice label when one was picked; null means the raw id.
-  String? _voiceLabel = kDefaultProfile.voiceLabel;
-
-  String get voice => _voice;
-
-  String? get voiceLabel => _voiceLabel;
-
-  /// Default voice for [model] from the config, or the compiled fish bootstrap
-  /// for fish; null when the model has no default configured.
-  (String, String)? _defaultVoiceFor(TtsModelProfile model) {
-    try {
-      return defaultVoiceFor(model, _voiceConfig);
-    } on VoiceConfigError {
-      return null;
-    }
-  }
+  String? get voiceLabel => _model.voiceLabel;
 
   /// Switches the active model, preserving a user-set raw voice and resetting
   /// to the new model's default voice only when the current raw voice was
   /// (or equals) the previous model's default.
   void changeModel(String alias) {
-    if (alias == _modelAlias) return;
-    final next = profileFor(alias, _voiceConfig);
-    if (next == null) return;
-    final previousDefaultsTo = _defaultVoiceFor(profile)?.$1;
-    if (_voice.isEmpty || _voice == previousDefaultsTo) {
-      final def = _defaultVoiceFor(next);
-      _voice = def?.$1 ?? '';
-      _voiceLabel = def?.$2;
-    } else {
-      // A user-set raw voice survives the switch; the previous model's
-      // friendly label no longer describes that id, so drop it.
-      _voiceLabel = null;
-    }
-    _modelAlias = alias;
-    // Gender tags are per-model; the filter does not carry across a switch.
-    _voiceGender = null;
+    if (alias == _model.modelAlias) return;
+    _model.changeModel(alias);
     notifyListeners();
   }
 
   /// Sets a raw voice id (free-form ids and aliases both work; unvalidated —
   /// providers add/remove voices).
   void setVoice(String rawId, {String? label}) {
-    _voice = rawId.trim();
-    _voiceLabel = (label != null && label != _voice) ? label : null;
+    _model.setVoice(rawId, label: label);
     notifyListeners();
   }
 
   /// Applies a friendly voice alias; resolves it to the provider raw id.
   void applyVoiceLabel(String label) {
-    final (id, _) = _voiceConfig.resolveVoice(profile.alias, label);
-    setVoice(id, label: label);
+    _model.applyVoiceLabel(label);
+    notifyListeners();
   }
 
   // --- Voice gender -------------------------------------------------
 
-  /// Narrator-gender selection. Two uses, both flowing through this one field:
-  /// narrowing the voice picker for models whose config tags voices with a
-  /// gender, and (via the openrouter plugin's `gender` model option) driving
-  /// the narrator phrase in the passage prefix for prompt-style models. Null
-  /// is "any / unselected".
-  VoiceGender? _voiceGender;
-
   /// The active narrator gender, or null for "any".
-  VoiceGender? get voiceGenderFilter => _voiceGender;
+  VoiceGender? get voiceGenderFilter => _model.voiceGenderFilter;
 
+  /// Sets the narrator-gender filter. The model owns the filter's voice
+  /// narrowing/auto-switch; the passage-prefix consequences (rewriting the
+  /// narrator phrase for prompt-style models) live here because the prefix is
+  /// part of the narration settings owned by this controller. The model may
+  /// revert an unmatched gender back to null, so the prefix sync reads the
+  /// effective filter after the write.
   set voiceGenderFilter(VoiceGender? value) {
-    if (value == _voiceGender) return;
-    _voiceGender = value;
-    _applyGenderFilter();
+    if (value == _model.voiceGenderFilter) return;
+    _model.voiceGenderFilter = value;
+    final effective = _model.voiceGenderFilter;
+    if (effective == null) {
+      _revertNarratorGenderToBaseline();
+    } else {
+      _syncNarratorGenderToPrefix(effective);
+    }
     notifyListeners();
   }
 
   /// Whether the active model tags any of its voices with a gender (drives the
   /// voice-picker gender control in "Model & voice").
-  bool get hasGenderTags =>
-      _voiceConfig.voices[profile.alias]?.values.any((v) => v.gender != null) ??
-      false;
+  bool get hasGenderTags => _model.hasGenderTags;
 
   /// Selectable voices for the active model, narrowed to [voiceGenderFilter].
   /// Each entry is `(value, displayLabel)`: tagged voices get a compact
   /// ` (m)`/` (f)`/` (n)` suffix so gender is visible in the dropdown.
-  List<(String, String)> get voiceItems => [
-    for (final e in _genderFilteredVoiceEntries(profile))
-      (
-        e.label,
-        e.gender == null ? e.label : '${e.label} (${e.gender!.shorthand})',
-      ),
-  ];
-
-  List<VoiceEntry> _genderFilteredVoiceEntries(TtsModelProfile p) {
-    final all = voiceEntries(model: p, config: _voiceConfig);
-    if (_voiceGender == null) return all;
-    // Untagged models have nothing to filter against: a gender set via a
-    // prompt-style model's option still keeps the full voice list.
-    final tagged =
-        _voiceConfig.voices[p.alias]?.values.any((v) => v.gender != null) ??
-        false;
-    if (!tagged) return all;
-    return [
-      for (final e in all)
-        if (e.gender == _voiceGender) e,
-    ];
-  }
-
-  /// Applies the consequences of a narrator-gender change: for prompt-style
-  /// models rewrites the narrator phrase in [passagePrefix], and when the
-  /// model's voices are gender-tagged auto-switches the selected voice so it
-  /// matches the filter. Selecting "any" (null) reverts both effects.
-  void _applyGenderFilter() {
-    final g = _voiceGender;
-    if (g == null) {
-      _revertNarratorGenderToBaseline();
-      return;
-    }
-    _syncNarratorGenderToPrefix(g);
-    final matches = _genderFilteredVoiceEntries(profile);
-    if (matches.isEmpty) {
-      // A gender was picked but the model has no voices of that gender (a
-      // tagged model whose voices are all the other gender). Revert to "any"
-      // so the picker keeps the full list and the narrator phrase stays
-      // consistent, rather than leaving a voice hidden by an empty filter.
-      _voiceGender = null;
-      _revertNarratorGenderToBaseline();
-      return;
-    }
-    if (!matches.any((e) => e.id == _voice || e.label == _voiceLabel)) {
-      // Prefer the model default when it matches the filter, else the first
-      // matching voice — mirrors changeModel's reset-to-default semantics.
-      late final VoiceEntry pick;
-      final def = _defaultVoiceFor(profile);
-      if (def != null) {
-        final defEntry = matches.where((e) => e.id == def.$1);
-        pick = defEntry.isNotEmpty ? defEntry.first : matches.first;
-      } else {
-        pick = matches.first;
-      }
-      _voice = pick.id;
-      _voiceLabel = pick.label;
-    }
-  }
+  List<(String, String)> get voiceItems => _model.voiceItems;
 
   static const _genderFemalePhrase =
       TextTokens.gui_controller_genderPhrases_female;
@@ -284,6 +191,7 @@ class AppController extends ChangeNotifier {
   void dispose() {
     _document.dispose();
     _theme.dispose();
+    _model.dispose();
     super.dispose();
   }
 
@@ -405,7 +313,7 @@ class AppController extends ChangeNotifier {
   }
 
   /// Cost data for the active model (free until the config sets pricing).
-  AudioPricing get pricing => _voiceConfig.pricingFor(profile.alias);
+  AudioPricing get pricing => _model.pricing;
 
   /// The editable GUI options for the active model, declared by its model's
   /// plugin (the provider package). Empty when no plugin declares a spec — the
@@ -424,11 +332,11 @@ class AppController extends ChangeNotifier {
   /// no config default (mirrors the CLI's error).
   NarrationConfig buildConfig() {
     final p = profile;
-    final raw = _voice.trim();
+    final raw = _model.voice.trim();
     String voiceId;
     String? label;
     if (raw.isEmpty) {
-      final def = _defaultVoiceFor(p);
+      final def = _model.defaultVoice;
       if (def == null) {
         throw FormatException(
           fillTextTemplate(TextTokens.gui_controller_errors_noVoiceSelected, {
@@ -439,10 +347,10 @@ class AppController extends ChangeNotifier {
       voiceId = def.$1;
       label = def.$2 == def.$1 ? null : def.$2;
     } else {
-      final (id, resolvedLabel) = _voiceConfig.resolveVoice(p.alias, raw);
+      final (id, resolvedLabel) = _model.voiceConfig.resolveVoice(p.alias, raw);
       voiceId = id;
-      label = (_voiceLabel != null && id == raw)
-          ? _voiceLabel
+      label = (_model.voiceLabel != null && id == raw)
+          ? _model.voiceLabel
           : (resolvedLabel != id ? resolvedLabel : null);
     }
     return NarrationConfig(
@@ -462,8 +370,8 @@ class AppController extends ChangeNotifier {
           ? TextTokens.defaults_outDir
           : outDir.trim(),
       resume: resume,
-      providerSettings: _loader.resolveProviderSettings(p),
-      pricing: _voiceConfig.pricingFor(p.alias),
+      providerSettings: _model.resolveProviderSettings(p),
+      pricing: _model.pricing,
     );
   }
 
