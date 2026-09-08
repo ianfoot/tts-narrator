@@ -178,7 +178,6 @@ class AppTypography {
   /// Nimbus / `serif` fallback.
   String? get editorSerifFamily {
     switch (platform) {
-      case TargetPlatform.iOS:
       case TargetPlatform.macOS:
       case TargetPlatform.windows:
         return 'Georgia';
@@ -191,7 +190,6 @@ class AppTypography {
   /// Liberation Mono.
   String? get monoFamily {
     switch (platform) {
-      case TargetPlatform.iOS:
       case TargetPlatform.macOS:
         return 'Menlo';
       case TargetPlatform.windows:
