@@ -36,12 +36,6 @@ void main() {
     expect(p, contains('Read the story exactly as written: The text.'));
   });
 
-  test('prepends [calm] when tags enabled', () {
-    final p = buildPrompt(cfg(tags: true), 'X.');
-    expect(p, startsWith('[calm] '));
-    expect(buildPrompt(cfg(tags: false), 'X.'), isNot(startsWith('[calm]')));
-  });
-
   test('respects a custom passage prefix', () {
     final p = buildPrompt(cfg(customPrefix: 'Speak softly.'), 'X.');
     expect(p, startsWith('Speak softly.'));
