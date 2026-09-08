@@ -216,7 +216,7 @@ void main() {
     test('Narrate guards empty text and does not dispatch', () async {
       final controller = await makeController();
       var narrated = false;
-      controller.onNarrate = () => narrated = true;
+      controller.commands.onNarrate = () => narrated = true;
       final file = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
@@ -230,7 +230,7 @@ void main() {
       final controller = await makeController();
       controller.setText('Some real text to narrate.');
       var narrated = false;
-      controller.onNarrate = () => narrated = true;
+      controller.commands.onNarrate = () => narrated = true;
       final file = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
@@ -243,7 +243,7 @@ void main() {
     test('Open Text dispatches through the onOpen slot', () async {
       final controller = await makeController();
       var opened = false;
-      controller.onOpen = () => opened = true;
+      controller.commands.onOpen = () => opened = true;
       final file = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
@@ -258,7 +258,7 @@ void main() {
       () async {
         final controller = await makeController();
         var picked = false;
-        controller.onSetOutputFolder = () => picked = true;
+        controller.commands.onSetOutputFolder = () => picked = true;
         final file = buildMacMenu(
           controller: controller,
           navigatorKey: GlobalKey<NavigatorState>(),
@@ -272,7 +272,7 @@ void main() {
     test('Preferences dispatches through the onPreferences slot', () async {
       final controller = await makeController();
       var opened = false;
-      controller.onPreferences = () => opened = true;
+      controller.commands.onPreferences = () => opened = true;
       final app = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
@@ -378,7 +378,7 @@ void main() {
     test('Toggle Settings Panel dispatches through the slot', () async {
       final controller = await makeController();
       var toggled = false;
-      controller.onToggleSettingsPanel = () => toggled = true;
+      controller.commands.onToggleSettingsPanel = () => toggled = true;
       final view = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),

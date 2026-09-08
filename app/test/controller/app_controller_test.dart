@@ -549,10 +549,10 @@ void main() {
 
     test('command slots start unwired', () {
       final c = makeController();
-      expect(c.onOpen, isNull);
-      expect(c.onNarrate, isNull);
-      expect(c.onCancel, isNull);
-      expect(c.onPreferences, isNull);
+      expect(c.commands.onOpen, isNull);
+      expect(c.commands.onNarrate, isNull);
+      expect(c.commands.onCancel, isNull);
+      expect(c.commands.onPreferences, isNull);
     });
   });
 

@@ -70,7 +70,7 @@ void main() {
     testWidgets('editorOpenButton invokes controller.onOpen', (tester) async {
       final controller = makeController();
       var opened = false;
-      controller.onOpen = () => opened = true;
+      controller.commands.onOpen = () => opened = true;
       await pumpToolbar(tester, controller);
       await tester.tap(find.byKey(const Key('editorOpenButton')));
       expect(opened, isTrue);
@@ -82,7 +82,7 @@ void main() {
         final controller = makeController();
         String? guardReason;
         var narrated = false;
-        controller.onNarrate = () => narrated = true;
+        controller.commands.onNarrate = () => narrated = true;
         await pumpToolbar(
           tester,
           controller,
@@ -99,7 +99,7 @@ void main() {
       final controller = makeController();
       controller.setText('Some text to narrate.');
       var narrated = false;
-      controller.onNarrate = () => narrated = true;
+      controller.commands.onNarrate = () => narrated = true;
       await pumpToolbar(tester, controller);
       await tester.tap(find.byKey(const Key('editorNarrateButton')));
       await tester.pump();
