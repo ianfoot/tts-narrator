@@ -23,7 +23,6 @@ void main() {
     inputPath: 'story.txt',
     profile: _gemini,
     voice: 'Callirrhoe',
-    useCalmTag: tags,
     accent: accent,
     style: style,
     passagePrefix: customPrefix ?? prefix,
