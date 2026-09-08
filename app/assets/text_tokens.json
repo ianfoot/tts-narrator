@@ -187,7 +187,21 @@
       "sampleMode": "Sample mode",
       "narrateFirstSegments": "Narrate first segments only",
       "skipCompletedSegments": "Skip completed segments (Resume)",
-      "modelDisplayFallback": "$alias — $id"
+      "modelDisplayFallback": "$alias — $id",
+      "modelDropdownTooltip": "Select the TTS model to use for narration",
+      "voiceDropdownTooltip": "Choose voice for current model",
+      "sendWholeFileTooltip": "Generate single audio file instead of segments",
+      "sampleModeTooltip": "Generate only first N segments for testing",
+      "resumeTooltip": "Skip already generated segments when resuming",
+      "minWordsSliderTooltip": "Merge paragraphs shorter than this word count",
+      "voiceRawFieldTooltip": "Custom voice ID or provider voice identifier",
+      "accentFieldTooltip": "Voice accent description (e.g., 'southern British English')",
+      "styleFieldTooltip": "Voice style personality (e.g., 'warm, composed')",
+      "prefixFieldTooltip": "Text prepended to each paragraph",
+      "sampleLenFieldTooltip": "Number of paragraphs to narrate in sample mode",
+      "genderControlTooltip": "Filter voices by gender",
+      "advancedVoiceIdTooltip": "Enter custom voice settings",
+      "overridesSelectedAliasTooltip": "Overrides selected alias from dropdown"
     },
     "narration": {
       "backToEditor": "Back to editor",

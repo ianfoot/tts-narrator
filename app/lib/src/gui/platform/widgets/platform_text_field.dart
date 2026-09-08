@@ -17,6 +17,7 @@ class PlatformTextField extends StatelessWidget {
     this.autofocus = false,
     this.style,
     this.hintStyle,
+    this.tooltip,
   });
 
   final TextEditingController? controller;
@@ -37,10 +38,14 @@ class PlatformTextField extends StatelessWidget {
   /// Style for the placeholder/hint text (e.g. a dimmed placeholder).
   final TextStyle? hintStyle;
 
+  /// Hover text shown when the mouse interacts with the text field.
+  final String? tooltip;
+
   @override
   Widget build(BuildContext context) {
+    Widget textField;
     if (defaultTargetPlatform == TargetPlatform.macOS) {
-      return CupertinoTextField(
+      textField = CupertinoTextField(
         controller: controller,
         onChanged: onChanged,
         placeholder: hintText,
@@ -55,8 +60,8 @@ class PlatformTextField extends StatelessWidget {
         padding: expands ? const EdgeInsets.all(4) : const EdgeInsets.all(12),
         decoration: expands ? const BoxDecoration() : null,
       );
-    }
-    return TextField(
+    } else {
+      textField = TextField(
       controller: controller,
       onChanged: onChanged,
       maxLines: maxLines,
@@ -72,6 +77,12 @@ class PlatformTextField extends StatelessWidget {
         border: InputBorder.none,
         isDense: true,
       ),
+    );
+    }
+    return tooltip == null ? textField : Localizations.override(
+      context: context,
+      delegates: const [DefaultMaterialLocalizations.delegate],
+      child: Tooltip(message: tooltip!, child: textField),
     );
   }
 }

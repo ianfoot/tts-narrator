@@ -14,6 +14,7 @@ class PlatformDisclosure extends StatelessWidget {
     required this.onToggle,
     required this.child,
     this.caption,
+    this.tooltip,
   });
 
   /// The header label (e.g. "Advanced Voice ID").
@@ -30,6 +31,9 @@ class PlatformDisclosure extends StatelessWidget {
 
   /// Optional caption below the header while collapsed.
   final String? caption;
+
+  /// Hover text shown when the mouse interacts with the disclosure header.
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -51,8 +55,9 @@ class PlatformDisclosure extends StatelessWidget {
         ],
       ),
     );
+    Widget result;
     if (!expanded) {
-      return Column(
+      result = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(padding: const EdgeInsets.only(top: 8), child: header),
@@ -63,13 +68,19 @@ class PlatformDisclosure extends StatelessWidget {
             ),
         ],
       );
+    } else {
+      result = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(padding: const EdgeInsets.only(top: 8), child: header),
+          Padding(padding: const EdgeInsets.all(12), child: child),
+        ],
+      );
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(padding: const EdgeInsets.only(top: 8), child: header),
-        Padding(padding: const EdgeInsets.all(12), child: child),
-      ],
+    return tooltip == null ? result : Localizations.override(
+      context: context,
+      delegates: const [DefaultMaterialLocalizations.delegate],
+      child: Tooltip(message: tooltip!, child: result),
     );
   }
 

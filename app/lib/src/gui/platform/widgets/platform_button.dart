@@ -22,6 +22,7 @@ class PlatformButton extends StatelessWidget {
     this.icon,
     this.style = PlatformButtonStyle.filled,
     this.compact = false,
+    this.tooltip,
   });
 
   /// Tap handler; null disables the button.
@@ -42,12 +43,22 @@ class PlatformButton extends StatelessWidget {
   /// shrinks.
   final bool compact;
 
+  /// Hover text shown when the mouse sits on the button.
+  final String? tooltip;
+
   @override
   Widget build(BuildContext context) {
+    Widget button;
     if (defaultTargetPlatform == TargetPlatform.macOS) {
-      return _buildCupertino(context);
+      button = _buildCupertino(context);
+    } else {
+      button = _buildMaterial();
     }
-    return _buildMaterial();
+    return tooltip == null ? button : Localizations.override(
+      context: context,
+      delegates: const [DefaultMaterialLocalizations.delegate],
+      child: Tooltip(message: tooltip!, child: button),
+    );
   }
 
   Widget _buildCupertino(BuildContext context) {

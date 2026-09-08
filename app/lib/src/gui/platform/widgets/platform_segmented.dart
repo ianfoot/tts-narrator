@@ -21,6 +21,7 @@ class PlatformSegmentedControl<T> extends StatelessWidget {
     required this.value,
     required this.items,
     required this.onChanged,
+    this.tooltip,
   });
 
   /// Selected item value (from [items]).
@@ -32,16 +33,26 @@ class PlatformSegmentedControl<T> extends StatelessWidget {
   /// Called when the user picks an entry.
   final ValueChanged<T>? onChanged;
 
+  /// Hover text shown when the mouse interacts with the segmented control.
+  final String? tooltip;
+
   /// macOS: the sliding selection glides between segments over 130ms on an
   /// ease-in-out curve, mirroring the system control's motion.
   static const _slideDuration = Duration(milliseconds: 130);
 
   @override
   Widget build(BuildContext context) {
+    Widget segmented;
     if (defaultTargetPlatform == TargetPlatform.macOS) {
-      return _buildCupertino(context);
+      segmented = _buildCupertino(context);
+    } else {
+      segmented = _buildMaterial();
     }
-    return _buildMaterial();
+    return tooltip == null ? segmented : Localizations.override(
+      context: context,
+      delegates: const [DefaultMaterialLocalizations.delegate],
+      child: Tooltip(message: tooltip!, child: segmented),
+    );
   }
 
   Widget _buildCupertino(BuildContext context) {

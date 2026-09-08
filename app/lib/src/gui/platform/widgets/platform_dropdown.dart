@@ -18,6 +18,7 @@ class PlatformDropdown<T> extends StatelessWidget {
     required this.onChanged,
     this.label,
     this.hint,
+    this.tooltip,
   });
 
   /// Selected item value (from [items]); null shows [hint].
@@ -32,15 +33,25 @@ class PlatformDropdown<T> extends StatelessWidget {
   /// Optional floating/group label (rendered on Material; ignored on Cupertino).
   final String? label;
 
+  /// Hover text shown when the mouse sits on the dropdown.
+  final String? tooltip;
+
   /// Placeholder shown when [value] is null.
   final String? hint;
 
   @override
   Widget build(BuildContext context) {
+    Widget dropdown;
     if (defaultTargetPlatform == TargetPlatform.macOS) {
-      return _buildCupertino();
+      dropdown = _buildCupertino();
+    } else {
+      dropdown = _buildMaterial(context);
     }
-    return _buildMaterial(context);
+    return tooltip == null ? dropdown : Localizations.override(
+      context: context,
+      delegates: const [DefaultMaterialLocalizations.delegate],
+      child: Tooltip(message: tooltip!, child: dropdown),
+    );
   }
 
   Widget _buildCupertino() {

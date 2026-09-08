@@ -14,6 +14,7 @@ class PlatformSlider extends StatelessWidget {
     this.max = 1.0,
     this.divisions,
     this.label,
+    this.tooltip,
   });
 
   /// Current selected value (must be within [min]..[max]).
@@ -31,10 +32,14 @@ class PlatformSlider extends StatelessWidget {
   /// Optional label (rendered below the slider on Material).
   final String? label;
 
+  /// Hover text shown when the mouse interacts with the slider.
+  final String? tooltip;
+
   @override
   Widget build(BuildContext context) {
+    Widget slider;
     if (defaultTargetPlatform == TargetPlatform.macOS) {
-      return Transform.scale(
+      slider = Transform.scale(
         alignment: Alignment.centerLeft,
         scale: AppMetrics.controlKnobScale,
         child: CupertinoSlider(
@@ -45,14 +50,20 @@ class PlatformSlider extends StatelessWidget {
           divisions: divisions,
         ),
       );
+    } else {
+      slider = Slider(
+        value: value,
+        onChanged: onChanged,
+        min: min,
+        max: max,
+        divisions: divisions,
+        label: label,
+      );
     }
-    return Slider(
-      value: value,
-      onChanged: onChanged,
-      min: min,
-      max: max,
-      divisions: divisions,
-      label: label,
+    return tooltip == null ? slider : Localizations.override(
+      context: context,
+      delegates: const [DefaultMaterialLocalizations.delegate],
+      child: Tooltip(message: tooltip!, child: slider),
     );
   }
 }

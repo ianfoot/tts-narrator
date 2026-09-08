@@ -9,7 +9,8 @@ class PlatformSwitch extends StatelessWidget {
   const PlatformSwitch({
     super.key,
     required this.value,
-    required this.onChanged,
+    this.onChanged,
+    this.tooltip,
   });
 
   /// Whether the switch is on.
@@ -18,14 +19,24 @@ class PlatformSwitch extends StatelessWidget {
   /// Called with the new value when toggled; null disables the switch.
   final ValueChanged<bool>? onChanged;
 
+  /// Hover text shown when the mouse sits on the switch.
+  final String? tooltip;
+
   @override
   Widget build(BuildContext context) {
+    Widget switchWidget;
     if (defaultTargetPlatform == TargetPlatform.macOS) {
-      return Transform.scale(
+      switchWidget = Transform.scale(
         scale: AppMetrics.controlKnobScale,
         child: CupertinoSwitch(value: value, onChanged: onChanged),
       );
+    } else {
+      switchWidget = Switch(value: value, onChanged: onChanged);
     }
-    return Switch(value: value, onChanged: onChanged);
+    return tooltip == null ? switchWidget : Localizations.override(
+      context: context,
+      delegates: const [DefaultMaterialLocalizations.delegate],
+      child: Tooltip(message: tooltip!, child: switchWidget),
+    );
   }
 }

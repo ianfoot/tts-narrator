@@ -237,6 +237,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
           _label(TextTokens.gui_settings_modelLabel),
           PlatformDropdown<String>(
             key: const Key('modelDropdown'),
+            tooltip: TextTokens.gui_settings_modelDropdownTooltip,
             value: _controller.modelAlias,
             items: _modelItems,
             onChanged: (alias) => _controller.changeModel(alias),
@@ -246,6 +247,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
             const SizedBox(height: 12),
             PlatformSegmentedControl<VoiceGender>(
               key: const Key('genderControl'),
+              tooltip: TextTokens.gui_settings_genderControlTooltip,
               value: _controller.voiceGenderFilter,
               items: const [
                 (VoiceGender.neutral, TextTokens.gui_settings_genderAny),
@@ -258,6 +260,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
           ],
           PlatformDropdown<String>(
             key: const Key('voiceDropdown'),
+            tooltip: TextTokens.gui_settings_voiceDropdownTooltip,
             value: _selectedVoiceLabel,
             items: _voiceItems,
             hint: TextTokens.gui_settings_selectVoiceHint,
@@ -265,12 +268,14 @@ class _SettingsPanelState extends State<SettingsPanel> {
           ),
           PlatformDisclosure(
             key: const Key('voiceAdvancedDisclosure'),
+            tooltip: TextTokens.gui_settings_advancedVoiceIdTooltip,
             label: TextTokens.gui_settings_advancedVoiceId,
             expanded: _voiceRawExpanded,
             caption: TextTokens.gui_settings_overridesSelectedAlias,
             onToggle: (value) => setState(() => _voiceRawExpanded = value),
             child: PlatformTextField(
               key: const Key('voiceRawField'),
+              tooltip: TextTokens.gui_settings_voiceRawFieldTooltip,
               controller: _voiceRaw,
               onChanged: _onVoiceRawChanged,
               hintText: TextTokens.gui_settings_freeFormVoiceHint,
@@ -357,6 +362,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
             _label(option.label),
             PlatformTextField(
               key: Key('${option.key}Field'),
+              tooltip: option.key == 'accent'
+                  ? TextTokens.gui_settings_accentFieldTooltip
+                  : option.key == 'style'
+                      ? TextTokens.gui_settings_styleFieldTooltip
+                      : option.key == 'passagePrefix'
+                          ? TextTokens.gui_settings_prefixFieldTooltip
+                          : null,
               controller: _modelOptionController(option.key),
               onChanged: (v) => _setModelOptionText(option.key, v),
               maxLines: option.type == ModelUiOptionType.multiline ? 3 : 1,
@@ -409,6 +421,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                   Expanded(child: _controlLabel(TextTokens.gui_settings_sendWholeFile)),
                   PlatformSwitch(
                     key: const Key('wholeFileSwitch'),
+                    tooltip: TextTokens.gui_settings_sendWholeFileTooltip,
                     value: _controller.sendWholeFile,
                     onChanged: (v) => _controller.sendWholeFile = v,
                   ),
@@ -421,8 +434,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: PlatformSlider(
+                  child:                   PlatformSlider(
                     key: const Key('minWordsSlider'),
+                    tooltip: TextTokens.gui_settings_minWordsSliderTooltip,
                     value: _controller.minWords.toDouble(),
                     onChanged: _onMinWordsChanged,
                     min: 10,
@@ -455,6 +469,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 Expanded(child: _controlLabel(TextTokens.gui_settings_sampleMode)),
                 PlatformSwitch(
                   key: const Key('sampleSwitch'),
+                  tooltip: TextTokens.gui_settings_sampleModeTooltip,
                   value: _sampleOn,
                   onChanged: _onSampleOnChanged,
                 ),
@@ -480,6 +495,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     width: 48,
                     child: PlatformTextField(
                       key: const Key('sampleLenField'),
+                      tooltip: TextTokens.gui_settings_sampleLenFieldTooltip,
                       controller: _sampleLen,
                       onChanged: _onSampleLenChanged,
                       keyboardType: TextInputType.number,
@@ -497,6 +513,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 ),
                 PlatformSwitch(
                   key: const Key('resumeSwitch'),
+                  tooltip: TextTokens.gui_settings_resumeTooltip,
                   value: _controller.resume,
                   onChanged: (v) => _controller.resume = v,
                 ),
