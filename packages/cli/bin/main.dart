@@ -59,6 +59,9 @@ Future<int> main(List<String> args) async {
     'Input:  ${inputs.length == 1 ? inputs.first : '${inputs.length} files (${config.inputPath})'}',
   );
   stdout.writeln('Tags:   ${config.useCalmTag ? 'on ([calm])' : 'off'}');
+  stdout.writeln(
+    'Mode:   ${config.sendWholeFile ? 'whole file (single call)' : 'segmented'}',
+  );
   if (config.resume) {
     stdout.writeln(
       'Resume: on (skips segments matching the existing manifest)',

@@ -418,32 +418,53 @@ class _SettingsPanelState extends State<SettingsPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _label('Min words per segment'),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: PlatformSlider(
-                  key: const Key('minWordsSlider'),
-                  value: _controller.minWords.toDouble(),
-                  onChanged: _onMinWordsChanged,
-                  min: 10,
-                  max: 100,
-                  divisions: 90,
-                ),
+          if (_controller.wholeFileAvailable)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(
+                children: [
+                  Expanded(child: _controlLabel('Send whole file')),
+                  PlatformSwitch(
+                    key: const Key('wholeFileSwitch'),
+                    value: _controller.sendWholeFile,
+                    onChanged: (v) => _controller.sendWholeFile = v,
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Container(
-                key: const Key('minWordsBadge'),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: _tokens.colors.bgSurfaceElevated,
-                  borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
+            ),
+          if (!_controller.sendWholeFile) ...[
+            _label('Min words per segment'),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: PlatformSlider(
+                    key: const Key('minWordsSlider'),
+                    value: _controller.minWords.toDouble(),
+                    onChanged: _onMinWordsChanged,
+                    min: 10,
+                    max: 100,
+                    divisions: 90,
+                  ),
                 ),
-                child: Text('$minWords', style: _tokens.typography.mono),
-              ),
-            ],
-          ),
+                const SizedBox(width: 8),
+                Container(
+                  key: const Key('minWordsBadge'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _tokens.colors.bgSurfaceElevated,
+                    borderRadius: BorderRadius.circular(
+                      AppMetrics.controlRadius,
+                    ),
+                  ),
+                  child: Text('$minWords', style: _tokens.typography.mono),
+                ),
+              ],
+            ),
+          ],
           Padding(
             padding: const EdgeInsets.only(top: 12),
             child: Row(

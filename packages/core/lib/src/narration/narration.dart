@@ -17,6 +17,14 @@ import 'wav.dart';
 /// keeping outputs under a few minutes.
 const _maxSegmentLength = 4000;
 
+/// Max characters for a single whole-file narration call
+/// ([NarrationConfig.sendWholeFile]). The whole document goes to the TTS
+/// engine in one request, so a runaway doc would otherwise be one unbounded
+/// call. Providers cap payload/token sizes and time out mid-run; the GUI
+/// hides the "Send whole file" toggle above this size and [planSegments]
+/// rejects the plan outright.
+const maxWholeFileLength = 60000;
+
 /// Segments source text into narration units.
 ///
 /// Paragraphs are split on blank lines. A paragraph shorter than
@@ -125,9 +133,25 @@ String _sourceText(NarrationConfig config) =>
 
 /// Returns the narration segment plan (scenes/paragraphs to narrate, after
 /// min-word merge and length split) for [config], reading from
-/// [NarrationConfig.sourceText] or the file at [config.inputPath].
+/// [NarrationConfig.sourceText] or the file at [config.inputPath]. When
+/// [NarrationConfig.sendWholeFile] is set, the entire source is returned as a
+/// single segment instead of being segmented.
 List<String> planSegments(NarrationConfig config) {
   final source = _sourceText(config);
+  if (config.sendWholeFile) {
+    final whole = source.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
+    if (whole.isEmpty) {
+      throw StateError('No paragraphs found in "${config.inputPath}".');
+    }
+    if (whole.length > maxWholeFileLength) {
+      throw StateError(
+        'Document is ${whole.length} characters; whole-file narration is '
+        'limited to $maxWholeFileLength characters. Turn off "Send whole '
+        'file" to narrate it as segments.',
+      );
+    }
+    return [whole];
+  }
   final paragraphs = segmentText(source, minWords: config.minWords);
   if (paragraphs.isEmpty) {
     throw StateError('No paragraphs found in "${config.inputPath}".');
@@ -341,7 +365,9 @@ void _writeManifest(
       'voice_label': config.voiceLabel,
     'format': config.profile.format,
     'sample_rate': ?rate,
-    'max_segment_length': _maxSegmentLength,
+    'max_segment_length': config.sendWholeFile
+        ? maxWholeFileLength
+        : _maxSegmentLength,
     // ignore: avoid_redundant_argument_values
     'paragraphs_total': paragraphsTotal,
     'paragraphs_narrated': records.length,

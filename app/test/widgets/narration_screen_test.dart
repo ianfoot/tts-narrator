@@ -123,7 +123,7 @@ void main() {
     expect(find.text('Narrating: untitled.txt'), findsOneWidget);
     expect(find.byKey(const Key('runHeaderTitle')), findsOneWidget);
     final pill = tester.widget<Text>(find.byKey(const Key('runSummaryPill')));
-    expect(pill.data, contains('segments · '));
+    expect(pill.data, contains('1 segment · '));
     expect(pill.data, contains('·'));
     expect(find.byKey(const Key('runProgressBar')), findsOneWidget);
     expect(find.byKey(const Key('runBackButton')), findsOneWidget);
@@ -407,7 +407,7 @@ void main() {
     final before = tester
         .widget<Text>(find.byKey(const Key('runSummaryPill')))
         .data;
-    expect(before, contains('segments · '));
+    expect(before, contains('1 segment · '));
 
     // Later editor/settings changes must not leak into the frozen run pill.
     c.setVoice('changed-id', label: 'Different Voice');
