@@ -239,7 +239,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
             widget.onShowGuard?.call(reason);
             return;
           }
-          controller.onNarrate?.call();
+          controller.commands.onNarrate?.call();
         },
         compact: true,
         icon: Icon(
@@ -292,7 +292,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
                 key: const Key('editorOpenButton'),
                 tooltip: TextTokens.gui_editor_toolbar_openTextFile,
                 icon: Icon(_isMac ? CupertinoIcons.folder : Icons.folder_open),
-                onPressed: () => controller.onOpen?.call(),
+                onPressed: () => controller.commands.onOpen?.call(),
               ),
               const SizedBox(width: 6),
               _buildOutputFolderButton(),

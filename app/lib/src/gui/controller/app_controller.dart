@@ -5,6 +5,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import 'config_loader.dart';
 import 'document_controller.dart';
 import 'model_profile_voice_controller.dart';
+import 'platform_commands.dart';
 import 'run_controller.dart';
 import 'settings_controller.dart';
 import 'theme_controller.dart';
@@ -13,7 +14,7 @@ import '../theme/app_tokens.dart' show AppThemeMode;
 export 'run_controller.dart' show NarrationRunSegment;
 
 /// Central, platform-neutral app state for the TTS Narrator GUI: the open
-/// document, the narration settings, the run flag, and the command slots that
+/// document, the narration settings, the run flag, and the [PlatformCommands]
 /// the in-app controls (and, on macOS, the native menu bar) dispatch through.
 ///
 /// The controller holds no View state; every screen derives what it needs from
@@ -58,6 +59,9 @@ class AppController extends ChangeNotifier {
 
   /// The narration-run lifecycle and per-run progress.
   late final RunController _run;
+
+  /// The platform-dispatched command slots (menu bar, toolbar bindings).
+  final PlatformCommands commands = PlatformCommands();
 
   // --- Model & voice ------------------------------------------------
 
@@ -342,7 +346,7 @@ class AppController extends ChangeNotifier {
 
   double get estimatedCostUsd => _settings.estimatedCostUsd;
 
-  // --- Run state + command slots -------------------------------------
+  // --- Run state ----------------------------------------------------
 
   bool get narrating => _run.narrating;
 
@@ -413,31 +417,12 @@ class AppController extends ChangeNotifier {
   /// Requests cancellation of the active run (no-op when idle).
   void cancelRun() => _run.cancelRun();
 
-  /// Command slots wired by the platform shell (and later the macOS menu bar):
-  /// platform-neutral command state so Linux/Windows can bind the same actions
-  /// to in-app menus.
-  VoidCallback? onOpen;
-  VoidCallback? onNarrate;
-  VoidCallback? onCancel;
-  VoidCallback? onPreferences;
-
-  /// Fired to toggle the settings panel (the native menu bar's View command
-  /// dispatches here). Wired by the platform shell to [toggleSettingsPanel];
-  /// mirrors the other command slots so non-macOS platforms can bind the same
-  /// action to an in-app control.
-  VoidCallback? onToggleSettingsPanel;
-
-  /// Invoked to choose the output folder (opened from the native menu bar or
-  /// an in-app shortcut). Wired by the platform shell; the menu item and any
-  /// key binding dispatch here.
-  VoidCallback? onSetOutputFolder;
-
   /// Opens the native directory picker for the output destination; leaves the
   /// current directory unchanged when cancelled or when the picker fails.
   Future<void> pickOutputFolder() => _settings.pickOutputFolder();
 
   /// Returns null when narration may start, otherwise the reason it is
   /// blocked (empty text / already running). The Narrate entrypoints guard on
-  /// this before dispatching to [onNarrate].
+  /// this before dispatching to [PlatformCommands.onNarrate].
   String? narrateBlockReason() => _run.narrateBlockReason();
 }

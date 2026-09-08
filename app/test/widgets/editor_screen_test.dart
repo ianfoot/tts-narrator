@@ -224,7 +224,7 @@ void main() {
   ) async {
     final controller = await makeController();
     var narrated = false;
-    controller.onNarrate = () => narrated = true;
+    controller.commands.onNarrate = () => narrated = true;
     controller.setText('Some real text to narrate.');
     await pumpEditor(tester, controller);
 

@@ -35,11 +35,12 @@ class _AppRootState extends State<AppRoot> {
   @override
   void initState() {
     super.initState();
-    widget.controller.onOpen = _openDocument;
-    widget.controller.onNarrate = _startNarration;
-    widget.controller.onCancel = () => widget.controller.cancelRun();
-    widget.controller.onSetOutputFolder = widget.controller.pickOutputFolder;
-    widget.controller.onToggleSettingsPanel =
+    widget.controller.commands.onOpen = _openDocument;
+    widget.controller.commands.onNarrate = _startNarration;
+    widget.controller.commands.onCancel = () => widget.controller.cancelRun();
+    widget.controller.commands.onSetOutputFolder =
+        widget.controller.pickOutputFolder;
+    widget.controller.commands.onToggleSettingsPanel =
         widget.controller.toggleSettingsPanel;
     widget.controller.saveLocationPicker = _pickSaveLocation;
     // Follow the system appearance live (CupertinoApp has no darkTheme/
@@ -52,11 +53,11 @@ class _AppRootState extends State<AppRoot> {
   void dispose() {
     WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged =
         null;
-    widget.controller.onOpen = null;
-    widget.controller.onNarrate = null;
-    widget.controller.onCancel = null;
-    widget.controller.onSetOutputFolder = null;
-    widget.controller.onToggleSettingsPanel = null;
+    widget.controller.commands.onOpen = null;
+    widget.controller.commands.onNarrate = null;
+    widget.controller.commands.onCancel = null;
+    widget.controller.commands.onSetOutputFolder = null;
+    widget.controller.commands.onToggleSettingsPanel = null;
     widget.controller.saveLocationPicker = null;
     super.dispose();
   }

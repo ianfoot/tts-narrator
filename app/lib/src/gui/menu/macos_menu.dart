@@ -45,7 +45,7 @@ PlatformMenu _appMenu(AppController controller) {
               LogicalKeyboardKey.comma,
               meta: true,
             ),
-            onSelected: () => controller.onPreferences?.call(),
+            onSelected: () => controller.commands.onPreferences?.call(),
           ),
         ],
       ),
@@ -82,19 +82,19 @@ PlatformMenu _fileMenu(
       PlatformMenuItem(
         label: TextTokens.gui_menu_openText,
         shortcut: const SingleActivator(LogicalKeyboardKey.keyO, meta: true),
-        onSelected: () => controller.onOpen?.call(),
+        onSelected: () => controller.commands.onOpen?.call(),
       ),
       PlatformMenuItem(
         label: TextTokens.gui_menu_outputFolder,
         shortcut: const SingleActivator(LogicalKeyboardKey.keyE, meta: true),
-        onSelected: () => controller.onSetOutputFolder?.call(),
+        onSelected: () => controller.commands.onSetOutputFolder?.call(),
       ),
       PlatformMenuItem(
         label: TextTokens.gui_menu_narrate,
         shortcut: const SingleActivator(LogicalKeyboardKey.keyN, meta: true),
         onSelected: () {
           if (controller.narrateBlockReason() != null) return;
-          controller.onNarrate?.call();
+          controller.commands.onNarrate?.call();
         },
       ),
       PlatformMenuItemGroup(
@@ -228,7 +228,7 @@ PlatformMenu _viewMenu(AppController controller) {
               LogicalKeyboardKey.backslash,
               meta: true,
             ),
-            onSelected: () => controller.onToggleSettingsPanel?.call(),
+            onSelected: () => controller.commands.onToggleSettingsPanel?.call(),
           ),
         ],
       ),
