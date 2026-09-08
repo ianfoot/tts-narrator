@@ -1,4 +1,3 @@
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
@@ -6,8 +5,9 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import 'config_loader.dart';
 import 'document_controller.dart';
 import 'model_profile_voice_controller.dart';
+import 'settings_controller.dart';
 import 'theme_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
+import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart' show AppThemeMode;
 
 /// Central, platform-neutral app state for the TTS Narrator GUI: the open
@@ -19,27 +19,22 @@ import '../theme/app_tokens.dart' show AppThemeMode;
 /// core's config resolution so the GUI and CLI agree on defaults.
 ///
 /// Document management lives in [DocumentController], the appearance in
-/// [ThemeController], and the model/voice state in [ModelProfileVoiceController];
-/// this
+/// [ThemeController], the model/voice state in [ModelProfileVoiceController],
+/// and the narration settings in [SettingsController]; this
 /// controller forwards their surfaces and re-broadcasts their notifications so
 /// callers keep a single change stream.
 class AppController extends ChangeNotifier {
   AppController({VoiceConfigLoader? loader, SharedPreferences? prefs})
-    : _prefs = prefs,
-      _model = ModelProfileVoiceController(loader: loader) {
-    final savedOutDir = prefs?.getString(_outDirPrefsKey);
-    if (savedOutDir != null && savedOutDir.trim().isNotEmpty) {
-      _outDir = savedOutDir;
-    }
+    : _model = ModelProfileVoiceController(loader: loader) {
+    _settings = SettingsController(
+      document: _document,
+      model: _model,
+      prefs: prefs,
+    );
     _document.addListener(_onDocumentChanged);
     _theme.addListener(_onThemeChanged);
+    _settings.addListener(_onSettingsChanged);
   }
-
-  /// Preferences key holding the last output folder the user picked.
-  static const _outDirPrefsKey = 'outDir';
-
-  /// The persistent preference store; null when the host has none (tests).
-  final SharedPreferences? _prefs;
 
   /// The model & voice state (active profile, selected voice, gender filter).
   final ModelProfileVoiceController _model;
@@ -49,6 +44,9 @@ class AppController extends ChangeNotifier {
 
   /// The appearance state and its notifier.
   final ThemeController _theme = ThemeController();
+
+  /// The narration settings and settings-panel visibility.
+  late final SettingsController _settings;
 
   // --- Model & voice ------------------------------------------------
 
@@ -98,19 +96,14 @@ class AppController extends ChangeNotifier {
 
   /// Sets the narrator-gender filter. The model owns the filter's voice
   /// narrowing/auto-switch; the passage-prefix consequences (rewriting the
-  /// narrator phrase for prompt-style models) live here because the prefix is
-  /// part of the narration settings owned by this controller. The model may
-  /// revert an unmatched gender back to null, so the prefix sync reads the
+  /// narrator phrase for prompt-style models) are applied by
+  /// [SettingsController], which owns the prefix. The model may
+  /// revert an unmatched gender back to null, so the prefix rewrite reads the
   /// effective filter after the write.
   set voiceGenderFilter(VoiceGender? value) {
     if (value == _model.voiceGenderFilter) return;
     _model.voiceGenderFilter = value;
-    final effective = _model.voiceGenderFilter;
-    if (effective == null) {
-      _revertNarratorGenderToBaseline();
-    } else {
-      _syncNarratorGenderToPrefix(effective);
-    }
+    _settings.applyNarratorGender(_model.voiceGenderFilter);
     notifyListeners();
   }
 
@@ -122,51 +115,6 @@ class AppController extends ChangeNotifier {
   /// Each entry is `(value, displayLabel)`: tagged voices get a compact
   /// ` (m)`/` (f)`/` (n)` suffix so gender is visible in the dropdown.
   List<(String, String)> get voiceItems => _model.voiceItems;
-
-  static const _genderFemalePhrase =
-      TextTokens.gui_controller_genderPhrases_female;
-  static const _genderMalePhrase = TextTokens.gui_controller_genderPhrases_male;
-
-  /// Whether [prefix] contains the exact male-phrase form. `female narrator`
-  /// already contains `male narrator` as a substring, so a plain
-  /// [String.contains] can't tell them apart; a phrase is "male" only when the
-  /// female form isn't also present.
-  static bool _hasMaleNarratorPhrase(String prefix) =>
-      prefix.contains(_genderMalePhrase) &&
-      !prefix.contains(_genderFemalePhrase);
-
-  /// Rewrites the gendered narrator phrase in [passagePrefix] when switching
-  /// gender on a prompt-style model. Only the exact `female narrator` ↔
-  /// `male narrator` phrases are swapped — custom prefixes are left alone.
-  void _syncNarratorGenderToPrefix(VoiceGender g) {
-    if (!profile.promptStyle) return;
-    if (g == VoiceGender.male && _passagePrefix.contains(_genderFemalePhrase)) {
-      _passagePrefix = _passagePrefix.replaceAll(
-        _genderFemalePhrase,
-        _genderMalePhrase,
-      );
-    } else if (g == VoiceGender.female &&
-        _hasMaleNarratorPhrase(_passagePrefix)) {
-      _passagePrefix = _passagePrefix.replaceAll(
-        _genderMalePhrase,
-        _genderFemalePhrase,
-      );
-    }
-  }
-
-  /// Returns the narrator phrase in [passagePrefix] to its ungendered
-  /// default when the last applied switch was a prompt-style one. Only
-  /// reverts the exact `male narrator` phrase back to `female narrator`;
-  /// custom prefixes are left alone (mirrors [_syncNarratorGenderToPrefix]).
-  void _revertNarratorGenderToBaseline() {
-    if (!profile.promptStyle) return;
-    if (_hasMaleNarratorPhrase(_passagePrefix)) {
-      _passagePrefix = _passagePrefix.replaceAll(
-        _genderMalePhrase,
-        _genderFemalePhrase,
-      );
-    }
-  }
 
   // --- Appearance ----------------------------------------------------
 
@@ -192,124 +140,85 @@ class AppController extends ChangeNotifier {
     _document.dispose();
     _theme.dispose();
     _model.dispose();
+    _settings.dispose();
     super.dispose();
   }
 
   // --- Settings panel -----------------------------------------------
 
-  bool _settingsPanelVisible = true;
-
   /// Whether the settings rail is shown on the editor. Driven by the toolbar
   /// toggle and, on macOS, the View menu command, so both dispatch through one
   /// piece of state.
-  bool get settingsPanelVisible => _settingsPanelVisible;
+  bool get settingsPanelVisible => _settings.settingsPanelVisible;
 
   /// Flips [settingsPanelVisible] and notifies listeners.
-  void toggleSettingsPanel() {
-    _settingsPanelVisible = !_settingsPanelVisible;
-    notifyListeners();
-  }
+  void toggleSettingsPanel() => _settings.toggleSettingsPanel();
 
   // --- Narration settings -------------------------------------------
 
-  String _accent = TextTokens.defaults_accent;
-  bool _useCalmTag = false;
-  int _minWords = TextTokens.defaults_minWords;
-  bool _sendWholeFile = false;
-  int? _sampleLen;
-  String _outDir = TextTokens.defaults_outDir;
-  bool _resume = false;
-  String _style = TextTokens.defaults_style;
-  String _passagePrefix = TextTokens.defaults_passagePrefix;
-
-  String get accent => _accent;
+  String get accent => _settings.accent;
 
   set accent(String value) {
-    if (value == _accent) return;
-    _accent = value;
-    notifyListeners();
+    _settings.accent = value;
   }
 
-  String get style => _style;
+  String get style => _settings.style;
 
   set style(String value) {
-    if (value == _style) return;
-    _style = value;
-    notifyListeners();
+    _settings.style = value;
   }
 
-  String get passagePrefix => _passagePrefix;
+  String get passagePrefix => _settings.passagePrefix;
 
   set passagePrefix(String value) {
-    if (value == _passagePrefix) return;
-    _passagePrefix = value;
-    notifyListeners();
+    _settings.passagePrefix = value;
   }
 
-  bool get useCalmTag => _useCalmTag;
+  bool get useCalmTag => _settings.useCalmTag;
 
   set useCalmTag(bool value) {
-    if (value == _useCalmTag) return;
-    _useCalmTag = value;
-    notifyListeners();
+    _settings.useCalmTag = value;
   }
 
-  /// Minimum words per segment (clamped to the settings rail's 10-100
-  /// slider range). Changing it revises the live segment plan and estimate the
-  /// editor shows.
-  int get minWords => _minWords;
+  /// Minimum words per segment (clamped to the settings rail's 10-100 slider
+  /// range). Changing it revises the live segment plan and estimate the editor
+  /// shows.
+  int get minWords => _settings.minWords;
 
   set minWords(int value) {
-    final clamped = value.clamp(10, 100);
-    if (clamped == _minWords) return;
-    _minWords = clamped;
-    notifyListeners();
+    _settings.minWords = value;
   }
 
   /// Whether to narrate the whole document as a single TTS call instead of
   /// segmenting it. When true, [minWords] is ignored and the settings rail
   /// hides the "Min words per segment" control.
-  bool get sendWholeFile => _sendWholeFile;
+  bool get sendWholeFile => _settings.sendWholeFile;
 
   set sendWholeFile(bool value) {
-    if (value == _sendWholeFile) return;
-    _sendWholeFile = value;
-    notifyListeners();
+    _settings.sendWholeFile = value;
   }
-
-  /// The current document normalized for whole-file narration (line endings
-  /// normalized, trimmed), mirroring the core's plan-time transform.
-  String get _wholeFileText =>
-      _document.text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
 
   /// Whether the current document is small enough for whole-file narration
   /// (see `maxWholeFileLength` in the core). The settings rail hides the "Send
   /// whole file" toggle when false (documents over the cap).
-  bool get wholeFileAvailable => _wholeFileText.length <= maxWholeFileLength;
+  bool get wholeFileAvailable => _settings.wholeFileAvailable;
 
-  int? get sampleLen => _sampleLen;
+  int? get sampleLen => _settings.sampleLen;
 
   set sampleLen(int? value) {
-    if (value == _sampleLen) return;
-    _sampleLen = value;
-    notifyListeners();
+    _settings.sampleLen = value;
   }
 
-  String get outDir => _outDir;
+  String get outDir => _settings.outDir;
 
   set outDir(String value) {
-    if (value == _outDir) return;
-    _outDir = value;
-    notifyListeners();
-    _prefs?.setString(_outDirPrefsKey, value);
+    _settings.outDir = value;
   }
 
-  bool get resume => _resume;
+  bool get resume => _settings.resume;
 
   set resume(bool value) {
-    if (value == _resume) return;
-    _resume = value;
-    notifyListeners();
+    _settings.resume = value;
   }
 
   /// Cost data for the active model (free until the config sets pricing).
@@ -318,11 +227,7 @@ class AppController extends ChangeNotifier {
   /// The editable GUI options for the active model, declared by its model's
   /// plugin (the provider package). Empty when no plugin declares a spec — the
   /// app has no per-model UI knowledge.
-  ModelUiSpec get modelUiSpec =>
-      ttsProviderRegistry
-          .resolveOrNull(profile.provider)
-          ?.modelUiSpecFor(profile) ??
-      const ModelUiSpec.empty();
+  ModelUiSpec get modelUiSpec => _model.modelUiSpec;
 
   /// Assembles the run config for the current document + settings, narrating
   /// from the in-memory [text] (`sourceText`) so typed/pasted content needs no
@@ -330,50 +235,7 @@ class AppController extends ChangeNotifier {
   ///
   /// Throws a [FormatException] when the active model has no voice selected and
   /// no config default (mirrors the CLI's error).
-  NarrationConfig buildConfig() {
-    final p = profile;
-    final raw = _model.voice.trim();
-    String voiceId;
-    String? label;
-    if (raw.isEmpty) {
-      final def = _model.defaultVoice;
-      if (def == null) {
-        throw FormatException(
-          fillTextTemplate(TextTokens.gui_controller_errors_noVoiceSelected, {
-            'modelAlias': p.alias,
-          }),
-        );
-      }
-      voiceId = def.$1;
-      label = def.$2 == def.$1 ? null : def.$2;
-    } else {
-      final (id, resolvedLabel) = _model.voiceConfig.resolveVoice(p.alias, raw);
-      voiceId = id;
-      label = (_model.voiceLabel != null && id == raw)
-          ? _model.voiceLabel
-          : (resolvedLabel != id ? resolvedLabel : null);
-    }
-    return NarrationConfig(
-      inputPath: _document.documentPath ?? TextTokens.app_untitledDocument,
-      sourceText: _document.text,
-      profile: p,
-      voice: voiceId,
-      voiceLabel: label,
-      accent: accent,
-      style: style,
-      useCalmTag: useCalmTag,
-      passagePrefix: passagePrefix,
-      minWords: minWords,
-      sendWholeFile: sendWholeFile,
-      sampleLen: sampleLen,
-      outDir: outDir.trim().isEmpty
-          ? TextTokens.defaults_outDir
-          : outDir.trim(),
-      resume: resume,
-      providerSettings: _model.resolveProviderSettings(p),
-      pricing: _model.pricing,
-    );
-  }
+  NarrationConfig buildConfig() => _settings.buildConfig();
 
   // --- Document ------------------------------------------------------
 
@@ -399,15 +261,11 @@ class AppController extends ChangeNotifier {
   void loadFromFile(String path) => _document.loadFromFile(path);
 
   /// Whole-file narration is only offered up to `maxWholeFileLength` chars; a
-  /// larger document would be an unbounded single TTS call. Runs from
-  /// [_onDocumentChanged] so a document that grows past the cap (or is loaded
+  /// larger document would be an unbounded single TTS call. Delegated to
+  /// [SettingsController] so a document that grows past the cap (or is loaded
   /// oversized) drops the toggle instead of leaving it silently "on" and
   /// planning a giant segment.
-  void _clearWholeFileIfTooLarge() {
-    if (_sendWholeFile && !wholeFileAvailable) {
-      _sendWholeFile = false;
-    }
-  }
+  void _clearWholeFileIfTooLarge() => _settings.adjustWholeFileForDocument();
 
   /// Forwards a [DocumentController] notification: re-checks the whole-file
   /// cap, then re-broadcasts so callers keep a single change stream.
@@ -418,6 +276,11 @@ class AppController extends ChangeNotifier {
 
   /// Forwards a [ThemeController] notification.
   void _onThemeChanged() {
+    notifyListeners();
+  }
+
+  /// Forwards a [SettingsController] notification.
+  void _onSettingsChanged() {
     notifyListeners();
   }
 
@@ -456,17 +319,11 @@ class AppController extends ChangeNotifier {
   /// The segment plan for the current text (min-word merge + length split).
   /// When [sendWholeFile] is on, the whole text is a single segment (empty
   /// when the document is blank, mirroring the empty plan the core reports).
-  List<String> get plannedSegments {
-    if (sendWholeFile) {
-      final whole = _wholeFileText;
-      return whole.isEmpty ? const [] : [whole];
-    }
-    return segmentText(_document.text, minWords: minWords);
-  }
+  List<String> get plannedSegments => _settings.plannedSegments;
 
-  double get estimatedMinutes => estimateMinutes(plannedSegments);
+  double get estimatedMinutes => _settings.estimatedMinutes;
 
-  double get estimatedCostUsd => estimateCostUsd(pricing, plannedSegments);
+  double get estimatedCostUsd => _settings.estimatedCostUsd;
 
   // --- Run state + command slots -------------------------------------
 
@@ -721,17 +578,7 @@ class AppController extends ChangeNotifier {
 
   /// Opens the native directory picker for the output destination; leaves the
   /// current directory unchanged when cancelled or when the picker fails.
-  Future<void> pickOutputFolder() async {
-    final String? path;
-    try {
-      path = await getDirectoryPath(initialDirectory: _outDir);
-    } catch (_) {
-      // Keep the current directory rather than crashing.
-      return;
-    }
-    if (path == null) return;
-    outDir = path;
-  }
+  Future<void> pickOutputFolder() => _settings.pickOutputFolder();
 
   /// Returns null when narration may start, otherwise the reason it is
   /// blocked (empty text / already running). The Narrate entrypoints guard on
