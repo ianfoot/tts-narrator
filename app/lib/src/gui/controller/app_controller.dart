@@ -5,10 +5,12 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import 'config_loader.dart';
 import 'document_controller.dart';
 import 'model_profile_voice_controller.dart';
+import 'run_controller.dart';
 import 'settings_controller.dart';
 import 'theme_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart' show AppThemeMode;
+
+export 'run_controller.dart' show NarrationRunSegment;
 
 /// Central, platform-neutral app state for the TTS Narrator GUI: the open
 /// document, the narration settings, the run flag, and the command slots that
@@ -20,9 +22,9 @@ import '../theme/app_tokens.dart' show AppThemeMode;
 ///
 /// Document management lives in [DocumentController], the appearance in
 /// [ThemeController], the model/voice state in [ModelProfileVoiceController],
-/// and the narration settings in [SettingsController]; this
-/// controller forwards their surfaces and re-broadcasts their notifications so
-/// callers keep a single change stream.
+/// the narration settings in [SettingsController], and the run lifecycle in
+/// [RunController]; this controller forwards their surfaces and re-broadcasts
+/// their notifications so callers keep a single change stream.
 class AppController extends ChangeNotifier {
   AppController({VoiceConfigLoader? loader, SharedPreferences? prefs})
     : _model = ModelProfileVoiceController(loader: loader) {
@@ -31,9 +33,15 @@ class AppController extends ChangeNotifier {
       model: _model,
       prefs: prefs,
     );
+    _run = RunController(
+      document: _document,
+      settings: _settings,
+      model: _model,
+    );
     _document.addListener(_onDocumentChanged);
     _theme.addListener(_onThemeChanged);
     _settings.addListener(_onSettingsChanged);
+    _run.addListener(_onRunChanged);
   }
 
   /// The model & voice state (active profile, selected voice, gender filter).
@@ -47,6 +55,9 @@ class AppController extends ChangeNotifier {
 
   /// The narration settings and settings-panel visibility.
   late final SettingsController _settings;
+
+  /// The narration-run lifecycle and per-run progress.
+  late final RunController _run;
 
   // --- Model & voice ------------------------------------------------
 
@@ -141,6 +152,7 @@ class AppController extends ChangeNotifier {
     _theme.dispose();
     _model.dispose();
     _settings.dispose();
+    _run.dispose();
     super.dispose();
   }
 
@@ -284,6 +296,11 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Forwards a [RunController] notification.
+  void _onRunChanged() {
+    notifyListeners();
+  }
+
   /// Resolves a destination for Save As (and the first save of an untitled
   /// document); returns null when the user cancels. Wired by the platform
   /// shell to the native save picker — platform-neutral so Linux/Windows bind
@@ -327,30 +344,20 @@ class AppController extends ChangeNotifier {
 
   // --- Run state + command slots -------------------------------------
 
-  bool _narrating = false;
-
-  bool get narrating => _narrating;
+  bool get narrating => _run.narrating;
 
   /// The config snapshot for the active run (banner reads model/voice/estimate
   /// from this), or null before a run starts.
-  NarrationConfig? runConfig;
-
-  /// Output directory of the most recent (or active) run; the target for
-  /// segment cleanup. Null until a run starts.
-  String? _lastRunDir;
+  NarrationConfig? get runConfig => _run.runConfig;
 
   /// The output directory of the most recent run; [segmentCleanupAvailable]
   /// inspects this. Null before any run starts.
-  String? get lastRunOutputDir => _lastRunDir;
+  String? get lastRunOutputDir => _run.lastRunOutputDir;
 
   /// Whether the most recent run's per-segment audio files can still be
   /// cleaned up (combined track exists, segments not yet deleted, and the run
   /// is finished). Powers the File ▸ "Clean Up Segments…" command.
-  bool get canCleanupSegments {
-    if (narrating) return false;
-    final dir = _lastRunDir;
-    return dir != null && segmentCleanupAvailable(dir);
-  }
+  bool get canCleanupSegments => _run.canCleanupSegments;
 
   /// Deletes the last run's per-segment audio files, keeping the combined
   /// track and the manifest (marked `segments_deleted: true`). Returns how
@@ -358,63 +365,39 @@ class AppController extends ChangeNotifier {
   /// against running while narration is active so the tiles' completed
   /// indicators revert instead of dangling at deleted files. Throws a
   /// [FileSystemException] when a segment cannot be removed.
-  Future<int> cleanupSegments() async {
-    if (narrating) return 0;
-    final dir = _lastRunDir;
-    if (dir == null) return 0;
-    final removed = cleanupSegmentFiles(dir);
-    if (removed > 0) {
-      for (final segment in runSegments) {
-        segment.filePath = null;
-      }
-    }
-    notifyListeners();
-    return removed;
-  }
+  Future<int> cleanupSegments() => _run.cleanupSegments();
 
   /// The segment plan for the active run; empty until [startRun] builds it.
-  List<NarrationRunSegment> runSegments = const [];
+  /// The list is mutable and shared with [RunController]; in-place edits are
+  /// visible to both.
+  List<NarrationRunSegment> get runSegments => _run.runSegments;
 
   /// Plan failure (missing/empty text) — render this instead of a run.
-  String? runPlanError;
+  String? get runPlanError => _run.runPlanError;
 
   /// Narration failure mid-run (API/etc).
-  String? runError;
+  String? get runError => _run.runError;
 
   /// Absolute path of the completed combined track from the last successful
   /// run, or null until one lands. Persists across leaving the run view so the
   /// editor can keep offering playback of the finished file; cleared when a new
   /// run starts or the run state resets (cleanup keeps the track on disk).
-  String? _completedAudioPath;
+  String? get completedAudioPath => _run.completedAudioPath;
 
-  String? get completedAudioPath => _completedAudioPath;
+  bool get runFinished => _run.runFinished;
 
-  bool _runFinished = false;
-  bool _runStopped = false;
-
-  bool get runFinished => _runFinished;
-
-  bool get runStopped => _runStopped;
-
-  int _doneCount = 0;
+  bool get runStopped => _run.runStopped;
 
   /// Number of segments whose audio has landed on disk.
-  int get runDoneCount => _doneCount;
+  int get runDoneCount => _run.runDoneCount;
 
-  int get totalSegments => runSegments.length;
+  int get totalSegments => _run.totalSegments;
 
-  double get runProgress =>
-      totalSegments == 0 ? 0 : runDoneCount / totalSegments;
+  double get runProgress => _run.runProgress;
 
-  double get runEstimatedMinutes =>
-      estimateMinutes(runSegments.map((s) => s.paragraph).toList());
+  double get runEstimatedMinutes => _run.runEstimatedMinutes;
 
-  double get runEstimatedCostUsd => estimateCostUsd(
-    runConfig?.pricing ?? pricing,
-    runSegments.map((s) => s.paragraph).toList(),
-  );
-
-  AbortToken? _abort;
+  double get runEstimatedCostUsd => _run.runEstimatedCostUsd;
 
   /// Launches narration of the current document with the current settings,
   /// snapshotting the plan + config so the run view is stable even as the
@@ -422,140 +405,13 @@ class AppController extends ChangeNotifier {
   ///
   /// Synchronously runs the plan (so a missing/empty text surfaces
   /// [runPlanError] without a half-started run), then narrates in the
-  /// background, publishing per-segment progress via [notifyListeners]. Cancel
-  /// via [cancelRun] throws [AbortException] (→ [runStopped]); any other
-  /// failure lands in [runError].
-  void startRun() {
-    // Idempotent against callers that dispatch without the guard (menu bar).
-    if (_narrating) return;
-    final NarrationConfig config;
-    try {
-      config = buildConfig();
-    } catch (e) {
-      _resetRunState();
-      runPlanError = e.toString();
-      notifyListeners();
-      return;
-    }
-    final List<String> paragraphs;
-    try {
-      paragraphs = planSegments(config);
-    } catch (e) {
-      _resetRunState();
-      runPlanError = e.toString();
-      notifyListeners();
-      return;
-    }
-    _resetRunState();
-    runConfig = config;
-    _lastRunDir = outputDirPath(config);
-    // narrate() processes only min(sampleLen, paragraphs.length) segments; build
-    // segments from the same count so progress reaches 100% and no phantom
-    // pending tiles linger past a sampled run.
-    final sampleLen = config.sampleLen;
-    final runCount = sampleLen == null
-        ? paragraphs.length
-        : (sampleLen < paragraphs.length ? sampleLen : paragraphs.length);
-    runSegments = [
-      for (var i = 0; i < runCount; i++)
-        NarrationRunSegment(index: i, paragraph: paragraphs[i]),
-    ];
-    _narrating = true;
-    _abort = AbortToken();
-    notifyListeners();
-    _narrate(config);
-  }
-
-  void _resetRunState() {
-    runSegments = const [];
-    runConfig = null;
-    runPlanError = null;
-    runError = null;
-    _runFinished = false;
-    _runStopped = false;
-    _completedAudioPath = null;
-    _doneCount = 0;
-    _abort = null;
-  }
-
-  Future<void> _narrate(NarrationConfig config) async {
-    final token = _abort!;
-    // Snapshot the segment tiles this invocation owns. A successor run
-    // reassigns the runSegments field before a cancelled predecessor unwinds,
-    // so callbacks must drive the tiles they created — never whatever run is
-    // current now.
-    final segments = runSegments;
-    bool isCurrentRun() => _abort == token;
-    try {
-      try {
-        await narrate(
-          config,
-          abort: token,
-          onProgress: (i, total, paragraph, {resumed = false}) {
-            segments[i].running = true;
-            notifyListeners();
-          },
-          onSegmentComplete: (i, filePath, {resumed = false}) {
-            segments[i]
-              ..running = false
-              ..filePath = filePath
-              ..resumed = resumed;
-            if (isCurrentRun()) _doneCount++;
-            notifyListeners();
-          },
-        );
-        // Only the current run drives terminal state: a cancelled predecessor
-        // that settles after a successor took over must not mark the new run
-        // stopped or overwrite its completed-track path/error.
-        if (isCurrentRun()) {
-          if (token.cancelled) {
-            _runStopped = true;
-          } else {
-            _runFinished = true;
-            _completedAudioPath = combinedFilePath(_lastRunDir!);
-          }
-        }
-      } on AbortException {
-        if (isCurrentRun()) _runStopped = true;
-      } catch (e) {
-        // Includes non-Exception failures (e.g. a StateError from an
-        // unregistered provider) — surface them instead of crashing the view.
-        if (isCurrentRun()) runError = e.toString();
-      }
-    } finally {
-      // Unwind unconditionally: even a non-Exception failure must not leave a
-      // lingering segment spinner on the tiles this invocation owned. Post the
-      // clear even when a successor run took over — the last notify before a
-      // cancel happened before this flag flip, and the run view keeps painting
-      // this invocation's tiles until they revert.
-      for (final segment in segments) {
-        segment.running = false;
-      }
-      notifyListeners();
-      if (isCurrentRun()) {
-        _narrating = false;
-        _abort = null;
-      }
-    }
-  }
+  /// background, publishing per-segment progress via the re-broadcast stream.
+  /// Cancel via [cancelRun] throws [AbortException] (→ [runStopped]); any other
+  /// failure lands in [runError]. Delegated to [RunController].
+  void startRun() => _run.startRun();
 
   /// Requests cancellation of the active run (no-op when idle).
-  void cancelRun() {
-    if (!_narrating) return;
-    _abort?.cancel();
-    // Go idle immediately so the user can start a new run while the old
-    // request unwinds; a cancelled provider's onCancel hook aborts the live
-    // call, and the narrate tail's isCurrentRun guards keep a settled zombie
-    // from clobbering a successor run's state. Until the provider's force-close
-    // lands, a zombie may still write a late segment/manifest to the shared out
-    // dir — bounded today because OpenRouter force-closes on cancel.
-    _abort = null;
-    _narrating = false;
-    // Mark the run as stopped immediately so the run view flips UI without
-    // waiting for the abort checkpoint; the narrate tail reconciles it too.
-    _runStopped = true;
-    notifyListeners();
-  }
+  void cancelRun() => _run.cancelRun();
 
   /// Command slots wired by the platform shell (and later the macOS menu bar):
   /// platform-neutral command state so Linux/Windows can bind the same actions
@@ -583,30 +439,5 @@ class AppController extends ChangeNotifier {
   /// Returns null when narration may start, otherwise the reason it is
   /// blocked (empty text / already running). The Narrate entrypoints guard on
   /// this before dispatching to [onNarrate].
-  String? narrateBlockReason() {
-    if (_document.text.trim().isEmpty) {
-      return TextTokens.gui_controller_blockReasons_emptyText;
-    }
-    if (_narrating) {
-      return TextTokens.gui_controller_blockReasons_alreadyRunning;
-    }
-    return null;
-  }
-}
-
-/// Per-segment run state rendered by the narration screen.
-class NarrationRunSegment {
-  NarrationRunSegment({required this.index, required this.paragraph});
-
-  final int index;
-  final String paragraph;
-
-  /// Set while a segment's audio is being synthesized.
-  bool running = false;
-
-  /// Absolute path once the segment's audio is on disk (null until done).
-  String? filePath;
-
-  /// Whether this segment was reused from a prior run's manifest.
-  bool resumed = false;
+  String? narrateBlockReason() => _run.narrateBlockReason();
 }
