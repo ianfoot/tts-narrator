@@ -11,7 +11,6 @@ class NarrationConfig {
     this.voiceLabel,
     this.accent = 'southern British English, neutral and clear',
     this.style = 'warm, composed, restrained, literary',
-    this.useCalmTag = false,
     this.passagePrefix = 'Narrate this passage for an audiobook. You are a warm, composed female narrator.',
     this.minWords = 30,
     this.sendWholeFile = false,
@@ -52,8 +51,11 @@ class NarrationConfig {
   /// Free-text style/register description used in the prompt.
   final String style;
 
-  /// Whether to prepend a `[calm]` style tag to the prompt.
-  final bool useCalmTag;
+  /// Whether to prepend a `[calm]` style tag to the prompt (merged into
+  /// [passagePrefix] — add `[calm] ` to the prefix text if needed).
+  /// @deprecated Use [passagePrefix] with `[calm] ` instead.
+  @Deprecated('Use passagePrefix with [calm] prefix')
+  bool get useCalmTag => false;
 
   /// Pooled preamble applied to every paragraph prompt.
   final String passagePrefix;
@@ -97,7 +99,6 @@ class NarrationConfig {
     voiceLabel: voiceLabel,
     accent: accent,
     style: style,
-    useCalmTag: useCalmTag,
     passagePrefix: passagePrefix,
     minWords: minWords,
     sendWholeFile: sendWholeFile,

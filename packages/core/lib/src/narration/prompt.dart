@@ -6,10 +6,6 @@ import 'config.dart';
 String buildPrompt(NarrationConfig config, String passage) {
   final buffer = StringBuffer();
 
-  if (config.useCalmTag) {
-    buffer.write('[calm] ');
-  }
-
   buffer.write(config.passagePrefix.trim());
   buffer.write(' Accent: ${config.accent.trim()}.');
   buffer.write(' Style: ${config.style.trim()}.');
