@@ -7,7 +7,7 @@ import 'config_loader.dart';
 /// for the TTS Narrator GUI.
 ///
 /// The controller loads the shared [VoiceConfig] (same directory the CLI reads,
-/// via its [VoiceConfigLoader]) and exposes the resolved profile, the selected
+/// via its [UserVoiceConfigLoader]) and exposes the resolved profile, the selected
 /// voice, and the gender-filtered voice items. [AppController] forwards its
 /// model & voice surface here and re-broadcasts notifications, so callers keep
 /// a single change stream.
@@ -16,8 +16,8 @@ import 'config_loader.dart';
 /// narrator phrase in the passage prefix) live in [AppController], which owns
 /// that setting and reacts to [voiceGenderFilter] writes through the facade.
 class ModelProfileVoiceController extends ChangeNotifier {
-  ModelProfileVoiceController({VoiceConfigLoader? loader})
-    : _loader = loader ?? VoiceConfigLoader() {
+  ModelProfileVoiceController({UserVoiceConfigLoader? loader})
+    : _loader = loader ?? UserVoiceConfigLoader() {
     _voiceConfig = _loader.load();
     _modelAlias = defaultModelFor(_voiceConfig).alias;
     final def = _defaultVoiceFor(profile);
@@ -25,7 +25,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
     _voiceLabel = def?.$2;
   }
 
-  final VoiceConfigLoader _loader;
+  final UserVoiceConfigLoader _loader;
 
   /// The preset default model (fish's compiled bootstrap unless `default_model`
   /// in the config names another); [changeModel] moves to other configured
@@ -83,7 +83,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
   (String, String)? _defaultVoiceFor(TtsModelProfile model) {
     try {
       return defaultVoiceFor(model, _voiceConfig);
-    } on VoiceConfigError {
+    } on VoiceConfigurationError {
       return null;
     }
   }
@@ -162,7 +162,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
       ),
   ];
 
-  List<VoiceEntry> _genderFilteredVoiceEntries(TtsModelProfile p) {
+  List<VoiceOption> _genderFilteredVoiceEntries(TtsModelProfile p) {
     final all = voiceEntries(model: p, config: _voiceConfig);
     if (_voiceGender == VoiceGender.neutral) return all;
     // Untagged models have nothing to filter against: a gender set via a
@@ -194,7 +194,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
     if (!matches.any((e) => e.id == _voice || e.label == _voiceLabel)) {
       // Prefer the model default when it matches the filter, else the first
       // matching voice — mirrors changeModel's reset-to-default semantics.
-      late final VoiceEntry pick;
+      late final VoiceOption pick;
       final def = _defaultVoiceFor(profile);
       if (def != null) {
         final defEntry = matches.where((e) => e.id == def.$1);

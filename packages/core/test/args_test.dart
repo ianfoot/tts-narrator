@@ -56,25 +56,25 @@ void main() {
       parseArgs([...args, '--config', cfgPath]);
 
   test('requires --input', () {
-    expect(() => parse(['--model', 'fish']), throwsA(isA<CliUsageError>()));
-    expect(() => parse(['--input', '']), throwsA(isA<CliUsageError>()));
+    expect(() => parse(['--model', 'fish']), throwsA(isA<InvalidCliArgumentError>()));
+    expect(() => parse(['--input', '']), throwsA(isA<InvalidCliArgumentError>()));
   });
 
   test('rejects unknown flags and unknown models', () {
     expect(
       () => parse(['--input', 's', '--nope']),
-      throwsA(isA<CliUsageError>()),
+      throwsA(isA<InvalidCliArgumentError>()),
     );
     expect(
       () => parse(['--input', 's', '--model', 'bogus']),
-      throwsA(isA<CliUsageError>()),
+      throwsA(isA<InvalidCliArgumentError>()),
     );
   });
 
   test('invalid --tags value errors', () {
     expect(
       () => parse(['--input', 's', '--tags', 'maybe']),
-      throwsA(isA<CliUsageError>()),
+      throwsA(isA<InvalidCliArgumentError>()),
     );
   });
 
@@ -115,7 +115,7 @@ void main() {
     expect(cfg.profile.provider, 'openrouter');
   });
 
-  test('an unresolvable env ref is a CliUsageError, not a StateError', () {
+  test('an unresolvable env ref is a InvalidCliArgumentError, not a StateError', () {
     const varName = 'TTN_UNSET_SECRET_4F7B';
     if (Platform.environment.containsKey(varName)) {
       return; // Only deterministic when the ref is genuinely unset.
@@ -133,7 +133,7 @@ void main() {
     expect(
       () => parseArgs(['--input', 's', '--config', cfg]),
       throwsA(
-        isA<CliUsageError>().having(
+        isA<InvalidCliArgumentError>().having(
           (e) => e.message,
           'message',
           contains(varName),
@@ -167,7 +167,7 @@ void main() {
     expect(
       () => parse(['--input', 's', '--provider', 'bogus']),
       throwsA(
-        isA<CliUsageError>().having(
+        isA<InvalidCliArgumentError>().having(
           (e) => e.message,
           'message',
           contains('openrouter'),
@@ -251,7 +251,7 @@ void main() {
         '--config',
         noDefaults,
       ]),
-      throwsA(isA<CliUsageError>()),
+      throwsA(isA<InvalidCliArgumentError>()),
     );
     final explicit = parseArgs([
       '--input',
@@ -293,11 +293,11 @@ void main() {
     expect(cfg.minWords, 10);
     expect(
       () => parse(['--input', 's', '--sample-len', 'x']),
-      throwsA(isA<CliUsageError>()),
+      throwsA(isA<InvalidCliArgumentError>()),
     );
     expect(
       () => parse(['--input', 's', '--min-words', '0']),
-      throwsA(isA<CliUsageError>()),
+      throwsA(isA<InvalidCliArgumentError>()),
     );
   });
 
@@ -323,7 +323,7 @@ void main() {
   test('explicit --config pointing at a missing directory errors loudly', () {
     expect(
       () => parseArgs(['--input', 's', '--config', '${dir.path}/missing']),
-      throwsA(isA<CliUsageError>()),
+      throwsA(isA<InvalidCliArgumentError>()),
     );
   });
 
@@ -347,13 +347,13 @@ void main() {
 
     test('a directory with no .txt files errors', () {
       File('${dir.path}/only.md').writeAsStringSync('x');
-      expect(() => expandInputFiles(dir.path), throwsA(isA<CliUsageError>()));
+      expect(() => expandInputFiles(dir.path), throwsA(isA<InvalidCliArgumentError>()));
     });
 
     test('a missing path errors', () {
       expect(
         () => expandInputFiles('${dir.path}/does-not-exist.txt'),
-        throwsA(isA<CliUsageError>()),
+        throwsA(isA<InvalidCliArgumentError>()),
       );
     });
   });

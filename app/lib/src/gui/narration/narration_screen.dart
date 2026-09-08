@@ -89,7 +89,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     return player;
   }
 
-  Future<void> _togglePlay(NarrationRunSegment segment) async {
+  Future<void> _togglePlay(NarrationSegment segment) async {
     final path = segment.filePath;
     if (path == null || !File(path).existsSync()) return;
     if (_playingIndex == segment.index) {
@@ -352,7 +352,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
   }
 
   /// 3-column segment card: status (32px) · body (flex) · action (100px).
-  Widget _buildSegmentCard(NarrationRunSegment segment) {
+  Widget _buildSegmentCard(NarrationSegment segment) {
     final colors = _tokens.colors;
     final trimmed = segment.paragraph.trim();
     return Container(
@@ -374,7 +374,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     );
   }
 
-  Widget _statusColumn(NarrationRunSegment segment) {
+  Widget _statusColumn(NarrationSegment segment) {
     final colors = _tokens.colors;
     final Widget indicator;
     if (segment.resumed) {
@@ -420,7 +420,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     return SizedBox(width: 32, child: Center(child: indicator));
   }
 
-  Widget _bodyColumn(NarrationRunSegment segment, String trimmed) {
+  Widget _bodyColumn(NarrationSegment segment, String trimmed) {
     final colors = _tokens.colors;
     final body = _tokens.typography.body;
     final words = trimmed.isEmpty ? 0 : trimmed.split(RegExp(r'\s+')).length;
@@ -461,7 +461,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     );
   }
 
-  Widget _actionColumn(NarrationRunSegment segment) {
+  Widget _actionColumn(NarrationSegment segment) {
     final colors = _tokens.colors;
     final playable =
         segment.filePath != null && File(segment.filePath!).existsSync();
@@ -487,7 +487,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
 
   /// Compact `▶ Play` / `⏹ Stop` toggle sized to fit the 100px action column
   /// (the shared [PlatformButton] outlined geometry is too wide for it).
-  Widget _playStopButton(NarrationRunSegment segment, bool isPlaying) {
+  Widget _playStopButton(NarrationSegment segment, bool isPlaying) {
     final colors = _tokens.colors;
     final label = isPlaying
         ? TextTokens.gui_narration_stop

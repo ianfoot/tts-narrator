@@ -34,7 +34,7 @@ class FakeTtsProvider implements TtsProvider {
   ModelUiSpec modelUiSpecFor(TtsModelProfile model) => modelUiSpec;
 
   @override
-  Future<ProviderAudio> synthesize({
+  Future<GeneratedAudio> synthesize({
     required String model,
     required String? voice,
     required String input,
@@ -50,6 +50,6 @@ class FakeTtsProvider implements TtsProvider {
       responseFormat: responseFormat,
       settings: Map.unmodifiable(settings),
     ));
-    return ProviderAudio(bytes: bytes);
+    return GeneratedAudio(bytes: bytes);
   }
 }

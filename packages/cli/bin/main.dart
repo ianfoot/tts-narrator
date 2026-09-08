@@ -25,7 +25,7 @@ Future<int> main(List<String> args) async {
   final warnings = <String>[];
   try {
     config = parseArgs(args, warningsOut: warnings);
-  } on CliUsageError catch (e) {
+  } on InvalidCliArgumentError catch (e) {
     stderr.writeln('Error: $e');
     stderr.writeln();
     stderr.writeln(usage);
@@ -40,7 +40,7 @@ Future<int> main(List<String> args) async {
   List<String> inputs;
   try {
     inputs = expandInputFiles(config.inputPath);
-  } on CliUsageError catch (e) {
+  } on InvalidCliArgumentError catch (e) {
     stderr.writeln('Error: $e');
     stderr.writeln();
     stderr.writeln(usage);
@@ -203,7 +203,7 @@ int _runListVoices(List<String> args) {
     final (cfg, warnings) = loadVoiceConfig(configPath ?? defaultConfigDir());
     voiceConfig = cfg;
     listWarnings.addAll(warnings);
-  } on VoiceConfigError catch (e) {
+  } on VoiceConfigurationError catch (e) {
     stderr.writeln('Error: $e');
     exitCode = _exitUsage;
     return _exitUsage;

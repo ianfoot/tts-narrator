@@ -67,7 +67,7 @@ class TtsModelProfile {
 /// so first runs cost nothing and the CLI/GUI preselect it before any config
 /// exists. The config's `"models"`/`"voices"` blocks can override and extend
 /// this; all other models come from the config.
-const kDefaultProfile = DefaultProfile(
+const kDefaultProfile = VoiceProfile(
   profile: TtsModelProfile(
     alias: 'fish',
     id: 'fish-audio/s2.1-pro-free',
@@ -80,8 +80,8 @@ const kDefaultProfile = DefaultProfile(
 );
 
 /// A single default model + voice to preselect on cold start.
-class DefaultProfile {
-  const DefaultProfile({
+class VoiceProfile {
+  const VoiceProfile({
     required this.profile,
     required this.voice,
     required this.voiceLabel,

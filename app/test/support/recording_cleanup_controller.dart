@@ -42,8 +42,8 @@ class RecordingCleanupController extends AppController {
 
 /// A loader pointing at an empty temp config dir (the subclass constructor
 /// needs one that exists rather than the user's home config).
-VoiceConfigLoader _emptyLoader() {
+UserVoiceConfigLoader _emptyLoader() {
   final dir = Directory.systemTemp.createTempSync('tts_cleanup_loader_');
   addTearDown(() => dir.deleteSync(recursive: true));
-  return VoiceConfigLoader(configDir: dir.path);
+  return UserVoiceConfigLoader(configDir: dir.path);
 }

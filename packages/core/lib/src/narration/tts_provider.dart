@@ -3,8 +3,8 @@ import 'model_profiles.dart';
 import 'model_ui.dart';
 
 /// A synthesized audio sample from a TTS provider.
-class ProviderAudio {
-  ProviderAudio({required this.bytes, this.generationId});
+class GeneratedAudio {
+  GeneratedAudio({required this.bytes, this.generationId});
 
   /// Raw audio bytes in the provider's requested [format].
   final List<int> bytes;
@@ -48,7 +48,7 @@ abstract class TtsProvider {
   /// [resolveSettings]); [abort] is checked between retries (and before the
   /// first attempt) — an already-cancelled token throws [AbortException]
   /// without calling the API.
-  Future<ProviderAudio> synthesize({
+  Future<GeneratedAudio> synthesize({
     required String model,
     required String? voice,
     required String input,

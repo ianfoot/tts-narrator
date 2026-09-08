@@ -59,7 +59,7 @@ void main() {
   }
 
   AppController makeController() =>
-      AppController(loader: VoiceConfigLoader(configDir: configDir));
+      AppController(loader: UserVoiceConfigLoader(configDir: configDir));
 
   group('cold start', () {
     test('boots an empty, untitled document on the fish default', () {
@@ -78,7 +78,7 @@ void main() {
 
     test('a missing config file degrades to the compiled fish bootstrap', () {
       final c = AppController(
-        loader: VoiceConfigLoader(configDir: '${dir.path}/nope'),
+        loader: UserVoiceConfigLoader(configDir: '${dir.path}/nope'),
       );
       expect(c.profile.alias, 'fish');
       expect(c.voice, kDefaultProfile.voice);
@@ -792,8 +792,8 @@ void main() {
     test('resolves the active model spec from the registered provider', () {
       final fake = FakeTtsProvider()
         ..specsByAlias['fish'] = const ModelUiSpec([
-          ModelUiOption(key: 'accent', label: 'Accent'),
-          ModelUiOption(
+          ModelUiControl(key: 'accent', label: 'Accent'),
+          ModelUiControl(
             key: 'useCalmTag',
             label: '[calm]',
             type: ModelUiOptionType.bool,
@@ -933,7 +933,7 @@ void main() {
       SharedPreferences.setMockInitialValues({'outDir': '/tmp/saved'});
       final prefs = await SharedPreferences.getInstance();
       final c = AppController(
-        loader: VoiceConfigLoader(configDir: configDir),
+        loader: UserVoiceConfigLoader(configDir: configDir),
         prefs: prefs,
       );
       expect(c.outDir, '/tmp/saved');
@@ -943,7 +943,7 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final prefs = await SharedPreferences.getInstance();
       final c = AppController(
-        loader: VoiceConfigLoader(configDir: configDir),
+        loader: UserVoiceConfigLoader(configDir: configDir),
         prefs: prefs,
       );
       c.outDir = '/tmp/picked';
@@ -954,7 +954,7 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final prefs = await SharedPreferences.getInstance();
       final c = AppController(
-        loader: VoiceConfigLoader(configDir: configDir),
+        loader: UserVoiceConfigLoader(configDir: configDir),
         prefs: prefs,
       );
       expect(c.outDir, 'output');
@@ -964,7 +964,7 @@ void main() {
       SharedPreferences.setMockInitialValues({'outDir': ''});
       final prefs = await SharedPreferences.getInstance();
       final c = AppController(
-        loader: VoiceConfigLoader(configDir: configDir),
+        loader: UserVoiceConfigLoader(configDir: configDir),
         prefs: prefs,
       );
       expect(c.outDir, 'output');

@@ -18,19 +18,19 @@
 ///
 /// A model whose plugin declares no spec gets no model-option controls.
 class ModelUiSpec {
-  const ModelUiSpec([this.options = const <ModelUiOption>[]]);
+  const ModelUiSpec([this.options = const <ModelUiControl>[]]);
 
-  const ModelUiSpec.empty() : options = const <ModelUiOption>[];
+  const ModelUiSpec.empty() : options = const <ModelUiControl>[];
 
   /// The editable controls the model exposes, in display order.
-  final List<ModelUiOption> options;
+  final List<ModelUiControl> options;
 
   bool get isEmpty => options.isEmpty;
 }
 
 /// A single editable option declared by a model's plugin.
-class ModelUiOption {
-  const ModelUiOption({
+class ModelUiControl {
+  const ModelUiControl({
     required this.key,
     required this.label,
     this.type = ModelUiOptionType.text,
@@ -51,5 +51,5 @@ class ModelUiOption {
   final String? hint;
 }
 
-/// How a [ModelUiOption] is edited in the GUI.
+/// How a [ModelUiControl] is edited in the GUI.
 enum ModelUiOptionType { text, multiline, bool, gender }

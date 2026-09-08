@@ -18,7 +18,7 @@ class _FakeProvider implements TtsProvider {
       const ModelUiSpec.empty();
 
   @override
-  Future<ProviderAudio> synthesize({
+  Future<GeneratedAudio> synthesize({
     required String model,
     required String? voice,
     required String input,
@@ -27,7 +27,7 @@ class _FakeProvider implements TtsProvider {
     AbortToken? abort,
   }) async {
     abort?.throwIfCancelled();
-    return ProviderAudio(bytes: input.codeUnits);
+    return GeneratedAudio(bytes: input.codeUnits);
   }
 }
 

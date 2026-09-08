@@ -6,8 +6,8 @@ import '../narration/tts_provider.dart';
 import 'voice_config.dart';
 
 /// Thrown when the user provides invalid CLI arguments.
-class CliUsageError implements Exception {
-  CliUsageError(this.message);
+class InvalidCliArgumentError implements Exception {
+  InvalidCliArgumentError(this.message);
   final String message;
 
   @override
@@ -17,7 +17,7 @@ class CliUsageError implements Exception {
 /// Parses command-line arguments into a [NarrationConfig].
 ///
 /// `--input` is required (no default filenames). Unknown flags and malformed
-/// values raise [CliUsageError]. Any non-fatal config warnings (e.g. a skipped
+/// values raise [InvalidCliArgumentError]. Any non-fatal config warnings (e.g. a skipped
 /// malformed model file) are appended to [warningsOut] for the caller to
 /// surface.
 NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
@@ -43,7 +43,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
   var i = 0;
   String take(String flag) {
     if (i + 1 >= args.length) {
-      throw CliUsageError('Missing value for $flag.');
+      throw InvalidCliArgumentError('Missing value for $flag.');
     }
     i++;
     return args[i];
@@ -77,7 +77,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
         final v = take(arg);
         final n = int.tryParse(v);
         if (n == null || n < 1) {
-          throw CliUsageError(
+          throw InvalidCliArgumentError(
             '--sample-len must be a positive integer, got "$v".',
           );
         }
@@ -86,7 +86,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
         final v = take(arg);
         final n = int.tryParse(v);
         if (n == null || n < 1) {
-          throw CliUsageError(
+          throw InvalidCliArgumentError(
             '--min-words must be a positive integer, got "$v".',
           );
         }
@@ -104,33 +104,33 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
         } else if (v == 'on' || v == 'true' || v == '1') {
           tags = true;
         } else {
-          throw CliUsageError('--tags must be on or off, got "$v".');
+          throw InvalidCliArgumentError('--tags must be on or off, got "$v".');
         }
       case '--help':
       case '-h':
-        throw CliUsageError(usage);
+        throw InvalidCliArgumentError(usage);
       default:
         if (arg.startsWith('-')) {
-          throw CliUsageError('Unknown flag: $arg');
+          throw InvalidCliArgumentError('Unknown flag: $arg');
         }
-        throw CliUsageError('Unexpected positional argument: $arg');
+        throw InvalidCliArgumentError('Unexpected positional argument: $arg');
     }
   }
 
   if (input == null || input.trim().isEmpty) {
-    throw CliUsageError('--input <path> is required (no default filename).');
+    throw InvalidCliArgumentError('--input <path> is required (no default filename).');
   }
 
   // Voice config: model wiring, voice aliases, defaults, pricing, providers.
   final cfgDir = configPath ?? defaultConfigDir();
   if (configPath != null && !Directory(cfgDir).existsSync()) {
-    throw CliUsageError('Voice config directory not found: "$cfgDir".');
+    throw InvalidCliArgumentError('Voice config directory not found: "$cfgDir".');
   }
   final (VoiceConfig, List<String>) loaded;
   try {
     loaded = loadVoiceConfig(cfgDir);
-  } on VoiceConfigError catch (e) {
-    throw CliUsageError('$e');
+  } on VoiceConfigurationError catch (e) {
+    throw InvalidCliArgumentError('$e');
   }
   final voiceConfig = loaded.$1;
   if (warningsOut != null) warningsOut.addAll(loaded.$2);
@@ -145,7 +145,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
       final aliases = effectiveModels(voiceConfig)
           .map((p) => p.alias)
           .join(', ');
-      throw CliUsageError(
+      throw InvalidCliArgumentError(
         'Unknown model "$modelArg". Available: $aliases '
         '(or pass a full model id).',
       );
@@ -159,7 +159,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
     try {
       ttsProviderRegistry.resolve(providerFlag);
     } on StateError catch (e) {
-      throw CliUsageError(e.message);
+      throw InvalidCliArgumentError(e.message);
     }
     profile = profile.copyWith(provider: providerFlag);
   }
@@ -175,8 +175,8 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
   } else {
     try {
       (voiceId, voiceLabel) = defaultVoiceFor(profile, voiceConfig);
-    } on VoiceConfigError catch (e) {
-      throw CliUsageError(e.message);
+    } on VoiceConfigurationError catch (e) {
+      throw InvalidCliArgumentError(e.message);
     }
   }
 
@@ -201,7 +201,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
         env: Platform.environment,
       );
     } on StateError catch (e) {
-      throw CliUsageError(e.message);
+      throw InvalidCliArgumentError(e.message);
     }
   }
 
@@ -228,11 +228,11 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
 /// Expands a single `--input` value into one or more `.txt` files to narrate.
 ///
 /// A regular file yields itself. A directory yields its top-level `*.txt`
-/// files, sorted and excluding hidden files. Throws a [CliUsageError] when the
+/// files, sorted and excluding hidden files. Throws a [InvalidCliArgumentError] when the
 /// path is missing or yields no files.
 List<String> expandInputFiles(String inputPath) {
   if (!Directory(inputPath).existsSync() && !File(inputPath).existsSync()) {
-    throw CliUsageError('Input not found: "$inputPath".');
+    throw InvalidCliArgumentError('Input not found: "$inputPath".');
   }
   if (!Directory(inputPath).existsSync()) {
     return [inputPath];
@@ -250,7 +250,7 @@ List<String> expandInputFiles(String inputPath) {
           .toList()
         ..sort();
   if (files.isEmpty) {
-    throw CliUsageError('No .txt files found in "$inputPath".');
+    throw InvalidCliArgumentError('No .txt files found in "$inputPath".');
   }
   return files;
 }
@@ -270,7 +270,7 @@ String renderVoiceListing({
       final (id, label) = defaultVoiceFor(p, config);
       final shown = id == label ? label : '$label ($id)';
       out.writeln('  default voice:  $shown');
-    } on VoiceConfigError {
+    } on VoiceConfigurationError {
       out.writeln('  default voice:  none configured');
     }
     final voices = config.voices[p.alias] ?? const <String, Voice>{};
