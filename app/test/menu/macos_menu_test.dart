@@ -20,7 +20,7 @@ Future<AppController> makeController() async {
   File('$configDir/config.json')
     ..parent.createSync(recursive: true)
     ..writeAsStringSync(const JsonEncoder().convert({}));
-  return AppController(loader: VoiceConfigLoader(configDir: configDir));
+  return AppController(loader: UserVoiceConfigLoader(configDir: configDir));
 }
 
 /// The leaf items of [menu], expanding [PlatformMenuItemGroup] members and

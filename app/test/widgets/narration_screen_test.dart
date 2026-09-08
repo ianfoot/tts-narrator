@@ -28,7 +28,7 @@ class _BlockingProvider implements TtsProvider {
       const ModelUiSpec.empty();
 
   @override
-  Future<ProviderAudio> synthesize({
+  Future<GeneratedAudio> synthesize({
     required String model,
     required String? voice,
     required String input,
@@ -38,7 +38,7 @@ class _BlockingProvider implements TtsProvider {
   }) async {
     await Completer<void>().future;
     abort?.throwIfCancelled();
-    return ProviderAudio(bytes: const [0]);
+    return GeneratedAudio(bytes: const [0]);
   }
 
   void register() => ttsProviderRegistry.register('openrouter', () => this);
@@ -61,7 +61,7 @@ void main() {
     File('$configDir/config.json')
       ..parent.createSync(recursive: true)
       ..writeAsStringSync('{}');
-    final c = AppController(loader: VoiceConfigLoader(configDir: configDir))
+    final c = AppController(loader: UserVoiceConfigLoader(configDir: configDir))
       ..outDir = dir.path;
     c.setText(
       'The rain fell on the quiet street all through the long cold night and '
@@ -146,7 +146,7 @@ void main() {
     tester,
   ) async {
     FakeTtsProvider().register();
-    final c = AppController(loader: VoiceConfigLoader(configDir: configDir))
+    final c = AppController(loader: UserVoiceConfigLoader(configDir: configDir))
       ..outDir = dir.path;
     c.startRun();
     await pumpRun(tester, c);
@@ -170,9 +170,9 @@ void main() {
     // segment 1 stays completed (its clip landed on disk during the run).
     final resumedFile = File('${dir.path}/resumed.wav')..writeAsStringSync('x');
     c.runSegments.addAll([
-      NarrationRunSegment(index: 2, paragraph: 'A third passage is processing.')
+      NarrationSegment(index: 2, paragraph: 'A third passage is processing.')
         ..running = true,
-      NarrationRunSegment(index: 3, paragraph: 'A reused fourth passage.')
+      NarrationSegment(index: 3, paragraph: 'A reused fourth passage.')
         ..resumed = true
         ..filePath = resumedFile.path,
     ]);

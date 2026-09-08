@@ -6,8 +6,8 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 /// read-only) and resolves the bits a run config needs: the effective models,
 /// the default voice, pricing, and the provider settings block with `${ENV}`
 /// references expanded from the runtime environment.
-class VoiceConfigLoader {
-  VoiceConfigLoader({String? configDir})
+class UserVoiceConfigLoader {
+  UserVoiceConfigLoader({String? configDir})
     : configDir = configDir ?? defaultConfigDir();
 
   /// Absolute path of the config directory (defaults to the platform path).

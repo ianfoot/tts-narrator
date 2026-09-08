@@ -84,7 +84,7 @@ class RunController extends ChangeNotifier {
   }
 
   /// The segment plan for the active run; empty until [startRun] builds it.
-  List<NarrationRunSegment> runSegments = const [];
+  List<NarrationSegment> runSegments = const [];
 
   /// Plan failure (missing/empty text) — render this instead of a run.
   String? runPlanError;
@@ -169,7 +169,7 @@ class RunController extends ChangeNotifier {
         : (sampleLen < paragraphs.length ? sampleLen : paragraphs.length);
     runSegments = [
       for (var i = 0; i < runCount; i++)
-        NarrationRunSegment(index: i, paragraph: paragraphs[i]),
+        NarrationSegment(index: i, paragraph: paragraphs[i]),
     ];
     _narrating = true;
     _abort = AbortToken();
@@ -283,8 +283,8 @@ class RunController extends ChangeNotifier {
 }
 
 /// Per-segment run state rendered by the narration screen.
-class NarrationRunSegment {
-  NarrationRunSegment({required this.index, required this.paragraph});
+class NarrationSegment {
+  NarrationSegment({required this.index, required this.paragraph});
 
   final int index;
   final String paragraph;

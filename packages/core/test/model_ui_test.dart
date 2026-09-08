@@ -13,13 +13,13 @@ class _SpecProvider implements TtsProvider {
       model.promptStyle ? _fancy : const ModelUiSpec.empty();
 
   static const _fancy = ModelUiSpec([
-    ModelUiOption(key: 'accent', label: 'Accent'),
-    ModelUiOption(
+    ModelUiControl(key: 'accent', label: 'Accent'),
+    ModelUiControl(
       key: 'passagePrefix',
       label: 'Passage prefix',
       type: ModelUiOptionType.multiline,
     ),
-    ModelUiOption(
+    ModelUiControl(
       key: 'useCalmTag',
       label: 'Prepend [calm] tag',
       type: ModelUiOptionType.bool,
@@ -27,14 +27,14 @@ class _SpecProvider implements TtsProvider {
   ]);
 
   @override
-  Future<ProviderAudio> synthesize({
+  Future<GeneratedAudio> synthesize({
     required String model,
     required String? voice,
     required String input,
     required String responseFormat,
     required Map<String, String> settings,
     AbortToken? abort,
-  }) async => ProviderAudio(bytes: input.codeUnits);
+  }) async => GeneratedAudio(bytes: input.codeUnits);
 }
 
 void main() {
@@ -46,8 +46,8 @@ void main() {
 
     test('carries declared options in order', () {
       const spec = ModelUiSpec([
-        ModelUiOption(key: 'accent', label: 'Accent'),
-        ModelUiOption(key: 'style', label: 'Style'),
+        ModelUiControl(key: 'accent', label: 'Accent'),
+        ModelUiControl(key: 'style', label: 'Style'),
       ]);
       expect(spec.isEmpty, isFalse);
       expect(spec.options.map((o) => o.key), ['accent', 'style']);

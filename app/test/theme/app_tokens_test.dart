@@ -209,7 +209,7 @@ void main() {
     });
 
     AppController makeController() =>
-        AppController(loader: VoiceConfigLoader(configDir: configDir));
+        AppController(loader: UserVoiceConfigLoader(configDir: configDir));
 
     testWidgets('EditorScreen pumps clean under dark Material + Cupertino', (
       tester,

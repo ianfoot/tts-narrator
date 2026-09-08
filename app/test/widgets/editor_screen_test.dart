@@ -33,7 +33,7 @@ void main() {
     File('$configDir/config.json')
       ..parent.createSync(recursive: true)
       ..writeAsStringSync(const JsonEncoder().convert({}));
-    return AppController(loader: VoiceConfigLoader(configDir: configDir));
+    return AppController(loader: UserVoiceConfigLoader(configDir: configDir));
   }
 
   Future<void> pumpEditor(

@@ -11,7 +11,7 @@ import 'settings_controller.dart';
 import 'theme_controller.dart';
 import '../theme/app_tokens.dart' show AppThemeMode;
 
-export 'run_controller.dart' show NarrationRunSegment;
+export 'run_controller.dart' show NarrationSegment;
 
 /// Central, platform-neutral app state for the TTS Narrator GUI: the open
 /// document, the narration settings, the run flag, and the [PlatformCommands]
@@ -27,7 +27,7 @@ export 'run_controller.dart' show NarrationRunSegment;
 /// [RunController]; this controller forwards their surfaces and re-broadcasts
 /// their notifications so callers keep a single change stream.
 class AppController extends ChangeNotifier {
-  AppController({VoiceConfigLoader? loader, SharedPreferences? prefs})
+  AppController({UserVoiceConfigLoader? loader, SharedPreferences? prefs})
     : _model = ModelProfileVoiceController(loader: loader) {
     _settings = SettingsController(
       document: _document,
@@ -374,7 +374,7 @@ class AppController extends ChangeNotifier {
   /// The segment plan for the active run; empty until [startRun] builds it.
   /// The list is mutable and shared with [RunController]; in-place edits are
   /// visible to both.
-  List<NarrationRunSegment> get runSegments => _run.runSegments;
+  List<NarrationSegment> get runSegments => _run.runSegments;
 
   /// Plan failure (missing/empty text) — render this instead of a run.
   String? get runPlanError => _run.runPlanError;

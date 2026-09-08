@@ -35,22 +35,22 @@ class OpenRouterTtsProvider implements TtsProvider {
   ModelUiSpec modelUiSpecFor(TtsModelProfile model) {
     if (!model.promptStyle) return const ModelUiSpec.empty();
     return const ModelUiSpec([
-      ModelUiOption(
+      ModelUiControl(
         key: 'gender',
         label: 'Narrator gender',
         type: ModelUiOptionType.gender,
       ),
-      ModelUiOption(
+      ModelUiControl(
         key: 'accent',
         label: 'Accent',
         hint: 'e.g., Southern British English',
       ),
-      ModelUiOption(
+      ModelUiControl(
         key: 'style',
         label: 'Style / register',
         hint: 'e.g., Warm, composed, literary',
       ),
-      ModelUiOption(
+      ModelUiControl(
         key: 'passagePrefix',
         label: 'Passage prefix',
         hint:
@@ -58,7 +58,7 @@ class OpenRouterTtsProvider implements TtsProvider {
             'before the story starts.',
         type: ModelUiOptionType.multiline,
       ),
-      ModelUiOption(
+      ModelUiControl(
         key: 'useCalmTag',
         label: 'Prepend [calm] directive',
         type: ModelUiOptionType.bool,
@@ -92,7 +92,7 @@ class OpenRouterTtsProvider implements TtsProvider {
   /// [abort] is checked between retries (and before the first attempt); an
   /// already-cancelled token throws [AbortException] without calling the API.
   @override
-  Future<ProviderAudio> synthesize({
+  Future<GeneratedAudio> synthesize({
     required String model,
     required String? voice,
     required String input,
@@ -129,7 +129,7 @@ class OpenRouterTtsProvider implements TtsProvider {
           }
           throw HttpException('Empty audio stream after $attempt attempts.');
         }
-        return ProviderAudio(bytes: bytes, generationId: generationId);
+        return GeneratedAudio(bytes: bytes, generationId: generationId);
       }
       // Non-2xx: fail fast unless 5xx (retryable).
       if (statusCode == 502 ||

@@ -324,7 +324,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     'useCalmTag',
   };
 
-  Widget _buildModelOption(ModelUiOption option) {
+  Widget _buildModelOption(ModelUiControl option) {
     switch (option.type) {
       case ModelUiOptionType.bool:
         return Padding(

@@ -249,27 +249,27 @@ void main() {
 
     test('rejects a non-string default_model (global config)', () {
       writeGlobal('{"default_model": 42}');
-      expect(load, throwsA(isA<VoiceConfigError>()));
+      expect(load, throwsA(isA<VoiceConfigurationError>()));
     });
 
     test('rejects malformed global config.json loudly', () {
       writeGlobal('{not json');
-      expect(load, throwsA(isA<VoiceConfigError>()));
+      expect(load, throwsA(isA<VoiceConfigurationError>()));
     });
 
     test('rejects a non-object top level in config.json', () {
       writeGlobal('[1,2,3]');
-      expect(load, throwsA(isA<VoiceConfigError>()));
+      expect(load, throwsA(isA<VoiceConfigurationError>()));
     });
 
     test('rejects a non-object providers entry', () {
       writeGlobal('{"providers": {"openrouter": "sk-or"}}');
-      expect(load, throwsA(isA<VoiceConfigError>()));
+      expect(load, throwsA(isA<VoiceConfigurationError>()));
     });
 
     test('rejects a non-string value inside a providers entry', () {
       writeGlobal('{"providers": {"openrouter": {"KEY": 42}}}');
-      expect(load, throwsA(isA<VoiceConfigError>()));
+      expect(load, throwsA(isA<VoiceConfigurationError>()));
     });
 
     test('parses the required model-file provider', () {
@@ -515,7 +515,7 @@ void main() {
           ),
           const VoiceConfig(),
         ),
-        throwsA(isA<VoiceConfigError>()),
+        throwsA(isA<VoiceConfigurationError>()),
       );
     });
   });
@@ -594,7 +594,7 @@ void main() {
         model: const TtsModelProfile(alias: 'kokoro', id: 'hexgrad/kokoro-82m'),
         config: cfg,
       );
-      VoiceEntry entryFor(String label) =>
+      VoiceOption entryFor(String label) =>
           entries.firstWhere((e) => e.label == label);
       expect(entryFor('Emma').gender, VoiceGender.female);
       expect(entryFor('Daniel').gender, VoiceGender.male);
@@ -775,13 +775,13 @@ void main() {
       expect(raw, isNot(contains('voice_genders')));
     });
 
-    test('throws VoiceConfigError when the path cannot be written', () {
+    test('throws VoiceConfigurationError when the path cannot be written', () {
       expect(
         () => writeVoiceConfig(
           '/dev/null/cfg',
           const VoiceConfig(defaultModel: 'x'),
         ),
-        throwsA(isA<VoiceConfigError>()),
+        throwsA(isA<VoiceConfigurationError>()),
       );
     });
   });

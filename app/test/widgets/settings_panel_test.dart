@@ -61,7 +61,7 @@ void main() {
   }
 
   AppController makeController() =>
-      AppController(loader: VoiceConfigLoader(configDir: configDir));
+      AppController(loader: UserVoiceConfigLoader(configDir: configDir));
 
   Future<void> pumpRail(WidgetTester tester, AppController controller) async {
     await tester.binding.setSurfaceSize(const Size(1200, 1800));
@@ -324,7 +324,7 @@ void main() {
       // prompt-styled models; emulate that spec via the fake provider.
       final fake = FakeTtsProvider()
         ..modelUiSpec = const ModelUiSpec([
-          ModelUiOption(
+          ModelUiControl(
             key: 'gender',
             label: 'Narrator gender',
             type: ModelUiOptionType.gender,
@@ -352,14 +352,14 @@ void main() {
 
   group('model options (from the plugin spec)', () {
     const geminiSpec = ModelUiSpec([
-      ModelUiOption(key: 'accent', label: 'Accent'),
-      ModelUiOption(key: 'style', label: 'Style / register'),
-      ModelUiOption(
+      ModelUiControl(key: 'accent', label: 'Accent'),
+      ModelUiControl(key: 'style', label: 'Style / register'),
+      ModelUiControl(
         key: 'passagePrefix',
         label: 'Passage prefix',
         type: ModelUiOptionType.multiline,
       ),
-      ModelUiOption(
+      ModelUiControl(
         key: 'useCalmTag',
         label: 'Prepend [calm] tag',
         type: ModelUiOptionType.bool,
@@ -433,8 +433,8 @@ void main() {
       // not render and must not throw during build.
       final fake = FakeTtsProvider()
         ..modelUiSpec = const ModelUiSpec([
-          ModelUiOption(key: 'speed', label: 'Speaking rate'),
-          ModelUiOption(key: 'accent', label: 'Accent'),
+          ModelUiControl(key: 'speed', label: 'Speaking rate'),
+          ModelUiControl(key: 'accent', label: 'Accent'),
         ]);
       fake.register();
       final c = makeController();
@@ -451,7 +451,7 @@ void main() {
       writeConfig({});
       final fake = FakeTtsProvider()
         ..modelUiSpec = const ModelUiSpec([
-          ModelUiOption(
+          ModelUiControl(
             key: 'style',
             label: 'Style / register',
             hint: 'e.g. warm, restrained',
@@ -641,14 +641,14 @@ void main() {
       // styling options; the default fish model declares none.
       final fake = FakeTtsProvider()
         ..specsByAlias['gemini'] = const ModelUiSpec([
-          ModelUiOption(key: 'accent', label: 'Accent'),
-          ModelUiOption(key: 'style', label: 'Style / register'),
-          ModelUiOption(
+          ModelUiControl(key: 'accent', label: 'Accent'),
+          ModelUiControl(key: 'style', label: 'Style / register'),
+          ModelUiControl(
             key: 'passagePrefix',
             label: 'Passage prefix',
             type: ModelUiOptionType.multiline,
           ),
-          ModelUiOption(
+          ModelUiControl(
             key: 'useCalmTag',
             label: 'Prepend [calm] tag',
             type: ModelUiOptionType.bool,

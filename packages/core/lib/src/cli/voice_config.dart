@@ -55,8 +55,8 @@ class Voice {
 }
 
 /// A single selectable voice for the GUI voice picker and CLI listing.
-class VoiceEntry {
-  const VoiceEntry({
+class VoiceOption {
+  const VoiceOption({
     required this.model,
     required this.id,
     required this.label,
@@ -232,7 +232,7 @@ String? _resolveAlias(VoiceConfig config, String modelAlias, String value) {
 ///      aliases (or be a raw id);
 ///   2. fish's compiled bootstrap ([kDefaultProfile]) when no config default is
 ///      set — the app's out-of-box, cost-free fallback;
-///   3. otherwise a [VoiceConfigError]: model needs a `--voice` or a config
+///   3. otherwise a [VoiceConfigurationError]: model needs a `--voice` or a config
 ///      default.
 (String id, String label) defaultVoiceFor(
   TtsModelProfile model,
@@ -242,7 +242,7 @@ String? _resolveAlias(VoiceConfig config, String modelAlias, String value) {
   if (configured != null && configured.trim().isNotEmpty) {
     final id = _resolveAlias(config, model.alias, configured);
     if (id != null) return (id, configured);
-    throw VoiceConfigError(
+    throw VoiceConfigurationError(
       'Default voice "$configured" for "${model.alias}" is not a configured '
       'voice or raw id.',
     );
@@ -250,7 +250,7 @@ String? _resolveAlias(VoiceConfig config, String modelAlias, String value) {
   if (model.alias == kDefaultProfile.profile.alias) {
     return (kDefaultProfile.voice, kDefaultProfile.voiceLabel);
   }
-  throw VoiceConfigError(
+  throw VoiceConfigurationError(
     'No default voice configured for "${model.alias}". Set "defaults" in the '
     'voice config, or pass --voice / pick one in the app.',
   );
@@ -262,17 +262,17 @@ String? _resolveAlias(VoiceConfig config, String modelAlias, String value) {
 /// default voice so the picker always has a sensible preselection even before
 /// the user adds aliases. Code ships no voice lists: providers add/remove
 /// voices, so the config is the single source of truth.
-List<VoiceEntry> voiceEntries({
+List<VoiceOption> voiceEntries({
   TtsModelProfile? model,
   required VoiceConfig config,
 }) {
   final profiles = model != null ? [model] : effectiveModels(config);
-  final entries = <VoiceEntry>[];
+  final entries = <VoiceOption>[];
   for (final p in profiles) {
     void add(String id, String label, bool isAlias) {
       if (entries.any((e) => e.model == p.alias && e.id == id)) return;
       entries.add(
-        VoiceEntry(
+        VoiceOption(
           model: p.alias,
           id: id,
           label: label,
@@ -289,7 +289,7 @@ List<VoiceEntry> voiceEntries({
     try {
       final (id, label) = defaultVoiceFor(p, config);
       add(id, label, false);
-    } on VoiceConfigError {
+    } on VoiceConfigurationError {
       // No default for this model yet; skip (raw-id entry stays available).
     }
   }
@@ -323,7 +323,7 @@ String defaultConfigDir() {
 /// bootstrap).
 ///
 /// Error policy: a malformed or unreadable `config.json` is a hard
-/// [VoiceConfigError] (the global file is small and should fail loudly). A
+/// [VoiceConfigurationError] (the global file is small and should fail loudly). A
 /// malformed *model* file — bad JSON, a missing/non-string `id`, a missing or
 /// empty `provider`, or a wrong-typed field — is skipped with a warning so one
 /// bad model never breaks the rest of the app. A `default_model` that names no
@@ -362,7 +362,7 @@ String defaultConfigDir() {
       if (m.defaultVoice != null) defaults[alias] = m.defaultVoice!;
       if (m.pricing != null) pricing[alias] = m.pricing!;
       if (m.voices.isNotEmpty) voices[alias] = m.voices;
-    } on VoiceConfigError catch (e) {
+    } on VoiceConfigurationError catch (e) {
       warnings.add('Skipped model "$alias": ${e.message}');
     }
   }
@@ -394,13 +394,13 @@ String defaultConfigDir() {
 VoiceConfig _loadGlobalConfig(String path) {
   final raw = _readJson(path);
   if (raw is! Map<String, dynamic>) {
-    throw VoiceConfigError(
+    throw VoiceConfigurationError(
       'Invalid voice config "$path": top-level value must be a JSON object',
     );
   }
   final defaultModelRaw = raw['default_model'];
   if (defaultModelRaw != null && defaultModelRaw is! String) {
-    throw VoiceConfigError(
+    throw VoiceConfigurationError(
       'Invalid voice config "$path": "default_model" must be a string',
     );
   }
@@ -409,14 +409,14 @@ VoiceConfig _loadGlobalConfig(String path) {
   if (providersRaw is Map<String, dynamic>) {
     providersRaw.forEach((id, settings) {
       if (settings is! Map<String, dynamic>) {
-        throw VoiceConfigError(
+        throw VoiceConfigurationError(
           'Invalid voice config "$path": "providers.$id" must be an object',
         );
       }
       final out = <String, String>{};
       settings.forEach((key, value) {
         if (value is! String) {
-          throw VoiceConfigError(
+          throw VoiceConfigurationError(
             'Invalid voice config "$path": "providers.$id.$key" must be a '
             'string',
           );
@@ -434,7 +434,7 @@ VoiceConfig _loadGlobalConfig(String path) {
 }
 
 /// Parses a single ``<alias>.json`` model file into a model profile plus its
-/// default voice, pricing, and voice library. Throws a [VoiceConfigError] for
+/// default voice, pricing, and voice library. Throws a [VoiceConfigurationError] for
 /// anything that makes the model unusable (skipped by the caller).
 ({
   TtsModelProfile profile,
@@ -445,42 +445,42 @@ VoiceConfig _loadGlobalConfig(String path) {
 _parseModelFile(String path, String alias) {
   final raw = _readJson(path);
   if (raw is! Map<String, dynamic>) {
-    throw VoiceConfigError('must be a JSON object');
+    throw VoiceConfigurationError('must be a JSON object');
   }
   final id = raw['id'];
   if (id is! String || id.isEmpty) {
-    throw VoiceConfigError('needs a non-empty "id"');
+    throw VoiceConfigurationError('needs a non-empty "id"');
   }
   final format = raw['format'];
   if (format != null && format is! String) {
-    throw VoiceConfigError('"format" must be a string');
+    throw VoiceConfigurationError('"format" must be a string');
   }
   final sampleRate = raw['sample_rate'];
   if (sampleRate != null && sampleRate is! num) {
-    throw VoiceConfigError('"sample_rate" must be a number');
+    throw VoiceConfigurationError('"sample_rate" must be a number');
   }
   final promptStyle = raw['prompt_style'];
   if (promptStyle != null && promptStyle is! bool) {
-    throw VoiceConfigError('"prompt_style" must be a bool');
+    throw VoiceConfigurationError('"prompt_style" must be a bool');
   }
   final sendsVoice = raw['sends_voice'];
   if (sendsVoice != null && sendsVoice is! bool) {
-    throw VoiceConfigError('"sends_voice" must be a bool');
+    throw VoiceConfigurationError('"sends_voice" must be a bool');
   }
   final provider = raw['provider'];
   if (provider is! String || provider.trim().isEmpty) {
-    throw VoiceConfigError('needs a non-empty "provider"');
+    throw VoiceConfigurationError('needs a non-empty "provider"');
   }
   final displayName = raw['display_name'];
   if (displayName != null && displayName is! String) {
-    throw VoiceConfigError('"display_name" must be a string');
+    throw VoiceConfigurationError('"display_name" must be a string');
   }
 
   String? defaultVoice;
   final defaultVoiceRaw = raw['default_voice'];
   if (defaultVoiceRaw != null) {
     if (defaultVoiceRaw is! String || defaultVoiceRaw.trim().isEmpty) {
-      throw VoiceConfigError('"default_voice" must be a non-empty string');
+      throw VoiceConfigurationError('"default_voice" must be a non-empty string');
     }
     defaultVoice = defaultVoiceRaw;
   }
@@ -489,7 +489,7 @@ _parseModelFile(String path, String alias) {
   final pricingRaw = raw['pricing'];
   if (pricingRaw != null) {
     if (pricingRaw is! Map<String, dynamic>) {
-      throw VoiceConfigError('"pricing" must be an object');
+      throw VoiceConfigurationError('"pricing" must be an object');
     }
     pricing = AudioPricing(
       inputUsdPerMTokens: _num(pricingRaw['input_usd_per_m_tokens']),
@@ -502,7 +502,7 @@ _parseModelFile(String path, String alias) {
   final voicesRaw = raw['voices'];
   if (voicesRaw != null) {
     if (voicesRaw is! Map<String, dynamic>) {
-      throw VoiceConfigError('"voices" must be an object');
+      throw VoiceConfigurationError('"voices" must be an object');
     }
     voicesRaw.forEach((label, value) {
       if (value is String) {
@@ -540,14 +540,14 @@ _parseModelFile(String path, String alias) {
 }
 
 /// Reads and JSON-decodes [path]; wraps read/decode failures in a
-/// [VoiceConfigError].
+/// [VoiceConfigurationError].
 Object? _readJson(String path) {
   try {
     return jsonDecode(File(path).readAsStringSync());
   } on FormatException catch (e) {
-    throw VoiceConfigError('Invalid voice config "$path": ${e.message}');
+    throw VoiceConfigurationError('Invalid voice config "$path": ${e.message}');
   } on IOException catch (e) {
-    throw VoiceConfigError('Cannot read voice config "$path": $e');
+    throw VoiceConfigurationError('Cannot read voice config "$path": $e');
   }
 }
 
@@ -599,7 +599,7 @@ Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
 /// Round-trips through [loadVoiceConfig] so the CLI and GUI serialize
 /// identically.
 ///
-/// Throws a [VoiceConfigError] when a file cannot be written.
+/// Throws a [VoiceConfigurationError] when a file cannot be written.
 void writeVoiceConfig(String configDir, VoiceConfig config) {
   final globalJson = <String, Object?>{
     if (config.defaultModel != null) 'default_model': config.defaultModel,
@@ -613,7 +613,7 @@ void writeVoiceConfig(String configDir, VoiceConfig config) {
         flush: true,
       );
   } on FileSystemException catch (e) {
-    throw VoiceConfigError('Cannot write voice config "$configDir": $e');
+    throw VoiceConfigurationError('Cannot write voice config "$configDir": $e');
   }
 
   if (config.models.isEmpty) return;
@@ -627,15 +627,15 @@ void writeVoiceConfig(String configDir, VoiceConfig config) {
             flush: true,
           );
     } on FileSystemException catch (e) {
-      throw VoiceConfigError('Cannot write voice config "$configDir": $e');
+      throw VoiceConfigurationError('Cannot write voice config "$configDir": $e');
     }
   }
 }
 
 /// Thrown when the voice config file exists but is unreadable or malformed,
 /// or when a write fails.
-class VoiceConfigError implements Exception {
-  VoiceConfigError(this.message);
+class VoiceConfigurationError implements Exception {
+  VoiceConfigurationError(this.message);
   final String message;
 
   @override
