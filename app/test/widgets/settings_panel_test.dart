@@ -409,7 +409,6 @@ void main() {
       expect(c.accent, 'a calm brogue');
       expect(c.style, 'measured, unhurried');
       expect(c.passagePrefix, 'Read this passage.');
-      expect(c.useCalmTag, isTrue);
     });
 
     testWidgets('an empty spec renders no model options section', (

@@ -234,18 +234,21 @@ void main() {
       expect(c.wholeFileAvailable, isFalse);
     });
 
-    test('a document that grows past the cap auto-disables whole-file mode', () {
-      writeConfig({});
-      final c = makeController()..setText('Small.');
-      c.sendWholeFile = true;
-      expect(c.sendWholeFile, isTrue);
+    test(
+      'a document that grows past the cap auto-disables whole-file mode',
+      () {
+        writeConfig({});
+        final c = makeController()..setText('Small.');
+        c.sendWholeFile = true;
+        expect(c.sendWholeFile, isTrue);
 
-      // Growing past the cap clears the toggle so no giant single segment can
-      // be scheduled behind a hidden switch.
-      c.setText(List.filled(maxWholeFileLength + 1, 'x').join());
-      expect(c.sendWholeFile, isFalse);
-      expect(c.plannedSegments.single, hasLength(maxWholeFileLength + 1));
-    });
+        // Growing past the cap clears the toggle so no giant single segment can
+        // be scheduled behind a hidden switch.
+        c.setText(List.filled(maxWholeFileLength + 1, 'x').join());
+        expect(c.sendWholeFile, isFalse);
+        expect(c.plannedSegments.single, hasLength(maxWholeFileLength + 1));
+      },
+    );
 
     test('empty text in whole-file mode plans no segments', () {
       writeConfig({});
@@ -881,7 +884,6 @@ void main() {
       c.accent = 'x';
       c.style = 'y';
       c.passagePrefix = 'z';
-      c.useCalmTag = true;
       c.minWords = 10;
       c.sampleLen = 2;
       c.outDir = 'out';
@@ -890,7 +892,6 @@ void main() {
       expect(c.accent, 'x');
       expect(c.style, 'y');
       expect(c.passagePrefix, 'z');
-      expect(c.useCalmTag, isTrue);
       expect(c.minWords, 10);
       expect(c.sampleLen, 2);
       expect(c.outDir, 'out');
