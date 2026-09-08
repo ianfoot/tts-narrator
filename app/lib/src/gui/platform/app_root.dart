@@ -9,6 +9,7 @@ import '../controller/app_controller.dart';
 import '../editor/editor_screen.dart';
 import '../menu/macos_menu.dart';
 import '../narration/narration_screen.dart';
+import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart';
 
 /// Cross-platform app root: a [CupertinoApp] on macOS, a [MaterialApp]
@@ -65,7 +66,7 @@ class _AppRootState extends State<AppRoot> {
   }
 
   Future<String?> _pickSaveLocation() async {
-    const group = XTypeGroup(label: 'Text', extensions: ['txt']);
+    const group = XTypeGroup(label: TextTokens.app_fileTypeGroup, extensions: ['txt']);
     final location = await getSaveLocation(
       acceptedTypeGroups: const [group],
       suggestedName: widget.controller.documentName,
@@ -76,7 +77,7 @@ class _AppRootState extends State<AppRoot> {
   /// Opens the native directory picker for the output destination; leaves the
   /// current directory unchanged when cancelled.
   Future<void> _openDocument() async {
-    const group = XTypeGroup(label: 'Text', extensions: ['txt']);
+    const group = XTypeGroup(label: TextTokens.app_fileTypeGroup, extensions: ['txt']);
     final file = await openFile(acceptedTypeGroups: const [group]);
     if (file == null) return;
     try {
@@ -144,7 +145,7 @@ class _AppRootState extends State<AppRoot> {
             dark ? Brightness.dark : Brightness.light,
           );
           return CupertinoApp(
-            title: 'TTS Narrator',
+            title: TextTokens.app_title,
             navigatorKey: _navigatorKey,
             debugShowCheckedModeBanner: false,
             theme: CupertinoThemeData(
@@ -168,7 +169,7 @@ class _AppRootState extends State<AppRoot> {
         final light = _materialTheme(Brightness.light);
         final dark = _materialTheme(Brightness.dark);
         return MaterialApp(
-          title: 'TTS Narrator',
+          title: TextTokens.app_title,
           navigatorKey: _navigatorKey,
           debugShowCheckedModeBanner: false,
           theme: light,

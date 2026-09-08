@@ -10,6 +10,7 @@ import '../platform/widgets/platform_segmented.dart';
 import '../platform/widgets/platform_slider.dart';
 import '../platform/widgets/platform_switch.dart';
 import '../platform/widgets/platform_text_field.dart';
+import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart';
 
 /// Left-side settings rail beside the editor: model & voice, styling, and run
@@ -50,7 +51,14 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// `alias — id` format.
   List<(String, String)> get _modelItems => [
     for (final p in effectiveModels(_controller.voiceConfig))
-      (p.alias, p.displayName ?? '${p.alias} — ${p.id}'),
+      (
+        p.alias,
+        p.displayName ??
+            fillTextTemplate(
+              TextTokens.gui_settings_modelDisplayFallback,
+              {'alias': p.alias, 'id': p.id},
+            ),
+      ),
   ];
 
   List<(String, String)> get _voiceItems => _controller.voiceItems;
@@ -212,7 +220,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
       child: Text(
-        'Settings',
+        TextTokens.gui_settings_header,
         style: _tokens.typography.headerSemibold.copyWith(
           color: _tokens.colors.accentPrimary,
         ),
@@ -222,27 +230,27 @@ class _SettingsPanelState extends State<SettingsPanel> {
 
   Widget _buildModelVoiceSection() {
     return PlatformSection(
-      title: 'Model & voice',
+      title: TextTokens.gui_settings_modelVoiceSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _label('Model'),
+          _label(TextTokens.gui_settings_modelLabel),
           PlatformDropdown<String>(
             key: const Key('modelDropdown'),
             value: _controller.modelAlias,
             items: _modelItems,
             onChanged: (alias) => _controller.changeModel(alias),
           ),
-          _label('Voice alias'),
+          _label(TextTokens.gui_settings_voiceAliasLabel),
           if (_controller.hasGenderTags) ...[
             const SizedBox(height: 12),
             PlatformSegmentedControl<VoiceGender?>(
               key: const Key('genderControl'),
               value: _controller.voiceGenderFilter,
               items: const [
-                (null, 'Any'),
-                (VoiceGender.female, 'Female'),
-                (VoiceGender.male, 'Male'),
+                (null, TextTokens.gui_settings_genderAny),
+                (VoiceGender.female, TextTokens.gui_settings_genderFemale),
+                (VoiceGender.male, TextTokens.gui_settings_genderMale),
               ],
               onChanged: (g) => _controller.voiceGenderFilter = g,
             ),
@@ -252,20 +260,20 @@ class _SettingsPanelState extends State<SettingsPanel> {
             key: const Key('voiceDropdown'),
             value: _selectedVoiceLabel,
             items: _voiceItems,
-            hint: 'Select a Voice...',
+            hint: TextTokens.gui_settings_selectVoiceHint,
             onChanged: (label) => _controller.applyVoiceLabel(label),
           ),
           PlatformDisclosure(
             key: const Key('voiceAdvancedDisclosure'),
-            label: 'Advanced Voice ID',
+            label: TextTokens.gui_settings_advancedVoiceId,
             expanded: _voiceRawExpanded,
-            caption: 'Overrides selected alias',
+            caption: TextTokens.gui_settings_overridesSelectedAlias,
             onToggle: (value) => setState(() => _voiceRawExpanded = value),
             child: PlatformTextField(
               key: const Key('voiceRawField'),
               controller: _voiceRaw,
               onChanged: _onVoiceRawChanged,
-              hintText: 'free-form id or provider voice',
+              hintText: TextTokens.gui_settings_freeFormVoiceHint,
             ),
           ),
         ],
@@ -299,7 +307,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
         .toList();
     if (options.isEmpty) return const SizedBox.shrink();
     return PlatformSection(
-      title: 'Model options',
+      title: TextTokens.gui_settings_modelOptionsSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [for (final option in options) _buildModelOption(option)],
@@ -345,9 +353,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 key: const Key('genderOptionSegmented'),
                 value: g,
                 items: const [
-                  (null, 'Any'),
-                  (VoiceGender.female, 'Female'),
-                  (VoiceGender.male, 'Male'),
+                  (null, TextTokens.gui_settings_genderAny),
+                  (VoiceGender.female, TextTokens.gui_settings_genderFemale),
+                  (VoiceGender.male, TextTokens.gui_settings_genderMale),
                 ],
                 onChanged: (v) => _controller.voiceGenderFilter = v,
               ),
@@ -414,7 +422,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
 
   Widget _buildRunSection() {
     return PlatformSection(
-      title: 'Run',
+      title: TextTokens.gui_settings_runSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -423,7 +431,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
               padding: const EdgeInsets.only(top: 12),
               child: Row(
                 children: [
-                  Expanded(child: _controlLabel('Send whole file')),
+                  Expanded(child: _controlLabel(TextTokens.gui_settings_sendWholeFile)),
                   PlatformSwitch(
                     key: const Key('wholeFileSwitch'),
                     value: _controller.sendWholeFile,
@@ -433,7 +441,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
               ),
             ),
           if (!_controller.sendWholeFile) ...[
-            _label('Min words per segment'),
+            _label(TextTokens.gui_settings_minWordsLabel),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -469,7 +477,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
             padding: const EdgeInsets.only(top: 12),
             child: Row(
               children: [
-                Expanded(child: _controlLabel('Sample mode')),
+                Expanded(child: _controlLabel(TextTokens.gui_settings_sampleMode)),
                 PlatformSwitch(
                   key: const Key('sampleSwitch'),
                   value: _sampleOn,
@@ -485,7 +493,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Narrate first segments only',
+                      TextTokens.gui_settings_narrateFirstSegments,
                       style: _tokens.typography.body.copyWith(
                         fontWeight: FontWeight.w500,
                         color: _tokens.colors.textPrimary,
@@ -510,7 +518,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
             child: Row(
               children: [
                 Expanded(
-                  child: _controlLabel('Skip completed segments (Resume)'),
+                  child: _controlLabel(TextTokens.gui_settings_skipCompletedSegments),
                 ),
                 PlatformSwitch(
                   key: const Key('resumeSwitch'),

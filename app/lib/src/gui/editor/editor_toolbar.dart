@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../controller/app_controller.dart';
 import '../platform/widgets/platform_button.dart';
 import '../platform/widgets/platform_icon_button.dart';
+import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart';
 
 /// Extracted toolbar widget (JSON UI Schema `header_toolbar`) that receives
@@ -80,7 +81,10 @@ class _EditorToolbarState extends State<EditorToolbar> {
     final currentMode = controller.themeMode;
     return PlatformIconButton(
       key: const Key('appearanceToggleButton'),
-      tooltip: 'Appearance: ${_themeModeLabel(currentMode)}',
+      tooltip: fillTextTemplate(
+        TextTokens.gui_editor_toolbar_appearanceTooltip,
+        {'mode': _themeModeLabel(currentMode)},
+      ),
       icon: Icon(switch (currentMode) {
         AppThemeMode.light =>
           _isMac ? CupertinoIcons.sun_max : Icons.light_mode,
@@ -99,15 +103,15 @@ class _EditorToolbarState extends State<EditorToolbar> {
   }
 
   String _themeModeLabel(AppThemeMode mode) => switch (mode) {
-    AppThemeMode.system => 'Auto',
-    AppThemeMode.light => 'Light',
-    AppThemeMode.dark => 'Dark',
+    AppThemeMode.system => TextTokens.gui_editor_toolbar_themeModeAuto,
+    AppThemeMode.light => TextTokens.gui_editor_toolbar_themeModeLight,
+    AppThemeMode.dark => TextTokens.gui_editor_toolbar_themeModeDark,
   };
 
   Widget _buildOutputFolderButton() {
     return PlatformIconButton(
       key: const Key('outDirPickerButton'),
-      tooltip: 'Set output folder (⌘E)',
+      tooltip: TextTokens.gui_editor_toolbar_setOutputFolder,
       icon: Icon(_isMac ? CupertinoIcons.folder_badge_plus : Icons.output),
       onPressed: _pickOutputDirectory,
     );
@@ -118,7 +122,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
   Widget _buildSaveButton() {
     return PlatformIconButton(
       key: const Key('editorSaveButton'),
-      tooltip: 'Save (⌘S)',
+      tooltip: TextTokens.gui_editor_toolbar_save,
       icon: Icon(
         _isMac ? CupertinoIcons.square_arrow_down : Icons.save_outlined,
       ),
@@ -157,7 +161,9 @@ class _EditorToolbarState extends State<EditorToolbar> {
   Widget? _buildFullPlayButton(AppTokens tokens) {
     if (controller.completedAudioPath == null) return null;
     final colors = tokens.colors;
-    final label = widget.playingFull ? 'Stop' : 'Play Full';
+    final label = widget.playingFull
+        ? TextTokens.gui_editor_toolbar_stop
+        : TextTokens.gui_editor_toolbar_playFull;
     final btnIcon = Icon(
       _isMac
           ? (widget.playingFull
@@ -216,7 +222,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
   Widget _buildCleanupButton() {
     return PlatformIconButton(
       key: const Key('editorCleanupButton'),
-      tooltip: 'Clean up segments',
+      tooltip: TextTokens.gui_editor_toolbar_cleanupSegments,
       icon: Icon(_isMac ? CupertinoIcons.trash : Icons.delete_outline),
       onPressed: widget.onCleanupSegments,
     );
@@ -224,7 +230,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
 
   Widget _buildNarrateButton(AppTokens tokens) {
     return Tooltip(
-      message: 'Narrate (⌘N)',
+      message: TextTokens.gui_editor_toolbar_narrateShortcut,
       child: PlatformButton(
         key: const Key('editorNarrateButton'),
         onPressed: () {
@@ -242,7 +248,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: [const Text('Narrate')],
+          children: [const Text(TextTokens.gui_editor_toolbar_narrate)],
         ),
       ),
     );
@@ -269,7 +275,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
             children: [
               PlatformIconButton(
                 key: const Key('railToggleButton'),
-                tooltip: 'Show / hide settings',
+                tooltip: TextTokens.gui_editor_toolbar_showHideSettings,
                 icon: Icon(
                   _isMac
                       ? CupertinoIcons.sidebar_left
@@ -284,7 +290,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
               const SizedBox(width: 6),
               PlatformIconButton(
                 key: const Key('editorOpenButton'),
-                tooltip: 'Open text file (⌘O)',
+                tooltip: TextTokens.gui_editor_toolbar_openTextFile,
                 icon: Icon(_isMac ? CupertinoIcons.folder : Icons.folder_open),
                 onPressed: () => controller.onOpen?.call(),
               ),

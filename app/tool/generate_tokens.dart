@@ -1,20 +1,27 @@
-// Codegen for the TTS Narrator design tokens.
+// Codegen for the TTS Narrator design tokens + text tokens.
 //
-// Reads `app/assets/theme/tokens.json` and writes
-// `app/lib/src/gui/theme/app_tokens.g.dart` with deterministic output so
-// trivial JSON edits produce minimal diffs.
+// Reads `app/assets/theme/tokens.json` (design) and
+// `app/assets/text_tokens.json` (user-facing strings) and writes
+// `app/lib/src/gui/theme/app_tokens.g.dart` / `app_text_tokens.g.dart`
+// with deterministic output so trivial JSON edits produce minimal diffs.
 //
 // Run with:  dart run tool/generate_tokens.dart
 //
-// The generated file is committed; CI re-runs this script and asserts
-// the result is byte-identical (see .github/workflows/tokens.yml and
-// test/theme/codegen_test.dart).
+// The generated files are committed; CI re-runs this script and asserts
+// the result is byte-identical (see test/theme/codegen_test.dart).
 
 import 'dart:convert';
 import 'dart:io';
 
 void main(List<String> args) {
   final packageRoot = _packageRoot();
+  _generateDesignTokens(packageRoot);
+  _generateTextTokens(packageRoot);
+}
+
+/// Reads `app/assets/theme/tokens.json` and writes
+/// `app/lib/src/gui/theme/app_tokens.g.dart`.
+void _generateDesignTokens(String packageRoot) {
   final jsonPath = '$packageRoot/assets/theme/tokens.json';
   final outPath = '$packageRoot/lib/src/gui/theme/app_tokens.g.dart';
 
@@ -37,6 +44,114 @@ void main(List<String> args) {
   outFile.parent.createSync(recursive: true);
   outFile.writeAsStringSync(rendered);
   stdout.writeln('Wrote $outPath');
+}
+
+/// Reads `app/assets/text_tokens.json` (all user-facing text strings) and
+/// writes `app/lib/src/gui/theme/app_text_tokens.g.dart`: a public
+/// [TextTokens] class with one `static const` per leaf, named by joining the
+/// token's JSON path with `_` (e.g. `cli.output.modelLine` →
+/// `TextTokens.cli_output_modelLine`).
+void _generateTextTokens(String packageRoot) {
+  final jsonPath = '$packageRoot/assets/text_tokens.json';
+  final outPath = '$packageRoot/lib/src/gui/theme/app_text_tokens.g.dart';
+
+  final jsonFile = File(jsonPath);
+  if (!jsonFile.existsSync()) {
+    stderr.writeln('Missing $jsonPath');
+    exit(1);
+  }
+
+  final dynamic raw = jsonDecode(jsonFile.readAsStringSync());
+  if (raw is! Map<String, dynamic>) {
+    stderr.writeln('text_tokens.json must be a JSON object at the top level.');
+    exit(1);
+  }
+
+  final outFile = File(outPath);
+  outFile.parent.createSync(recursive: true);
+  outFile.writeAsStringSync(renderTextTokens(raw));
+  stdout.writeln('Wrote $outPath');
+}
+
+/// Renders `app_text_tokens.g.dart` from the parsed [json] text-token tree.
+///
+/// Each leaf value (strings, and bare ints like `defaults.minWords`) becomes a
+/// `static const` on the public `TextTokens` class. String literals are
+/// escaped for Dart: backslashes, quotes, and newlines/tabs are escaped
+/// normally, and `$` is emitted as `\u0024` so `${...}` / `$name` template
+/// placeholders survive compilation verbatim (interpolation happens when the
+/// caller formats the token at runtime).
+String renderTextTokens(Map<String, dynamic> json) {
+  final b = StringBuffer();
+  b.writeln('// GENERATED CODE — do not edit by hand.');
+  b.writeln('// Source: app/assets/text_tokens.json');
+  b.writeln('// Regenerate with: dart run tool/generate_tokens.dart');
+  b.writeln();
+  b.writeln('part of \'app_text_tokens.dart\';');
+  b.writeln();
+  b.writeln('/// All user-facing text strings, one `static const` per leaf of');
+  b.writeln('/// `app/assets/text_tokens.json`, keyed by its JSON path with');
+  b.writeln('/// `_` separators (e.g. `gui.menu.narrate` →');
+  b.writeln('/// `TextTokens.gui_menu_narrate`).');
+  b.writeln('final class TextTokens {');
+  b.writeln('  TextTokens._();');
+  for (final (key, value) in _flatten(json, '')) {
+    if (value is String) {
+      b.writeln("  static const String $key = '${_escapeDart(value)}';");
+    } else if (value is int) {
+      b.writeln('  static const int $key = $value;');
+    } else {
+      throw FormatException(
+        'text_tokens.json leaf "$key" must be a string or an int.',
+      );
+    }
+  }
+  b.writeln('}');
+  return b.toString();
+}
+
+/// Flattens the nested [json] tree into a list of `(dottedKey, leafValue)`,
+/// walking maps in sorted key order so the emitted output is deterministic.
+/// A leaf is any non-map value.
+List<(String, Object?)> _flatten(Map<String, dynamic> json, String prefix) {
+  final out = <(String, Object?)>[];
+  for (final key in json.keys.toList()..sort()) {
+    final value = json[key];
+    final path = prefix.isEmpty ? key : '$prefix.$key';
+    if (value is Map<String, dynamic>) {
+      out.addAll(_flatten(value, path));
+    } else {
+      out.add((path.replaceAll('.', '_'), value));
+    }
+  }
+  return out;
+}
+
+/// Escapes [s] for a single-quoted Dart string literal. `$` becomes `\u0024`
+/// so `${...}` / `$name` placeholders stay literal in the generated source;
+/// backslashes, quotes, and control characters are escaped normally.
+String _escapeDart(String s) {
+  final b = StringBuffer();
+  for (var i = 0; i < s.length; i++) {
+    final c = s[i];
+    switch (c) {
+      case '\\':
+        b.write('\\\\');
+      case "'":
+        b.write("\\'");
+      case '\n':
+        b.write('\\n');
+      case '\r':
+        b.write('\\r');
+      case '\t':
+        b.write('\\t');
+      case r'$':
+        b.write('\\u0024');
+      default:
+        b.write(c);
+    }
+  }
+  return b.toString();
 }
 
 /// The "package root" for the codegen: the directory containing `assets/`
