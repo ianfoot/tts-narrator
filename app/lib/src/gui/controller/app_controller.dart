@@ -1,11 +1,11 @@
-import 'dart:io';
-
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'config_loader.dart';
+import 'document_controller.dart';
+import 'theme_controller.dart';
 import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart' show AppThemeMode;
 
@@ -16,6 +16,10 @@ import '../theme/app_tokens.dart' show AppThemeMode;
 /// The controller holds no View state; every screen derives what it needs from
 /// here and subscribes via [ChangeNotifier]. Model/voice handling reuses the
 /// core's config resolution so the GUI and CLI agree on defaults.
+///
+/// Document management lives in [DocumentController] and the appearance in
+/// [ThemeController]; this controller forwards their surfaces and re-broadcasts
+/// their notifications so callers keep a single change stream.
 class AppController extends ChangeNotifier {
   AppController({VoiceConfigLoader? loader, SharedPreferences? prefs})
     : _prefs = prefs,
@@ -29,6 +33,8 @@ class AppController extends ChangeNotifier {
     if (savedOutDir != null && savedOutDir.trim().isNotEmpty) {
       _outDir = savedOutDir;
     }
+    _document.addListener(_onDocumentChanged);
+    _theme.addListener(_onThemeChanged);
   }
 
   /// Preferences key holding the last output folder the user picked.
@@ -38,6 +44,12 @@ class AppController extends ChangeNotifier {
   final SharedPreferences? _prefs;
 
   final VoiceConfigLoader _loader;
+
+  /// The in-memory document (text, path, dirty flag, save/load surface).
+  final DocumentController _document = DocumentController();
+
+  /// The appearance state and its notifier.
+  final ThemeController _theme = ThemeController();
 
   /// The preset default model (fish's compiled bootstrap unless `default_model`
   /// in the config names another); [changeModel] moves to other configured
@@ -251,8 +263,6 @@ class AppController extends ChangeNotifier {
 
   // --- Appearance ----------------------------------------------------
 
-  AppThemeMode _themeMode = AppThemeMode.system;
-
   /// The user's appearance choice ([AppThemeMode.system] follows the OS).
   /// Session-only; defaults to the OS setting so the app boots as before.
   ///
@@ -260,24 +270,20 @@ class AppController extends ChangeNotifier {
   /// theme resolution) can subscribe without rebuilding on every other
   /// controller write; the [ChangeNotifier] notification is still fired for
   /// widgets that display the current label.
-  AppThemeMode get themeMode => _themeMode;
+  AppThemeMode get themeMode => _theme.themeMode;
 
   /// Fires when [themeMode] changes. Subscribe here (not the whole
   /// controller) for widgets that depend only on the appearance.
-  ValueNotifier<AppThemeMode> get themeNotifier => _themeNotifier;
-  final ValueNotifier<AppThemeMode> _themeNotifier =
-      ValueNotifier<AppThemeMode>(AppThemeMode.system);
+  ValueNotifier<AppThemeMode> get themeNotifier => _theme.themeNotifier;
 
   set themeMode(AppThemeMode value) {
-    if (value == _themeMode) return;
-    _themeMode = value;
-    _themeNotifier.value = value;
-    notifyListeners();
+    _theme.themeMode = value;
   }
 
   @override
   void dispose() {
-    _themeNotifier.dispose();
+    _document.dispose();
+    _theme.dispose();
     super.dispose();
   }
 
@@ -366,7 +372,7 @@ class AppController extends ChangeNotifier {
   /// The current document normalized for whole-file narration (line endings
   /// normalized, trimmed), mirroring the core's plan-time transform.
   String get _wholeFileText =>
-      _text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
+      _document.text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
 
   /// Whether the current document is small enough for whole-file narration
   /// (see `maxWholeFileLength` in the core). The settings rail hides the "Send
@@ -440,8 +446,8 @@ class AppController extends ChangeNotifier {
           : (resolvedLabel != id ? resolvedLabel : null);
     }
     return NarrationConfig(
-      inputPath: _documentPath ?? TextTokens.app_untitledDocument,
-      sourceText: _text,
+      inputPath: _document.documentPath ?? TextTokens.app_untitledDocument,
+      sourceText: _document.text,
       profile: p,
       voice: voiceId,
       voiceLabel: label,
@@ -463,111 +469,81 @@ class AppController extends ChangeNotifier {
 
   // --- Document ------------------------------------------------------
 
-  String _text = '';
-  String? _documentPath;
-  bool _dirty = false;
-
-  String get text => _text;
+  /// The in-memory document text (typed/pasted content lives here only; a
+  /// backing file is not required). Forwarded to [DocumentController].
+  String get text => _document.text;
 
   /// Absolute path of the open document, or null for an in-memory `untitled`
   /// document.
-  String? get documentPath => _documentPath;
+  String? get documentPath => _document.documentPath;
 
   /// Whether the document has unsaved edits (load sets false; every text edit
   /// sets it true).
-  bool get dirty => _dirty;
+  bool get dirty => _document.dirty;
 
-  String get documentName => _documentPath == null
-      ? TextTokens.app_untitledDocument
-      : _documentPath!.split(Platform.pathSeparator).last;
+  String get documentName => _document.documentName;
 
   /// Replaces the document text (typing/paste path). Marks the document dirty.
-  void setText(String value) {
-    if (value == _text) return;
-    _text = value;
-    _dirty = true;
-    _clearWholeFileIfTooLarge();
-    notifyListeners();
-  }
+  void setText(String value) => _document.setText(value);
 
   /// Loads a `.txt` document from [path], replacing the in-memory text. Clears
   /// the dirty flag. Throws a [FileSystemException] when the file is missing.
-  void loadFromFile(String path) {
-    final file = File(path);
-    if (!file.existsSync()) {
-      throw FileSystemException(
-        TextTokens.gui_controller_errors_cannotOpenTextFile,
-        path,
-      );
-    }
-    _text = file.readAsStringSync();
-    _documentPath = file.absolute.path;
-    _dirty = false;
-    _clearWholeFileIfTooLarge();
-    notifyListeners();
-  }
+  void loadFromFile(String path) => _document.loadFromFile(path);
 
   /// Whole-file narration is only offered up to `maxWholeFileLength` chars; a
-  /// larger document would be an unbounded single TTS call. Called from
-  /// [setText]/[loadFromFile] so a document that grows past the cap (or is
-  /// loaded oversized) drops the toggle instead of leaving it silently "on"
-  /// and planning a giant segment.
+  /// larger document would be an unbounded single TTS call. Runs from
+  /// [_onDocumentChanged] so a document that grows past the cap (or is loaded
+  /// oversized) drops the toggle instead of leaving it silently "on" and
+  /// planning a giant segment.
   void _clearWholeFileIfTooLarge() {
     if (_sendWholeFile && !wholeFileAvailable) {
       _sendWholeFile = false;
     }
   }
 
+  /// Forwards a [DocumentController] notification: re-checks the whole-file
+  /// cap, then re-broadcasts so callers keep a single change stream.
+  void _onDocumentChanged() {
+    _clearWholeFileIfTooLarge();
+    notifyListeners();
+  }
+
+  /// Forwards a [ThemeController] notification.
+  void _onThemeChanged() {
+    notifyListeners();
+  }
+
   /// Resolves a destination for Save As (and the first save of an untitled
   /// document); returns null when the user cancels. Wired by the platform
   /// shell to the native save picker — platform-neutral so Linux/Windows bind
   /// their own picker.
-  Future<String?> Function()? saveLocationPicker;
+  Future<String?> Function()? get saveLocationPicker =>
+      _document.saveLocationPicker;
+
+  set saveLocationPicker(Future<String?> Function()? value) {
+    _document.saveLocationPicker = value;
+  }
 
   /// Writes [text] to [path] and adopts it as the document: the dirty flag
   /// clears and future saves keep that path. Throws a [FileSystemException]
   /// when the file cannot be written.
-  void saveTo(String path) {
-    File(path).writeAsStringSync(_text);
-    _documentPath = File(path).absolute.path;
-    _dirty = false;
-    notifyListeners();
-  }
+  void saveTo(String path) => _document.saveTo(path);
 
   /// Saves to the current document path, or prompts (via [saveAs]) when the
   /// document has not been saved yet. Swallows write errors the way the open
   /// path does.
-  Future<void> save() async {
-    if (_documentPath == null) {
-      await saveAs();
-      return;
-    }
-    try {
-      saveTo(_documentPath!);
-    } on FileSystemException {
-      // Ignore write failures; the document stays dirty.
-    }
-  }
+  Future<void> save() => _document.save();
 
   /// Prompts for a save location and writes the text there, adopting the new
   /// path. The old path stays intact until the user confirms a location.
-  Future<void> saveAs() async {
-    final path = await saveLocationPicker?.call();
-    if (path == null) return;
-    try {
-      saveTo(path);
-    } on FileSystemException {
-      // Ignore write failures; the document stays dirty.
-    }
-  }
+  Future<void> saveAs() => _document.saveAs();
 
   // --- Live document stats / estimate --------------------------------
 
   /// Non-whitespace words in the document.
-  int get wordCount =>
-      _text.trim().isEmpty ? 0 : _text.trim().split(RegExp(r'\s+')).length;
+  int get wordCount => _document.wordCount;
 
-  int get charCount => _text.length;
+  int get charCount => _document.charCount;
 
   /// The segment plan for the current text (min-word merge + length split).
   /// When [sendWholeFile] is on, the whole text is a single segment (empty
@@ -577,7 +553,7 @@ class AppController extends ChangeNotifier {
       final whole = _wholeFileText;
       return whole.isEmpty ? const [] : [whole];
     }
-    return segmentText(_text, minWords: minWords);
+    return segmentText(_document.text, minWords: minWords);
   }
 
   double get estimatedMinutes => estimateMinutes(plannedSegments);
@@ -853,7 +829,7 @@ class AppController extends ChangeNotifier {
   /// blocked (empty text / already running). The Narrate entrypoints guard on
   /// this before dispatching to [onNarrate].
   String? narrateBlockReason() {
-    if (_text.trim().isEmpty) {
+    if (_document.text.trim().isEmpty) {
       return TextTokens.gui_controller_blockReasons_emptyText;
     }
     if (_narrating) {
