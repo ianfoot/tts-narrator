@@ -1,0 +1,250 @@
+{
+  "app": {
+    "title": "TTS Narrator",
+    "untitledDocument": "untitled.txt",
+    "fileTypeGroup": "Text"
+  },
+  "defaults": {
+    "accent": "southern British English, neutral and clear",
+    "style": "warm, composed, restrained, literary",
+    "passagePrefix": "Narrate this passage for an audiobook. You are a warm, composed female narrator.",
+    "outDir": "output",
+    "minWords": 30
+  },
+  "prompt": {
+    "calmTag": "[calm] ",
+    "accentSentence": " Accent: ${accent}.",
+    "styleSentence": " Style: ${style}.",
+    "readInstruction": " Read the story exactly as written: "
+  },
+  "cli": {
+    "usage": "Usage: tts-narrator --input <path> [options]\n\nRequired:\n  --input <path>            Path to a text file, or a directory of .txt files\n                            (top-level, sorted, hidden files skipped) to narrate\n                            as a batch.\n\nOptions:\n  --list-voices [model]     List voices/aliases for a model (optional; default\n                            lists all models) and exit. Also honors --model and\n                            --config.\n  --model <alias|id>        TTS model: fish (default, free), gemini, or kokoro,\n                            or a full model id. Controls prompt styling and\n                            output format.\n  --provider <id>           Override the provider serving the model. Unknown\n                            ids list the registered providers.\n  --voice <name>            Voice: a friendly alias or a raw provider id.\n                            Accepts any value (no validation) so you can test\n                            voices. Defaults to the config \"defaults\" entry, or\n                            fish's free \"British Female Narrator\" when none.\n  --accent <text>           Accent description folded into the prompt\n                            (gemini only; ignored by kokoro).\n  --style <text>            Style/register description in prompt (gemini only;\n                            ignored by kokoro).\n  --tags on|off             Prepend a [calm] tag (gemini only; default: off).\n  --passage-prefix <text>   Pooled preamble applied to each paragraph.\n  --min-words <n>           Merge paragraphs shorter than n words into the next\n                            (default: 30).\n  --send-whole-file         Narrate the whole file in a single TTS call instead\n                            of segmenting it (--min-words is ignored; capped at\n                            60,000 characters).\n  --sample-len <n>          Narrate only the first n paragraphs.\n  --dry-run                 Print the segment plan + cost estimate and exit\n                            (no API call).\n  --resume                  Skip segments whose prompt+fingerprint already exist\n                            in the output manifest (re-run safe; no re-billing).\n  --out <dir>               Output directory (default: \"output/<input>\").\n  --config <path>           Voice config directory (default: ~/.config/tts-\n                            narrator/). Holds config.json (default model +\n                            providers) + one <alias>.json per model (provider,\n                            aliases, defaults, pricing).\n  --api-key <key>           Opaque \"api_key\" setting merged into the selected\n                            provider's settings (overrides the config).\n\nOutput goes to <out>/<input-stem>_<nn>.<ext> — gemini writes 24 kHz PCM WAVs,\nkokoro and fish write MP3s.\nExample:\n  tts-narrator --input /path/to/text.txt --voice Charon --sample-len 1\n  tts-narrator --input /path/to/text.txt --model kokoro --voice Emma\n  tts-narrator --input /path/to/text.txt --model fish\n(From source: cd packages/cli && fvm dart run bin/main.dart -- ...)",
+    "args": {
+      "errors": {
+        "missingValue": "Missing value for $flag.",
+        "sampleLenInvalid": "--sample-len must be a positive integer, got \"$v\".",
+        "minWordsInvalid": "--min-words must be a positive integer, got \"$v\".",
+        "tagsInvalid": "--tags must be on or off, got \"$v\".",
+        "unknownFlag": "Unknown flag: $arg",
+        "unexpectedArgument": "Unexpected positional argument: $arg",
+        "inputRequired": "--input <path> is required (no default filename).",
+        "configDirNotFound": "Voice config directory not found: \"$cfgDir\".",
+        "unknownModel": "Unknown model \"$modelArg\". Available: $aliases (or pass a full model id).",
+        "inputNotFound": "Input not found: \"$inputPath\".",
+        "noTxtFiles": "No .txt files found in \"$inputPath\"."
+      },
+      "listing": {
+        "modelHeader": "${p.alias} — ${p.id} (${p.format})",
+        "defaultVoice": "  default voice:  $shown",
+        "defaultVoiceNone": "  default voice:  none configured",
+        "aliasesLine": "  aliases:        $shown",
+        "voicesNone": "  voices:         none configured — add \"${p.alias}\" aliases in the voice config"
+      }
+    },
+    "output": {
+      "errorPrefix": "Error: $e",
+      "warningPrefix": "Warning: $w",
+      "modelLine": "Model:  ${config.profile.alias} (${config.profile.id})",
+      "voiceLine": "Voice:  $label",
+      "providerLine": "Provider: ${config.profile.provider}",
+      "formatLine": "Format: ${config.profile.format}",
+      "inputLine": "Input:  ${inputs.length == 1 ? inputs.first : '${inputs.length} files (${config.inputPath})'}",
+      "tagsLine": "Tags:   ${config.useCalmTag ? 'on ([calm])' : 'off'}",
+      "tagsOn": "on ([calm])",
+      "tagsOff": "off",
+      "modeLine": "Mode:   ${config.sendWholeFile ? 'whole file (single call)' : 'segmented'}",
+      "modeWholeFile": "whole file (single call)",
+      "modeSegmented": "segmented",
+      "resumeLine": "Resume: on (skips segments matching the existing manifest)",
+      "noteNoPromptStyling": "Note: ${config.profile.alias} does not support prompt styling — --accent/--style/--tags are ignored.",
+      "wavKind": "WAVs",
+      "mp3Kind": "MP3s",
+      "wavExtension": "wav",
+      "mp3Extension": "mp3",
+      "segmentHeader": "\n== $stem == (${segments.length} segment(s))",
+      "segmentHeaderSimple": "\n== $stem ==",
+      "segmentEntry": "${i + 1}. ($words words) ${preview.split('\n').first}",
+      "outputLine": "  Output: ${outputDirPath(fileConfig)}${Platform.pathSeparator}${stem}_${'1'.padLeft(pad, '0')}.$extension … ${stem}_${segments.length.toString().padLeft(pad, '0')}.$extension + manifest.json",
+      "batchTotal": "\nBatch total: ${inputs.length} file(s).",
+      "estimatedDurationCost": "Estimated duration: ${totalMinutes.toStringAsFixed(1)} min (~${(totalMinutes * 60).round()} s). Estimated cost: ${formatCostUsd(totalCost)}.",
+      "estimatedDurationCostShort": "  Estimated duration: ${minutes.toStringAsFixed(1)} min. Estimated cost: ${formatCostUsd(estimate)}.",
+      "dryRunFailed": "Dry run failed: $e",
+      "narrationFailed": "Narration failed: $e",
+      "progressLine": "  [${index + 1}/$total]${resumed ? ' (resumed)' : ''} ${preview.split('\n').first}",
+      "resumedSuffix": " (resumed)",
+      "doneLine": "  Done. $kind + manifest.json written to ${outputDirPath(fileConfig)}/.",
+      "combinedTrackLine": "  Combined track: ${outputDirPath(fileConfig)}${Platform.pathSeparator}${stem}_full.${fileConfig.profile.format == 'pcm' ? 'wav' : 'mp3'}",
+      "batchComplete": "Batch complete: ${inputs.length} file(s) narrated.",
+      "voicesHeader": "Voices for ${model?.alias ?? 'all models'}:"
+    }
+  },
+  "core": {
+    "modelProfiles": {
+      "fishDisplayName": "Fish Audio S2.1 (Free)",
+      "britishFemaleNarrator": "British Female Narrator"
+    },
+    "errors": {
+      "noParagraphs": "No paragraphs found in \"${config.inputPath}\".",
+      "wholeFileTooLong": "Document is ${whole.length} characters; whole-file narration is limited to $maxWholeFileLength characters. Turn off \"Send whole file\" to narrate it as segments.",
+      "missingSegment": "Segment audio is missing.",
+      "notWav": "Not a WAV file (bad header).",
+      "truncatedWav": "Not a WAV file (truncated chunk).",
+      "noDataChunk": "Not a WAV file (no data chunk).",
+      "skippedModel": "Skipped model \"$alias\": ${e.message}",
+      "defaultModelFallback": "default_model \"$configuredDefault\" is not a configured model; falling back to the compiled default.",
+      "defaultVoiceNotConfigured": "Default voice \"$configured\" for \"${model.alias}\" is not a configured voice or raw id.",
+      "noDefaultVoice": "No default voice configured for \"${model.alias}\". Set \"defaults\" in the voice config, or pass --voice / pick one in the app.",
+      "invalidTopLevel": "Invalid voice config \"$path\": top-level value must be a JSON object",
+      "defaultModelType": "Invalid voice config \"$path\": \"default_model\" must be a string",
+      "providersType": "Invalid voice config \"$path\": \"providers.$id\" must be an object",
+      "providerValueType": "Invalid voice config \"$path\": \"providers.$id.$key\" must be a string",
+      "modelMustBeObject": "must be a JSON object",
+      "modelNeedsId": "needs a non-empty \"id\"",
+      "modelFormat": "\"format\" must be a string",
+      "modelSampleRate": "\"sample_rate\" must be a number",
+      "modelPromptStyle": "\"prompt_style\" must be a bool",
+      "modelSendsVoice": "\"sends_voice\" must be a bool",
+      "modelNeedsProvider": "needs a non-empty \"provider\"",
+      "modelDisplayName": "\"display_name\" must be a string",
+      "modelDefaultVoice": "\"default_voice\" must be a non-empty string",
+      "modelPricing": "\"pricing\" must be an object",
+      "modelVoices": "\"voices\" must be an object",
+      "invalidConfigRead": "Invalid voice config \"$path\": ${e.message}",
+      "cannotReadConfig": "Cannot read voice config \"$path\": $e",
+      "cannotWriteConfig": "Cannot write voice config \"$configDir\": $e",
+      "unknownProvider": "Unknown provider \"$id\". Registered: ${registered.isEmpty ? '(none)' : registered.join(', ')}.",
+      "registeredNone": "(none)",
+      "missingEnvVar": "Missing environment variable \"$name\" referenced by provider setting \"$key\"."
+    },
+    "cost": {
+      "freeLabel": "$0.00 (free)"
+    },
+    "plurals": {
+      "segment": "segment",
+      "segments": "segments",
+      "word": "word",
+      "words": "words",
+      "file": "file",
+      "files": "files"
+    }
+  },
+  "gui": {
+    "controller": {
+      "errors": {
+        "noVoiceSelected": "No voice selected for \"$modelAlias\" — pick an alias or set a default in the voice config.",
+        "cannotOpenTextFile": "Cannot open text file"
+      },
+      "blockReasons": {
+        "emptyText": "Editor text is empty",
+        "alreadyRunning": "Narration is already running."
+      },
+      "genderPhrases": {
+        "female": "female narrator",
+        "male": "male narrator"
+      }
+    },
+    "editor": {
+      "toolbar": {
+        "narrate": "Narrate",
+        "narrateShortcut": "Narrate (⌘N)",
+        "playFull": "Play Full",
+        "stop": "Stop",
+        "appearanceTooltip": "Appearance: $mode",
+        "showHideSettings": "Show / hide settings",
+        "setOutputFolder": "Set output folder (⌘E)",
+        "openTextFile": "Open text file (⌘O)",
+        "save": "Save (⌘S)",
+        "cleanupSegments": "Clean up segments",
+        "themeModeAuto": "Auto",
+        "themeModeLight": "Light",
+        "themeModeDark": "Dark"
+      },
+      "hintText": "Type, paste text, or open a .txt file...",
+      "cannotNarratePrefix": "Cannot narrate: $message",
+      "statusBar": {
+        "wordCharCount": "$words words · $chars characters",
+        "estimate": "$segments $segmentLabel · ~$minutes mins · ~$cost est.",
+        "minutesAbbrev": "mins",
+        "estimateAbbrev": "est."
+      }
+    },
+    "settings": {
+      "header": "Settings",
+      "modelVoiceSection": "Model & voice",
+      "modelLabel": "Model",
+      "voiceAliasLabel": "Voice alias",
+      "advancedVoiceId": "Advanced Voice ID",
+      "overridesSelectedAlias": "Overrides selected alias",
+      "freeFormVoiceHint": "free-form id or provider voice",
+      "selectVoiceHint": "Select a Voice...",
+      "genderAny": "Any",
+      "genderFemale": "Female",
+      "genderMale": "Male",
+      "modelOptionsSection": "Model options",
+      "runSection": "Run",
+      "sendWholeFile": "Send whole file",
+      "minWordsLabel": "Min words per segment",
+      "sampleMode": "Sample mode",
+      "narrateFirstSegments": "Narrate first segments only",
+      "skipCompletedSegments": "Skip completed segments (Resume)",
+      "modelDisplayFallback": "$alias — $id"
+    },
+    "narration": {
+      "backToEditor": "Back to editor",
+      "narratingTitle": "Narrating: $documentName",
+      "summaryPill": "$modelName · $voice | $segments $segmentLabel · ~$minutes mins · ~$cost",
+      "noSegmentsYet": "No segments yet.",
+      "narrationComplete": "Narration complete.",
+      "narrationStopped": "Narration was stopped.",
+      "narrationFailed": "Narration failed: $runError",
+      "segmentLabel": "Segment $segmentNumber",
+      "wordCountSuffix": " · $words $wordWord",
+      "processing": "Processing...",
+      "pending": "Pending",
+      "play": "Play",
+      "stop": "Stop",
+      "resumedTooltip": "Resumed — tap to play",
+      "back": "Back",
+      "cancelRun": "Cancel Run",
+      "confirmCancelTitle": "Cancel active narration run?",
+      "confirmCancelMessage": "Generation stops now; completed clips stay playable in this session."
+    },
+    "menu": {
+      "appMenu": "TTS Narrator",
+      "preferences": "Preferences…",
+      "file": "File",
+      "openText": "Open Text…",
+      "outputFolder": "Output Folder…",
+      "narrate": "Narrate",
+      "save": "Save",
+      "saveAs": "Save As…",
+      "cleanUpSegments": "Clean Up Segments…",
+      "close": "Close",
+      "edit": "Edit",
+      "undo": "Undo",
+      "redo": "Redo",
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select All",
+      "view": "View",
+      "appearance": "Appearance",
+      "themeModeAuto": "Auto",
+      "themeModeLight": "Light",
+      "themeModeDark": "Dark",
+      "toggleSettingsPanel": "Toggle Settings Panel",
+      "window": "Window",
+      "checkmarkPrefix": "✓ "
+    },
+    "cleanup": {
+      "confirmTitle": "Delete segment files?",
+      "confirmMessage": "This deletes the per-segment audio clips. The combined track and the manifest are kept. Deleted segments can't be reused by --resume, so a re-run narrates them again.",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "ok": "OK",
+      "deletedTitle": "Segments deleted",
+      "removedMessage": "Removed $removedCount segment $fileWord.",
+      "cleanupFailedTitle": "Cleanup failed"
+    }
+  }
+}

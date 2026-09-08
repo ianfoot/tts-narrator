@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'config_loader.dart';
+import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart' show AppThemeMode;
 
 /// Central, platform-neutral app state for the TTS Narrator GUI: the open
@@ -203,8 +204,9 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  static const _genderFemalePhrase = 'female narrator';
-  static const _genderMalePhrase = 'male narrator';
+  static const _genderFemalePhrase =
+      TextTokens.gui_controller_genderPhrases_female;
+  static const _genderMalePhrase = TextTokens.gui_controller_genderPhrases_male;
 
   /// Whether [prefix] contains the exact male-phrase form. `female narrator`
   /// already contains `male narrator` as a substring, so a plain
@@ -296,16 +298,15 @@ class AppController extends ChangeNotifier {
 
   // --- Narration settings -------------------------------------------
 
-  String _accent = 'southern British English, neutral and clear';
+  String _accent = TextTokens.defaults_accent;
   bool _useCalmTag = false;
-  int _minWords = 30;
+  int _minWords = TextTokens.defaults_minWords;
   bool _sendWholeFile = false;
   int? _sampleLen;
-  String _outDir = 'output';
+  String _outDir = TextTokens.defaults_outDir;
   bool _resume = false;
-  String _style = 'warm, composed, restrained, literary';
-  String _passagePrefix =
-      'Narrate this passage for an audiobook. You are a warm, composed female narrator.';
+  String _style = TextTokens.defaults_style;
+  String _passagePrefix = TextTokens.defaults_passagePrefix;
 
   String get accent => _accent;
 
@@ -370,8 +371,7 @@ class AppController extends ChangeNotifier {
   /// Whether the current document is small enough for whole-file narration
   /// (see `maxWholeFileLength` in the core). The settings rail hides the "Send
   /// whole file" toggle when false (documents over the cap).
-  bool get wholeFileAvailable =>
-      _wholeFileText.length <= maxWholeFileLength;
+  bool get wholeFileAvailable => _wholeFileText.length <= maxWholeFileLength;
 
   int? get sampleLen => _sampleLen;
 
@@ -425,8 +425,9 @@ class AppController extends ChangeNotifier {
       final def = _defaultVoiceFor(p);
       if (def == null) {
         throw FormatException(
-          'No voice selected for "${p.alias}" — pick an alias or set a '
-          'default in the voice config.',
+          fillTextTemplate(TextTokens.gui_controller_errors_noVoiceSelected, {
+            'modelAlias': p.alias,
+          }),
         );
       }
       voiceId = def.$1;
@@ -439,7 +440,7 @@ class AppController extends ChangeNotifier {
           : (resolvedLabel != id ? resolvedLabel : null);
     }
     return NarrationConfig(
-      inputPath: _documentPath ?? 'untitled.txt',
+      inputPath: _documentPath ?? TextTokens.app_untitledDocument,
       sourceText: _text,
       profile: p,
       voice: voiceId,
@@ -451,7 +452,9 @@ class AppController extends ChangeNotifier {
       minWords: minWords,
       sendWholeFile: sendWholeFile,
       sampleLen: sampleLen,
-      outDir: outDir.trim().isEmpty ? 'output' : outDir.trim(),
+      outDir: outDir.trim().isEmpty
+          ? TextTokens.defaults_outDir
+          : outDir.trim(),
       resume: resume,
       providerSettings: _loader.resolveProviderSettings(p),
       pricing: _voiceConfig.pricingFor(p.alias),
@@ -475,7 +478,7 @@ class AppController extends ChangeNotifier {
   bool get dirty => _dirty;
 
   String get documentName => _documentPath == null
-      ? 'untitled.txt'
+      ? TextTokens.app_untitledDocument
       : _documentPath!.split(Platform.pathSeparator).last;
 
   /// Replaces the document text (typing/paste path). Marks the document dirty.
@@ -492,7 +495,10 @@ class AppController extends ChangeNotifier {
   void loadFromFile(String path) {
     final file = File(path);
     if (!file.existsSync()) {
-      throw FileSystemException('Cannot open text file', path);
+      throw FileSystemException(
+        TextTokens.gui_controller_errors_cannotOpenTextFile,
+        path,
+      );
     }
     _text = file.readAsStringSync();
     _documentPath = file.absolute.path;
@@ -848,10 +854,10 @@ class AppController extends ChangeNotifier {
   /// this before dispatching to [onNarrate].
   String? narrateBlockReason() {
     if (_text.trim().isEmpty) {
-      return 'Editor text is empty';
+      return TextTokens.gui_controller_blockReasons_emptyText;
     }
     if (_narrating) {
-      return 'Narration is already running.';
+      return TextTokens.gui_controller_blockReasons_alreadyRunning;
     }
     return null;
   }

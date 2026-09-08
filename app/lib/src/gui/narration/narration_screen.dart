@@ -12,6 +12,7 @@ import '../platform/widgets/platform_activity_indicator.dart';
 import '../platform/widgets/platform_button.dart';
 import '../platform/widgets/platform_icon_button.dart';
 import '../platform/widgets/platform_progress_bar.dart';
+import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart';
 
 /// Narration run view: a back-arrow header with the document name, a frozen
@@ -145,9 +146,8 @@ class _NarrationScreenState extends State<NarrationScreen> {
   /// Confirms leaving a still-generating run. Returns true only when the user
   /// chose "Cancel Run" (stop generation + leave); "Back" keeps the run going.
   Future<bool> _confirmCancelActiveRun() async {
-    const title = 'Cancel active narration run?';
-    const message =
-        'Generation stops now; completed clips stay playable in this session.';
+    const title = TextTokens.gui_narration_confirmCancelTitle;
+    const message = TextTokens.gui_narration_confirmCancelMessage;
     if (_isMac) {
       final result = await showCupertinoDialog<bool>(
         context: context,
@@ -158,11 +158,11 @@ class _NarrationScreenState extends State<NarrationScreen> {
             CupertinoDialogAction(
               isDefaultAction: true,
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Cancel Run'),
+              child: const Text(TextTokens.gui_narration_cancelRun),
             ),
             CupertinoDialogAction(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Back'),
+              child: const Text(TextTokens.gui_narration_back),
             ),
           ],
         ),
@@ -177,11 +177,11 @@ class _NarrationScreenState extends State<NarrationScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Back'),
+            child: const Text(TextTokens.gui_narration_back),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Cancel Run'),
+            child: const Text(TextTokens.gui_narration_cancelRun),
           ),
         ],
       ),
@@ -220,13 +220,15 @@ class _NarrationScreenState extends State<NarrationScreen> {
               _buildMessageCard(controller.runPlanError!, isError: true)
             else if (controller.runError != null)
               _buildMessageCard(
-                'Narration failed: ${controller.runError}',
+                fillTextTemplate(TextTokens.gui_narration_narrationFailed, {
+                  'runError': controller.runError,
+                }),
                 isError: true,
               )
             else if (controller.runStopped)
-              _buildMessageCard('Narration was stopped.')
+              _buildMessageCard(TextTokens.gui_narration_narrationStopped)
             else if (controller.runFinished)
-              _buildMessageCard('Narration complete.'),
+              _buildMessageCard(TextTokens.gui_narration_narrationComplete),
             Expanded(child: _buildSegmentList(controller)),
             _buildActionBar(controller),
           ],
@@ -249,14 +251,16 @@ class _NarrationScreenState extends State<NarrationScreen> {
         children: [
           PlatformIconButton(
             key: const Key('runBackButton'),
-            tooltip: 'Back to editor',
+            tooltip: TextTokens.gui_narration_backToEditor,
             icon: Icon(_isMac ? CupertinoIcons.back : Icons.arrow_back),
             onPressed: () => _onBack(),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Narrating: ${controller.documentName}',
+              fillTextTemplate(TextTokens.gui_narration_narratingTitle, {
+                'documentName': controller.documentName,
+              }),
               key: const Key('runHeaderTitle'),
               overflow: TextOverflow.ellipsis,
               style: _tokens.typography.headerSemibold.copyWith(
@@ -277,7 +281,9 @@ class _NarrationScreenState extends State<NarrationScreen> {
     final segments = controller.totalSegments;
     final minutes = controller.runEstimatedMinutes.round();
     final cost = formatCostUsd(controller.runEstimatedCostUsd);
-    final segmentLabel = segments == 1 ? 'segment' : 'segments';
+    final segmentLabel = segments == 1
+        ? TextTokens.core_plurals_segment
+        : TextTokens.core_plurals_segments;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
       child: Container(
@@ -287,8 +293,14 @@ class _NarrationScreenState extends State<NarrationScreen> {
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
-          '${config.profile.alias} · $voice | $segments $segmentLabel · '
-          '~$minutes mins · ~$cost',
+          fillTextTemplate(TextTokens.gui_narration_summaryPill, {
+            'modelName': config.profile.alias,
+            'voice': voice,
+            'segments': segments,
+            'segmentLabel': segmentLabel,
+            'minutes': minutes,
+            'cost': cost,
+          }),
           key: const Key('runSummaryPill'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -322,7 +334,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     if (controller.runSegments.isEmpty) {
       return Center(
         child: Text(
-          'No segments yet.',
+          TextTokens.gui_narration_noSegmentsYet,
           style: _tokens.typography.body.copyWith(
             color: _tokens.colors.textSecondary,
           ),
@@ -419,14 +431,21 @@ class _NarrationScreenState extends State<NarrationScreen> {
         Row(
           children: [
             Text(
-              'Segment ${segment.index + 1}',
+              fillTextTemplate(TextTokens.gui_narration_segmentLabel, {
+                'segmentNumber': '${segment.index + 1}',
+              }),
               style: body.copyWith(
                 fontWeight: FontWeight.w600,
                 color: colors.textPrimary,
               ),
             ),
             Text(
-              ' · $words ${words == 1 ? 'word' : 'words'}',
+              fillTextTemplate(TextTokens.gui_narration_wordCountSuffix, {
+                'words': words,
+                'wordWord': words == 1
+                    ? TextTokens.core_plurals_word
+                    : TextTokens.core_plurals_words,
+              }),
               style: body.copyWith(color: colors.textSecondary),
             ),
           ],
@@ -450,7 +469,9 @@ class _NarrationScreenState extends State<NarrationScreen> {
     final Widget child;
     if (!playable) {
       child = Text(
-        segment.running ? 'Processing...' : 'Pending',
+        segment.running
+            ? TextTokens.gui_narration_processing
+            : TextTokens.gui_narration_pending,
         key: Key('segAction_${segment.index}'),
         textAlign: TextAlign.right,
         style: _tokens.typography.mono.copyWith(color: colors.textSecondary),
@@ -468,7 +489,9 @@ class _NarrationScreenState extends State<NarrationScreen> {
   /// (the shared [PlatformButton] outlined geometry is too wide for it).
   Widget _playStopButton(NarrationRunSegment segment, bool isPlaying) {
     final colors = _tokens.colors;
-    final label = isPlaying ? 'Stop' : 'Play';
+    final label = isPlaying
+        ? TextTokens.gui_narration_stop
+        : TextTokens.gui_narration_play;
     final icon = Icon(
       isPlaying ? _stopIcon() : _playIcon(),
       size: 14,
@@ -516,7 +539,10 @@ class _NarrationScreenState extends State<NarrationScreen> {
     }
     // Reused clips get a Material-only tooltip (Cupertino has none).
     if (segment.resumed && !_isMac) {
-      return Tooltip(message: 'Resumed — tap to play', child: button);
+      return Tooltip(
+        message: TextTokens.gui_narration_resumedTooltip,
+        child: button,
+      );
     }
     return button;
   }
@@ -541,7 +567,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
             key: const Key('runActionBack'),
             onPressed: () => _onBack(),
             style: PlatformButtonStyle.outlined,
-            child: const Text('Back'),
+            child: const Text(TextTokens.gui_narration_back),
           ),
           const Spacer(),
           if (controller.narrating && !controller.runStopped)
@@ -549,7 +575,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
               key: const Key('runCancelButton'),
               onPressed: _onCancel,
               icon: Icon(_isMac ? CupertinoIcons.stop : Icons.stop),
-              child: const Text('Cancel Run'),
+              child: const Text(TextTokens.gui_narration_cancelRun),
             ),
         ],
       ),
