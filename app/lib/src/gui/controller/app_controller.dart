@@ -106,16 +106,16 @@ class AppController extends ChangeNotifier {
 
   // --- Voice gender -------------------------------------------------
 
-  /// The active narrator gender, or null for "any".
-  VoiceGender? get voiceGenderFilter => _model.voiceGenderFilter;
+  /// The active narrator gender; [VoiceGender.neutral] is "any".
+  VoiceGender get voiceGenderFilter => _model.voiceGenderFilter;
 
   /// Sets the narrator-gender filter. The model owns the filter's voice
   /// narrowing/auto-switch; the passage-prefix consequences (rewriting the
   /// narrator phrase for prompt-style models) are applied by
   /// [SettingsController], which owns the prefix. The model may
-  /// revert an unmatched gender back to null, so the prefix rewrite reads the
-  /// effective filter after the write.
-  set voiceGenderFilter(VoiceGender? value) {
+  /// revert an unmatched gender back to "any" ([VoiceGender.neutral]), so the
+  /// prefix rewrite reads the effective filter after the write.
+  set voiceGenderFilter(VoiceGender value) {
     if (value == _model.voiceGenderFilter) return;
     _model.voiceGenderFilter = value;
     _settings.applyNarratorGender(_model.voiceGenderFilter);

@@ -262,10 +262,10 @@ void main() {
       c.changeModel('kokoro');
       await pumpRail(tester, c);
 
-      final control = tester.widget<PlatformSegmentedControl<VoiceGender?>>(
+      final control = tester.widget<PlatformSegmentedControl<VoiceGender>>(
         find.byKey(const Key('genderControl')),
       );
-      expect(control.value, isNull);
+      expect(control.value, VoiceGender.neutral);
       expect(control.items.map((it) => it.$2), ['Any', 'Female', 'Male']);
 
       // Female voices get a compact shorthand in the dropdown.
@@ -290,12 +290,12 @@ void main() {
       expect(find.text('Emma (f)'), findsNothing);
 
       // Back to Any: the picker returns to the full list (Material path must
-      // forward the null selection instead of treating it as no-op).
+      // forward the "any" selection instead of treating it as no-op).
       await tester.tapAt(const Offset(600, 100));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Any'));
       await tester.pump();
-      expect(c.voiceGenderFilter, isNull);
+      expect(c.voiceGenderFilter, VoiceGender.neutral);
       await tester.tap(find.byKey(const Key('voiceDropdown')));
       await tester.pumpAndSettle();
       expect(find.text('Emma (f)').last, findsOneWidget);

@@ -244,11 +244,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
           _label(TextTokens.gui_settings_voiceAliasLabel),
           if (_controller.hasGenderTags) ...[
             const SizedBox(height: 12),
-            PlatformSegmentedControl<VoiceGender?>(
+            PlatformSegmentedControl<VoiceGender>(
               key: const Key('genderControl'),
               value: _controller.voiceGenderFilter,
               items: const [
-                (null, TextTokens.gui_settings_genderAny),
+                (VoiceGender.neutral, TextTokens.gui_settings_genderAny),
                 (VoiceGender.female, TextTokens.gui_settings_genderFemale),
                 (VoiceGender.male, TextTokens.gui_settings_genderMale),
               ],
@@ -349,11 +349,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
             children: [
               _label(option.label),
               const SizedBox(height: 6),
-              PlatformSegmentedControl<VoiceGender?>(
+              PlatformSegmentedControl<VoiceGender>(
                 key: const Key('genderOptionSegmented'),
                 value: g,
                 items: const [
-                  (null, TextTokens.gui_settings_genderAny),
+                  (VoiceGender.neutral, TextTokens.gui_settings_genderAny),
                   (VoiceGender.female, TextTokens.gui_settings_genderFemale),
                   (VoiceGender.male, TextTokens.gui_settings_genderMale),
                 ],

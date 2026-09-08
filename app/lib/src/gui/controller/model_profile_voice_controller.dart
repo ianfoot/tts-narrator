@@ -107,7 +107,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
     }
     _modelAlias = alias;
     // Gender tags are per-model; the filter does not carry across a switch.
-    _voiceGender = null;
+    _voiceGender = VoiceGender.neutral;
     notifyListeners();
   }
 
@@ -132,13 +132,13 @@ class ModelProfileVoiceController extends ChangeNotifier {
   /// gender, and (via the openrouter plugin's `gender` model option) driving
   /// the narrator phrase in the passage prefix for prompt-style models. The
   /// passage-prefix side effect is applied by [AppController], which owns that
-  /// setting. Null is "any / unselected".
-  VoiceGender? _voiceGender;
+  /// setting. [VoiceGender.neutral] is "any / unselected".
+  VoiceGender _voiceGender = VoiceGender.neutral;
 
-  /// The active narrator gender, or null for "any".
-  VoiceGender? get voiceGenderFilter => _voiceGender;
+  /// The active narrator gender; [VoiceGender.neutral] is "any".
+  VoiceGender get voiceGenderFilter => _voiceGender;
 
-  set voiceGenderFilter(VoiceGender? value) {
+  set voiceGenderFilter(VoiceGender value) {
     if (value == _voiceGender) return;
     _voiceGender = value;
     _applyGenderFilter();
@@ -164,7 +164,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   List<VoiceEntry> _genderFilteredVoiceEntries(TtsModelProfile p) {
     final all = voiceEntries(model: p, config: _voiceConfig);
-    if (_voiceGender == null) return all;
+    if (_voiceGender == VoiceGender.neutral) return all;
     // Untagged models have nothing to filter against: a gender set via a
     // prompt-style model's option still keeps the full voice list.
     final tagged =
@@ -179,16 +179,16 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   /// Adjusts the selected voice to match the active [voiceGenderFilter]: when
   /// the model's voices are gender-tagged, auto-switches the selection so it
-  /// matches the filter. Selecting "any" (null) leaves the voice untouched.
-  /// When a gender is picked but the model has no voices of that gender, the
-  /// filter reverts to "any" so the picker keeps the full list rather than
-  /// leaving a voice hidden behind an empty filter.
+  /// matches the filter. Selecting "any" ([VoiceGender.neutral]) leaves the
+  /// voice untouched. When a gender is picked but the model has no voices of
+  /// that gender, the filter reverts to "any" so the picker keeps the full
+  /// list rather than leaving a voice hidden behind an empty filter.
   void _applyGenderFilter() {
     final g = _voiceGender;
-    if (g == null) return;
+    if (g == VoiceGender.neutral) return;
     final matches = _genderFilteredVoiceEntries(profile);
     if (matches.isEmpty) {
-      _voiceGender = null;
+      _voiceGender = VoiceGender.neutral;
       return;
     }
     if (!matches.any((e) => e.id == _voice || e.label == _voiceLabel)) {

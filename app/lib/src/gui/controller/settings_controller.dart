@@ -190,29 +190,29 @@ class SettingsController extends ChangeNotifier {
 
   /// Applies the narrator phrase in [_passagePrefix] to match [gender] on a
   /// prompt-style model: `female narrator` ↔ `male narrator` when switching
-  /// between the two, or back to the ungendered default when clearing to
-  /// "any" (null). Only the exact phrases are swapped — custom prefixes are
-  /// left alone. The facade's gender-filter write owns the single
-  /// notification, so this mutates without notifying.
-  void applyNarratorGender(VoiceGender? gender) {
+  /// male, or back to the ungendered default for any other gender (female,
+  /// or "any" via [VoiceGender.neutral]). Only the exact phrases are swapped
+  /// — custom prefixes are left alone. The facade's gender-filter write owns
+  /// the single notification, so this mutates without notifying.
+  void applyNarratorGender(VoiceGender gender) {
     if (!_model.profile.promptStyle) return;
-    if (gender == VoiceGender.male &&
-        _passagePrefix.contains(_genderFemalePhrase)) {
-      _passagePrefix = _passagePrefix.replaceAll(
-        _genderFemalePhrase,
-        _genderMalePhrase,
-      );
-    } else if (gender == VoiceGender.female &&
-        _hasMaleNarratorPhrase(_passagePrefix)) {
-      _passagePrefix = _passagePrefix.replaceAll(
-        _genderMalePhrase,
-        _genderFemalePhrase,
-      );
-    } else if (gender == null && _hasMaleNarratorPhrase(_passagePrefix)) {
-      _passagePrefix = _passagePrefix.replaceAll(
-        _genderMalePhrase,
-        _genderFemalePhrase,
-      );
+    switch (gender) {
+      case VoiceGender.male:
+        if (_passagePrefix.contains(_genderFemalePhrase)) {
+          _passagePrefix = _passagePrefix.replaceAll(
+            _genderFemalePhrase,
+            _genderMalePhrase,
+          );
+        }
+        break;
+      case VoiceGender.female:
+      case VoiceGender.neutral:
+        if (_hasMaleNarratorPhrase(_passagePrefix)) {
+          _passagePrefix = _passagePrefix.replaceAll(
+            _genderMalePhrase,
+            _genderFemalePhrase,
+          );
+        }
     }
   }
 
@@ -283,7 +283,8 @@ class SettingsController extends ChangeNotifier {
 
   double get estimatedMinutes => estimateMinutes(plannedSegments);
 
-  double get estimatedCostUsd => estimateCostUsd(_model.pricing, plannedSegments);
+  double get estimatedCostUsd =>
+      estimateCostUsd(_model.pricing, plannedSegments);
 
   /// Opens the native directory picker for the output destination; leaves the
   /// current directory unchanged when cancelled or when the picker fails.
