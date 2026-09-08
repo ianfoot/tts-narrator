@@ -472,6 +472,44 @@ void main() {
   });
 
   group('run options', () {
+    testWidgets('the whole-file switch renders on by default off', (
+      tester,
+    ) async {
+      writeConfig({});
+      final c = makeController();
+      await pumpRail(tester, c);
+
+      expect(c.sendWholeFile, isFalse);
+      expect(find.byKey(const Key('wholeFileSwitch')), findsOneWidget);
+      // Segmentation controls are visible while the switch is off.
+      expect(find.byKey(const Key('minWordsSlider')), findsOneWidget);
+      expect(find.byKey(const Key('minWordsBadge')), findsOneWidget);
+    });
+
+    testWidgets('enabling whole-file hides the min-words section', (
+      tester,
+    ) async {
+      writeConfig({});
+      final c = makeController();
+      await pumpRail(tester, c);
+
+      await tester.tap(find.byKey(const Key('wholeFileSwitch')));
+      await tester.pump();
+
+      expect(c.sendWholeFile, isTrue);
+      expect(find.byKey(const Key('minWordsSlider')), findsNothing);
+      expect(find.byKey(const Key('minWordsBadge')), findsNothing);
+      expect(find.byKey(const Key('sampleSwitch')), findsOneWidget);
+      expect(find.byKey(const Key('resumeSwitch')), findsOneWidget);
+
+      // Toggling back restores the slider with the preserved value.
+      await tester.tap(find.byKey(const Key('wholeFileSwitch')));
+      await tester.pump();
+      expect(c.sendWholeFile, isFalse);
+      expect(find.byKey(const Key('minWordsSlider')), findsOneWidget);
+      expect(find.byKey(const Key('minWordsBadge')), findsOneWidget);
+    });
+
     testWidgets('the min-words slider updates the controller within 10-100', (
       tester,
     ) async {

@@ -208,6 +208,86 @@ void main() {
       expect(() => planSegments(cfg), throwsStateError);
     });
 
+    test('sendWholeFile returns the entire source as one segment', () {
+      const multi = 'Para alpha.\n\nPara beta.\n\nPara gamma.';
+      final cfg = NarrationConfig(
+        inputPath: 'story.txt',
+        sourceText: multi,
+        profile: TtsModelProfile(
+          alias: 'test',
+          id: 'test/model',
+          format: 'mp3',
+          provider: provider.id,
+        ),
+        voice: 'VoiceOne',
+        outDir: '${dir.path}/out',
+        // Segmentation settings are ignored in whole-file mode.
+        minWords: 1,
+        sendWholeFile: true,
+      );
+      expect(planSegments(cfg), [multi]);
+    });
+
+    test('sendWholeFile trims and normalizes line endings', () {
+      final cfg = NarrationConfig(
+        inputPath: 'story.txt',
+        sourceText: 'One.\r\n\r\nTwo.',
+        profile: TtsModelProfile(
+          alias: 'test',
+          id: 'test/model',
+          format: 'mp3',
+          provider: provider.id,
+        ),
+        voice: 'VoiceOne',
+        outDir: '${dir.path}/out',
+        sendWholeFile: true,
+      );
+      expect(planSegments(cfg), ['One.\n\nTwo.']);
+    });
+
+    test('sendWholeFile with only blank text raises the planning error', () {
+      final cfg = NarrationConfig(
+        inputPath: 'story.txt',
+        sourceText: '   \n\n  ',
+        profile: TtsModelProfile(
+          alias: 'test',
+          id: 'test/model',
+          format: 'mp3',
+          provider: provider.id,
+        ),
+        voice: 'VoiceOne',
+        outDir: '${dir.path}/out',
+        sendWholeFile: true,
+      );
+      expect(() => planSegments(cfg), throwsStateError);
+    });
+
+    test('sendWholeFile narrates the whole source in a single call', () async {
+      final cfg = NarrationConfig(
+        inputPath: 'story.txt',
+        sourceText: '$_inputText\n\n$_inputText',
+        profile: TtsModelProfile(
+          alias: 'test',
+          id: 'test/model',
+          format: 'mp3',
+          provider: provider.id,
+        ),
+        voice: 'VoiceOne',
+        providerSettings: const {'api_key': 'sk-test'},
+        outDir: '${dir.path}/out',
+        sendWholeFile: true,
+      );
+      await narrate(cfg);
+
+      expect(provider.callCount, 1);
+      expect(provider.calls.single.input, '$_inputText\n\n$_inputText');
+
+      // Output naming still derives from inputPath (the document name).
+      final audio = File('${dir.path}/out/story/story_1.mp3');
+      expect(audio.existsSync(), isTrue);
+      expect(audio.readAsBytesSync(), provider.bytes);
+    });
+
     test(
       'narrates from text via the provider without reading inputPath',
       () async {

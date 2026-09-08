@@ -31,6 +31,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
   var prefix =
       'Narrate this passage for an audiobook. You are a warm, composed female narrator.';
   var minWords = 30;
+  var sendWholeFile = false;
   var sampleLen = -1;
   var outDir = 'output';
   var dryRun = false;
@@ -90,6 +91,8 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
           );
         }
         minWords = n;
+      case '--send-whole-file':
+        sendWholeFile = true;
       case '--dry-run':
         dryRun = true;
       case '--resume':
@@ -212,6 +215,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
     useCalmTag: tags,
     passagePrefix: prefix,
     minWords: minWords,
+    sendWholeFile: sendWholeFile,
     sampleLen: sampleLen > 0 ? sampleLen : null,
     outDir: outDir,
     dryRun: dryRun,
@@ -318,6 +322,8 @@ Options:
   --passage-prefix <text>   Pooled preamble applied to each paragraph.
   --min-words <n>           Merge paragraphs shorter than n words into the next
                             (default: 30).
+  --send-whole-file         Narrate the whole file in a single TTS call instead
+                            of segmenting it (--min-words is ignored).
   --sample-len <n>          Narrate only the first n paragraphs.
   --dry-run                 Print the segment plan + cost estimate and exit
                             (no API call).

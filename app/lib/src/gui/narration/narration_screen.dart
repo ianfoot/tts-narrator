@@ -277,6 +277,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     final segments = controller.totalSegments;
     final minutes = controller.runEstimatedMinutes.round();
     final cost = formatCostUsd(controller.runEstimatedCostUsd);
+    final segmentLabel = segments == 1 ? 'segment' : 'segments';
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
       child: Container(
@@ -286,7 +287,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
-          '${config.profile.alias} · $voice | $segments segments · '
+          '${config.profile.alias} · $voice | $segments $segmentLabel · '
           '~$minutes mins · ~$cost',
           key: const Key('runSummaryPill'),
           maxLines: 1,

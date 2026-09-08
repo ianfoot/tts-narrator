@@ -125,9 +125,18 @@ String _sourceText(NarrationConfig config) =>
 
 /// Returns the narration segment plan (scenes/paragraphs to narrate, after
 /// min-word merge and length split) for [config], reading from
-/// [NarrationConfig.sourceText] or the file at [config.inputPath].
+/// [NarrationConfig.sourceText] or the file at [config.inputPath]. When
+/// [NarrationConfig.sendWholeFile] is set, the entire source is returned as a
+/// single segment instead of being segmented.
 List<String> planSegments(NarrationConfig config) {
   final source = _sourceText(config);
+  if (config.sendWholeFile) {
+    final whole = source.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
+    if (whole.isEmpty) {
+      throw StateError('No paragraphs found in "${config.inputPath}".');
+    }
+    return [whole];
+  }
   final paragraphs = segmentText(source, minWords: config.minWords);
   if (paragraphs.isEmpty) {
     throw StateError('No paragraphs found in "${config.inputPath}".');

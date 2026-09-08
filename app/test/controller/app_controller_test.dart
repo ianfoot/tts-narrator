@@ -206,6 +206,17 @@ void main() {
       expect(inputStem(cfg.inputPath), 'my_chapter');
     });
 
+    test('sendWholeFile flows through to the narration config', () {
+      writeConfig({});
+      final c = makeController()..setText('One.\n\nTwo.');
+      expect(c.buildConfig().sendWholeFile, isFalse);
+      c.sendWholeFile = true;
+      final cfg = c.buildConfig();
+      expect(cfg.sendWholeFile, isTrue);
+      // Whole-file mode plans a single segment containing the whole text.
+      expect(c.plannedSegments, ['One.\n\nTwo.']);
+    });
+
     test('throws a FormatException when the model has no selected voice', () {
       writeConfig({
         'models': {

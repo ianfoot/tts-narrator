@@ -66,6 +66,7 @@ path to the text to narrate.
 | `--tags on\|off` | Prepend a `[calm]` style tag to every prompt (Gemini only). | `off` |
 | `--passage-prefix <text>` | Pooled preamble prepended to every paragraph prompt. | `Narrate this passage for an audiobook. You are a warm, composed female narrator.` |
 | `--min-words <n>` | Merge paragraphs shorter than `n` words into the next, so tiny fragments don't get an isolated reading. | `30` |
+| `--send-whole-file` | Narrate the whole file in a single TTS call instead of segmenting it (`--min-words` is ignored). | `off` |
 | `--sample-len <n>` | Narrate only the first `n` segments (useful for testing). | — |
 | `--dry-run` | Print the segment plan + estimated duration/cost and exit without calling the API. | `off` |
 | `--resume` | Skip segments already present in the output manifest (same prompt + file), so a re-run doesn't re-bill finished paragraphs. | `off` |
@@ -333,6 +334,8 @@ Playback (macOS): `afplay output/story/story_1.wav` (Gemini),
 
 ## How narration text is segmented
 
+By default the text is segmented so each paragraph gets a controlled, consistent reading:
+
 1. Split the input on blank lines into paragraphs.
 2. Merge a paragraph into the next when it is shorter than `--min-words`
    (default 30), so isolated short fragments aren't given their own
@@ -340,6 +343,10 @@ Playback (macOS): `afplay output/story/story_1.wav` (Gemini),
 3. Any merged paragraph longer than 4,000 characters is split at sentence
    boundaries.
 4. Each resulting segment is one call to the TTS API.
+
+Pass `--send-whole-file` (or toggle **Send whole file** in the GUI) to bypass
+segmentation entirely: the whole document is sent to the TTS engine as a single
+call. The "Min words per segment" setting is hidden and ignored in this mode.
 
 The mood of Gemini 3.1 Flash TTS is controlled through the prompt text
 (inline tags like `[calm]`, accent/style descriptions) rather than a separate

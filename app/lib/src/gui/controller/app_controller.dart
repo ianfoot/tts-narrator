@@ -299,6 +299,7 @@ class AppController extends ChangeNotifier {
   String _accent = 'southern British English, neutral and clear';
   bool _useCalmTag = false;
   int _minWords = 30;
+  bool _sendWholeFile = false;
   int? _sampleLen;
   String _outDir = 'output';
   bool _resume = false;
@@ -347,6 +348,17 @@ class AppController extends ChangeNotifier {
     final clamped = value.clamp(10, 100);
     if (clamped == _minWords) return;
     _minWords = clamped;
+    notifyListeners();
+  }
+
+  /// Whether to narrate the whole document as a single TTS call instead of
+  /// segmenting it. When true, [minWords] is ignored and the settings rail
+  /// hides the "Min words per segment" control.
+  bool get sendWholeFile => _sendWholeFile;
+
+  set sendWholeFile(bool value) {
+    if (value == _sendWholeFile) return;
+    _sendWholeFile = value;
     notifyListeners();
   }
 
@@ -426,6 +438,7 @@ class AppController extends ChangeNotifier {
       useCalmTag: useCalmTag,
       passagePrefix: passagePrefix,
       minWords: minWords,
+      sendWholeFile: sendWholeFile,
       sampleLen: sampleLen,
       outDir: outDir.trim().isEmpty ? 'output' : outDir.trim(),
       resume: resume,
@@ -527,7 +540,10 @@ class AppController extends ChangeNotifier {
   int get charCount => _text.length;
 
   /// The segment plan for the current text (min-word merge + length split).
-  List<String> get plannedSegments => segmentText(_text, minWords: minWords);
+  /// When [sendWholeFile] is on, the whole text is a single segment.
+  List<String> get plannedSegments => sendWholeFile
+      ? [_text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim()]
+      : segmentText(_text, minWords: minWords);
 
   double get estimatedMinutes => estimateMinutes(plannedSegments);
 
