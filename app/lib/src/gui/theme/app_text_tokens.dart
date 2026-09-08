@@ -28,8 +28,7 @@ String fillTextTemplate(String template, Map<String, Object?> values) {
       i++;
       continue;
     }
-    final braced =
-        i + 1 < template.length && template[i + 1] == '{';
+    final braced = i + 1 < template.length && template[i + 1] == '{';
     final nameStart = braced ? i + 2 : i + 1;
     if (braced) {
       final end = template.indexOf('}', nameStart);

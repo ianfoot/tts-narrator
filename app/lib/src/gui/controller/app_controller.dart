@@ -204,7 +204,8 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  static const _genderFemalePhrase = TextTokens.gui_controller_genderPhrases_female;
+  static const _genderFemalePhrase =
+      TextTokens.gui_controller_genderPhrases_female;
   static const _genderMalePhrase = TextTokens.gui_controller_genderPhrases_male;
 
   /// Whether [prefix] contains the exact male-phrase form. `female narrator`
@@ -370,8 +371,7 @@ class AppController extends ChangeNotifier {
   /// Whether the current document is small enough for whole-file narration
   /// (see `maxWholeFileLength` in the core). The settings rail hides the "Send
   /// whole file" toggle when false (documents over the cap).
-  bool get wholeFileAvailable =>
-      _wholeFileText.length <= maxWholeFileLength;
+  bool get wholeFileAvailable => _wholeFileText.length <= maxWholeFileLength;
 
   int? get sampleLen => _sampleLen;
 
@@ -425,10 +425,9 @@ class AppController extends ChangeNotifier {
       final def = _defaultVoiceFor(p);
       if (def == null) {
         throw FormatException(
-          fillTextTemplate(
-            TextTokens.gui_controller_errors_noVoiceSelected,
-            {'modelAlias': p.alias},
-          ),
+          fillTextTemplate(TextTokens.gui_controller_errors_noVoiceSelected, {
+            'modelAlias': p.alias,
+          }),
         );
       }
       voiceId = def.$1;
@@ -441,7 +440,7 @@ class AppController extends ChangeNotifier {
           : (resolvedLabel != id ? resolvedLabel : null);
     }
     return NarrationConfig(
-      inputPath: _documentPath ?? 'untitled.txt',
+      inputPath: _documentPath ?? TextTokens.app_untitledDocument,
       sourceText: _text,
       profile: p,
       voice: voiceId,
@@ -453,7 +452,9 @@ class AppController extends ChangeNotifier {
       minWords: minWords,
       sendWholeFile: sendWholeFile,
       sampleLen: sampleLen,
-      outDir: outDir.trim().isEmpty ? TextTokens.defaults_outDir : outDir.trim(),
+      outDir: outDir.trim().isEmpty
+          ? TextTokens.defaults_outDir
+          : outDir.trim(),
       resume: resume,
       providerSettings: _loader.resolveProviderSettings(p),
       pricing: _voiceConfig.pricingFor(p.alias),
@@ -494,7 +495,10 @@ class AppController extends ChangeNotifier {
   void loadFromFile(String path) {
     final file = File(path);
     if (!file.existsSync()) {
-      throw FileSystemException(TextTokens.gui_controller_errors_cannotOpenTextFile, path);
+      throw FileSystemException(
+        TextTokens.gui_controller_errors_cannotOpenTextFile,
+        path,
+      );
     }
     _text = file.readAsStringSync();
     _documentPath = file.absolute.path;

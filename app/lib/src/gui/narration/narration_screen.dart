@@ -220,10 +220,9 @@ class _NarrationScreenState extends State<NarrationScreen> {
               _buildMessageCard(controller.runPlanError!, isError: true)
             else if (controller.runError != null)
               _buildMessageCard(
-                fillTextTemplate(
-                  TextTokens.gui_narration_narrationFailed,
-                  {'runError': controller.runError},
-                ),
+                fillTextTemplate(TextTokens.gui_narration_narrationFailed, {
+                  'runError': controller.runError,
+                }),
                 isError: true,
               )
             else if (controller.runStopped)
@@ -259,10 +258,9 @@ class _NarrationScreenState extends State<NarrationScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              fillTextTemplate(
-                TextTokens.gui_narration_narratingTitle,
-                {'documentName': controller.documentName},
-              ),
+              fillTextTemplate(TextTokens.gui_narration_narratingTitle, {
+                'documentName': controller.documentName,
+              }),
               key: const Key('runHeaderTitle'),
               overflow: TextOverflow.ellipsis,
               style: _tokens.typography.headerSemibold.copyWith(
@@ -283,10 +281,9 @@ class _NarrationScreenState extends State<NarrationScreen> {
     final segments = controller.totalSegments;
     final minutes = controller.runEstimatedMinutes.round();
     final cost = formatCostUsd(controller.runEstimatedCostUsd);
-    final segmentLabel =
-        segments == 1
-            ? TextTokens.core_plurals_segment
-            : TextTokens.core_plurals_segments;
+    final segmentLabel = segments == 1
+        ? TextTokens.core_plurals_segment
+        : TextTokens.core_plurals_segments;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
       child: Container(
@@ -296,17 +293,14 @@ class _NarrationScreenState extends State<NarrationScreen> {
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
-          fillTextTemplate(
-            TextTokens.gui_narration_summaryPill,
-            {
-              'modelName': config.profile.alias,
-              'voice': voice,
-              'segments': segments,
-              'segmentLabel': segmentLabel,
-              'minutes': minutes,
-              'cost': cost,
-            },
-          ),
+          fillTextTemplate(TextTokens.gui_narration_summaryPill, {
+            'modelName': config.profile.alias,
+            'voice': voice,
+            'segments': segments,
+            'segmentLabel': segmentLabel,
+            'minutes': minutes,
+            'cost': cost,
+          }),
           key: const Key('runSummaryPill'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -437,25 +431,21 @@ class _NarrationScreenState extends State<NarrationScreen> {
         Row(
           children: [
             Text(
-              fillTextTemplate(
-                TextTokens.gui_narration_segmentLabel,
-                {'segmentNumber': '${segment.index + 1}'},
-              ),
+              fillTextTemplate(TextTokens.gui_narration_segmentLabel, {
+                'segmentNumber': '${segment.index + 1}',
+              }),
               style: body.copyWith(
                 fontWeight: FontWeight.w600,
                 color: colors.textPrimary,
               ),
             ),
             Text(
-              fillTextTemplate(
-                TextTokens.gui_narration_wordCountSuffix,
-                {
-                  'words': words,
-                  'wordWord': words == 1
-                      ? TextTokens.core_plurals_word
-                      : TextTokens.core_plurals_words,
-                },
-              ),
+              fillTextTemplate(TextTokens.gui_narration_wordCountSuffix, {
+                'words': words,
+                'wordWord': words == 1
+                    ? TextTokens.core_plurals_word
+                    : TextTokens.core_plurals_words,
+              }),
               style: body.copyWith(color: colors.textSecondary),
             ),
           ],
@@ -550,9 +540,9 @@ class _NarrationScreenState extends State<NarrationScreen> {
     // Reused clips get a Material-only tooltip (Cupertino has none).
     if (segment.resumed && !_isMac) {
       return Tooltip(
-      message: TextTokens.gui_narration_resumedTooltip,
-      child: button,
-    );
+        message: TextTokens.gui_narration_resumedTooltip,
+        child: button,
+      );
     }
     return button;
   }
