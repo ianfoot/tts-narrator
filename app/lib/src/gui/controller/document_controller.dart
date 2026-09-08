@@ -102,10 +102,8 @@ class DocumentController extends ChangeNotifier {
 
   int get charCount => _text.length;
 
-  /// Clears the document text. Disabled (greyed) when no text to clear.
-  /// Marks document dirty so the cleared state can be saved.
+  /// Clears the document text and marks dirty. Guard is handled by AppController.
   void clearText() {
-    if (_text.isEmpty) return;
     _text = '';
     _dirty = true;
     notifyListeners();

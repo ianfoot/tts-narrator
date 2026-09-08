@@ -421,12 +421,28 @@ class AppController extends ChangeNotifier {
   String? narrateBlockReason() => _run.narrateBlockReason();
 
   /// Clears the document text. Disabled when no text or while narrating.
-  /// Marks document dirty so the cleared state can be saved.
+  /// Saves current text to undo stack before clearing.
   void clearText() {
-    if (narrating) return; // Block while narration is active
-    if (text.isEmpty) return; // Nothing to clear
+    if (!canClearText) return; // Centralized guard
+    // Save to undo stack before clearing
+    _undoStack.add(text);
+    // Keep only last 10 for memory
+    if (_undoStack.length > 10) _undoStack.removeAt(0);
     _document.clearText();
   }
+
+  /// Undo the last clear action.
+  void undoClear() {
+    if (_undoStack.isNotEmpty) {
+      final restored = _undoStack.removeLast();
+      _document.setText(restored);
+    }
+  }
+
+  /// Whether undo is available.
+  bool get canUndoClear => _undoStack.isNotEmpty;
+
+  final List<String> _undoStack = [];
 
   /// Whether the clear action should be enabled (text non-empty, not narrating).
   bool get canClearText => text.isNotEmpty && !narrating;
