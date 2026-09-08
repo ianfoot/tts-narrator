@@ -430,7 +430,7 @@ void main() {
       expect(c.voiceLabel, 'Emma'); // default is female
       c.voiceGenderFilter = VoiceGender.male;
       expect(c.voiceLabel, 'Daniel'); // first male entry
-      c.voiceGenderFilter = null;
+      c.voiceGenderFilter = VoiceGender.neutral;
       expect(c.voiceLabel, 'Daniel'); // resetting the filter keeps the pick
     });
 
@@ -441,7 +441,7 @@ void main() {
       c.voiceGenderFilter = VoiceGender.male;
       expect(c.voiceGenderFilter, VoiceGender.male);
       c.changeModel('fish');
-      expect(c.voiceGenderFilter, isNull);
+      expect(c.voiceGenderFilter, VoiceGender.neutral);
     });
 
     test('changing gender tweaks the narrator phrase on gemini', () {
@@ -470,7 +470,7 @@ void main() {
       expect(defaultPrefix, contains('female narrator'));
       c.voiceGenderFilter = VoiceGender.male;
       expect(c.passagePrefix, contains('male narrator'));
-      c.voiceGenderFilter = null;
+      c.voiceGenderFilter = VoiceGender.neutral;
       expect(c.passagePrefix, defaultPrefix);
     });
 
@@ -483,7 +483,7 @@ void main() {
       expect(c.passagePrefix, contains('female narrator'));
       expect(c.voiceGenderFilter, VoiceGender.female);
       // Reverting to Any is likewise a no-op on the default phrase.
-      c.voiceGenderFilter = null;
+      c.voiceGenderFilter = VoiceGender.neutral;
       expect(c.passagePrefix, contains('female narrator'));
     });
 
@@ -505,7 +505,7 @@ void main() {
       c.voiceGenderFilter = VoiceGender.male;
       // No male voices: rather than leave a voice hidden behind an empty
       // filter, the pick reverts to "any" and the full list stays available.
-      expect(c.voiceGenderFilter, isNull);
+      expect(c.voiceGenderFilter, VoiceGender.neutral);
       expect(c.voiceItems.map((e) => e.$1), unorderedEquals(['Alice', 'Beth']));
       expect(c.voiceLabel, 'Alice');
     });
