@@ -20,4 +20,7 @@ class PlatformCommands {
   /// Mirrors the controller's folder-picker entry point so the menu bar and
   /// any key binding dispatch through one slot.
   VoidCallback? onSetOutputFolder;
+
+  /// Clears the editor text; greyed out when document is empty or narrating.
+  VoidCallback? onClearText;
 }

@@ -101,4 +101,11 @@ class DocumentController extends ChangeNotifier {
       _text.trim().isEmpty ? 0 : _text.trim().split(RegExp(r'\s+')).length;
 
   int get charCount => _text.length;
+
+  /// Clears the document text and marks dirty. Guard is handled by AppController.
+  void clearText() {
+    _text = '';
+    _dirty = true;
+    notifyListeners();
+  }
 }
