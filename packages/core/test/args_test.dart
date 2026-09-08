@@ -307,6 +307,15 @@ void main() {
     expect(cfg.resume, isTrue);
   });
 
+  test('--send-whole-file sets the config flag', () {
+    expect(parse(['--input', 's']).sendWholeFile, isFalse);
+    expect(parse(['--input', 's', '--send-whole-file']).sendWholeFile, isTrue);
+    // --min-words is still accepted alongside (whole-file mode ignores it).
+    final both = parse(['--input', 's', '--send-whole-file', '--min-words', '5']);
+    expect(both.sendWholeFile, isTrue);
+    expect(both.minWords, 5);
+  });
+
   test('--out override is passed through', () {
     expect(parse(['--input', 's', '--out', '/tmp/x']).outDir, '/tmp/x');
   });
@@ -443,6 +452,7 @@ void main() {
         'fish',
         '--out',
         '/tmp/x',
+        '--send-whole-file',
       ]);
       final copy = base.copyWith(inputPath: '/other.txt');
       expect(copy.inputPath, '/other.txt');
@@ -450,6 +460,7 @@ void main() {
       expect(copy.voice, base.voice);
       expect(copy.outDir, base.outDir);
       expect(copy.resume, base.resume);
+      expect(copy.sendWholeFile, isTrue);
       expect(copy.providerSettings, base.providerSettings);
       expect(copy.pricing, base.pricing);
     });

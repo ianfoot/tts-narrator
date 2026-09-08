@@ -59,6 +59,7 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
     final segments = controller.plannedSegments.length;
     final minutes = controller.estimatedMinutes.round();
     final cost = formatCostUsd(controller.estimatedCostUsd);
+    final segmentLabel = segments == 1 ? 'segment' : 'segments';
     return Container(
       key: const Key('statusBar'),
       height: AppMetrics.statusBarHeight,
@@ -107,7 +108,7 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
             child: KeyedSubtree(
               key: ValueKey('$segments-$minutes-$cost'),
               child: Text(
-                '$segments segments · ~$minutes mins · ~$cost est.',
+                '$segments $segmentLabel · ~$minutes mins · ~$cost est.',
                 key: const Key('editorEstimate'),
                 maxLines: 1,
                 softWrap: false,

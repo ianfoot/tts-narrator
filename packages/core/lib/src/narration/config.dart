@@ -14,6 +14,7 @@ class NarrationConfig {
     this.useCalmTag = false,
     this.passagePrefix = 'Narrate this passage for an audiobook. You are a warm, composed female narrator.',
     this.minWords = 30,
+    this.sendWholeFile = false,
     this.sampleLen,
     this.outDir = 'output',
     this.dryRun = false,
@@ -64,6 +65,10 @@ class NarrationConfig {
   /// words, so tiny fragments don't get an isolated (off-register) reading.
   final int minWords;
 
+  /// When true, bypass paragraph segmentation and narrate the whole source as
+  /// a single TTS call. [minWords] is ignored.
+  final bool sendWholeFile;
+
   /// Output directory for generated WAV files and the manifest.
   final String outDir;
 
@@ -95,6 +100,7 @@ class NarrationConfig {
     useCalmTag: useCalmTag,
     passagePrefix: passagePrefix,
     minWords: minWords,
+    sendWholeFile: sendWholeFile,
     sampleLen: sampleLen,
     outDir: outDir,
     dryRun: dryRun,

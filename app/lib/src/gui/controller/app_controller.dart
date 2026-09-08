@@ -299,6 +299,7 @@ class AppController extends ChangeNotifier {
   String _accent = 'southern British English, neutral and clear';
   bool _useCalmTag = false;
   int _minWords = 30;
+  bool _sendWholeFile = false;
   int? _sampleLen;
   String _outDir = 'output';
   bool _resume = false;
@@ -349,6 +350,28 @@ class AppController extends ChangeNotifier {
     _minWords = clamped;
     notifyListeners();
   }
+
+  /// Whether to narrate the whole document as a single TTS call instead of
+  /// segmenting it. When true, [minWords] is ignored and the settings rail
+  /// hides the "Min words per segment" control.
+  bool get sendWholeFile => _sendWholeFile;
+
+  set sendWholeFile(bool value) {
+    if (value == _sendWholeFile) return;
+    _sendWholeFile = value;
+    notifyListeners();
+  }
+
+  /// The current document normalized for whole-file narration (line endings
+  /// normalized, trimmed), mirroring the core's plan-time transform.
+  String get _wholeFileText =>
+      _text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
+
+  /// Whether the current document is small enough for whole-file narration
+  /// (see `maxWholeFileLength` in the core). The settings rail hides the "Send
+  /// whole file" toggle when false (documents over the cap).
+  bool get wholeFileAvailable =>
+      _wholeFileText.length <= maxWholeFileLength;
 
   int? get sampleLen => _sampleLen;
 
@@ -426,6 +449,7 @@ class AppController extends ChangeNotifier {
       useCalmTag: useCalmTag,
       passagePrefix: passagePrefix,
       minWords: minWords,
+      sendWholeFile: sendWholeFile,
       sampleLen: sampleLen,
       outDir: outDir.trim().isEmpty ? 'output' : outDir.trim(),
       resume: resume,
@@ -459,6 +483,7 @@ class AppController extends ChangeNotifier {
     if (value == _text) return;
     _text = value;
     _dirty = true;
+    _clearWholeFileIfTooLarge();
     notifyListeners();
   }
 
@@ -472,7 +497,19 @@ class AppController extends ChangeNotifier {
     _text = file.readAsStringSync();
     _documentPath = file.absolute.path;
     _dirty = false;
+    _clearWholeFileIfTooLarge();
     notifyListeners();
+  }
+
+  /// Whole-file narration is only offered up to `maxWholeFileLength` chars; a
+  /// larger document would be an unbounded single TTS call. Called from
+  /// [setText]/[loadFromFile] so a document that grows past the cap (or is
+  /// loaded oversized) drops the toggle instead of leaving it silently "on"
+  /// and planning a giant segment.
+  void _clearWholeFileIfTooLarge() {
+    if (_sendWholeFile && !wholeFileAvailable) {
+      _sendWholeFile = false;
+    }
   }
 
   /// Resolves a destination for Save As (and the first save of an untitled
@@ -527,7 +564,15 @@ class AppController extends ChangeNotifier {
   int get charCount => _text.length;
 
   /// The segment plan for the current text (min-word merge + length split).
-  List<String> get plannedSegments => segmentText(_text, minWords: minWords);
+  /// When [sendWholeFile] is on, the whole text is a single segment (empty
+  /// when the document is blank, mirroring the empty plan the core reports).
+  List<String> get plannedSegments {
+    if (sendWholeFile) {
+      final whole = _wholeFileText;
+      return whole.isEmpty ? const [] : [whole];
+    }
+    return segmentText(_text, minWords: minWords);
+  }
 
   double get estimatedMinutes => estimateMinutes(plannedSegments);
 
