@@ -217,6 +217,44 @@ void main() {
       expect(c.plannedSegments, ['One.\n\nTwo.']);
     });
 
+    test('wholeFileAvailable tracks the 60k character cap', () {
+      writeConfig({});
+      final c = makeController();
+      // Blank and short documents stay under the cap.
+      expect(c.wholeFileAvailable, isTrue);
+      c.setText('   \n\n  ');
+      expect(c.wholeFileAvailable, isTrue);
+      c.setText('x');
+      expect(c.wholeFileAvailable, isTrue);
+
+      c.setText(List.filled(maxWholeFileLength, 'x').join());
+      expect(c.wholeFileAvailable, isTrue);
+
+      c.setText(List.filled(maxWholeFileLength + 1, 'x').join());
+      expect(c.wholeFileAvailable, isFalse);
+    });
+
+    test('a document that grows past the cap auto-disables whole-file mode', () {
+      writeConfig({});
+      final c = makeController()..setText('Small.');
+      c.sendWholeFile = true;
+      expect(c.sendWholeFile, isTrue);
+
+      // Growing past the cap clears the toggle so no giant single segment can
+      // be scheduled behind a hidden switch.
+      c.setText(List.filled(maxWholeFileLength + 1, 'x').join());
+      expect(c.sendWholeFile, isFalse);
+      expect(c.plannedSegments.single, hasLength(maxWholeFileLength + 1));
+    });
+
+    test('empty text in whole-file mode plans no segments', () {
+      writeConfig({});
+      final c = makeController()..setText('Hello.');
+      c.sendWholeFile = true;
+      c.setText('');
+      expect(c.plannedSegments, isEmpty);
+    });
+
     test('throws a FormatException when the model has no selected voice', () {
       writeConfig({
         'models': {

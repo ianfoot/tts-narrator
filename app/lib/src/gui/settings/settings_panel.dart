@@ -418,19 +418,20 @@ class _SettingsPanelState extends State<SettingsPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Row(
-              children: [
-                Expanded(child: _controlLabel('Send whole file')),
-                PlatformSwitch(
-                  key: const Key('wholeFileSwitch'),
-                  value: _controller.sendWholeFile,
-                  onChanged: (v) => _controller.sendWholeFile = v,
-                ),
-              ],
+          if (_controller.wholeFileAvailable)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(
+                children: [
+                  Expanded(child: _controlLabel('Send whole file')),
+                  PlatformSwitch(
+                    key: const Key('wholeFileSwitch'),
+                    value: _controller.sendWholeFile,
+                    onChanged: (v) => _controller.sendWholeFile = v,
+                  ),
+                ],
+              ),
             ),
-          ),
           if (!_controller.sendWholeFile) ...[
             _label('Min words per segment'),
             Row(

@@ -262,6 +262,65 @@ void main() {
       expect(() => planSegments(cfg), throwsStateError);
     });
 
+    test('sendWholeFile rejects a document over the whole-file cap', () {
+      final tooLong = List.filled(maxWholeFileLength + 1, 'x').join();
+      final cfg = NarrationConfig(
+        inputPath: 'story.txt',
+        sourceText: tooLong,
+        profile: TtsModelProfile(
+          alias: 'test',
+          id: 'test/model',
+          format: 'mp3',
+          provider: provider.id,
+        ),
+        voice: 'VoiceOne',
+        outDir: '${dir.path}/out',
+        sendWholeFile: true,
+      );
+      expect(() => planSegments(cfg), throwsStateError);
+    });
+
+    test('sendWholeFile accepts a document at the cap', () {
+      final atCap = List.filled(maxWholeFileLength, 'x').join();
+      final cfg = NarrationConfig(
+        inputPath: 'story.txt',
+        sourceText: atCap,
+        profile: TtsModelProfile(
+          alias: 'test',
+          id: 'test/model',
+          format: 'mp3',
+          provider: provider.id,
+        ),
+        voice: 'VoiceOne',
+        outDir: '${dir.path}/out',
+        sendWholeFile: true,
+      );
+      expect(planSegments(cfg), [atCap]);
+    });
+
+    test('the manifest records the whole-file cap in whole-file mode', () async {
+      final cfg = NarrationConfig(
+        inputPath: 'story.txt',
+        sourceText: _inputText,
+        profile: TtsModelProfile(
+          alias: 'test',
+          id: 'test/model',
+          format: 'mp3',
+          provider: provider.id,
+        ),
+        voice: 'VoiceOne',
+        providerSettings: const {'api_key': 'sk-test'},
+        outDir: '${dir.path}/out',
+        sendWholeFile: true,
+      );
+      await narrate(cfg);
+
+      final manifest = jsonDecode(
+        File('${dir.path}/out/story/manifest.json').readAsStringSync(),
+      ) as Map<String, dynamic>;
+      expect(manifest['max_segment_length'], maxWholeFileLength);
+    });
+
     test('sendWholeFile narrates the whole source in a single call', () async {
       final cfg = NarrationConfig(
         inputPath: 'story.txt',

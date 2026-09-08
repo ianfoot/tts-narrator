@@ -510,6 +510,20 @@ void main() {
       expect(find.byKey(const Key('minWordsBadge')), findsOneWidget);
     });
 
+    testWidgets('documents over 60k chars hide the whole-file toggle', (
+      tester,
+    ) async {
+      writeConfig({});
+      final c = makeController();
+      c.setText(List.filled(maxWholeFileLength + 1, 'x').join());
+      await pumpRail(tester, c);
+
+      expect(c.wholeFileAvailable, isFalse);
+      expect(find.byKey(const Key('wholeFileSwitch')), findsNothing);
+      // The segment plan remains available; only whole-file is out of reach.
+      expect(find.byKey(const Key('minWordsSlider')), findsOneWidget);
+    });
+
     testWidgets('the min-words slider updates the controller within 10-100', (
       tester,
     ) async {

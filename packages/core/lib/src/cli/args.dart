@@ -323,7 +323,8 @@ Options:
   --min-words <n>           Merge paragraphs shorter than n words into the next
                             (default: 30).
   --send-whole-file         Narrate the whole file in a single TTS call instead
-                            of segmenting it (--min-words is ignored).
+                            of segmenting it (--min-words is ignored; capped at
+                            60,000 characters).
   --sample-len <n>          Narrate only the first n paragraphs.
   --dry-run                 Print the segment plan + cost estimate and exit
                             (no API call).

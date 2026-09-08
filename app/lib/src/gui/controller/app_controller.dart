@@ -362,6 +362,17 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The current document normalized for whole-file narration (line endings
+  /// normalized, trimmed), mirroring the core's plan-time transform.
+  String get _wholeFileText =>
+      _text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
+
+  /// Whether the current document is small enough for whole-file narration
+  /// (see `maxWholeFileLength` in the core). The settings rail hides the "Send
+  /// whole file" toggle when false (documents over the cap).
+  bool get wholeFileAvailable =>
+      _wholeFileText.length <= maxWholeFileLength;
+
   int? get sampleLen => _sampleLen;
 
   set sampleLen(int? value) {
@@ -472,6 +483,7 @@ class AppController extends ChangeNotifier {
     if (value == _text) return;
     _text = value;
     _dirty = true;
+    _clearWholeFileIfTooLarge();
     notifyListeners();
   }
 
@@ -485,7 +497,19 @@ class AppController extends ChangeNotifier {
     _text = file.readAsStringSync();
     _documentPath = file.absolute.path;
     _dirty = false;
+    _clearWholeFileIfTooLarge();
     notifyListeners();
+  }
+
+  /// Whole-file narration is only offered up to `maxWholeFileLength` chars; a
+  /// larger document would be an unbounded single TTS call. Called from
+  /// [setText]/[loadFromFile] so a document that grows past the cap (or is
+  /// loaded oversized) drops the toggle instead of leaving it silently "on"
+  /// and planning a giant segment.
+  void _clearWholeFileIfTooLarge() {
+    if (_sendWholeFile && !wholeFileAvailable) {
+      _sendWholeFile = false;
+    }
   }
 
   /// Resolves a destination for Save As (and the first save of an untitled
@@ -540,10 +564,15 @@ class AppController extends ChangeNotifier {
   int get charCount => _text.length;
 
   /// The segment plan for the current text (min-word merge + length split).
-  /// When [sendWholeFile] is on, the whole text is a single segment.
-  List<String> get plannedSegments => sendWholeFile
-      ? [_text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim()]
-      : segmentText(_text, minWords: minWords);
+  /// When [sendWholeFile] is on, the whole text is a single segment (empty
+  /// when the document is blank, mirroring the empty plan the core reports).
+  List<String> get plannedSegments {
+    if (sendWholeFile) {
+      final whole = _wholeFileText;
+      return whole.isEmpty ? const [] : [whole];
+    }
+    return segmentText(_text, minWords: minWords);
+  }
 
   double get estimatedMinutes => estimateMinutes(plannedSegments);
 

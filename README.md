@@ -66,7 +66,7 @@ path to the text to narrate.
 | `--tags on\|off` | Prepend a `[calm]` style tag to every prompt (Gemini only). | `off` |
 | `--passage-prefix <text>` | Pooled preamble prepended to every paragraph prompt. | `Narrate this passage for an audiobook. You are a warm, composed female narrator.` |
 | `--min-words <n>` | Merge paragraphs shorter than `n` words into the next, so tiny fragments don't get an isolated reading. | `30` |
-| `--send-whole-file` | Narrate the whole file in a single TTS call instead of segmenting it (`--min-words` is ignored). | `off` |
+| `--send-whole-file` | Narrate the whole file in a single TTS call instead of segmenting it (`--min-words` is ignored; limited to 60,000 characters so a runaway document isn't one unbounded request). | `off` |
 | `--sample-len <n>` | Narrate only the first `n` segments (useful for testing). | — |
 | `--dry-run` | Print the segment plan + estimated duration/cost and exit without calling the API. | `off` |
 | `--resume` | Skip segments already present in the output manifest (same prompt + file), so a re-run doesn't re-bill finished paragraphs. | `off` |
@@ -347,6 +347,9 @@ By default the text is segmented so each paragraph gets a controlled, consistent
 Pass `--send-whole-file` (or toggle **Send whole file** in the GUI) to bypass
 segmentation entirely: the whole document is sent to the TTS engine as a single
 call. The "Min words per segment" setting is hidden and ignored in this mode.
+Whole-file narration is limited to 60,000 characters (roughly an hour of audio)
+so a runaway document isn't sent as one unbounded request — the GUI hides the
+toggle above that size and the CLI rejects the plan with a clear error.
 
 The mood of Gemini 3.1 Flash TTS is controlled through the prompt text
 (inline tags like `[calm]`, accent/style descriptions) rather than a separate
