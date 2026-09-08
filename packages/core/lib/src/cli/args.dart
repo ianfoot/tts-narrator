@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:args/args.dart';
+
 import '../narration/config.dart';
 import '../narration/model_profiles.dart';
 import '../narration/tts_provider.dart';
@@ -21,95 +23,78 @@ class InvalidCliArgumentError implements Exception {
 /// malformed model file) are appended to [warningsOut] for the caller to
 /// surface.
 NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
-  String? input;
-  String? modelArg;
-  var voice = '';
-  var voiceSpecified = false;
-  var accent = 'southern British English, neutral and clear';
-  var style = 'warm, composed, restrained, literary';
-  var prefix =
-      'Narrate this passage for an audiobook. You are a warm, composed female narrator.';
-  var minWords = 30;
-  var sendWholeFile = false;
-  var sampleLen = -1;
-  var outDir = 'output';
-  var dryRun = false;
-  var resume = false;
-  String? apiKey;
-  String? configPath;
-  String? providerFlag;
+  final parser = ArgParser()
+    ..addOption('input', abbr: 'i', help: 'Path to input file or directory')
+    ..addOption('model', abbr: 'm', help: 'TTS model alias or id')
+    ..addOption('voice', abbr: 'v', help: 'Voice alias or provider id')
+    ..addOption('accent', help: 'Accent description (gemini only; ignored by kokoro)')
+    ..addOption('style', help: 'Style/register description in prompt (gemini only)')
+    ..addOption('passage-prefix', help: 'Pooled preamble applied to each paragraph')
+    ..addOption('out', help: 'Output directory (default: "output")')
+    ..addOption('config', help: 'Voice config directory')
+    ..addOption('api-key', help: 'Opaque api_key setting for provider')
+    ..addOption('provider', help: 'Override the model/provider id')
+    ..addOption('sample-len', help: 'Narrate only the first n paragraphs')
+    ..addOption('min-words', defaultsTo: '30', help: 'Merge paragraphs shorter than n words')
+    ..addFlag('send-whole-file', help: 'Narrate whole file in a single TTS call')
+    ..addFlag('dry-run', help: 'Print segment plan + cost estimate and exit')
+    ..addFlag('resume', help: 'Skip segments already in output manifest')
+    ..addFlag('list-voices', help: 'List voices/aliases for a model and exit')
+    ..addFlag('help', abbr: 'h', negatable: false, help: 'Show usage information');
 
-  var i = 0;
-  String take(String flag) {
-    if (i + 1 >= args.length) {
-      throw InvalidCliArgumentError('Missing value for $flag.');
-    }
-    i++;
-    return args[i];
+  late final ArgResults results;
+  try {
+    results = parser.parse(args);
+  } on ArgParserException catch (e) {
+    throw InvalidCliArgumentError(e.message);
   }
 
-  for (; i < args.length; i++) {
-    final arg = args[i];
-    switch (arg) {
-      case '--input':
-        input = take(arg);
-      case '--model':
-        modelArg = take(arg);
-      case '--voice':
-        voice = take(arg);
-        voiceSpecified = true;
-      case '--accent':
-        accent = take(arg);
-      case '--style':
-        style = take(arg);
-      case '--passage-prefix':
-        prefix = take(arg);
-      case '--out':
-        outDir = take(arg);
-      case '--config':
-        configPath = take(arg);
-      case '--api-key':
-        apiKey = take(arg);
-      case '--provider':
-        providerFlag = take(arg);
-      case '--sample-len':
-        final v = take(arg);
-        final n = int.tryParse(v);
-        if (n == null || n < 1) {
-          throw InvalidCliArgumentError(
-            '--sample-len must be a positive integer, got "$v".',
-          );
-        }
-        sampleLen = n;
-      case '--min-words':
-        final v = take(arg);
-        final n = int.tryParse(v);
-        if (n == null || n < 1) {
-          throw InvalidCliArgumentError(
-            '--min-words must be a positive integer, got "$v".',
-          );
-        }
-        minWords = n;
-      case '--send-whole-file':
-        sendWholeFile = true;
-      case '--dry-run':
-        dryRun = true;
-      case '--resume':
-        resume = true;
-      case '--help':
-      case '-h':
-        throw InvalidCliArgumentError(usage);
-      default:
-        if (arg.startsWith('-')) {
-          throw InvalidCliArgumentError('Unknown flag: $arg');
-        }
-        throw InvalidCliArgumentError('Unexpected positional argument: $arg');
-    }
+  if (results.flag('help')) {
+    throw InvalidCliArgumentError(usage);
   }
 
+  // Required --input check.
+  final input = results['input'] as String?;
   if (input == null || input.trim().isEmpty) {
     throw InvalidCliArgumentError('--input <path> is required (no default filename).');
   }
+
+  // Numeric parsing for --sample-len and --min-words.
+  final sampleLenStr = results['sample-len'] as String?;
+  var sampleLen = -1;
+  if (sampleLenStr != null && sampleLenStr.isNotEmpty) {
+    final n = int.tryParse(sampleLenStr);
+    if (n == null || n < 1) {
+      throw InvalidCliArgumentError('--sample-len must be a positive integer, got "$sampleLenStr".');
+    }
+    sampleLen = n;
+  }
+
+  final minWordsStr = results['min-words'] as String?;
+  var minWords = 30;
+  if (minWordsStr != null && minWordsStr.isNotEmpty) {
+    final n = int.tryParse(minWordsStr);
+    if (n == null || n < 1) {
+      throw InvalidCliArgumentError('--min-words must be a positive integer, got "$minWordsStr".');
+    }
+    minWords = n;
+  }
+
+  // Voice and style defaults.
+  var voice = results['voice'] as String? ?? '';
+  final voiceSpecified = results.wasParsed('voice');
+  var accent = results['accent'] as String? ?? 'southern British English, neutral and clear';
+  var style = results['style'] as String? ?? 'warm, composed, restrained, literary';
+  var prefix = results['passage-prefix'] as String? ??
+      'Narrate this passage for an audiobook. You are a warm, composed female narrator.';
+  final outDir = results['out'] as String? ?? 'output';
+  final dryRun = results.flag('dry-run');
+  final resume = results.flag('resume');
+  final sendWholeFile = results.flag('send-whole-file');
+  final apiKey = results['api-key'] as String?;
+  final configPath = results['config'] as String?;
+  final providerFlag = results['provider'] as String?;
+  final modelArg = results['model'] as String?;
 
   // Voice config: model wiring, voice aliases, defaults, pricing, providers.
   final cfgDir = configPath ?? defaultConfigDir();
@@ -125,9 +110,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
   final voiceConfig = loaded.$1;
   if (warningsOut != null) warningsOut.addAll(loaded.$2);
 
-  // Model resolution: the default model comes from the config's
-  // `default_model` (falling back to the fish bootstrap); an explicit --model
-  // resolves against the effective model set.
+  // Model resolution.
   var profile = defaultModelFor(voiceConfig);
   if (modelArg != null) {
     final resolved = profileFor(modelArg, voiceConfig);
@@ -143,8 +126,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
     profile = resolved;
   }
 
-  // --provider overrides the model's/default provider; unknown ids error with
-  // the registered list (via the registry's message).
+  // --provider overrides.
   if (providerFlag != null) {
     try {
       ttsProviderRegistry.resolve(providerFlag);
@@ -154,10 +136,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
     profile = profile.copyWith(provider: providerFlag);
   }
 
-  // Voice resolution. An explicit --voice passes straight through (no
-  // validation — providers add/remove voices and testing arbitrary ids is a
-  // feature); otherwise the config default is used, with fish falling back to
-  // its compiled free default on cold start.
+  // Voice resolution.
   final String voiceId;
   final String voiceLabel;
   if (voiceSpecified) {
@@ -170,11 +149,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
     }
   }
 
-  // Provider settings: the selected provider's block from the config, with
-  // --api-key merged in as the generic `api_key` setting (it wins over any
-  // `providers.<id>.api_key`). `${ENV}` refs are resolved once at build time;
-  // no env reads happen per segment. A dry run never calls the API, so it skips
-  // resolution entirely — no key is needed to print the plan.
+  // Provider settings.
   final rawSettings = <String, String>{
     ...?voiceConfig.providers[profile.provider],
   };
