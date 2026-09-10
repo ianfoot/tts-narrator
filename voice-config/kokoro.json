@@ -1,0 +1,20 @@
+{
+  "id": "hexgrad/kokoro-82m",
+  "provider": "openrouter",
+  "format": "mp3",
+  "display_name": "Kokoro 82M",
+  "default_voice": "Emma",
+  "pricing": {
+    "usd_per_m_chars": 0.62
+  },
+  "voices": {
+    "Alice": {"id": "bf_alice", "gender": "female"},
+    "Daniel": {"id": "bm_daniel", "gender": "male"},
+    "Emma": {"id": "bf_emma", "gender": "female"},
+    "Fable": {"id": "bm_fable", "gender": "male"},
+    "George": {"id": "bm_george", "gender": "male"},
+    "Isabella": {"id": "bf_isabella", "gender": "female"},
+    "Lewis": {"id": "bm_lewis", "gender": "male"},
+    "Lily": {"id": "bf_lily", "gender": "female"}
+  }
+}
