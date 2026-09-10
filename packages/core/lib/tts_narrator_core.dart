@@ -7,6 +7,9 @@ library;
 
 export 'src/cli/args.dart';
 export 'src/cli/voice_config.dart';
+export 'src/cli/voice_config_queries.dart';
+export 'src/cli/voice_config_io.dart';
+export 'src/cli/voice_config_download.dart';
 export 'src/narration/abort.dart';
 export 'src/narration/concat.dart';
 export 'src/narration/config.dart';

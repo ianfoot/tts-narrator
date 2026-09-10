@@ -233,7 +233,7 @@ class SettingsController extends ChangeNotifier {
       voiceId = def.$1;
       label = def.$2 == def.$1 ? null : def.$2;
     } else {
-      final (id, resolvedLabel) = _model.voiceConfig.resolveVoice(p.alias, raw);
+      final (id, resolvedLabel) = resolveVoice(_model.voiceConfig, p.alias, raw);
       voiceId = id;
       label = (_model.voiceLabel != null && id == raw)
           ? _model.voiceLabel

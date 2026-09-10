@@ -58,7 +58,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
   String? get voiceLabel => _voiceLabel;
 
   /// Cost data for the active model (free until the config sets pricing).
-  AudioPricing get pricing => _voiceConfig.pricingFor(profile.alias);
+  AudioPricing get pricing => pricingFor(_voiceConfig, profile.alias);
 
   /// Resolves the provider settings block for [profile] (see
   /// `resolveSettings` in the core); used when assembling the run config.
@@ -121,7 +121,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   /// Applies a friendly voice alias; resolves it to the provider raw id.
   void applyVoiceLabel(String label) {
-    final (id, _) = _voiceConfig.resolveVoice(profile.alias, label);
+    final (id, _) = resolveVoice(_voiceConfig, profile.alias, label);
     setVoice(id, label: label);
   }
 

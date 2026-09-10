@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/cli/voice_config.dart';
+import 'package:tts_narrator_core/src/cli/voice_config_queries.dart';
+import 'package:tts_narrator_core/src/cli/voice_config_io.dart';
 import 'package:tts_narrator_core/src/narration/cost.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
@@ -420,7 +422,8 @@ void main() {
     );
 
     test('resolves an alias to its raw id and keeps the label', () {
-      final (id, label) = cfg.resolveVoice(
+      final (id, label) = resolveVoice(
+        cfg,
         'fish',
         'British Female Narrator (good)',
       );
@@ -429,7 +432,8 @@ void main() {
     });
 
     test('passes unknown values through unchanged', () {
-      final (id, label) = cfg.resolveVoice(
+      final (id, label) = resolveVoice(
+        cfg,
         'fish',
         '2fd511bd06904a21a971c6551dfb853a',
       );
@@ -438,17 +442,18 @@ void main() {
     });
 
     test('is isolated per model', () {
-      final (id, _) = cfg.resolveVoice(
+      final (id, _) = resolveVoice(
+        cfg,
         'kokoro',
         'British Female Narrator (good)',
       );
       expect(id, 'British Female Narrator (good)'); // not a kokoro alias
-      final (id2, _) = cfg.resolveVoice('gemini', 'Emma');
+      final (id2, _) = resolveVoice(const VoiceConfig(), 'gemini', 'Emma');
       expect(id2, 'Emma');
     });
 
     test('empty config passes everything through', () {
-      final (id, label) = const VoiceConfig().resolveVoice('fish', 'anything');
+      final (id, label) = resolveVoice(const VoiceConfig(), 'fish', 'anything');
       expect(id, 'anything');
       expect(label, 'anything');
     });
@@ -475,9 +480,9 @@ void main() {
           'kokoro': {'Emma': Voice(id: 'bf_emma', gender: VoiceGender.female)},
         },
       );
-      expect(cfg.genderFor('kokoro', 'Emma'), VoiceGender.female);
-      expect(cfg.genderFor('kokoro', 'Daniel'), isNull);
-      expect(cfg.genderFor('gemini', 'Emma'), isNull);
+      expect(genderFor(cfg, 'kokoro', 'Emma'), VoiceGender.female);
+      expect(genderFor(cfg, 'kokoro', 'Daniel'), isNull);
+      expect(genderFor(cfg, 'gemini', 'Emma'), isNull);
     });
   });
 
