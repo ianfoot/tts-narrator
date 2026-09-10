@@ -28,7 +28,10 @@ String defaultConfigDir() {
 ///
 /// Returns the loaded config plus warnings for skipped models.
 (VoiceConfig, List<String>) loadVoiceConfig(String configDir) {
-  downloadVoiceConfigFiles(configDir);
+  // Note: download is no longer triggered automatically here so
+  // loadVoiceConfig stays pure synchronous disk I/O. Callers that
+  // want remote defaults should await downloadVoiceConfigFiles()
+  // explicitly before loading.
 
   final warnings = <String>[];
   final separator = Platform.pathSeparator;
