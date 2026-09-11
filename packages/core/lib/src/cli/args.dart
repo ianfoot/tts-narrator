@@ -6,6 +6,8 @@ import '../narration/config.dart';
 import '../narration/model_profiles.dart';
 import '../narration/tts_provider.dart';
 import 'voice_config.dart';
+import 'voice_config_queries.dart';
+import 'voice_config_io.dart';
 
 /// Thrown when the user provides invalid CLI arguments.
 class InvalidCliArgumentError implements Exception {
@@ -140,7 +142,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
   final String voiceId;
   final String voiceLabel;
   if (voiceSpecified) {
-    (voiceId, voiceLabel) = voiceConfig.resolveVoice(profile.alias, voice);
+    (voiceId, voiceLabel) = resolveVoice(voiceConfig, profile.alias, voice);
   } else {
     try {
       (voiceId, voiceLabel) = defaultVoiceFor(profile, voiceConfig);
@@ -184,7 +186,7 @@ NarrationConfig parseArgs(List<String> args, {List<String>? warningsOut}) {
     outDir: outDir,
     dryRun: dryRun,
     resume: resume,
-    pricing: voiceConfig.pricingFor(profile.alias),
+    pricing: pricingFor(voiceConfig, profile.alias),
     providerSettings: providerSettings,
   );
 }
