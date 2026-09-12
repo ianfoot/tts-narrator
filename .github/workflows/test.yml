@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: .
+
+      - name: Run core Dart tests
+        run: dart test
+        working-directory: packages/core
+
+      - name: Run provider Dart tests
+        run: dart test
+        working-directory: packages/providers/openrouter
+
+      - name: Run Flutter widget tests
+        run: flutter test
+        working-directory: app
