@@ -359,11 +359,6 @@ void main() {
         label: 'Passage prefix',
         type: ModelUiOptionType.multiline,
       ),
-      ModelUiControl(
-        key: 'useCalmTag',
-        label: 'Prepend [calm] tag',
-        type: ModelUiOptionType.bool,
-      ),
     ]);
 
     testWidgets('declared fields render and write through to the controller', (
@@ -380,7 +375,6 @@ void main() {
       expect(find.byKey(const Key('accentField')), findsOneWidget);
       expect(find.byKey(const Key('styleField')), findsOneWidget);
       expect(find.byKey(const Key('passagePrefixField')), findsOneWidget);
-      expect(find.byKey(const Key('useCalmTagSwitch')), findsOneWidget);
 
       await tester.enterText(
         find.descendant(
@@ -403,8 +397,6 @@ void main() {
         ),
         'Read this passage.',
       );
-      await tester.tap(find.byKey(const Key('useCalmTagSwitch')));
-      await tester.pump();
 
       expect(c.accent, 'a calm brogue');
       expect(c.style, 'measured, unhurried');
@@ -647,11 +639,6 @@ void main() {
             label: 'Passage prefix',
             type: ModelUiOptionType.multiline,
           ),
-          ModelUiControl(
-            key: 'useCalmTag',
-            label: 'Prepend [calm] tag',
-            type: ModelUiOptionType.bool,
-          ),
         ]);
       fake.register();
       final c = makeController();
@@ -675,7 +662,6 @@ void main() {
       expect(c.voice, 'CN2pVME9cDEeMRXJzcMPYj0p');
       // Switching to gemini brings its plugin-declared options.
       expect(find.byKey(const Key('accentField')), findsOneWidget);
-      expect(find.byKey(const Key('useCalmTagSwitch')), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       debugDefaultTargetPlatformOverride = null;

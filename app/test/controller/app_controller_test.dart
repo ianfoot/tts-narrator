@@ -4,11 +4,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tts_narrator_core/tts_narrator_core.dart';
-
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
+import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/fake_tts_provider.dart';
 
@@ -796,17 +795,12 @@ void main() {
       final fake = FakeTtsProvider()
         ..specsByAlias['fish'] = const ModelUiSpec([
           ModelUiControl(key: 'accent', label: 'Accent'),
-          ModelUiControl(
-            key: 'useCalmTag',
-            label: '[calm]',
-            type: ModelUiOptionType.bool,
-          ),
         ]);
       fake.register();
       final c = makeController();
       expect(c.modelUiSpec.isEmpty, isFalse);
       final keys = c.modelUiSpec.options.map((o) => o.key).toList();
-      expect(keys, ['accent', 'useCalmTag']);
+      expect(keys, ['accent']);
     });
   });
 
@@ -896,7 +890,7 @@ void main() {
       expect(c.sampleLen, 2);
       expect(c.outDir, 'out');
       expect(c.resume, isTrue);
-      expect(notifications, 8);
+      expect(notifications, 7);
     });
 
     test('identical setting writes are ignored', () {
