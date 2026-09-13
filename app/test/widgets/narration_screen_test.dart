@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
@@ -57,10 +58,30 @@ void main() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
-  AppController makeController() {
+  /// Writes the starter fish config (config.json + fish.json) so the
+  /// controller has a resolvable default model, as after the first-run
+  /// download; without it no model is configured and runs cannot start.
+  void writeFishConfig() {
     File('$configDir/config.json')
       ..parent.createSync(recursive: true)
-      ..writeAsStringSync('{}');
+      ..writeAsStringSync(
+        const JsonEncoder().convert({'default_model': 'fish'}),
+      );
+    File('$configDir/fish.json').writeAsStringSync(
+      const JsonEncoder().convert({
+        'id': 'fish-audio/s2.1-pro-free:free',
+        'provider': 'openrouter',
+        'format': 'mp3',
+        'default_voice': 'British Female Narrator',
+        'voices': {
+          'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+        },
+      }),
+    );
+  }
+
+  AppController makeController() {
+    writeFishConfig();
     final c = AppController(loader: UserVoiceConfigLoader(configDir: configDir))
       ..outDir = dir.path;
     c.setText(
@@ -146,6 +167,7 @@ void main() {
     tester,
   ) async {
     FakeTtsProvider().register();
+    writeFishConfig();
     final c = AppController(loader: UserVoiceConfigLoader(configDir: configDir))
       ..outDir = dir.path;
     c.startRun();

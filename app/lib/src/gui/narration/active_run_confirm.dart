@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 
 /// Confirms leaving a still-generating narration run.
 class ActiveRunConfirmDialog {
-  static Future<bool> show({required BuildContext context, required bool isMac}) async {
+  static Future<bool> show({
+    required BuildContext context,
+    required bool isMac,
+  }) async {
     const title = 'Cancel active narration run?';
-    const message = 'Generation stops now; completed clips stay playable in this session.';
+    const message =
+        'Generation stops now; completed clips stay playable in this session.';
     if (isMac) {
       final result = await showCupertinoDialog<bool>(
         context: context,

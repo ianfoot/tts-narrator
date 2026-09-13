@@ -4,7 +4,6 @@ import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/config/voice_config.dart';
 import 'package:tts_narrator_core/src/config/voice_config_queries.dart';
 import 'package:tts_narrator_core/src/config/voice_config_io.dart';
-import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
 void main() {
   group('loadVoiceConfig', () {
@@ -292,12 +291,12 @@ void main() {
       },
     );
 
-    test('an unknown default_model warns and keeps the fish fallback', () {
+    test('an unknown default_model warns and yields no default', () {
       writeGlobal('{"default_model": "bogus"}');
       writeModel('fish', '{"id": "a/b", "provider": "openrouter"}');
       final (cfg, warnings) = load();
       expect(cfg.defaultModel, 'bogus');
-      expect(defaultModelFor(cfg).alias, kDefaultProfile.profile.alias);
+      expect(defaultModelFor(cfg), isNull);
       expect(warnings.single, contains('default_model "bogus"'));
     });
   });

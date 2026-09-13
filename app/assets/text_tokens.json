@@ -91,7 +91,7 @@
       "truncatedWav": "Not a WAV file (truncated chunk).",
       "noDataChunk": "Not a WAV file (no data chunk).",
       "skippedModel": "Skipped model \"$alias\": ${e.message}",
-      "defaultModelFallback": "default_model \"$configuredDefault\" is not a configured model; falling back to the compiled default.",
+      "defaultModelFallback": "default_model \"$configuredDefault\" is not a configured model; no default model is selected.",
       "defaultVoiceNotConfigured": "Default voice \"$configured\" for \"${model.alias}\" is not a configured voice or raw id.",
       "noDefaultVoice": "No default voice configured for \"${model.alias}\". Set \"defaults\" in the voice config, or pass --voice / pick one in the app.",
       "invalidTopLevel": "Invalid voice config \"$path\": top-level value must be a JSON object",
@@ -131,10 +131,12 @@
   "gui": {
     "controller": {
       "errors": {
+        "noModelConfigured": "No voice model is configured. Download the starter configs, or add model files to the voice config directory.",
         "noVoiceSelected": "No voice selected for \"$modelAlias\" — pick an alias or set a default in the voice config.",
         "cannotOpenTextFile": "Cannot open text file"
       },
       "blockReasons": {
+        "noModelConfigured": "No voice model is configured. Download the starter configs, or add model files to the voice config directory.",
         "emptyText": "Editor text is empty",
         "alreadyRunning": "Narration is already running."
       },

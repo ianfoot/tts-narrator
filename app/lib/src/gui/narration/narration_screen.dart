@@ -147,7 +147,8 @@ class _NarrationScreenState extends State<NarrationScreen> {
   void _onCancel() => _controller.cancelRun();
 
   /// Confirms leaving via the extracted dialog class.
-  Future<bool> _confirmCancel() => ActiveRunConfirmDialog.show(context: context, isMac: _isMac);
+  Future<bool> _confirmCancel() =>
+      ActiveRunConfirmDialog.show(context: context, isMac: _isMac);
 
   AppTokens get _tokens => AppTokens.of(context);
 

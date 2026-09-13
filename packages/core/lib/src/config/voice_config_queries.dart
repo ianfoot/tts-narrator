@@ -27,24 +27,15 @@ VoiceGender? genderFor(
   String voiceLabel,
 ) => config.voices[modelAlias]?[voiceLabel]?.gender;
 
-/// The effective set of models: compiled fish bootstrap first, merged with [config].
+/// The configured models, sorted by alias. Models exist only in the config —
+/// there is no compiled fallback — so an empty config yields no models.
 List<TtsModelProfile> effectiveModels(VoiceConfig config) {
-  final out = <TtsModelProfile>[];
-  final bootstrap = kDefaultProfile.profile;
-  final concrete = config.models;
-  if (concrete.containsKey(bootstrap.alias)) {
-    out.add(concrete[bootstrap.alias]!);
-  } else {
-    out.add(bootstrap);
-  }
-  for (final e in concrete.entries) {
-    if (e.key == bootstrap.alias) continue;
-    out.add(e.value);
-  }
-  return out;
+  final aliases = config.models.keys.toList()..sort();
+  return [for (final alias in aliases) config.models[alias]!];
 }
 
-/// Resolves `--model` value against effective set, or null if unknown.
+/// Resolves a model by alias or id against the configured models, or null when
+/// unknown.
 TtsModelProfile? profileFor(String aliasOrId, VoiceConfig config) {
   for (final p in effectiveModels(config)) {
     if (p.alias == aliasOrId || p.id == aliasOrId) return p;
@@ -52,14 +43,15 @@ TtsModelProfile? profileFor(String aliasOrId, VoiceConfig config) {
   return null;
 }
 
-/// The model the CLI and GUI preselect on cold start.
-TtsModelProfile defaultModelFor(VoiceConfig config) {
+/// The model the CLI and GUI preselect, or null when no `default_model` is
+/// configured (or it does not resolve to a configured model).
+///
+/// No compiled default exists: without a resolvable `default_model` there is
+/// nothing to preselect.
+TtsModelProfile? defaultModelFor(VoiceConfig config) {
   final dm = config.defaultModel;
-  if (dm != null && dm.trim().isNotEmpty) {
-    final resolved = profileFor(dm.trim(), config);
-    if (resolved != null) return resolved;
-  }
-  return kDefaultProfile.profile;
+  if (dm == null || dm.trim().isEmpty) return null;
+  return profileFor(dm.trim(), config);
 }
 
 String? _resolveAlias(VoiceConfig config, String modelAlias, String value) {
@@ -68,6 +60,9 @@ String? _resolveAlias(VoiceConfig config, String modelAlias, String value) {
 }
 
 /// The default voice (+ friendly label) for [model].
+///
+/// Only a configured `defaults` entry (or the voice named by it) can be the
+/// default: models do not bundle a compiled default voice.
 (String id, String label) defaultVoiceFor(
   TtsModelProfile model,
   VoiceConfig config,
@@ -80,9 +75,6 @@ String? _resolveAlias(VoiceConfig config, String modelAlias, String value) {
       'Default voice "$configured" for "${model.alias}" is not a configured '
       'voice or raw id.',
     );
-  }
-  if (model.alias == kDefaultProfile.profile.alias) {
-    return (kDefaultProfile.voice, kDefaultProfile.voiceLabel);
   }
   throw VoiceConfigurationError(
     'No default voice configured for "${model.alias}". Set "defaults" in the '

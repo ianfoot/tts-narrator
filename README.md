@@ -249,7 +249,7 @@ packages/core/            # tts_narrator_core — pure Dart narration core
         abort.dart            # AbortToken for the GUI Cancel button
         config.dart           # NarrationConfig
         cost.dart             # duration + cost estimates
-        model_profiles.dart   # request wiring + compiled fish bootstrap (kDefaultProfile)
+        model_profiles.dart   # request wiring (models come only from config files)
         model_ui.dart         # ModelUiSpec — GUI options declared by a model's plugin
         narration.dart       # segmentText + narration orchestrator
         prompt.dart           # per-paragraph prompt template (Gemini only)

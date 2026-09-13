@@ -63,6 +63,21 @@ void main() {
   AppController makeController() =>
       AppController(loader: UserVoiceConfigLoader(configDir: configDir));
 
+  /// Writes the starter fish config so the controller preselects fish with its
+  /// default voice (as after the first-run download).
+  void writeFishConfig() {
+    writeConfig({
+      'default_model': 'fish',
+      'models': {
+        'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+      },
+      'defaults': {'fish': 'British Female Narrator'},
+      'voices': {
+        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+      },
+    });
+  }
+
   Future<void> pumpRail(WidgetTester tester, AppController controller) async {
     await tester.binding.setSurfaceSize(const Size(1200, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -181,6 +196,7 @@ void main() {
 
     testWidgets('picking a voice alias resolves to its raw id', (tester) async {
       writeConfig({
+        'default_model': 'fish',
         'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
         },
@@ -364,7 +380,7 @@ void main() {
     testWidgets('declared fields render and write through to the controller', (
       tester,
     ) async {
-      writeConfig({});
+      writeFishConfig();
       final fake = FakeTtsProvider()..modelUiSpec = geminiSpec;
       fake.register();
       final c = makeController();
@@ -406,7 +422,7 @@ void main() {
     testWidgets('an empty spec renders no model options section', (
       tester,
     ) async {
-      writeConfig({});
+      writeFishConfig();
       FakeTtsProvider().register();
       final c = makeController();
       await pumpRail(tester, c);
@@ -419,7 +435,7 @@ void main() {
     testWidgets('unbindable keys are ignored rather than crashing the rail', (
       tester,
     ) async {
-      writeConfig({});
+      writeFishConfig();
       // A future plugin may declare a key this app version cannot bind; it must
       // not render and must not throw during build.
       final fake = FakeTtsProvider()
@@ -439,7 +455,7 @@ void main() {
     testWidgets('a declared hint shows as the field placeholder', (
       tester,
     ) async {
-      writeConfig({});
+      writeFishConfig();
       final fake = FakeTtsProvider()
         ..modelUiSpec = const ModelUiSpec([
           ModelUiControl(

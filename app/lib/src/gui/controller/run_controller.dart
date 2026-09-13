@@ -272,6 +272,9 @@ class RunController extends ChangeNotifier {
   /// blocked (empty text / already running). The Narrate entrypoints guard on
   /// this before dispatching to the facade's [startRun].
   String? narrateBlockReason() {
+    if (_model.profile == null) {
+      return TextTokens.gui_controller_blockReasons_noModelConfigured;
+    }
     if (_document.text.trim().isEmpty) {
       return TextTokens.gui_controller_blockReasons_emptyText;
     }
