@@ -137,7 +137,8 @@ VoiceConfig _loadGlobalConfig(String path) {
   String? defaultVoice,
   AudioPricing? pricing,
   Map<String, Voice> voices,
-}) _parseModelFile(String path, String alias) {
+})
+_parseModelFile(String path, String alias) {
   final raw = _readJson(path);
   if (raw is! Map<String, dynamic>) {
     throw VoiceConfigurationError('must be a JSON object');
@@ -175,7 +176,9 @@ VoiceConfig _loadGlobalConfig(String path) {
   final defaultVoiceRaw = raw['default_voice'];
   if (defaultVoiceRaw != null) {
     if (defaultVoiceRaw is! String || defaultVoiceRaw.trim().isEmpty) {
-      throw VoiceConfigurationError('"default_voice" must be a non-empty string');
+      throw VoiceConfigurationError(
+        '"default_voice" must be a non-empty string',
+      );
     }
     defaultVoice = defaultVoiceRaw;
   }
@@ -305,7 +308,9 @@ void writeVoiceConfig(String configDir, VoiceConfig config) {
             flush: true,
           );
     } on FileSystemException catch (e) {
-      throw VoiceConfigurationError('Cannot write voice config "$configDir": $e');
+      throw VoiceConfigurationError(
+        'Cannot write voice config "$configDir": $e',
+      );
     }
   }
 }

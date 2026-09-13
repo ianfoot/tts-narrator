@@ -39,15 +39,12 @@ Future<void> runCleanupSegmentsFlow({
     _showInfoDialog(
       context,
       title: TextTokens.gui_cleanup_deletedTitle,
-      message: fillTextTemplate(
-        TextTokens.gui_cleanup_removedMessage,
-        {
-          'removedCount': removed,
-          'fileWord': removed == 1
-              ? TextTokens.core_plurals_file
-              : TextTokens.core_plurals_files,
-        },
-      ),
+      message: fillTextTemplate(TextTokens.gui_cleanup_removedMessage, {
+        'removedCount': removed,
+        'fileWord': removed == 1
+            ? TextTokens.core_plurals_file
+            : TextTokens.core_plurals_files,
+      }),
     );
   } catch (e) {
     if (!context.mounted) return;

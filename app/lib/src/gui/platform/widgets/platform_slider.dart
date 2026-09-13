@@ -60,10 +60,12 @@ class PlatformSlider extends StatelessWidget {
         label: label,
       );
     }
-    return tooltip == null ? slider : Localizations.override(
-      context: context,
-      delegates: const [DefaultMaterialLocalizations.delegate],
-      child: Tooltip(message: tooltip!, child: slider),
-    );
+    return tooltip == null
+        ? slider
+        : Localizations.override(
+            context: context,
+            delegates: const [DefaultMaterialLocalizations.delegate],
+            child: Tooltip(message: tooltip!, child: slider),
+          );
   }
 }

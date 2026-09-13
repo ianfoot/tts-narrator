@@ -54,10 +54,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
       (
         p.alias,
         p.displayName ??
-            fillTextTemplate(
-              TextTokens.gui_settings_modelDisplayFallback,
-              {'alias': p.alias, 'id': p.id},
-            ),
+            fillTextTemplate(TextTokens.gui_settings_modelDisplayFallback, {
+              'alias': p.alias,
+              'id': p.id,
+            }),
       ),
   ];
 
@@ -331,7 +331,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
   Widget _buildModelOption(ModelUiControl option) {
     switch (option.type) {
       case ModelUiOptionType.bool:
-        throw UnsupportedError('bool model options removed (use passagePrefix for [calm])');
+        throw UnsupportedError(
+          'bool model options removed (use passagePrefix for [calm])',
+        );
       case ModelUiOptionType.gender:
         final g = _controller.voiceGenderFilter;
         return Padding(
@@ -365,10 +367,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
               tooltip: option.key == 'accent'
                   ? TextTokens.gui_settings_accentFieldTooltip
                   : option.key == 'style'
-                      ? TextTokens.gui_settings_styleFieldTooltip
-                      : option.key == 'passagePrefix'
-                          ? TextTokens.gui_settings_prefixFieldTooltip
-                          : null,
+                  ? TextTokens.gui_settings_styleFieldTooltip
+                  : option.key == 'passagePrefix'
+                  ? TextTokens.gui_settings_prefixFieldTooltip
+                  : null,
               controller: _modelOptionController(option.key),
               onChanged: (v) => _setModelOptionText(option.key, v),
               maxLines: option.type == ModelUiOptionType.multiline ? 3 : 1,
@@ -418,7 +420,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
               padding: const EdgeInsets.only(top: 12),
               child: Row(
                 children: [
-                  Expanded(child: _controlLabel(TextTokens.gui_settings_sendWholeFile)),
+                  Expanded(
+                    child: _controlLabel(TextTokens.gui_settings_sendWholeFile),
+                  ),
                   PlatformSwitch(
                     key: const Key('wholeFileSwitch'),
                     tooltip: TextTokens.gui_settings_sendWholeFileTooltip,
@@ -434,7 +438,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child:                   PlatformSlider(
+                  child: PlatformSlider(
                     key: const Key('minWordsSlider'),
                     tooltip: TextTokens.gui_settings_minWordsSliderTooltip,
                     value: _controller.minWords.toDouble(),
@@ -466,7 +470,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
             padding: const EdgeInsets.only(top: 12),
             child: Row(
               children: [
-                Expanded(child: _controlLabel(TextTokens.gui_settings_sampleMode)),
+                Expanded(
+                  child: _controlLabel(TextTokens.gui_settings_sampleMode),
+                ),
                 PlatformSwitch(
                   key: const Key('sampleSwitch'),
                   tooltip: TextTokens.gui_settings_sampleModeTooltip,
@@ -509,7 +515,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
             child: Row(
               children: [
                 Expanded(
-                  child: _controlLabel(TextTokens.gui_settings_skipCompletedSegments),
+                  child: _controlLabel(
+                    TextTokens.gui_settings_skipCompletedSegments,
+                  ),
                 ),
                 PlatformSwitch(
                   key: const Key('resumeSwitch'),

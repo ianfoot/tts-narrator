@@ -4,10 +4,12 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
 import '../platform/platform_page.dart';
+
+import 'package:tts_narrator_core/tts_narrator_core.dart' show formatCostUsd;
+
 import '../platform/widgets/platform_activity_indicator.dart';
 import '../platform/widgets/platform_button.dart';
 import '../platform/widgets/platform_icon_button.dart';

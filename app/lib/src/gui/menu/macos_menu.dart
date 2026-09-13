@@ -230,9 +230,21 @@ PlatformMenu _viewMenu(AppController controller) {
           PlatformMenu(
             label: TextTokens.gui_menu_appearance,
             menus: <PlatformMenuItem>[
-              _appearanceItem(controller, AppThemeMode.system, TextTokens.gui_menu_themeModeAuto),
-              _appearanceItem(controller, AppThemeMode.light, TextTokens.gui_menu_themeModeLight),
-              _appearanceItem(controller, AppThemeMode.dark, TextTokens.gui_menu_themeModeDark),
+              _appearanceItem(
+                controller,
+                AppThemeMode.system,
+                TextTokens.gui_menu_themeModeAuto,
+              ),
+              _appearanceItem(
+                controller,
+                AppThemeMode.light,
+                TextTokens.gui_menu_themeModeLight,
+              ),
+              _appearanceItem(
+                controller,
+                AppThemeMode.dark,
+                TextTokens.gui_menu_themeModeDark,
+              ),
             ],
           ),
           PlatformMenuItem(

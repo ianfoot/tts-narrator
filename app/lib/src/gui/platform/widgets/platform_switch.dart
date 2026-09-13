@@ -33,10 +33,12 @@ class PlatformSwitch extends StatelessWidget {
     } else {
       switchWidget = Switch(value: value, onChanged: onChanged);
     }
-    return tooltip == null ? switchWidget : Localizations.override(
-      context: context,
-      delegates: const [DefaultMaterialLocalizations.delegate],
-      child: Tooltip(message: tooltip!, child: switchWidget),
-    );
+    return tooltip == null
+        ? switchWidget
+        : Localizations.override(
+            context: context,
+            delegates: const [DefaultMaterialLocalizations.delegate],
+            child: Tooltip(message: tooltip!, child: switchWidget),
+          );
   }
 }

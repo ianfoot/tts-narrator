@@ -127,7 +127,9 @@ void main() {
     expect(estimateRight.dx, closeTo(barRect.right - 16, 1));
   });
 
-  testWidgets('readouts use textSecondary at 75% in light mode', (tester) async {
+  testWidgets('readouts use textSecondary at 75% in light mode', (
+    tester,
+  ) async {
     final controller = makeController();
     await pumpStatusBar(tester, controller);
 

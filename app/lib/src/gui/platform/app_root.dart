@@ -69,7 +69,10 @@ class _AppRootState extends State<AppRoot> {
   }
 
   Future<String?> _pickSaveLocation() async {
-    const group = XTypeGroup(label: TextTokens.app_fileTypeGroup, extensions: ['txt']);
+    const group = XTypeGroup(
+      label: TextTokens.app_fileTypeGroup,
+      extensions: ['txt'],
+    );
     final location = await getSaveLocation(
       acceptedTypeGroups: const [group],
       suggestedName: widget.controller.documentName,
@@ -80,7 +83,10 @@ class _AppRootState extends State<AppRoot> {
   /// Opens the native directory picker for the output destination; leaves the
   /// current directory unchanged when cancelled.
   Future<void> _openDocument() async {
-    const group = XTypeGroup(label: TextTokens.app_fileTypeGroup, extensions: ['txt']);
+    const group = XTypeGroup(
+      label: TextTokens.app_fileTypeGroup,
+      extensions: ['txt'],
+    );
     final file = await openFile(acceptedTypeGroups: const [group]);
     if (file == null) return;
     try {

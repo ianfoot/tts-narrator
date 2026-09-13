@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:tts_narrator_core/src/cli/voice_config_download.dart';
+import 'package:tts_narrator_core/src/config/voice_config_download.dart';
 
 void main() {
   group('downloadVoiceConfigFiles', () {

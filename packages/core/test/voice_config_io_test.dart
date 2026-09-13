@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:tts_narrator_core/src/cli/voice_config.dart';
-import 'package:tts_narrator_core/src/cli/voice_config_io.dart';
+import 'package:tts_narrator_core/src/config/voice_config.dart';
+import 'package:tts_narrator_core/src/config/voice_config_io.dart';
 
 void main() {
   group('loadVoiceConfig', () {
@@ -31,17 +31,23 @@ void main() {
     });
 
     test('parses per-model files into request profiles', () {
-      writeModel('gemini', '''{"id":"google/gemini-3.1-flash-tts-preview","provider":"openrouter","format":"pcm","sample_rate":24000,"prompt_style":true}''');
+      writeModel(
+        'gemini',
+        '''{"id":"google/gemini-3.1-flash-tts-preview","provider":"openrouter","format":"pcm","sample_rate":24000,"prompt_style":true}''',
+      );
       final (cfg, warnings) = load();
       expect(cfg.models.containsKey('gemini'), isTrue);
       expect(warnings, isEmpty);
     });
 
-    test('accepts a directory with only an empty config.json and no models', () {
-      writeGlobal('{}');
-      final (cfg, warnings) = load();
-      expect(cfg.isEmpty, isTrue);
-    });
+    test(
+      'accepts a directory with only an empty config.json and no models',
+      () {
+        writeGlobal('{}');
+        final (cfg, warnings) = load();
+        expect(cfg.isEmpty, isTrue);
+      },
+    );
   });
 
   group('defaultConfigDir', () {
@@ -59,7 +65,10 @@ void main() {
     test('writes config.json', () {
       final cfg = VoiceConfig(defaultModel: 'fish');
       writeVoiceConfig(dir.path, cfg);
-      expect(File('${dir.path}${Platform.pathSeparator}config.json').existsSync(), isTrue);
+      expect(
+        File('${dir.path}${Platform.pathSeparator}config.json').existsSync(),
+        isTrue,
+      );
     });
   });
 }

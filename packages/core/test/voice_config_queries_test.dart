@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import 'package:tts_narrator_core/src/cli/voice_config.dart';
-import 'package:tts_narrator_core/src/cli/voice_config_queries.dart';
+import 'package:tts_narrator_core/src/config/voice_config.dart';
+import 'package:tts_narrator_core/src/config/voice_config_queries.dart';
 import 'package:tts_narrator_core/src/narration/cost.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
@@ -13,17 +13,16 @@ TtsModelProfile _model({
   bool sendsVoiceField = true,
   int? sampleRate,
   String? displayName,
-}) =>
-    TtsModelProfile(
-      alias: alias,
-      id: id,
-      provider: provider,
-      format: format,
-      promptStyle: promptStyle,
-      sendsVoiceField: sendsVoiceField,
-      sampleRate: sampleRate,
-      displayName: displayName,
-    );
+}) => TtsModelProfile(
+  alias: alias,
+  id: id,
+  provider: provider,
+  format: format,
+  promptStyle: promptStyle,
+  sendsVoiceField: sendsVoiceField,
+  sampleRate: sampleRate,
+  displayName: displayName,
+);
 
 VoiceConfig _cfg({
   String? defaultModel,
@@ -32,15 +31,14 @@ VoiceConfig _cfg({
   Map<String, String> defaults = const {},
   Map<String, AudioPricing> pricing = const {},
   Map<String, Map<String, Voice>> voices = const {},
-}) =>
-    VoiceConfig(
-      defaultModel: defaultModel,
-      providers: providers,
-      models: models,
-      defaults: defaults,
-      pricing: pricing,
-      voices: voices,
-    );
+}) => VoiceConfig(
+  defaultModel: defaultModel,
+  providers: providers,
+  models: models,
+  defaults: defaults,
+  pricing: pricing,
+  voices: voices,
+);
 
 void main() {
   group('effectiveModels', () {
@@ -52,9 +50,7 @@ void main() {
 
     test('config models extend the set with new providers', () {
       final cfg = _cfg(
-        models: {
-          'kokoro': _model(alias: 'kokoro', id: 'hexgrad/kokoro-82m'),
-        },
+        models: {'kokoro': _model(alias: 'kokoro', id: 'hexgrad/kokoro-82m')},
         defaults: const {'kokoro': 'Emma'},
       );
       final models = effectiveModels(cfg);
@@ -69,7 +65,10 @@ void main() {
       );
       final models = effectiveModels(cfg);
       expect(models.length, 1);
-      expect(models.firstWhere((m) => m.alias == 'fish').id, 'custom/fish-model');
+      expect(
+        models.firstWhere((m) => m.alias == 'fish').id,
+        'custom/fish-model',
+      );
     });
   });
 
@@ -221,7 +220,9 @@ void main() {
   group('defaultVoiceFor', () {
     test('uses the configured default label', () {
       final cfg = _cfg(
-        voices: const {'kokoro': {'Emma': Voice(id: 'bf_emma')}},
+        voices: const {
+          'kokoro': {'Emma': Voice(id: 'bf_emma')},
+        },
         defaults: const {'kokoro': 'Emma'},
         models: {'kokoro': _model(alias: 'kokoro', id: 'hexgrad/kokoro-82m')},
       );
@@ -232,7 +233,13 @@ void main() {
 
     test('fish falls back to the compiled bootstrap voice', () {
       final cfg = _cfg(
-        voices: const {'fish': {'British Female Narrator': Voice(id: '89f41ea230034706881f85a8227d6ab9')}},
+        voices: const {
+          'fish': {
+            'British Female Narrator': Voice(
+              id: '89f41ea230034706881f85a8227d6ab9',
+            ),
+          },
+        },
         models: {'fish': _model(alias: 'fish', id: 'fish-audio/s2.1-pro-free')},
       );
       final model = profileFor('fish', cfg)!;
@@ -242,11 +249,16 @@ void main() {
 
     test('throws when a model has no default configured', () {
       final cfg = _cfg(
-        voices: const {'gemini': {'Voice1': Voice(id: 'v1')}},
+        voices: const {
+          'gemini': {'Voice1': Voice(id: 'v1')},
+        },
         models: {'gemini': _model(alias: 'gemini', id: 'google/gemini-tts')},
       );
       final model = profileFor('gemini', cfg)!;
-      expect(() => defaultVoiceFor(model, cfg), throwsA(isA<VoiceConfigurationError>()));
+      expect(
+        () => defaultVoiceFor(model, cfg),
+        throwsA(isA<VoiceConfigurationError>()),
+      );
     });
   });
 
@@ -282,7 +294,10 @@ void main() {
         defaults: const {'kokoro': 'Emma'},
         models: {'kokoro': _model(alias: 'kokoro', id: 'hexgrad/kokoro-82m')},
       );
-      final entries = voiceEntries(config: cfg, model: profileFor('kokoro', cfg)!);
+      final entries = voiceEntries(
+        config: cfg,
+        model: profileFor('kokoro', cfg)!,
+      );
       // When the default voice is in the voices map, it stays as alias (deduped)
       expect(entries.length, 3);
       final labels = entries.map((e) => e.label).toSet();
@@ -293,7 +308,11 @@ void main() {
     test('covers all effective models when none is given', () {
       final cfg = _cfg(
         voices: const {
-          'fish': {'British Female Narrator': Voice(id: '89f41ea230034706881f85a8227d6ab9')},
+          'fish': {
+            'British Female Narrator': Voice(
+              id: '89f41ea230034706881f85a8227d6ab9',
+            ),
+          },
           'kokoro': {'Emma': Voice(id: 'bf_emma')},
         },
         models: {
@@ -315,7 +334,10 @@ void main() {
         },
         models: {'kokoro': _model(alias: 'kokoro', id: 'hexgrad/kokoro-82m')},
       );
-      final entries = voiceEntries(config: cfg, model: profileFor('kokoro', cfg)!);
+      final entries = voiceEntries(
+        config: cfg,
+        model: profileFor('kokoro', cfg)!,
+      );
       final emma = entries.firstWhere((e) => e.label == 'Emma');
       final daniel = entries.firstWhere((e) => e.label == 'Daniel');
       expect(emma.gender, VoiceGender.female);
