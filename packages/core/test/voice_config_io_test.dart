@@ -51,8 +51,8 @@ void main() {
   });
 
   group('defaultConfigDir', () {
-    test('uses path_provider cross-platform directory', () async {
-      final path = await defaultConfigDir();
+    test('uses standard cross-platform config directory', () {
+      final path = defaultConfigDir();
       expect(path.contains('tts-narrator'), isTrue);
     });
   });

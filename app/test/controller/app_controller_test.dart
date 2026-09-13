@@ -194,7 +194,7 @@ void main() {
       expect(cfg.pricing, freePricing);
     });
 
-    test('documents use the real path for output naming', () {
+    test('documents use the real path for output naming', () async {
       writeConfig({});
       final story = File('${dir.path}/my chapter.txt')
         ..writeAsStringSync('A chapter with enough words to narrate.');
@@ -205,7 +205,7 @@ void main() {
       expect(inputStem(cfg.inputPath), 'my_chapter');
     });
 
-    test('sendWholeFile flows through to the narration config', () {
+    test('sendWholeFile flows through to the narration config', () async {
       writeConfig({});
       final c = makeController()..setText('One.\n\nTwo.');
       expect(c.buildConfig().sendWholeFile, isFalse);

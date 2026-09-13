@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
@@ -63,7 +65,10 @@ class ModelProfileVoiceController extends ChangeNotifier {
   /// Resolves the provider settings block for [profile] (see
   /// `resolveSettings` in the core); used when assembling the run config.
   Map<String, String> resolveProviderSettings(TtsModelProfile profile) =>
-      _loader.resolveProviderSettings(profile);
+      resolveSettings(
+        _loader.load().providers[profile.provider] ?? const {},
+        env: Platform.environment,
+      );
 
   /// The editable GUI options for the active model, declared by its model's
   /// plugin (the provider package). Empty when no plugin declares a spec — the

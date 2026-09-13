@@ -1,22 +1,20 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:path_provider/path_provider.dart';
-
 import '../narration/cost.dart';
 import '../narration/model_profiles.dart';
 import 'voice_config.dart';
 import 'voice_config_download.dart';
 import 'voice_config_queries.dart';
 
-/// Default config directory using path_provider for cross-platform support.
-/// Resolves to standard OS-specific directories:
-/// - macOS: ~/Library/Application Support/tts-narrator/
-/// - Windows: %APPDATA%/tts-narrator/
-/// - Linux: ~/.config/tts-narrator/ or $XDG_CONFIG_HOME/tts-narrator/
-Future<String> defaultConfigDir() async {
-  final dir = await getApplicationSupportDirectory();
-  return '${dir.path}${Platform.pathSeparator}tts-narrator';
+/// Default config directory, shared by the CLI and GUI.
+String defaultConfigDir() {
+  if (Platform.isWindows) {
+    final appData = Platform.environment['APPDATA'];
+    return appData != null ? '$appData\\tts-narrator' : 'tts-narrator';
+  }
+  final home = Platform.environment['HOME'];
+  return home != null ? '$home/.config/tts-narrator' : '.';
 }
 
 /// Loads a [VoiceConfig] from a config *directory* ([configDir]).
