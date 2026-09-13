@@ -19,108 +19,34 @@ A Dart **pub workspace** with three packages:
 The core has no Flutter dependencies and no provider-specific logic, so the same
 core can be driven from the GUI (or new providers) without rework.
 
+## Download & Installation (macOS)
+
+Pre-built macOS releases (`TTS Narrator.app`) and Gatekeeper security bypass instructions are documented in **[MAC.md](MAC.md)**.
+
 ## Requirements
 
 - Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.1`, Dart 3.13.1).
-- An OpenRouter API key, from any of (resolved in this order): `--api-key`,
-  the `providers.openrouter` block in the [voice config](#voice-configuration)
-  (a literal value or a runtime-`${ENV}` reference), or the
-  `OPENROUTER_API_KEY` environment variable. Prefer the environment
-  variable or config file over `--api-key` — command-line arguments are
-  visible in `ps` output.
+- An OpenRouter API key, configured in the `providers.openrouter` block in the [voice config](#voice-configuration) (a literal value or a runtime `${ENV}` reference) or via the `OPENROUTER_API_KEY` environment variable.
 
 ## Usage
 
-Run from the `app` directory:
+To run the application in development:
 
-```
-fvm flutter run
+```bash
+cd app
+fvm flutter run -d macos
 ```
 
 ## Voice configuration
 
 Everything user-facing — the default model, per-provider settings, models,
 per-model providers and default voices, prices, and friendly voice aliases —
-lives in a config **directory**, defaulting to `~/.config/tts-narrator/`
-(override with `--config`). Two kinds of files:
+lives in a config **directory**, defaulting to `~/.config/tts-narrator/`. Two kinds of files:
 
 - `config.json` — the global bits: `default_model` (the preselected model on
   cold start) and the per-provider settings block (secrets).
 - `<alias>.json` — one file per model: its id, the provider that serves it,
   the request wiring, default voice, pricing, and friendly voice aliases.
-
-Copy the repo's `voice_config.example/` directory to that path as a starting
-point — it's the paste-template; the directory under `~/.config` is the live
-one the tools read:
-
-`~/.config/tts-narrator/config.json`:
-
-```json
-{
-  "default_model": "fish",
-  "providers": {
-    "openrouter": { "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}" }
-  }
-}
-```
-
-`~/.config/tts-narrator/fish.json`:
-
-```json
-{
-  "id": "fish-audio/s2.1-pro-free",
-  "provider": "openrouter",
-  "format": "mp3",
-  "default_voice": "British Female Narrator",
-  "voices": {
-    "British Female Narrator": "89f41ea230034706881f85a8227d6ab9",
-    "British War": "2fd511bd06904a21a971c6551dfb853a"
-  }
-}
-```
-
-`~/.config/tts-narrator/gemini.json`:
-
-```json
-{
-  "id": "google/gemini-3.1-flash-tts-preview",
-  "provider": "openrouter",
-  "format": "pcm",
-  "sample_rate": 24000,
-  "prompt_style": true,
-  "default_voice": "Charon",
-  "pricing": {
-    "input_usd_per_m_tokens": 1.0,
-    "output_usd_per_m_tokens": 20.0
-  },
-  "voices": { "Charon": "Charon", "Zephyr": "Zephyr" }
-}
-```
-
-`~/.config/tts-narrator/kokoro.json`:
-
-```json
-{
-  "id": "hexgrad/kokoro-82m",
-  "provider": "openrouter",
-  "format": "mp3",
-  "default_voice": "Emma",
-  "pricing": { "usd_per_m_chars": 0.62 },
-  "voices": { "Emma": "bf_emma", "Lewis": "bm_lewis" }
-}
-```
-
-## Voice configuration
-
-Everything user-facing — the default model, per-provider settings, models,
-per-model providers and default voices, prices, and friendly voice aliases —
-lives in a config **directory**, defaulting to `~/.config/tts-narrator/`
-(Two kinds of files:
-
-- `config.json` — the global bits: `default_model` (the preselected model on
-cold start) and the per-provider settings block (secrets).
-- `<alias>.json` — one file per model: its id, the provider that serves it,
-the request wiring, default voice, pricing, and friendly voice aliases.
 
 Copy the repo's `voice_config.example/` directory to that path as a starting
 point — it's the paste-template; the directory under `~/.config` is the live
@@ -191,13 +117,13 @@ config. Model differences drive how requests are built:
 
 | Alias | Voice format | Prompt styling | Output |
 | --- | --- | --- | --- |
-| `fish` (default) | free-form 32-hex fish.audio id | ✗ (read aloud — ignore `--accent`/`--style`/`--tags`) | `.mp3` (free) |
+| `fish` (default) | free-form 32-hex fish.audio id | ✗ (read aloud — prompt styling disabled) | `.mp3` (free) |
 | `gemini` | named voices (rated on the OpenRouter page) | ✓ (accent/style/`[calm]`) | 24 kHz PCM `.wav` |
-| `kokoro` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — ignore `--accent`/`--style`/`--tags`) | `.mp3` |
+| `kokoro` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — prompt styling disabled) | `.mp3` |
 
 Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
 Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma`
-("Emma"); `--voice` overrides.
+("Emma"). The voice can be selected in the GUI settings rail.
 
 Gender tags drive a narrator-gender filter (and, for prompt-driven models, may
 rewrite the "narrator" phrase in the passage prefix). Tagging is per-voice and
@@ -212,8 +138,7 @@ plugin exposes a "Narrator gender" control in the rail's Model options for
 gemini (and any other prompt-styled model).
 
 Add or swap a model by adding/editing its `<alias>.json` file; it then
-becomes selectable via `--model <alias>` or the full id. Pass
-`--model <anything-else>` on the CLI to list the registered models.
+becomes selectable via the model dropdown in the UI.
 
 ### Providers
 
@@ -221,15 +146,14 @@ The narration layer is provider-agnostic: **core** (`packages/core`) defines a
 `TtsProvider` interface — `synthesize(model, voice, input, responseFormat,
 settings)` → `ProviderAudio` — and a `TtsProviderRegistry` that maps a provider
 id to a factory function. Core ships **no** provider; concrete providers live
-in their own workspace packages and are `register()`ed by the CLI and GUI at
-startup.
+in their own workspace packages and are registered by the GUI at startup.
 
 - **The built-in provider**: `packages/providers/openrouter` implements the
   interface for OpenRouter's `/audio/speech` endpoint — Bearer auth from the
   resolved settings, retry/backoff on transient failures, and
   `X-Generation-Id` mapped onto `ProviderAudio.generationId`.
 - **Adding a provider** = a workspace package implementing `TtsProvider`,
-  registered at both entrypoints, plus a `providers.<id>` block in `config.json`
+  registered at startup, plus a `providers.<id>` block in `config.json`
   for its secrets. Route models to it with `"provider": "<id>"` in their model
   file.
 - **Secrets**: `providers.<id>` is an opaque string→string map. A value of the
@@ -237,16 +161,13 @@ startup.
   time (a missing or empty variable is an error naming it); any other value is
   used literally. The rule is generic — core never interprets the keys, and
   each provider keeps its own key names.
-- **Selection precedence**: `--provider <id>` > the model's `provider` field
-  (required in each model file). An unknown `--provider` lists the registered
-  ids.
 
 ### Gemini voices
 
 Voices are the named ones on the OpenRouter page (e.g. `Charon`, `Zephyr`,
 `Puck`). Add friendly aliases for the ones you use under `voices` in
-`gemini.json` — the drop-down and `--list-voices` show whatever you
-configure. Any unlisted id still works via `--voice` / the raw-id field.
+`gemini.json` — the drop-down shows whatever you
+configure. Any unlisted id still works via the raw-id field in the settings rail.
 
 ### Kokoro voices
 
@@ -262,44 +183,6 @@ Voices are free-form 32-hex fish.audio ids (the default is
 accepted; a curated British voice list lives on the "Text to Speech" Logseq
 page and in `voice_config.example/fish.json`.
 
-## Example
-
-```bash
-# See what the segment plan looks like without spending credits
-./build/tts-narrator --input story.txt --voice Callirrhoe --dry-run
-
-# Narrate the first paragraph only, as a smoke test
-./build/tts-narrator --input story.txt \
-  --voice Callirrhoe \
-  --accent "received pronunciation" \
-  --style "warm, composed, restrained, literary" \
-  --tags off \
-  --sample-len 1
-
-# Full narration
-./build/tts-narrator --input story.txt --voice Callirrhoe --tags off
-
-# Kokoro narration (British female voice, MP3 output)
-./build/tts-narrator --input story.txt --model kokoro --voice bf_emma
-
-# Fish narration (free model, MP3 output, default voice)
-./build/tts-narrator --input story.txt --model fish
-
-# Explicitly route the model through the OpenRouter provider
-./build/tts-narrator --input story.txt --provider openrouter
-
-# Fish narration using a friendly voice alias from the voice config
-./build/tts-narrator --input story.txt --model fish \
-  --voice "British Female Narrator (good)"
-
-# List available voices + aliases (optionally for one model)
-./build/tts-narrator --list-voices
-./build/tts-narrator --list-voices fish
-
-# Batch: narrate every top-level .txt in a directory
-./build/tts-narrator --input ./stories/ --model fish --dry-run
-```
-
 ## Output
 
 Each segment is written to `output/<input-stem>/` as `<input-stem>_<nn>.<ext>`
@@ -312,13 +195,8 @@ Each segment is written to `output/<input-stem>/` as `<input-stem>_<nn>.<ext>`
 
 So `story.txt` → `output/story/story_01.mp3` … `story_16.mp3`
 
-Batch narration (`--input <directory>`) narrates each top-level `.txt` with
-the same model/voice/options; every file gets its own
-`output/<file-stem>/` directory, so outputs never collide. Use `--dry-run`
-first to see all files' segment plans and one combined time/cost estimate.
-
 The manifest is rewritten after every segment, so an interrupted run can be
-picked up with `--resume` (finished paragraphs are skipped — no re-billing).
+picked up without re-generating completed paragraphs.
 
 Manifest contents:
 - `model`, `voice`, optional `voice_label` (friendly alias if used), `format`,
@@ -335,19 +213,19 @@ Playback (macOS): `afplay output/story/story_1.wav` (Gemini),
 By default the text is segmented so each paragraph gets a controlled, consistent reading:
 
 1. Split the input on blank lines into paragraphs.
-2. Merge a paragraph into the next when it is shorter than `--min-words`
+2. Merge a paragraph into the next when it is shorter than the "Min words per segment" setting
    (default 30), so isolated short fragments aren't given their own
    off-register reading.
 3. Any merged paragraph longer than 4,000 characters is split at sentence
    boundaries.
 4. Each resulting segment is one call to the TTS API.
 
-Pass `--send-whole-file` (or toggle **Send whole file** in the GUI) to bypass
+Toggle **Send whole file** in the GUI to bypass
 segmentation entirely: the whole document is sent to the TTS engine as a single
 call. The "Min words per segment" setting is hidden and ignored in this mode.
 Whole-file narration is limited to 60,000 characters (roughly an hour of audio)
 so a runaway document isn't sent as one unbounded request — the GUI hides the
-toggle above that size and the CLI rejects the plan with a clear error.
+toggle above that size and rejects the plan with a clear error.
 
 The mood of Gemini 3.1 Flash TTS is controlled through the prompt text
 (inline tags like `[calm]`, accent/style descriptions) rather than a separate
@@ -361,7 +239,7 @@ A Dart **pub workspace** — `pubspec.yaml` at the repo root lists the members
 and holds the single shared lockfile.
 
 ```
-packages/core/            # tts_narrator_core — pure Dart, no Flutter deps
+packages/core/            # tts_narrator_core — pure Dart narration core
   lib/
     tts_narrator_core.dart # public barrel (the GUI imports this)
     src/
@@ -410,16 +288,11 @@ voice_config.example/       # sample config: config.json (providers/${ENV} refs,
 
 Note: `output/`, `.dart_tool/`, and `build/` are gitignored.
 
-## Download macOS build
-
-The latest macOS release build (`TTS Narrator.app`) is packaged as a `.zip` by the [Build macOS](https://github.com/ianfoot/tts-narrator/actions/workflows/build-macos.yml) workflow. Download it from the [latest release](https://github.com/ianfoot/tts-narrator/releases/latest/download/tts-narrator-macos.zip).
-
 ## GUI (macOS)
 
-A Flutter desktop app (`app/`) wraps the same core the CLI uses. It is
-editor-first: type or paste the text you want narrated right into the window
+A Flutter desktop app (`app/`) provides an editor-first interface: type or paste the text you want narrated right into the window
 (no backing file — the core reads the in-memory text via `sourceText`), then
-hit **Narrate**. A collapsible settings rail controls the model, voice, and
+click **Narrate**. A collapsible settings rail controls the model, voice, and
 model-specific options (declared by each model's provider plugin), the run view
 shows per-segment progress with in-app playback of finished clips, Cancel, and
 Back — and the editor is intact when you return. The native macOS menu bar
@@ -429,7 +302,7 @@ Edit menu's undo/redo/cut/copy/paste/select-all, which dispatch to the focused
 text field. Saving writes the document to a `.txt`; once saved, narration names
 its output from the real filename.
 
-```
+```bash
 cd app
 fvm flutter run -d macos            # debug run
 fvm flutter test test               # widget tests
@@ -446,9 +319,9 @@ fvm flutter build macos --release
   entitlement to reach the OpenRouter API; it's already present in
   `app/macos/Runner/DebugProfile.entitlements` and `Release.entitlements`.
 - Linux/Windows are planned but not yet scaffolded (macOS-only for now).
-- The GUI reads the same `~/.config/tts-narrator/` config directory as the CLI
+- The GUI reads the `~/.config/tts-narrator/` config directory
   for voice aliases and the per-provider settings block, but never writes it —
-  edit those files directly (or via the CLI). It has no secret-key field; each
+  edit those files directly. It has no secret-key field; each
   provider's key comes from the `providers.<id>` block in `config.json`. The
   GUI resolves `${ENV}` references from its own environment at run-config build
   time. Note: a GUI app launched from the Finder doesn't inherit a shell's
@@ -469,7 +342,7 @@ those are layout-grid constants that don't change with the brand.
 
 To change a color or a font size:
 
-```
+```bash
 cd app
 # 1. Edit app/assets/theme/tokens.json.
 # 2. Regenerate the .g.dart from the JSON.
@@ -506,9 +379,7 @@ The JSON shape:
   There is no MP3 encoding or concatenation step — the model emits these formats.
 - Transient `502` (empty audio stream) failures are retried up to 3 times,
   matching a documented Gemini TTS quirk. (Fish failures are not billed.)
-- `--dry-run` and the run header print an estimated cost + duration. Estimates
+- The run view displays an estimated cost + duration. Estimates
   are approximate: pricing comes from each model's OpenRouter page (gemini
   `$1/$20` per 1M text/audio tokens, kokoro `$0.62/M` chars, fish free);
   duration assumes ~160 words/min and Gemini audio billed at ~160 tokens/sec.
-- To build the CLI as a standalone native executable, see
-  [docs/COMPILING.md](docs/COMPILING.md).
