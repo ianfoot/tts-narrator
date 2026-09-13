@@ -3,7 +3,10 @@ import 'dart:io';
 
 /// Downloads voice config files from GitHub repository if they don't exist locally.
 /// Uses the project's repository URL to fetch the config files.
-Future<void> downloadVoiceConfigFiles(String configDir, {HttpClient Function()? clientFactory}) async {
+Future<void> downloadVoiceConfigFiles(
+  String configDir, {
+  HttpClient Function()? clientFactory,
+}) async {
   const repoUrl = 'https://github.com/ianfoot/tts-narrator';
   const branch = 'main';
   final files = ['config.json', 'fish.json', 'gemini.json', 'kokoro.json'];
@@ -14,7 +17,9 @@ Future<void> downloadVoiceConfigFiles(String configDir, {HttpClient Function()? 
     dir.createSync(recursive: true);
   }
 
-  final httpClient = (clientFactory ?? () => HttpClient()..connectionTimeout = const Duration(seconds: 5))();
+  final httpClient =
+      (clientFactory ??
+      () => HttpClient()..connectionTimeout = const Duration(seconds: 5))();
   try {
     for (final file in files) {
       final localFile = File('$configDir$separator$file');

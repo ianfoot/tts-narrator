@@ -9,19 +9,15 @@ friendly "British Female Narrator" voice out of the box. Other models: Gemini
 Uses the [OpenRouter text-to-speech endpoint](https://openrouter.ai/docs/guides/overview/multimodal/tts)
 (`POST /api/v1/audio/speech`) through the OpenRouter provider.
 
-A Dart **pub workspace** with four packages:
+A Dart **pub workspace** with three packages:
 - `packages/core` — pure-Dart narration core (segmentation, provider-agnostic TTS
   dispatch, voice config, cost estimates), no Flutter or GUI deps.
-- `packages/cli` — the headless CLI (`bin/main.dart`), compiles to a single
-  native executable via `dart compile exe`.
 - `packages/providers/openrouter` — the OpenRouter TTS provider, registered by
-  the CLI and GUI at startup.
-- `app` — the Flutter macOS GUI (adds `audioplayers`, `file_selector`; never
-  affects the CLI).
+  the GUI at startup.
+- `app` — the Flutter macOS GUI (adds `audioplayers`, `file_selector`).
 
-The core has no Flutter dependencies and no provider-specific logic, so the CLI
-runs standalone and the same core can be driven from the GUI (or new providers)
-without rework.
+The core has no Flutter dependencies and no provider-specific logic, so the same
+core can be driven from the GUI (or new providers) without rework.
 
 ## Requirements
 
@@ -35,45 +31,11 @@ without rework.
 
 ## Usage
 
-From source (run from the `packages/cli` directory so the workspace resolves):
+Run from the `app` directory:
 
 ```
-cd packages/cli
-fvm dart run bin/main.dart --input <path> [options]
+fvm flutter run
 ```
-
-Or build a native executable once (see
-[docs/COMPILING.md](docs/COMPILING.md)), then run `tts-narrator` from anywhere:
-
-```
-fvm dart compile exe bin/main.dart -o ../../build/tts-narrator   # in packages/cli
-./build/tts-narrator --input <path> [options]                    # from repo root
-```
-
-`--input` is required and there is **no default filename**. Provide an explicit
-path to the text to narrate.
-
-### Options
-
-| Flag | Description | Default |
-| --- | --- | --- |
-| `--input <path>` | Path to the text to narrate, or a directory of `.txt` files to narrate as a batch (top-level only, sorted, hidden skipped). | — |
-| `--model <alias\|id>` | TTS model: `fish`, `gemini`, `kokoro`, or a full model id. See "Models". | `fish` (free) |
-| `--provider <id>` | Override the provider serving the model. Unknown ids list the registered providers. | model's `provider` |
-| `--voice <name>` | Model-specific voice name or id (free-form for kokoro/fish). Friendly aliases from the voice config resolve to the raw id. | model default |
-| `--accent <text>` | Accent description used in the prompt (Gemini only). | `southern British English, neutral and clear` |
-| `--style <text>` | Style / register description used in the prompt (Gemini only). | `warm, composed, restrained, literary` |
-| `--tags on\|off` | Prepend a `[calm]` style tag to every prompt (Gemini only). | `off` |
-| `--passage-prefix <text>` | Pooled preamble prepended to every paragraph prompt. | `Narrate this passage for an audiobook. You are a warm, composed female narrator.` |
-| `--min-words <n>` | Merge paragraphs shorter than `n` words into the next, so tiny fragments don't get an isolated reading. | `30` |
-| `--send-whole-file` | Narrate the whole file in a single TTS call instead of segmenting it (`--min-words` is ignored; limited to 60,000 characters so a runaway document isn't one unbounded request). | `off` |
-| `--sample-len <n>` | Narrate only the first `n` segments (useful for testing). | — |
-| `--dry-run` | Print the segment plan + estimated duration/cost and exit without calling the API. | `off` |
-| `--resume` | Skip segments already present in the output manifest (same prompt + file), so a re-run doesn't re-bill finished paragraphs. | `off` |
-| `--out <dir>` | Output directory base; the input stem is appended unless it already ends with it. | `output` |
-| `--config <path>` | Voice config directory: `config.json` (default model, providers) + one `<alias>.json` per model (provider, aliases, defaults, pricing). | `~/.config/tts-narrator/` |
-| `--api-key <key>` | Opaque `api_key` setting merged into the selected provider's settings (overrides the config). | — |
-| `--list-voices [model]` | Print available voices (and friendly aliases from the config) for a model, or all models when omitted, then exit. Also honors `--model` / `--config`. | all models |
 
 ## Voice configuration
 
@@ -148,42 +110,78 @@ one the tools read:
 }
 ```
 
-- **Provider routing**: each model file names the provider that serves it
-  (`"provider": "<id>"`, required). See [Providers](#providers).
-- **Default model**: `config.json`'s `default_model` names the model (alias or
-  full id) the CLI and GUI preselect on cold start; a name that matches no
-  configured model warns and falls back to fish. With no config, fish's
-  compiled bootstrap is the preset default.
-- **Models**: each `<alias>.json` file maps an alias to its model id and
-  request wiring. Add a model or swap an id (e.g. replace the gemini preview)
-  by adding/editing a file — no rebuild. Only the fish bootstrap is compiled
-  in as the out-of-the-box default.
-- **Display names**: an optional `display_name` key (e.g.
-  `"Fish Audio S2.1 (Free)"`) sets the friendly label the GUI dropdown shows
-  for a model; without it the app falls back to `alias — id`. Fish's compiled
-  bootstrap carries its own name, so it reads nicely even before any config
-  exists.
-- **Default voices**: `default_voice` names the friendly alias (from `voices`)
-  used when `--voice` / the GUI voice field is empty. With no config, fish
-  falls back to its compiled default (`89f41ea2...`, "British Female
-  Narrator"); other models need a `default_voice` or an explicit `--voice`.
-- **Pricing**: per-model cost data for the `--dry-run` / GUI estimates; models
-  without a pricing entry are treated as free.
-- **Voices**: `--voice <name>` resolves a friendly alias for the selected model
-  to its raw id; unknown values pass through unchanged (no validation — testing
-  arbitrary voices is supported). The friendly name is kept for display and
-  recorded in the manifest as `voice_label`.
-- The config directory is optional. With no config, the app falls back to the
-  compiled free default: **fish** (`fish-audio/s2.1-pro-free`) with voice
-  `89f41ea2...` ("British Female Narrator"), so the very first run costs
-  nothing. Both the CLI and the GUI use this default.
-- An explicit `--config` path that doesn't exist is a hard error; a malformed
-  `config.json` is a hard error. A malformed **model file** is skipped with a
-  warning — the rest of the app keeps working.
-- API key precedence: `--api-key` flag > `providers.<id>.api_key` in
-  `config.json` > the provider's own env fallback (`OPENROUTER_API_KEY`). A
-  `providers.<id>` value can be a literal secret or a runtime-`${ENV}`
-  reference (see [Providers](#providers)).
+## Voice configuration
+
+Everything user-facing — the default model, per-provider settings, models,
+per-model providers and default voices, prices, and friendly voice aliases —
+lives in a config **directory**, defaulting to `~/.config/tts-narrator/`
+(Two kinds of files:
+
+- `config.json` — the global bits: `default_model` (the preselected model on
+cold start) and the per-provider settings block (secrets).
+- `<alias>.json` — one file per model: its id, the provider that serves it,
+the request wiring, default voice, pricing, and friendly voice aliases.
+
+Copy the repo's `voice_config.example/` directory to that path as a starting
+point — it's the paste-template; the directory under `~/.config` is the live
+one the tools read:
+
+`~/.config/tts-narrator/config.json`:
+
+```json
+{
+  "default_model": "fish",
+  "providers": {
+    "openrouter": { "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}" }
+  }
+}
+```
+
+`~/.config/tts-narrator/fish.json`:
+
+```json
+{
+  "id": "fish-audio/s2.1-pro-free",
+  "provider": "openrouter",
+  "format": "mp3",
+  "default_voice": "British Female Narrator",
+  "voices": {
+    "British Female Narrator": "89f41ea230034706881f85a8227d6ab9",
+    "British War": "2fd511bd06904a21a971c6551dfb853a"
+  }
+}
+```
+
+`~/.config/tts-narrator/gemini.json`:
+
+```json
+{
+  "id": "google/gemini-3.1-flash-tts-preview",
+  "provider": "openrouter",
+  "format": "pcm",
+  "sample_rate": 24000,
+  "prompt_style": true,
+  "default_voice": "Charon",
+  "pricing": {
+    "input_usd_per_m_tokens": 1.0,
+    "output_usd_per_m_tokens": 20.0
+  },
+  "voices": { "Charon": "Charon", "Zephyr": "Zephyr" }
+}
+```
+
+`~/.config/tts-narrator/kokoro.json`:
+
+```json
+{
+  "id": "hexgrad/kokoro-82m",
+  "provider": "openrouter",
+  "format": "mp3",
+  "default_voice": "Emma",
+  "pricing": { "usd_per_m_chars": 0.62 },
+  "voices": { "Emma": "bf_emma", "Lewis": "bm_lewis" }
+}
+```
 
 ### Models
 

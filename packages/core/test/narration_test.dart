@@ -298,28 +298,31 @@ void main() {
       expect(planSegments(cfg), [atCap]);
     });
 
-    test('the manifest records the whole-file cap in whole-file mode', () async {
-      final cfg = NarrationConfig(
-        inputPath: 'story.txt',
-        sourceText: _inputText,
-        profile: TtsModelProfile(
-          alias: 'test',
-          id: 'test/model',
-          format: 'mp3',
-          provider: provider.id,
-        ),
-        voice: 'VoiceOne',
-        providerSettings: const {'api_key': 'sk-test'},
-        outDir: '${dir.path}/out',
-        sendWholeFile: true,
-      );
-      await narrate(cfg);
+    test(
+      'the manifest records the whole-file cap in whole-file mode',
+      () async {
+        final cfg = NarrationConfig(
+          inputPath: 'story.txt',
+          sourceText: _inputText,
+          profile: TtsModelProfile(
+            alias: 'test',
+            id: 'test/model',
+            format: 'mp3',
+            provider: provider.id,
+          ),
+          voice: 'VoiceOne',
+          providerSettings: const {'api_key': 'sk-test'},
+          outDir: '${dir.path}/out',
+          sendWholeFile: true,
+        );
+        await narrate(cfg);
 
-      final manifest = jsonDecode(
-        File('${dir.path}/out/story/manifest.json').readAsStringSync(),
-      ) as Map<String, dynamic>;
-      expect(manifest['max_segment_length'], maxWholeFileLength);
-    });
+        final manifest = jsonDecode(
+          File('${dir.path}/out/story/manifest.json').readAsStringSync(),
+        ) as Map<String, dynamic>;
+        expect(manifest['max_segment_length'], maxWholeFileLength);
+      },
+    );
 
     test('sendWholeFile narrates the whole source in a single call', () async {
       final cfg = NarrationConfig(

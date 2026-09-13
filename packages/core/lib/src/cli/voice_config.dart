@@ -5,8 +5,10 @@ import '../narration/model_profiles.dart';
 enum VoiceGender {
   /// Male/narrator gender tag.
   male,
+
   /// Female/narrator gender tag.
   female,
+
   /// Neutral or unspecified gender tag.
   neutral;
 
@@ -40,6 +42,7 @@ class Voice {
 
   /// Provider voice id sent in the request body.
   final String id;
+
   /// Optional narrator gender tag; null when untagged.
   final VoiceGender? gender;
 }
@@ -56,12 +59,16 @@ class VoiceOption {
 
   /// Model alias this voice belongs to (e.g. `gemini`, `fish`).
   final String model;
+
   /// Provider voice id sent in the request body.
   final String id;
+
   /// Human-readable label: the friendly alias when [isAlias], else the raw id.
   final String label;
+
   /// Whether [label] is a friendly alias from the config (vs a raw id).
   final bool isAlias;
+
   /// Optional narrator gender tag; null when untagged.
   final VoiceGender? gender;
 }
@@ -91,14 +98,19 @@ class VoiceConfig {
 
   /// Global default model alias (e.g. 'fish', 'gemini').
   final String? defaultModel;
+
   /// Per-provider settings blocks (`provider`: settings object).
   final Map<String, Map<String, String>> providers;
+
   /// Effective model profiles (alias → TtsModelProfile).
   final Map<String, TtsModelProfile> models;
+
   /// Per-model default voice labels (alias → label).
   final Map<String, String> defaults;
+
   /// Per-model pricing data.
   final Map<String, AudioPricing> pricing;
+
   /// Per-model configured voices (alias → label → Voice).
   final Map<String, Map<String, Voice>> voices;
 
