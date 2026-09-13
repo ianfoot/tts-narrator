@@ -1,0 +1,32 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup FVM
+        uses: leoafarias/fvm@v1
+        with:
+          flutter-version: '3.47.1'
+
+      - name: Install dependencies
+        working-directory: app
+        run: fvm flutter pub get
+
+      - name: Build macOS
+        working-directory: app
+        run: fvm flutter build macos --release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tts-narrator-macos
+          path: app/build/macos/Build/Products/Release/tts_narrator.app
