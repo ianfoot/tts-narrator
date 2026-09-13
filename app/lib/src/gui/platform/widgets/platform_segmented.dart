@@ -48,11 +48,13 @@ class PlatformSegmentedControl<T> extends StatelessWidget {
     } else {
       segmented = _buildMaterial();
     }
-    return tooltip == null ? segmented : Localizations.override(
-      context: context,
-      delegates: const [DefaultMaterialLocalizations.delegate],
-      child: Tooltip(message: tooltip!, child: segmented),
-    );
+    return tooltip == null
+        ? segmented
+        : Localizations.override(
+            context: context,
+            delegates: const [DefaultMaterialLocalizations.delegate],
+            child: Tooltip(message: tooltip!, child: segmented),
+          );
   }
 
   Widget _buildCupertino(BuildContext context) {

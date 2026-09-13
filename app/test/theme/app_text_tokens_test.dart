@@ -12,7 +12,10 @@ void main() {
     });
 
     test('templated tokens keep placeholders literal', () {
-      expect(TextTokens.gui_narration_narratingTitle, 'Narrating: \$documentName');
+      expect(
+        TextTokens.gui_narration_narratingTitle,
+        'Narrating: \$documentName',
+      );
       expect(
         TextTokens.gui_cleanup_removedMessage,
         'Removed \$removedCount segment \$fileWord.',

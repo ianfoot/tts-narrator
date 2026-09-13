@@ -62,27 +62,29 @@ class PlatformTextField extends StatelessWidget {
       );
     } else {
       textField = TextField(
-      controller: controller,
-      onChanged: onChanged,
-      maxLines: maxLines,
-      expands: expands,
-      keyboardType: keyboardType,
-      enabled: enabled,
-      autofocus: autofocus,
-      style: style,
-      textAlignVertical: TextAlignVertical.top,
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: hintStyle,
-        border: InputBorder.none,
-        isDense: true,
-      ),
-    );
+        controller: controller,
+        onChanged: onChanged,
+        maxLines: maxLines,
+        expands: expands,
+        keyboardType: keyboardType,
+        enabled: enabled,
+        autofocus: autofocus,
+        style: style,
+        textAlignVertical: TextAlignVertical.top,
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: hintStyle,
+          border: InputBorder.none,
+          isDense: true,
+        ),
+      );
     }
-    return tooltip == null ? textField : Localizations.override(
-      context: context,
-      delegates: const [DefaultMaterialLocalizations.delegate],
-      child: Tooltip(message: tooltip!, child: textField),
-    );
+    return tooltip == null
+        ? textField
+        : Localizations.override(
+            context: context,
+            delegates: const [DefaultMaterialLocalizations.delegate],
+            child: Tooltip(message: tooltip!, child: textField),
+          );
   }
 }

@@ -77,11 +77,13 @@ class PlatformDisclosure extends StatelessWidget {
         ],
       );
     }
-    return tooltip == null ? result : Localizations.override(
-      context: context,
-      delegates: const [DefaultMaterialLocalizations.delegate],
-      child: Tooltip(message: tooltip!, child: result),
-    );
+    return tooltip == null
+        ? result
+        : Localizations.override(
+            context: context,
+            delegates: const [DefaultMaterialLocalizations.delegate],
+            child: Tooltip(message: tooltip!, child: result),
+          );
   }
 
   /// Platform-native chevron: CupertinoIcons on macOS, Material expand icon

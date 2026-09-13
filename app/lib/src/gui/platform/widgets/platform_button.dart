@@ -54,11 +54,13 @@ class PlatformButton extends StatelessWidget {
     } else {
       button = _buildMaterial();
     }
-    return tooltip == null ? button : Localizations.override(
-      context: context,
-      delegates: const [DefaultMaterialLocalizations.delegate],
-      child: Tooltip(message: tooltip!, child: button),
-    );
+    return tooltip == null
+        ? button
+        : Localizations.override(
+            context: context,
+            delegates: const [DefaultMaterialLocalizations.delegate],
+            child: Tooltip(message: tooltip!, child: button),
+          );
   }
 
   Widget _buildCupertino(BuildContext context) {

@@ -269,10 +269,9 @@ class _EditorScreenState extends State<EditorScreen> {
           ),
           const SizedBox(width: 8),
           Text(
-            fillTextTemplate(
-              TextTokens.gui_editor_cannotNarratePrefix,
-              {'message': message},
-            ),
+            fillTextTemplate(TextTokens.gui_editor_cannotNarratePrefix, {
+              'message': message,
+            }),
             key: const Key('narrateGuardMessage'),
             style: _tokens.typography.body.copyWith(color: foreground),
           ),

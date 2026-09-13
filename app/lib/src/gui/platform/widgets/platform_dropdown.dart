@@ -47,11 +47,13 @@ class PlatformDropdown<T> extends StatelessWidget {
     } else {
       dropdown = _buildMaterial(context);
     }
-    return tooltip == null ? dropdown : Localizations.override(
-      context: context,
-      delegates: const [DefaultMaterialLocalizations.delegate],
-      child: Tooltip(message: tooltip!, child: dropdown),
-    );
+    return tooltip == null
+        ? dropdown
+        : Localizations.override(
+            context: context,
+            delegates: const [DefaultMaterialLocalizations.delegate],
+            child: Tooltip(message: tooltip!, child: dropdown),
+          );
   }
 
   Widget _buildCupertino() {

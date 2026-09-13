@@ -1,8 +1,7 @@
 /// Public API for the pure-Dart TTS narration core.
 ///
-/// The GUI (`app/`) and the CLI (`packages/cli/`) both import this single
-/// barrel instead of reaching into `src/`, so internal layout can change
-/// without breaking consumers.
+/// The GUI (`app/`) imports this single barrel instead of reaching into
+/// `src/`, so internal layout can change without breaking consumers.
 library;
 
 export 'src/cli/voice_config.dart';
