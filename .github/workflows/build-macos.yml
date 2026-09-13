@@ -24,9 +24,14 @@ jobs:
         working-directory: app
         run: flutter build macos --release
 
+      - name: Prepare file path
+        run: |
+          FILE_PATH="app/build/macos/Build/Products/Release/TTS Narrator.app"
+          echo "FILE_PATH=$FILE_PATH" >> $GITHUB_ENV
+
       - name: Create Release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v3.0.3
         with:
-          files: app/build/macos/Build/Products/Release/TTS\ Narrator.app
+          files: ${{ env.FILE_PATH }}
           token: ${{ secrets.GITHUB_TOKEN }}
