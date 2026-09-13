@@ -4,10 +4,12 @@ on:
   push:
     tags: [ '*' ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-latest
-    permissions: write-all
     steps:
       - uses: actions/checkout@v4
 
@@ -25,14 +27,11 @@ jobs:
         working-directory: app
         run: flutter build macos --release
 
-      - name: Prepare file path
-        run: |
-          FILE_PATH="app/build/macos/Build/Products/Release/TTS Narrator.app"
-          echo "FILE_PATH=$FILE_PATH" >> $GITHUB_ENV
+      - name: Package app
+        run: ditto -c -k --sequesterRsrc --keepParent "app/build/macos/Build/Products/Release/TTS Narrator.app" tts-narrator-macos.zip
 
       - name: Create Release
-        if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v3.0.3
+        uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.FILE_PATH }}
+          files: tts-narrator-macos.zip
           token: ${{ secrets.GITHUB_TOKEN }}
