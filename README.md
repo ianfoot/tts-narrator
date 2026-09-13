@@ -412,7 +412,7 @@ Note: `output/`, `.dart_tool/`, and `build/` are gitignored.
 
 ## Download macOS build
 
-The latest macOS release build (`tts_narrator.app`) is produced by the [Build macOS](https://github.com/ian/tts-narrator/actions/workflows/build-macos.yml) workflow. Download the artifact from the latest successful workflow run.
+The latest macOS release build (`tts_narrator.app`) is produced by the [Build macOS](https://github.com/ian/tts-narrator/actions/workflows/build-macos.yml) workflow. Download it from the [latest release](https://github.com/ian/tts-narrator/releases/latest/download/tts_narrator.app).
 
 ## GUI (macOS)
 
