@@ -26,8 +26,9 @@ jobs:
         working-directory: app
         run: flutter build macos --release
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
+      - name: Create Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
         with:
-          name: tts-narrator-macos
-          path: app/build/macos/Build/Products/Release/TTS\ Narrator.app
+          files: app/build/macos/Build/Products/Release/TTS\ Narrator.app
+          token: ${{ secrets.GITHUB_TOKEN }}
