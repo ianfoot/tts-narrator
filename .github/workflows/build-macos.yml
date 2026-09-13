@@ -2,9 +2,7 @@ name: Build macOS
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags: ['*']
 
 jobs:
   build:
@@ -27,7 +25,7 @@ jobs:
         run: flutter build macos --release
 
       - name: Create Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/macos/Build/Products/Release/TTS\ Narrator.app
