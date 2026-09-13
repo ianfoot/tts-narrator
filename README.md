@@ -363,10 +363,9 @@ and holds the single shared lockfile.
 ```
 packages/core/            # tts_narrator_core — pure Dart, no Flutter deps
   lib/
-    tts_narrator_core.dart # public barrel (both the CLI and GUI import this)
+    tts_narrator_core.dart # public barrel (the GUI imports this)
     src/
-      cli/args.dart           # flag parsing + usage text
-      cli/voice_config.dart   # models/voices/defaults/pricing/providers JSON load/save
+      config/voice_config.dart   # models/voices/defaults/pricing/providers JSON load/save
       narration/
         abort.dart            # AbortToken for the GUI Cancel button
         config.dart           # NarrationConfig
@@ -378,8 +377,6 @@ packages/core/            # tts_narrator_core — pure Dart, no Flutter deps
         tts_provider.dart     # TtsProvider interface, registry, resolveSettings
         wav.dart              # PCM -> WAV header writer
   test/                       # unit tests (dart test)
-packages/cli/               # tts_narrator_cli — depends only on core
-  bin/main.dart               # CLI entrypoint (registers the OpenRouter provider)
 packages/providers/openrouter/  # tts_narrator_openrouter — OpenRouter TtsProvider
   lib/openrouter_tts_provider.dart
 app/                        # tts_narrator — Flutter macOS GUI

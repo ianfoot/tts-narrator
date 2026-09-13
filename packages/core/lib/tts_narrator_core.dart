@@ -4,10 +4,10 @@
 /// `src/`, so internal layout can change without breaking consumers.
 library;
 
-export 'src/cli/voice_config.dart';
-export 'src/cli/voice_config_download.dart';
-export 'src/cli/voice_config_io.dart';
-export 'src/cli/voice_config_queries.dart';
+export 'src/config/voice_config.dart';
+export 'src/config/voice_config_download.dart';
+export 'src/config/voice_config_io.dart';
+export 'src/config/voice_config_queries.dart';
 export 'src/narration/abort.dart';
 export 'src/narration/config.dart';
 export 'src/narration/concat.dart';
