@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
+import 'active_run_confirm.dart';
 import '../platform/platform_page.dart';
 
 import 'package:tts_narrator_core/tts_narrator_core.dart' show formatCostUsd;
@@ -127,7 +128,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     _confirming = true;
     bool confirmed;
     try {
-      confirmed = await _confirmCancelActiveRun();
+      confirmed = await _confirmCancel();
     } finally {
       _confirming = false;
     }
@@ -145,51 +146,8 @@ class _NarrationScreenState extends State<NarrationScreen> {
 
   void _onCancel() => _controller.cancelRun();
 
-  /// Confirms leaving a still-generating run. Returns true only when the user
-  /// chose "Cancel Run" (stop generation + leave); "Back" keeps the run going.
-  Future<bool> _confirmCancelActiveRun() async {
-    const title = TextTokens.gui_narration_confirmCancelTitle;
-    const message = TextTokens.gui_narration_confirmCancelMessage;
-    if (_isMac) {
-      final result = await showCupertinoDialog<bool>(
-        context: context,
-        builder: (dialogContext) => CupertinoAlertDialog(
-          title: const Text(title),
-          content: const Text(message),
-          actions: [
-            CupertinoDialogAction(
-              isDefaultAction: true,
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text(TextTokens.gui_narration_cancelRun),
-            ),
-            CupertinoDialogAction(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text(TextTokens.gui_narration_back),
-            ),
-          ],
-        ),
-      );
-      return result ?? false;
-    }
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text(title),
-        content: const Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text(TextTokens.gui_narration_back),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text(TextTokens.gui_narration_cancelRun),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
-  }
+  /// Confirms leaving via the extracted dialog class.
+  Future<bool> _confirmCancel() => ActiveRunConfirmDialog.show(context: context, isMac: _isMac);
 
   AppTokens get _tokens => AppTokens.of(context);
 
