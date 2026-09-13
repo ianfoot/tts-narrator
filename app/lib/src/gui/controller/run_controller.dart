@@ -273,7 +273,7 @@ class RunController extends ChangeNotifier {
   /// this before dispatching to the facade's [startRun].
   String? narrateBlockReason() {
     if (_model.profile == null) {
-      return TextTokens.gui_controller_blockReasons_noModelConfigured;
+      return TextTokens.gui_controller_errors_noModelConfigured;
     }
     if (_document.text.trim().isEmpty) {
       return TextTokens.gui_controller_blockReasons_emptyText;

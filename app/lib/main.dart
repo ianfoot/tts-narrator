@@ -163,7 +163,7 @@ Future<void> main() async {
   ttsProviderRegistry.register('openrouter', OpenRouterTtsProvider.new);
 
   final appSupportDir = await getApplicationSupportDirectory();
-  final configDir = '${appSupportDir.parent.path}/TTS Narrator';
+  final configDir = '${appSupportDir.path}/tts-narrator';
 
   runApp(BootstrapApp(configDir: configDir, prefs: prefs));
 }

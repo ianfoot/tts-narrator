@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
@@ -77,10 +75,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
   /// Resolves the provider settings block for [profile] (see
   /// `resolveSettings` in the core); used when assembling the run config.
   Map<String, String> resolveProviderSettings(TtsModelProfile profile) =>
-      resolveSettings(
-        _loader.load().providers[profile.provider] ?? const {},
-        env: Platform.environment,
-      );
+      _loader.resolveProviderSettings(profile);
 
   /// The editable GUI options for the active model, declared by its model's
   /// plugin (the provider package). Empty when no model is configured or no
@@ -140,11 +135,13 @@ class ModelProfileVoiceController extends ChangeNotifier {
   }
 
   /// Applies a friendly voice alias; resolves it to the provider raw id.
-  void applyVoiceLabel(String label) {
+  /// Returns false (leaving the selection unchanged) when no model is active.
+  bool applyVoiceLabel(String label) {
     final p = profile;
-    if (p == null) return;
+    if (p == null) return false;
     final (id, _) = resolveVoice(_voiceConfig, p.alias, label);
     setVoice(id, label: label);
+    return true;
   }
 
   // --- Voice gender -------------------------------------------------

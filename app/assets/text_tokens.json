@@ -136,7 +136,6 @@
         "cannotOpenTextFile": "Cannot open text file"
       },
       "blockReasons": {
-        "noModelConfigured": "No voice model is configured. Download the starter configs, or add model files to the voice config directory.",
         "emptyText": "Editor text is empty",
         "alreadyRunning": "Narration is already running."
       },

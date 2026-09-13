@@ -101,9 +101,11 @@ class AppController extends ChangeNotifier {
   }
 
   /// Applies a friendly voice alias; resolves it to the provider raw id.
-  void applyVoiceLabel(String label) {
-    _model.applyVoiceLabel(label);
+  /// Returns false (leaving the selection unchanged) when no model is active.
+  bool applyVoiceLabel(String label) {
+    final applied = _model.applyVoiceLabel(label);
     notifyListeners();
+    return applied;
   }
 
   // --- Voice gender -------------------------------------------------
