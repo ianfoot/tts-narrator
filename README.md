@@ -410,6 +410,10 @@ voice_config.example/       # sample config: config.json (providers/${ENV} refs,
 
 Note: `output/`, `.dart_tool/`, and `build/` are gitignored.
 
+## Download macOS build
+
+The latest macOS release build (`tts_narrator.app`) is produced by the [Build macOS](https://github.com/ian/tts-narrator/actions/workflows/build-macos.yml) workflow. Download the artifact from the latest successful workflow run.
+
 ## GUI (macOS)
 
 A Flutter desktop app (`app/`) wraps the same core the CLI uses. It is
