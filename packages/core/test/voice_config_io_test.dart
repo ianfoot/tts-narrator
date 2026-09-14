@@ -51,7 +51,7 @@ void main() {
   });
 
   group('defaultConfigDir', () {
-    test('uses Unix config dir on non-Windows hosts', () {
+    test('uses standard cross-platform config directory', () {
       final path = defaultConfigDir();
       expect(path.contains('tts-narrator'), isTrue);
     });

@@ -84,7 +84,7 @@ String defaultConfigDir() {
       profileFor(configuredDefault.trim(), config) == null) {
     warnings.add(
       'default_model "$configuredDefault" is not a configured model; '
-      'falling back to the compiled default.',
+      'no default model is selected.',
     );
   }
 

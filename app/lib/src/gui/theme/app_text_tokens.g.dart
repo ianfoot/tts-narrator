@@ -67,7 +67,7 @@ final class TextTokens {
   static const String core_cost_freeLabel = '\u00240.00 (free)';
   static const String core_errors_cannotReadConfig = 'Cannot read voice config "\u0024path": \u0024e';
   static const String core_errors_cannotWriteConfig = 'Cannot write voice config "\u0024configDir": \u0024e';
-  static const String core_errors_defaultModelFallback = 'default_model "\u0024configuredDefault" is not a configured model; falling back to the compiled default.';
+  static const String core_errors_defaultModelFallback = 'default_model "\u0024configuredDefault" is not a configured model; no default model is selected.';
   static const String core_errors_defaultModelType = 'Invalid voice config "\u0024path": "default_model" must be a string';
   static const String core_errors_defaultVoiceNotConfigured = 'Default voice "\u0024configured" for "\u0024{model.alias}" is not a configured voice or raw id.';
   static const String core_errors_invalidConfigRead = 'Invalid voice config "\u0024path": \u0024{e.message}';
@@ -120,6 +120,7 @@ final class TextTokens {
   static const String gui_controller_blockReasons_alreadyRunning = 'Narration is already running.';
   static const String gui_controller_blockReasons_emptyText = 'Editor text is empty';
   static const String gui_controller_errors_cannotOpenTextFile = 'Cannot open text file';
+  static const String gui_controller_errors_noModelConfigured = 'No voice model is configured. Download the starter configs, or add model files to the voice config directory.';
   static const String gui_controller_errors_noVoiceSelected = 'No voice selected for "\u0024modelAlias" — pick an alias or set a default in the voice config.';
   static const String gui_controller_genderPhrases_female = 'female narrator';
   static const String gui_controller_genderPhrases_male = 'male narrator';

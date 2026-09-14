@@ -19,7 +19,16 @@ Future<AppController> makeController() async {
   final configDir = '${dir.path}/cfg';
   File('$configDir/config.json')
     ..parent.createSync(recursive: true)
-    ..writeAsStringSync(const JsonEncoder().convert({}));
+    ..writeAsStringSync(const JsonEncoder().convert({'default_model': 'fish'}));
+  File('$configDir/fish.json').writeAsStringSync(
+    const JsonEncoder().convert({
+      'id': 'fish-audio/s2.1-pro-free:free',
+      'provider': 'openrouter',
+      'format': 'mp3',
+      'default_voice': 'British Female Narrator',
+      'voices': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+    }),
+  );
   return AppController(loader: UserVoiceConfigLoader(configDir: configDir));
 }
 

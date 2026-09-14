@@ -5,12 +5,11 @@
 /// and how voices work. A [TtsModelProfile] captures the *wiring* needed to
 /// build a request for a given model.
 ///
-/// Most profiles are NOT compiled here. Models come from the user's
-/// config directory (`<alias>.json`) so the user can point at a
-/// different or newer model id (e.g. swap the gemini preview for a GA id)
-/// without a rebuild. Only the out-of-box fish bootstrap lives in code, as the
-/// app's default until any config overrides it. Voices and pricing are also
-/// user data and live in the per-model files (see `voice_config.dart`).
+/// Models are never compiled here: they come only from the user's config
+/// directory (`<alias>.json`), so the user can point at a different or newer
+/// model id (e.g. swap the gemini preview for a GA id) without a rebuild.
+/// Voices and pricing are also user data and live in the per-model files (see
+/// `voice_config.dart`).
 class TtsModelProfile {
   const TtsModelProfile({
     required this.alias,
@@ -46,9 +45,7 @@ class TtsModelProfile {
   /// PCM sample rate used for the WAV header and duration; null for MP3.
   final int? sampleRate;
 
-  /// Provider id that serves this model. Required in the model config file;
-  /// the compiled fish bootstrap carries `'openrouter'` so cold start works —
-  /// a default value, not special provider treatment.
+  /// Provider id that serves this model. Required in the model config file.
   final String provider;
 
   TtsModelProfile copyWith({String? id, String? provider}) => TtsModelProfile(
@@ -61,33 +58,4 @@ class TtsModelProfile {
     provider: provider ?? this.provider,
     displayName: displayName,
   );
-}
-
-/// The app's out-of-the-box default: the fish model + its free default voice,
-/// so first runs cost nothing and the CLI/GUI preselect it before any config
-/// exists. The config's `"models"`/`"voices"` blocks can override and extend
-/// this; all other models come from the config.
-const kDefaultProfile = VoiceProfile(
-  profile: TtsModelProfile(
-    alias: 'fish',
-    id: 'fish-audio/s2.1-pro-free',
-    format: 'mp3',
-    sendsVoiceField: true,
-    displayName: 'Fish Audio S2.1 (Free)',
-  ),
-  voice: '89f41ea230034706881f85a8227d6ab9',
-  voiceLabel: 'British Female Narrator',
-);
-
-/// A single default model + voice to preselect on cold start.
-class VoiceProfile {
-  const VoiceProfile({
-    required this.profile,
-    required this.voice,
-    required this.voiceLabel,
-  });
-
-  final TtsModelProfile profile;
-  final String voice;
-  final String voiceLabel;
 }

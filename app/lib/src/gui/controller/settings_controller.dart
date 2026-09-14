@@ -186,7 +186,8 @@ class SettingsController extends ChangeNotifier {
   /// — custom prefixes are left alone. The facade's gender-filter write owns
   /// the single notification, so this mutates without notifying.
   void applyNarratorGender(VoiceGender gender) {
-    if (!_model.profile.promptStyle) return;
+    final p = _model.profile;
+    if (p == null || !p.promptStyle) return;
     switch (gender) {
       case VoiceGender.male:
         if (_passagePrefix.contains(_genderFemalePhrase)) {
@@ -218,6 +219,9 @@ class SettingsController extends ChangeNotifier {
   /// no config default (mirrors the CLI's error).
   NarrationConfig buildConfig() {
     final p = _model.profile;
+    if (p == null) {
+      throw FormatException(TextTokens.gui_controller_errors_noModelConfigured);
+    }
     final raw = _model.voice.trim();
     String voiceId;
     String? label;

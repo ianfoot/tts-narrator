@@ -65,8 +65,9 @@ class AppController extends ChangeNotifier {
 
   // --- Model & voice ------------------------------------------------
 
-  /// The active model profile (alias resolved against the loaded config).
-  TtsModelProfile get profile => _model.profile;
+  /// The active model profile (alias resolved against the loaded config), or
+  /// null when no model is configured.
+  TtsModelProfile? get profile => _model.profile;
 
   VoiceConfig get voiceConfig => _model.voiceConfig;
 
@@ -74,7 +75,8 @@ class AppController extends ChangeNotifier {
   /// malformed model file). Rendered as a persistent, non-fatal banner.
   List<String> get configWarnings => _model.configWarnings;
 
-  String get modelAlias => _model.modelAlias;
+  /// The active model alias, or null when no model is configured.
+  String? get modelAlias => _model.modelAlias;
 
   /// Raw provider voice id; an empty string means "use the model default".
   String get voice => _model.voice;
@@ -99,9 +101,11 @@ class AppController extends ChangeNotifier {
   }
 
   /// Applies a friendly voice alias; resolves it to the provider raw id.
-  void applyVoiceLabel(String label) {
-    _model.applyVoiceLabel(label);
+  /// Returns false (leaving the selection unchanged) when no model is active.
+  bool applyVoiceLabel(String label) {
+    final applied = _model.applyVoiceLabel(label);
     notifyListeners();
+    return applied;
   }
 
   // --- Voice gender -------------------------------------------------

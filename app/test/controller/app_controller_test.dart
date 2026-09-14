@@ -60,8 +60,27 @@ void main() {
   AppController makeController() =>
       AppController(loader: UserVoiceConfigLoader(configDir: configDir));
 
+  /// Writes the starter fish config (a `default_model` and a fish model file
+  /// mirroring the shipped voice-config layout) so the controller preselects
+  /// fish with its default voice, as it does after the first-run download.
+  void writeFishConfig() {
+    writeConfig({
+      'default_model': 'fish',
+      'providers': {
+        'openrouter': {'api_key': 'sk-test'},
+      },
+      'models': {
+        'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+      },
+      'defaults': {'fish': 'British Female Narrator'},
+      'voices': {
+        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+      },
+    });
+  }
+
   group('cold start', () {
-    test('boots an empty, untitled document on the fish default', () {
+    test('boots an empty, untitled document with no model configured', () {
       final c = makeController();
       expect(c.text, isEmpty);
       expect(c.documentName, 'untitled.txt');
@@ -69,18 +88,22 @@ void main() {
       expect(c.wordCount, 0);
       expect(c.charCount, 0);
       expect(c.plannedSegments, isEmpty);
-      expect(c.profile.alias, kDefaultProfile.profile.alias);
-      expect(c.modelAlias, kDefaultProfile.profile.alias);
-      expect(c.voice, kDefaultProfile.voice);
-      expect(c.voiceLabel, kDefaultProfile.voiceLabel);
+      // No config models and no default_model -> no model to select, so
+      // narration is unavailable until a config (or the starter download)
+      // provides one.
+      expect(c.profile, isNull);
+      expect(c.modelAlias, isNull);
+      expect(c.voice, '');
+      expect(c.voiceLabel, isNull);
     });
 
-    test('a missing config file degrades to the compiled fish bootstrap', () {
+    test('a missing config file yields no model (no compiled fallback)', () {
       final c = AppController(
         loader: UserVoiceConfigLoader(configDir: '${dir.path}/nope'),
       );
-      expect(c.profile.alias, 'fish');
-      expect(c.voice, kDefaultProfile.voice);
+      expect(c.profile, isNull);
+      expect(c.modelAlias, isNull);
+      expect(c.voice, '');
     });
   });
 
@@ -107,6 +130,7 @@ void main() {
     test(
       'loadFromFile reads the file, sets the path, clears the dirty flag',
       () {
+        writeFishConfig();
         final story = File('${dir.path}/story.txt')
           ..writeAsStringSync('Once upon a time there was a very long story.');
         final c = makeController();
@@ -179,23 +203,19 @@ void main() {
 
   group('buildConfig', () {
     test('narrates from in-memory text with an untitled input path', () {
-      writeConfig({
-        'providers': {
-          'openrouter': {'api_key': 'sk-test'},
-        },
-      });
+      writeFishConfig();
       final c = makeController()..setText('Hello world. Some more words here.');
       final cfg = c.buildConfig();
       expect(cfg.sourceText, 'Hello world. Some more words here.');
       expect(cfg.inputPath, 'untitled.txt');
       expect(cfg.profile.alias, 'fish');
-      expect(cfg.voice, kDefaultProfile.voice);
+      expect(cfg.voice, '89f41ea230034706881f85a8227d6ab9');
       expect(cfg.providerSettings['api_key'], 'sk-test');
       expect(cfg.pricing, freePricing);
     });
 
-    test('documents use the real path for output naming', () {
-      writeConfig({});
+    test('documents use the real path for output naming', () async {
+      writeFishConfig();
       final story = File('${dir.path}/my chapter.txt')
         ..writeAsStringSync('A chapter with enough words to narrate.');
       final c = makeController()..loadFromFile(story.path);
@@ -205,8 +225,8 @@ void main() {
       expect(inputStem(cfg.inputPath), 'my_chapter');
     });
 
-    test('sendWholeFile flows through to the narration config', () {
-      writeConfig({});
+    test('sendWholeFile flows through to the narration config', () async {
+      writeFishConfig();
       final c = makeController()..setText('One.\n\nTwo.');
       expect(c.buildConfig().sendWholeFile, isFalse);
       c.sendWholeFile = true;
@@ -321,6 +341,7 @@ void main() {
 
     test('a preserved raw voice drops the previous model label on switch', () {
       writeConfig({
+        'default_model': 'fish',
         'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
           'gemini': {
@@ -350,6 +371,7 @@ void main() {
 
     test('resolveVoice wires a friendly alias to its raw id', () {
       writeConfig({
+        'default_model': 'fish',
         'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
         },
@@ -442,7 +464,7 @@ void main() {
       final c = makeController()..changeModel('kokoro');
       c.voiceGenderFilter = VoiceGender.male;
       expect(c.voiceGenderFilter, VoiceGender.male);
-      c.changeModel('fish');
+      c.changeModel('gemini');
       expect(c.voiceGenderFilter, VoiceGender.neutral);
     });
 
@@ -524,16 +546,24 @@ void main() {
 
   group('narrate guard', () {
     test('blocks on empty text', () {
+      writeFishConfig();
       final c = makeController();
       expect(c.narrateBlockReason(), contains('Editor text is empty'));
     });
 
-    test('allows narration with text present', () {
+    test('blocks when no model is configured', () {
+      final c = makeController();
+      expect(c.narrateBlockReason(), contains('No voice model is configured'));
+    });
+
+    test('allows narration with text present and a configured model', () {
+      writeFishConfig();
       final c = makeController()..setText('Hello world. Enough words.');
       expect(c.narrateBlockReason(), isNull);
     });
 
     test('blocks re-entrancy once a run starts', () async {
+      writeFishConfig();
       final c = makeController()..setText('Hello world. Enough words.');
       final fake = FakeTtsProvider()..register();
       c.sampleLen = 1;
@@ -559,6 +589,10 @@ void main() {
   });
 
   group('run state', () {
+    // Every run test narrates a configured model; without one, startRun() is
+    // blocked by the no-model guard before the first segment is planned.
+    setUp(() => writeFishConfig());
+
     test('sampleLen sizes the segment plan so progress completes at 100%', () async {
       final c = makeController();
       c.setText(
@@ -797,6 +831,7 @@ void main() {
           ModelUiControl(key: 'accent', label: 'Accent'),
         ]);
       fake.register();
+      writeFishConfig();
       final c = makeController();
       expect(c.modelUiSpec.isEmpty, isFalse);
       final keys = c.modelUiSpec.options.map((o) => o.key).toList();
@@ -806,6 +841,7 @@ void main() {
 
   group('estimate', () {
     test('plans and estimates update with the text', () {
+      writeFishConfig();
       final c = makeController();
       c.setText(
         'The rain fell on the quiet street. Lights glowed behind the windows. '

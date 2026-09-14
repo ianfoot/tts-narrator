@@ -42,33 +42,21 @@ VoiceConfig _cfg({
 
 void main() {
   group('effectiveModels', () {
-    test('with an empty config, only the fish bootstrap exists', () {
+    test('an empty config yields no models (no compiled default)', () {
       final models = effectiveModels(const VoiceConfig());
-      expect(models.length, 1);
-      expect(models.firstWhere((m) => m.alias == 'fish'), isNotNull);
+      expect(models, isEmpty);
     });
 
-    test('config models extend the set with new providers', () {
+    test('returns the configured models, sorted by alias', () {
       final cfg = _cfg(
-        models: {'kokoro': _model(alias: 'kokoro', id: 'hexgrad/kokoro-82m')},
+        models: {
+          'kokoro': _model(alias: 'kokoro', id: 'hexgrad/kokoro-82m'),
+          'fish': _model(alias: 'fish', id: 'fish-audio/s2.1-pro-free'),
+        },
         defaults: const {'kokoro': 'Emma'},
       );
       final models = effectiveModels(cfg);
-      expect(models.length, 2);
-      expect(models.any((m) => m.alias == 'fish'), isTrue);
-      expect(models.any((m) => m.alias == 'kokoro'), isTrue);
-    });
-
-    test('a config model overrides the fish bootstrap by alias', () {
-      final cfg = _cfg(
-        models: {'fish': _model(alias: 'fish', id: 'custom/fish-model')},
-      );
-      final models = effectiveModels(cfg);
-      expect(models.length, 1);
-      expect(
-        models.firstWhere((m) => m.alias == 'fish').id,
-        'custom/fish-model',
-      );
+      expect(models.map((m) => m.alias), ['fish', 'kokoro']);
     });
   });
 
@@ -83,10 +71,8 @@ void main() {
       expect(profile!.provider, 'openrouter');
     });
 
-    test('fish bootstraps in with an empty config', () {
-      final profile = profileFor('fish', const VoiceConfig());
-      expect(profile, isNotNull);
-      expect(profile!.provider, 'openrouter');
+    test('returns null for an unknown name on an empty config', () {
+      expect(profileFor('fish', const VoiceConfig()), isNull);
     });
 
     test('returns null for unknown names', () {
@@ -95,8 +81,8 @@ void main() {
   });
 
   group('defaultModelFor', () {
-    test('empty config falls back to the compiled fish bootstrap', () {
-      expect(defaultModelFor(const VoiceConfig()).alias, 'fish');
+    test('empty config has no default model (no compiled default)', () {
+      expect(defaultModelFor(const VoiceConfig()), isNull);
     });
 
     test('resolves default_model by alias', () {
@@ -104,7 +90,7 @@ void main() {
         defaultModel: 'gemini',
         models: {'gemini': _model(alias: 'gemini', id: 'google/gemini-tts')},
       );
-      expect(defaultModelFor(cfg).alias, 'gemini');
+      expect(defaultModelFor(cfg)!.alias, 'gemini');
     });
 
     test('resolves default_model by full id', () {
@@ -112,12 +98,19 @@ void main() {
         defaultModel: 'google/gemini-tts',
         models: {'gemini': _model(alias: 'gemini', id: 'google/gemini-tts')},
       );
-      expect(defaultModelFor(cfg).alias, 'gemini');
+      expect(defaultModelFor(cfg)!.alias, 'gemini');
     });
 
-    test('an unknown default_model falls back to fish', () {
+    test('an unknown default_model yields no default', () {
       final cfg = _cfg(defaultModel: 'unknown');
-      expect(defaultModelFor(cfg).alias, 'fish');
+      expect(defaultModelFor(cfg), isNull);
+    });
+
+    test('no default_model set yields no default even with models', () {
+      final cfg = _cfg(
+        models: {'gemini': _model(alias: 'gemini', id: 'google/gemini-tts')},
+      );
+      expect(defaultModelFor(cfg), isNull);
     });
   });
 
@@ -231,7 +224,7 @@ void main() {
       expect(label, 'Emma');
     });
 
-    test('fish falls back to the compiled bootstrap voice', () {
+    test('uses the configured default voice for a model', () {
       final cfg = _cfg(
         voices: const {
           'fish': {
@@ -240,10 +233,12 @@ void main() {
             ),
           },
         },
+        defaults: const {'fish': 'British Female Narrator'},
         models: {'fish': _model(alias: 'fish', id: 'fish-audio/s2.1-pro-free')},
       );
       final model = profileFor('fish', cfg)!;
       final (id, label) = defaultVoiceFor(model, cfg);
+      expect(id, '89f41ea230034706881f85a8227d6ab9');
       expect(label, 'British Female Narrator');
     });
 
@@ -263,15 +258,26 @@ void main() {
   });
 
   group('voiceEntries', () {
-    test('fish includes its compiled default voice, no aliases', () {
+    test('a configured default voice yields that entry, not a compiled one', () {
+      final cfg = _cfg(
+        defaults: const {'fish': 'British Female Narrator'},
+        voices: const {
+          'fish': {
+            'British Female Narrator': Voice(
+              id: '89f41ea230034706881f85a8227d6ab9',
+            ),
+          },
+        },
+        models: {'fish': _model(alias: 'fish', id: 'fish-audio/s2.1-pro-free')},
+      );
       final entries = voiceEntries(
-        model: kDefaultProfile.profile,
-        config: const VoiceConfig(),
+        model: profileFor('fish', cfg)!,
+        config: cfg,
       );
       expect(entries, hasLength(1));
-      expect(entries.single.id, kDefaultProfile.voice);
+      expect(entries.single.id, '89f41ea230034706881f85a8227d6ab9');
       expect(entries.single.label, 'British Female Narrator');
-      expect(entries.single.isAlias, isFalse);
+      expect(entries.single.isAlias, isTrue);
     });
 
     test('a model without aliases or a config default yields no entries', () {

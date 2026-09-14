@@ -16,7 +16,7 @@ class UserVoiceConfigLoader {
   /// Warnings from the last [load] (e.g. a skipped malformed model file).
   List<String> warnings = const [];
 
-  /// Reads the config; empty when the directory is absent.
+  /// Reads the config from [configDir]; empty when the directory is absent.
   VoiceConfig load() {
     final (cfg, warnings) = loadVoiceConfig(configDir);
     this.warnings = warnings;

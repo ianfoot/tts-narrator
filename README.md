@@ -41,18 +41,19 @@ fvm flutter run -d macos
 
 Everything user-facing — the default model, per-provider settings, models,
 per-model providers and default voices, prices, and friendly voice aliases —
-lives in a config **directory**, defaulting to `~/.config/tts-narrator/`. Two kinds of files:
+lives in a config **directory** resolved by `path_provider` (`getApplicationSupportDirectory()` + `tts-narrator`): Two kinds of files:
 
 - `config.json` — the global bits: `default_model` (the preselected model on
   cold start) and the per-provider settings block (secrets).
 - `<alias>.json` — one file per model: its id, the provider that serves it,
   the request wiring, default voice, pricing, and friendly voice aliases.
 
-Copy the repo's `voice_config.example/` directory to that path as a starting
-point — it's the paste-template; the directory under `~/.config` is the live
-one the tools read:
+Cross-platform paths (via `path_provider`):
+- macOS: `~/Library/Application Support/tts-narrator/`
+- Windows: `%APPDATA%/tts-narrator/`
+- Linux: `~/.config/tts-narrator/` (or `$XDG_CONFIG_HOME/tts-narrator/`)
 
-`~/.config/tts-narrator/config.json`:
+`<path_provider_dir>/tts-narrator/config.json`:
 
 ```json
 {
@@ -63,7 +64,7 @@ one the tools read:
 }
 ```
 
-`~/.config/tts-narrator/fish.json`:
+`<path_provider_dir>/tts-narrator/fish.json`:
 
 ```json
 {
@@ -78,7 +79,7 @@ one the tools read:
 }
 ```
 
-`~/.config/tts-narrator/gemini.json`:
+`<path_provider_dir>/tts-narrator/gemini.json`:
 
 ```json
 {
@@ -96,7 +97,7 @@ one the tools read:
 }
 ```
 
-`~/.config/tts-narrator/kokoro.json`:
+`<path_provider_dir>/tts-narrator/kokoro.json`:
 
 ```json
 {
@@ -248,7 +249,7 @@ packages/core/            # tts_narrator_core — pure Dart narration core
         abort.dart            # AbortToken for the GUI Cancel button
         config.dart           # NarrationConfig
         cost.dart             # duration + cost estimates
-        model_profiles.dart   # request wiring + compiled fish bootstrap (kDefaultProfile)
+        model_profiles.dart   # request wiring (models come only from config files)
         model_ui.dart         # ModelUiSpec — GUI options declared by a model's plugin
         narration.dart       # segmentText + narration orchestrator
         prompt.dart           # per-paragraph prompt template (Gemini only)
@@ -319,7 +320,8 @@ fvm flutter build macos --release
   entitlement to reach the OpenRouter API; it's already present in
   `app/macos/Runner/DebugProfile.entitlements` and `Release.entitlements`.
 - Linux/Windows are planned but not yet scaffolded (macOS-only for now).
-- The GUI reads the `~/.config/tts-narrator/` config directory
+- The GUI reads the `path_provider` `getApplicationSupportDirectory()` config
+  (`tts-narrator/` subfolder)
   for voice aliases and the per-provider settings block, but never writes it —
   edit those files directly. It has no secret-key field; each
   provider's key comes from the `providers.<id>` block in `config.json`. The
