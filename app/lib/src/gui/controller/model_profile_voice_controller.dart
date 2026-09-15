@@ -74,8 +74,19 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   /// Resolves the provider settings block for [profile] (see
   /// `resolveSettings` in the core); used when assembling the run config.
-  Map<String, String> resolveProviderSettings(TtsModelProfile profile) =>
-      _loader.resolveProviderSettings(profile);
+  /// [overrides] are merged over the raw block before `${ENV}` expansion (see
+  /// [UserVoiceConfigLoader.resolveProviderSettings]).
+  Map<String, String> resolveProviderSettings(
+    TtsModelProfile profile, {
+    Map<String, String>? overrides,
+  }) => _loader.resolveProviderSettings(profile, overrides: overrides);
+
+  /// The raw (unexpanded) `providers.<id>` block for [profile] straight from
+  /// the config, or an empty map when the provider has no block. The settings
+  /// rail uses this to tell whether a key came from config.json (literal or
+  /// `${ENV}` reference) vs the secure store.
+  Map<String, String> rawProviderSettings(TtsModelProfile profile) =>
+      _voiceConfig.providers[profile.provider] ?? const {};
 
   /// The editable GUI options for the active model, declared by its model's
   /// plugin (the provider package). Empty when no model is configured or no

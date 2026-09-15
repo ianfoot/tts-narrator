@@ -1,11 +1,29 @@
+import 'dart:io';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'document_controller.dart';
+import 'api_key_store.dart';
 import 'model_profile_voice_controller.dart';
 import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
+
+/// Where the effective API key for the active model's provider comes from.
+enum ApiKeySource {
+  /// No key configured anywhere.
+  missing,
+
+  /// Stored in the OS secure store (Keychain / Credential Manager / libsecret).
+  keychain,
+
+  /// A literal value in the `providers.<id>` config block.
+  config,
+
+  /// A `${ENV}` reference in the config resolved from the runtime environment.
+  environment,
+}
 
 /// Owns the narration settings and the editor's settings-panel visibility for
 /// the TTS Narrator GUI: accent/style, passage prefix, per-segment sizing,
@@ -26,6 +44,7 @@ class SettingsController extends ChangeNotifier {
     required this._document,
     required this._model,
     SharedPreferences? prefs,
+    this.apiKeyStore,
   }) : _prefs = prefs {
     final savedOutDir = prefs?.getString(_outDirPrefsKey);
     if (savedOutDir != null && savedOutDir.trim().isNotEmpty) {
@@ -38,6 +57,11 @@ class SettingsController extends ChangeNotifier {
 
   /// The persistent preference store; null when the host has none (tests).
   final SharedPreferences? _prefs;
+
+  /// The OS-secure key store backing the API-key section of the settings rail;
+  /// null when the host injects none (tests) — the key simply never falls back
+  /// to secure storage.
+  final ApiKeyStore? apiKeyStore;
 
   /// The open document (read for whole-file availability and the live plan).
   final DocumentController _document;
@@ -208,6 +232,126 @@ class SettingsController extends ChangeNotifier {
     }
   }
 
+  // --- API key (provider secrets) -----------------------------------
+
+  /// OpenRouter API-key setting names, in the provider's own lookup order
+  /// (`api_key` first, then `OPENROUTER_API_KEY`).
+  static const _apiKeySettingNames = ['api_key', 'OPENROUTER_API_KEY'];
+
+  /// Provider ids the app requires an API key for. Mirrors the openrouter
+  /// registration in `main.dart`; other providers extend this set.
+  static const _keyedProviders = {'openrouter'};
+
+  /// Whether [settings] carries a usable (non-empty) API key under any known
+  /// key-setting name.
+  bool _hasUsableApiKey(Map<String, String> settings) => settings.entries.any(
+    (e) => _apiKeySettingNames.contains(e.key) && e.value.trim().isNotEmpty,
+  );
+
+  /// Mirrors the core `resolveSettings` env-reference pattern so the status
+  /// line and the run config can never disagree about what a value means.
+  static final _envRef = RegExp(r'^\$\{(\w+)\}$');
+
+  /// Resolves a raw config [value] to a usable key, or null when it's absent,
+  /// empty, or a `${ENV}` reference the runtime environment cannot fulfil.
+  /// Literals are returned (trimmed); env references are expanded from
+  /// [Platform.environment] exactly as the core does.
+  String? _usableApiKeyValue(String raw) {
+    final match = _envRef.firstMatch(raw);
+    if (match != null) {
+      final resolved = Platform.environment[match.group(1)];
+      return (resolved == null || resolved.trim().isEmpty) ? null : resolved;
+    }
+    final literal = raw.trim();
+    return literal.isEmpty ? null : literal;
+  }
+
+  /// Resolves the provider settings for [profile]: config.json literals and
+  /// `${ENV}` references first (via the core), then the OS-secure store, and
+  /// fails early with a descriptive message when no key exists anywhere.
+  ///
+  /// Failing here — inside [buildConfig], which [RunController.startRun]
+  /// guards — turns a missing key into a plan error before the run starts
+  /// instead of a mid-run narration `StateError` from the provider.
+  Map<String, String> _resolveProviderSettings(TtsModelProfile p) {
+    if (!_keyedProviders.contains(p.provider)) {
+      return _model.resolveProviderSettings(p);
+    }
+    Map<String, String>? resolved;
+    try {
+      resolved = _model.resolveProviderSettings(p);
+    } on StateError {
+      // A `${ENV}` reference the runtime cannot fulfil (the shipped starter
+      // config's `${OPENROUTER_API_KEY}` under a double-click launch, for
+      // instance) is treated as "no config/env key"; the secure store can
+      // still provide one, so fall through and re-resolve with it injected.
+      resolved = null;
+    }
+    if (resolved != null && _hasUsableApiKey(resolved)) return resolved;
+    final stored = apiKeyStore?.value;
+    if (stored == null || stored.isEmpty) {
+      throw StateError(TextTokens.gui_controller_errors_noApiKey);
+    }
+    final retried = _model.resolveProviderSettings(
+      p,
+      overrides: _apiKeyOverridesWith(p, stored),
+    );
+    if (_hasUsableApiKey(retried)) return retried;
+    throw StateError(TextTokens.gui_controller_errors_noApiKey);
+  }
+
+  /// Overrides injecting the stored [key] into [profile]'s provider block:
+  /// overrides whichever key-setting names are already present (preserving the
+  /// provider's native naming), else supplies `OPENROUTER_API_KEY` for a block
+  /// that carries none.
+  Map<String, String> _apiKeyOverridesWith(TtsModelProfile p, String key) {
+    final raw = _model.rawProviderSettings(p);
+    final overrides = <String, String>{};
+    for (final name in _apiKeySettingNames) {
+      if (raw.containsKey(name)) overrides[name] = key;
+    }
+    if (overrides.isEmpty) overrides['OPENROUTER_API_KEY'] = key;
+    return overrides;
+  }
+
+  /// Where the active model's API key comes from, mirroring the precedence
+  /// applied in [_resolveProviderSettings] (config/env first, then the secure
+  /// store). Drives the settings rail's status line. [ApiKeySource.missing]
+  /// when no model is active or its provider needs no key.
+  ///
+  /// A `${ENV}` reference that cannot resolve does NOT count as "set via the
+  /// environment": the app would still fail without the secure-store key, so
+  /// the status agrees with what a run would actually consume.
+  ApiKeySource get apiKeySource {
+    final p = _model.profile;
+    if (p == null || !_keyedProviders.contains(p.provider)) {
+      return ApiKeySource.missing;
+    }
+    final raw = _model.rawProviderSettings(p);
+    for (final key in _apiKeySettingNames) {
+      final value = raw[key];
+      if (value == null || _usableApiKeyValue(value) == null) continue;
+      return _envRef.hasMatch(value)
+          ? ApiKeySource.environment
+          : ApiKeySource.config;
+    }
+    final stored = apiKeyStore?.value;
+    return (stored != null && stored.isNotEmpty)
+        ? ApiKeySource.keychain
+        : ApiKeySource.missing;
+  }
+
+  /// Status label for [apiKeySource], rendered in the settings rail.
+  String get apiKeyStatusLabel => switch (apiKeySource) {
+    ApiKeySource.keychain => TextTokens.gui_settings_apiKeyStatusKeychain,
+    ApiKeySource.config => TextTokens.gui_settings_apiKeyStatusConfig,
+    ApiKeySource.environment => TextTokens.gui_settings_apiKeyStatusEnvironment,
+    ApiKeySource.missing => TextTokens.gui_settings_apiKeyStatusMissing,
+  };
+
+  /// Whether no API key is configured anywhere for the active model.
+  bool get apiKeyMissing => apiKeySource == ApiKeySource.missing;
+
   // --- Run config + live estimates ------------------------------------
 
   /// Assembles the run config for the current document + settings, narrating
@@ -263,7 +407,7 @@ class SettingsController extends ChangeNotifier {
           ? TextTokens.defaults_outDir
           : outDir.trim(),
       resume: resume,
-      providerSettings: _model.resolveProviderSettings(p),
+      providerSettings: _resolveProviderSettings(p),
       pricing: _model.pricing,
     );
   }

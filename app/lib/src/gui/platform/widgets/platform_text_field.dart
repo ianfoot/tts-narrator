@@ -15,6 +15,7 @@ class PlatformTextField extends StatelessWidget {
     this.keyboardType,
     this.enabled = true,
     this.autofocus = false,
+    this.obscureText = false,
     this.style,
     this.hintStyle,
     this.tooltip,
@@ -23,6 +24,9 @@ class PlatformTextField extends StatelessWidget {
   final TextEditingController? controller;
   final ValueChanged<String>? onChanged;
   final String? hintText;
+
+  /// Masks the input (password-style) for secrets such as the API key.
+  final bool obscureText;
 
   /// Number of lines (null unbounded). Must be null when [expands] is true.
   final int? maxLines;
@@ -54,6 +58,7 @@ class PlatformTextField extends StatelessWidget {
         keyboardType: keyboardType,
         enabled: enabled,
         autofocus: autofocus,
+        obscureText: obscureText,
         style: style,
         placeholderStyle: hintStyle,
         textAlignVertical: TextAlignVertical.top,
@@ -69,6 +74,7 @@ class PlatformTextField extends StatelessWidget {
         keyboardType: keyboardType,
         enabled: enabled,
         autofocus: autofocus,
+        obscureText: obscureText,
         style: style,
         textAlignVertical: TextAlignVertical.top,
         decoration: InputDecoration(

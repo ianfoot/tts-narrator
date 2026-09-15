@@ -133,6 +133,7 @@
       "errors": {
         "noModelConfigured": "No voice model is configured. Download the starter configs, or add model files to the voice config directory.",
         "noVoiceSelected": "No voice selected for \"$modelAlias\" — pick an alias or set a default in the voice config.",
+        "noApiKey": "No OpenRouter API key set. Add one to the \"providers.openrouter\" block in config.json, set the OPENROUTER_API_KEY environment variable, or enter it in the Settings rail (stored in the system keychain).",
         "cannotOpenTextFile": "Cannot open text file"
       },
       "blockReasons": {
@@ -189,6 +190,17 @@
       "narrateFirstSegments": "Narrate first segments only",
       "skipCompletedSegments": "Skip completed segments (Resume)",
       "modelDisplayFallback": "$alias — $id",
+      "apiKeySection": "API key",
+      "apiKeyStatusLabel": "Key source",
+      "apiKeyStatusKeychain": "Stored in keychain",
+      "apiKeyStatusConfig": "Set in config.json",
+      "apiKeyStatusEnvironment": "Set via environment variable",
+      "apiKeyStatusMissing": "Not set",
+      "apiKeyFieldHint": "sk-or-...",
+      "apiKeyFieldTooltip": "OpenRouter API key, saved to the system keychain",
+      "apiKeySave": "Save",
+      "apiKeyRemove": "Remove",
+      "apiKeyStoreError": "Could not reach the system key store.",
       "modelDropdownTooltip": "Select the TTS model to use for narration",
       "voiceDropdownTooltip": "Choose voice for current model",
       "sendWholeFileTooltip": "Generate single audio file instead of segments",
