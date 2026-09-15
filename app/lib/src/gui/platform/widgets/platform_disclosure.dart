@@ -38,8 +38,6 @@ class PlatformDisclosure extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppTokens.of(context).colors;
-    final textStyle = AppTokens.of(context).typography.caption
-        .copyWith(color: colors.textSecondary);
     final header = GestureDetector(
       onTap: () => onToggle(!expanded),
       child: Row(
@@ -51,7 +49,11 @@ class PlatformDisclosure extends StatelessWidget {
             color: colors.textPrimary.withValues(alpha: 0.85),
           ),
           const SizedBox(width: 8),
-          Text(label, style: textStyle),
+          Text(
+            label,
+            style: AppTokens.of(context).typography.body
+                .copyWith(color: colors.textPrimary),
+          ),
         ],
       ),
     );
@@ -64,7 +66,11 @@ class PlatformDisclosure extends StatelessWidget {
           if (caption != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(caption!, style: textStyle),
+              child: Text(
+                caption!,
+                style: AppTokens.of(context).typography.body
+                    .copyWith(color: colors.textSecondary),
+              ),
             ),
         ],
       );

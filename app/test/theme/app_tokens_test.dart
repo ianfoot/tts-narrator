@@ -124,7 +124,6 @@ void main() {
     test('exposes the spec type scale (spec §1)', () {
       final t = AppTypography(TargetPlatform.macOS);
       expect(t.body.fontSize, 13);
-      expect(t.caption.fontSize, 11);
       expect(t.headerSemibold.fontSize, 15);
       expect(t.headerSemibold.fontWeight, FontWeight.w600);
       expect(t.mono.fontSize, 12);

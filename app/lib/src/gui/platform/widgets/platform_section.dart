@@ -26,10 +26,10 @@ class PlatformSection extends StatelessWidget {
     final tokens = AppTokens.of(context);
     return Text(
       title.toUpperCase(),
-      style: tokens.typography.caption.copyWith(
+      style: tokens.typography.body.copyWith(
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
-        color: tokens.colors.textSecondary,
+        color: tokens.colors.textPrimary,
       ),
     );
   }

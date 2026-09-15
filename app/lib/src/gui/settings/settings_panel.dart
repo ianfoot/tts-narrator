@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
+import '../platform/widgets/platform_button.dart';
 import '../platform/widgets/platform_disclosure.dart';
 import '../platform/widgets/platform_dropdown.dart';
 import '../platform/widgets/platform_section.dart';
@@ -32,6 +33,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
   late final TextEditingController _style;
   late final TextEditingController _prefix;
   late final TextEditingController _sampleLen;
+  late final TextEditingController _apiKey;
 
   /// Set while applying controller state into the local fields; prevents the
   /// controller notify -> field write -> onChanged -> controller write loop
@@ -41,8 +43,16 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// Whether the advanced voice id disclosure is expanded.
   bool _voiceRawExpanded = false;
 
+  /// Whether the API key disclosure is expanded. Collapsed by default so the
+  /// key source/entry controls stay out of the way until opened.
+  bool _apiKeyExpanded = false;
+
   /// Whether sample mode is on (revealing the inline segment count input).
   bool _sampleOn = false;
+
+  /// Transient key-store failure shown under the API-key row (e.g. an
+  /// unreachable keychain / Secret Service on save or remove).
+  String? _apiKeyError;
 
   AppController get _controller => widget.controller;
 
@@ -74,13 +84,21 @@ class _SettingsPanelState extends State<SettingsPanel> {
       text: _controller.sampleLen?.toString() ?? '',
     );
     _sampleOn = _controller.sampleLen != null;
+    _apiKey = TextEditingController();
     _controller.addListener(_onControllerChanged);
   }
 
   @override
   void dispose() {
     _controller.removeListener(_onControllerChanged);
-    for (final c in [_voiceRaw, _accent, _style, _prefix, _sampleLen]) {
+    for (final c in [
+      _voiceRaw,
+      _accent,
+      _style,
+      _prefix,
+      _sampleLen,
+      _apiKey,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -108,6 +126,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
         _sampleLen.text = _controller.sampleLen?.toString() ?? '';
       }
       _sampleOn = _controller.sampleLen != null;
+      if (_apiKeyError != null && _controller.hasStoredApiKey) {
+        _apiKeyError = null;
+      }
       _syncing = false;
     });
   }
@@ -164,25 +185,14 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// sitting 4px above its control and 12px below the preceding one.
   Widget _label(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 4, top: 12),
-    child: Text(
-      text,
-      style: _tokens.typography.body.copyWith(
-        fontWeight: FontWeight.w500,
-        color: _tokens.colors.textPrimary,
-      ),
-    ),
+    child: Text(text, style: _tokens.typography.body),
   );
 
   /// Inline control label (e.g. "Sample mode", "Skip completed segments") —
   /// Tier 2: 13pt Medium primary, matching the field titles so toggle labels
   /// (previously 14pt/bold) sit at the same visual weight.
-  Widget _controlLabel(String text) => Text(
-    text,
-    style: _tokens.typography.body.copyWith(
-      fontWeight: FontWeight.w500,
-      color: _tokens.colors.textPrimary,
-    ),
-  );
+  Widget _controlLabel(String text) =>
+      Text(text, style: _tokens.typography.body);
 
   @override
   Widget build(BuildContext context) {
@@ -207,6 +217,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 // provider package); the app has no per-model UI knowledge.
                 if (!_controller.modelUiSpec.isEmpty)
                   _buildModelOptionsSection(_controller.modelUiSpec),
+                _buildApiKeySection(),
                 _buildRunSection(),
               ],
             ),
@@ -279,6 +290,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
               controller: _voiceRaw,
               onChanged: _onVoiceRawChanged,
               hintText: TextTokens.gui_settings_freeFormVoiceHint,
+              style: _tokens.typography.body.copyWith(
+                color: _tokens.colors.textPrimary,
+              ),
             ),
           ),
         ],
@@ -409,6 +423,107 @@ class _SettingsPanelState extends State<SettingsPanel> {
     }
   }
 
+  /// The "API key" section: where the active model's key comes from, a masked
+  /// field to enter a new one, and Save / Remove buttons backed by the OS
+  /// secure store. The stored key is a fallback only — a key already present
+  /// in config.json or the environment keeps precedence (see
+  /// [SettingsController._resolveProviderSettings]). Wrapped in a collapsed
+  /// [PlatformDisclosure] so the key controls stay out of the way; the status
+  /// line serves as its caption.
+  Widget _buildApiKeySection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: PlatformDisclosure(
+        key: const Key('apiKeyDisclosure'),
+        label: TextTokens.gui_settings_apiKeySection,
+        tooltip: TextTokens.gui_settings_apiKeySectionTooltip,
+        caption: _controller.apiKeyStatusLabel,
+        expanded: _apiKeyExpanded,
+        onToggle: (value) => setState(() => _apiKeyExpanded = value),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label(TextTokens.gui_settings_apiKeyStatusLabel),
+            Text(
+              _controller.apiKeyStatusLabel,
+              style: _tokens.typography.body.copyWith(
+                color: _controller.apiKeyMissing
+                    ? _tokens.colors.accentError
+                    : _tokens.colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            PlatformTextField(
+              key: const Key('apiKeyField'),
+              tooltip: TextTokens.gui_settings_apiKeyFieldTooltip,
+              controller: _apiKey,
+              obscureText: true,
+              hintText: TextTokens.gui_settings_apiKeyFieldPlaceholder,
+              hintStyle: _tokens.typography.body.copyWith(
+                color: _tokens.colors.textTertiary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PlatformButton(
+                  key: const Key('apiKeySaveButton'),
+                  onPressed: () => _saveApiKey(),
+                  child: Text(TextTokens.gui_settings_apiKeySave),
+                ),
+                const SizedBox(width: 8),
+                PlatformButton(
+                  key: const Key('apiKeyRemoveButton'),
+                  style: PlatformButtonStyle.outlined,
+                  onPressed: _controller.hasStoredApiKey ? _removeApiKey : null,
+                  child: Text(TextTokens.gui_settings_apiKeyRemove),
+                ),
+              ],
+            ),
+            if (_apiKeyError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _apiKeyError!,
+                style: _tokens.typography.body.copyWith(
+                  color: _tokens.colors.accentError,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Saves the entered key to the OS secure store and clears the visible
+  /// field (the secret never lingers in the edit box). Empty input is a no-op.
+  /// A key-store failure leaves the field populated and reports it on the
+  /// status row instead of surfacing as an unhandled async error.
+  Future<void> _saveApiKey() async {
+    if (_apiKey.text.trim().isEmpty) return;
+    try {
+      await _controller.saveApiKey(_apiKey.text);
+    } catch (_) {
+      setState(() => _apiKeyError = TextTokens.gui_settings_apiKeyStoreError);
+      return;
+    }
+    _apiKey.clear();
+    setState(() => _apiKeyError = null);
+  }
+
+  /// Removes the stored key and clears the visible field.
+  Future<void> _removeApiKey() async {
+    try {
+      await _controller.removeApiKey();
+    } catch (_) {
+      setState(() => _apiKeyError = TextTokens.gui_settings_apiKeyStoreError);
+      return;
+    }
+    _apiKey.clear();
+    setState(() => _apiKeyError = null);
+  }
+
   Widget _buildRunSection() {
     return PlatformSection(
       title: TextTokens.gui_settings_runSection,
@@ -490,10 +605,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                   Expanded(
                     child: Text(
                       TextTokens.gui_settings_narrateFirstSegments,
-                      style: _tokens.typography.body.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: _tokens.colors.textPrimary,
-                      ),
+                      style: _tokens.typography.body
                     ),
                   ),
                   const SizedBox(width: 8),

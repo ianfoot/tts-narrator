@@ -5,12 +5,18 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
+import 'package:tts_narrator/src/gui/controller/api_key_store.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
+import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
+    show ApiKeySource;
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
+import 'package:tts_narrator/src/gui/platform/widgets/platform_button.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_segmented.dart';
+import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart';
 
 import '../support/fake_tts_provider.dart';
 
@@ -128,7 +134,12 @@ void main() {
 
   /// Expands the collapsed "Advanced Voice ID" disclosure.
   Future<void> expandVoiceRaw(WidgetTester tester) async {
-    await tester.tap(find.byKey(const Key('voiceAdvancedDisclosure')));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('voiceAdvancedDisclosure')),
+        matching: find.text('Advanced Voice ID'),
+      ),
+    );
     await tester.pump();
   }
 
@@ -621,6 +632,136 @@ void main() {
       await tester.pump();
 
       expect(c.resume, isTrue);
+    });
+  });
+
+  group('API key (secure store)', () {
+    setUp(() {
+      // In-memory mock keychain; a mutable map so saves can land. Reset so a
+      // stored key never leaks between tests.
+      FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    });
+
+    PlatformButton buttonWith(WidgetTester tester, String key) =>
+        tester.widget<PlatformButton>(find.byKey(Key(key)));
+
+    /// The API key section is collapsed by default; tap its header label (the
+    /// tappable GestureDetector row, not the whole disclosure) to expand.
+    Future<void> expandApiKey(WidgetTester tester) async {
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('apiKeyDisclosure')),
+          matching: find.text('API key'),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('shows "Not set" and a disabled Remove when no key exists', (
+      tester,
+    ) async {
+      writeFishConfig(); // no providers block -> no config/env key.
+      final c = makeController();
+      await pumpRail(tester, c);
+
+      // Collapsed by default: the caption mirrors the status.
+      expect(find.byKey(const Key('apiKeyField')), findsNothing);
+      expect(find.text('Not set'), findsOneWidget);
+      // The section header carries a tooltip explaining what the key is for.
+      expect(
+        find.byTooltip(TextTokens.gui_settings_apiKeySectionTooltip),
+        findsOneWidget,
+      );
+
+      await expandApiKey(tester);
+
+      expect(find.byKey(const Key('apiKeyField')), findsOneWidget);
+      // The empty field shows a placeholder so the input area stays visible
+      // against the dark rail background.
+      expect(
+        find.text(TextTokens.gui_settings_apiKeyFieldPlaceholder),
+        findsOneWidget,
+      );
+      expect(find.text('Not set'), findsOneWidget);
+      expect(buttonWith(tester, 'apiKeySaveButton').onPressed, isNotNull);
+      expect(buttonWith(tester, 'apiKeyRemoveButton').onPressed, isNull);
+    });
+
+    testWidgets(
+      'saving a key flips the status to keychain and enables Remove',
+      (tester) async {
+        writeFishConfig();
+        final c = makeController();
+        await pumpRail(tester, c);
+        await expandApiKey(tester);
+
+        await tester.enterText(
+          find.descendant(
+            of: find.byKey(const Key('apiKeyField')),
+            matching: find.byType(TextField),
+          ),
+          'sk-gui-saved',
+        );
+        await tester.tap(find.byKey(const Key('apiKeySaveButton')));
+        await tester.pumpAndSettle();
+
+        expect(c.hasStoredApiKey, isTrue);
+        expect(c.apiKeySource, ApiKeySource.keychain);
+        expect(find.text('Stored in keychain'), findsOneWidget);
+        expect(buttonWith(tester, 'apiKeyRemoveButton').onPressed, isNotNull);
+        // The secret never lingers in the edit box.
+        final field = tester.widget<TextField>(
+          find.descendant(
+            of: find.byKey(const Key('apiKeyField')),
+            matching: find.byType(TextField),
+          ),
+        );
+        expect(field.controller!.text, isEmpty);
+
+        // Removing clears the store and reverts the status.
+        await tester.tap(find.byKey(const Key('apiKeyRemoveButton')));
+        await tester.pumpAndSettle();
+        expect(c.hasStoredApiKey, isFalse);
+        expect(c.apiKeyMissing, isTrue);
+        expect(find.text('Not set'), findsOneWidget);
+      },
+    );
+
+    testWidgets('an unset \${ENV} config ref still narrates via a stored key', (
+      tester,
+    ) async {
+      writeConfig({
+        'default_model': 'fish',
+        'providers': {
+          'openrouter': {'OPENROUTER_API_KEY': r'${TTS_NARRATOR_NOT_SET}'},
+        },
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+        },
+        'defaults': {'fish': 'British Female Narrator'},
+        'voices': {
+          'fish': {
+            'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          },
+        },
+      });
+      FlutterSecureStorage.setMockInitialValues({
+        'openrouter_api_key': 'sk-stored',
+      });
+      final store = ApiKeyStore();
+      await store.load();
+      final c = AppController(
+        loader: UserVoiceConfigLoader(configDir: configDir),
+        apiKeyStore: store,
+      );
+      await pumpRail(tester, c);
+
+      // "Stored in keychain" shows as the collapsed caption.
+      expect(find.text('Stored in keychain'), findsOneWidget);
+      expect(
+        c.buildConfig().providerSettings['OPENROUTER_API_KEY'],
+        'sk-stored',
+      );
     });
   });
 

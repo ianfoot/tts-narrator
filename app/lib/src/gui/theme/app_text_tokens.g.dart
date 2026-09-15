@@ -120,6 +120,7 @@ final class TextTokens {
   static const String gui_controller_blockReasons_alreadyRunning = 'Narration is already running.';
   static const String gui_controller_blockReasons_emptyText = 'Editor text is empty';
   static const String gui_controller_errors_cannotOpenTextFile = 'Cannot open text file';
+  static const String gui_controller_errors_noApiKey = 'No OpenRouter API key set. Add one to the "providers.openrouter" block in config.json, set the OPENROUTER_API_KEY environment variable, or enter it in the Settings rail (stored in the system keychain).';
   static const String gui_controller_errors_noModelConfigured = 'No voice model is configured. Download the starter configs, or add model files to the voice config directory.';
   static const String gui_controller_errors_noVoiceSelected = 'No voice selected for "\u0024modelAlias" — pick an alias or set a default in the voice config.';
   static const String gui_controller_genderPhrases_female = 'female narrator';
@@ -189,6 +190,18 @@ final class TextTokens {
   static const String gui_settings_accentFieldTooltip = 'Voice accent description (e.g., \'southern British English\')';
   static const String gui_settings_advancedVoiceId = 'Advanced Voice ID';
   static const String gui_settings_advancedVoiceIdTooltip = 'Enter custom voice settings';
+  static const String gui_settings_apiKeyFieldPlaceholder = 'Paste your API key here';
+  static const String gui_settings_apiKeyFieldTooltip = 'OpenRouter API key, saved to the system keychain';
+  static const String gui_settings_apiKeyRemove = 'Remove';
+  static const String gui_settings_apiKeySave = 'Save';
+  static const String gui_settings_apiKeySection = 'API key';
+  static const String gui_settings_apiKeySectionTooltip = 'API key for OpenRouter authentication';
+  static const String gui_settings_apiKeyStatusConfig = 'Set in config.json';
+  static const String gui_settings_apiKeyStatusEnvironment = 'Set via environment variable';
+  static const String gui_settings_apiKeyStatusKeychain = 'Stored in keychain';
+  static const String gui_settings_apiKeyStatusLabel = 'Key source';
+  static const String gui_settings_apiKeyStatusMissing = 'Not set';
+  static const String gui_settings_apiKeyStoreError = 'Could not reach the system key store.';
   static const String gui_settings_freeFormVoiceHint = 'free-form id or provider voice';
   static const String gui_settings_genderAny = 'Any';
   static const String gui_settings_genderControlTooltip = 'Filter voices by gender';

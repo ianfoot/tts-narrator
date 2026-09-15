@@ -33,7 +33,12 @@ void main() {
     File('$configDir/config.json')
       ..parent.createSync(recursive: true)
       ..writeAsStringSync(
-        const JsonEncoder().convert({'default_model': 'fish'}),
+        const JsonEncoder().convert({
+          'default_model': 'fish',
+          'providers': {
+            'openrouter': {'api_key': 'sk-test'},
+          },
+        }),
       );
     File('$configDir/fish.json').writeAsStringSync(
       const JsonEncoder().convert({

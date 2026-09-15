@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
+import 'api_key_store.dart';
 import 'config_loader.dart';
 import 'document_controller.dart';
 import 'model_profile_voice_controller.dart';
@@ -27,12 +30,21 @@ export 'run_controller.dart' show NarrationSegment;
 /// [RunController]; this controller forwards their surfaces and re-broadcasts
 /// their notifications so callers keep a single change stream.
 class AppController extends ChangeNotifier {
-  AppController({UserVoiceConfigLoader? loader, SharedPreferences? prefs})
-    : _model = ModelProfileVoiceController(loader: loader) {
+  AppController({
+    UserVoiceConfigLoader? loader,
+    SharedPreferences? prefs,
+    ApiKeyStore? apiKeyStore,
+  }) : _model = ModelProfileVoiceController(loader: loader),
+       _apiKeyStore = apiKeyStore ?? ApiKeyStore() {
+    // Preload the OS-secure key so run-config building (synchronous) can read
+    // the cached fallback; a missing host plugin or unreachable keychain is
+    // treated as "no stored key" rather than a startup failure.
+    unawaited(_apiKeyStore.load());
     _settings = SettingsController(
       document: _document,
       model: _model,
       prefs: prefs,
+      apiKeyStore: _apiKeyStore,
     );
     _run = RunController(
       document: _document,
@@ -43,10 +55,16 @@ class AppController extends ChangeNotifier {
     _theme.addListener(_onThemeChanged);
     _settings.addListener(_onSettingsChanged);
     _run.addListener(_onRunChanged);
+    _apiKeyStore.addListener(_onSettingsChanged);
   }
 
   /// The model & voice state (active profile, selected voice, gender filter).
   final ModelProfileVoiceController _model;
+
+  /// The OS-secure OpenRouter API-key store (Keychain / Credential Manager /
+  /// libsecret). The run-config fallback reads the cached [ApiKeyStore.value]
+  /// synchronously; the settings rail manages the key through this.
+  final ApiKeyStore _apiKeyStore;
 
   /// The in-memory document (text, path, dirty flag, save/load surface).
   final DocumentController _document = DocumentController();
@@ -161,6 +179,8 @@ class AppController extends ChangeNotifier {
     _model.dispose();
     _settings.dispose();
     _run.dispose();
+    _apiKeyStore.removeListener(_onSettingsChanged);
+    _apiKeyStore.dispose();
     super.dispose();
   }
 
@@ -174,7 +194,39 @@ class AppController extends ChangeNotifier {
   /// Flips [settingsPanelVisible] and notifies listeners.
   void toggleSettingsPanel() => _settings.toggleSettingsPanel();
 
-  // --- Narration settings -------------------------------------------
+  // --- API key (secure store) --------------------------------------
+
+  /// The OS-secure key store backing the settings rail's "API key" section.
+  ApiKeyStore get apiKeyStore => _apiKeyStore;
+
+  /// Where the active model's API key comes from (config / env / keychain /
+  /// none), mirroring the run-config precedence.
+  ApiKeySource get apiKeySource => _settings.apiKeySource;
+
+  /// Status label for [apiKeySource], rendered in the settings rail.
+  String get apiKeyStatusLabel => _settings.apiKeyStatusLabel;
+
+  /// Whether no API key is configured anywhere for the active model.
+  bool get apiKeyMissing => _settings.apiKeyMissing;
+
+  /// Whether a key currently sits in the OS secure store (enables the rail's
+  /// Remove button).
+  bool get hasStoredApiKey => _apiKeyStore.value != null;
+
+  /// Saves [key] to the OS secure store and re-broadcasts so the rail's status
+  /// line updates. Throws an [ArgumentError] for an empty key.
+  Future<void> saveApiKey(String key) async {
+    await _apiKeyStore.save(key);
+    notifyListeners();
+  }
+
+  /// Removes the stored key (if any) and re-broadcasts.
+  Future<void> removeApiKey() async {
+    await _apiKeyStore.remove();
+    notifyListeners();
+  }
+
+  // --- Narration settings ---------------------------------------
 
   String get accent => _settings.accent;
 

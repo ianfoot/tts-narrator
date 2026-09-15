@@ -26,7 +26,7 @@ Pre-built macOS releases (`TTS Narrator.app`) and Gatekeeper security bypass ins
 ## Requirements
 
 - Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.1`, Dart 3.13.1).
-- An OpenRouter API key, configured in the `providers.openrouter` block in the [voice config](#voice-configuration) (a literal value or a runtime `${ENV}` reference) or via the `OPENROUTER_API_KEY` environment variable.
+- An OpenRouter API key, configured in the `providers.openrouter` block in the [voice config](#voice-configuration) (a literal value or a runtime `${ENV}` reference), via the `OPENROUTER_API_KEY` environment variable, or — for double-click launches that have no shell environment — through the Settings rail's **API key** section, which stores it in the OS secure store (macOS Keychain / Windows Credential Manager / Linux `libsecret`).
 
 ## Usage
 
@@ -41,17 +41,18 @@ fvm flutter run -d macos
 
 Everything user-facing — the default model, per-provider settings, models,
 per-model providers and default voices, prices, and friendly voice aliases —
-lives in a config **directory** resolved by `path_provider` (`getApplicationSupportDirectory()` + `tts-narrator`): Two kinds of files:
+lives in a config **directory** shared by the CLI and the GUI (macOS/Linux
+default to `~/.config/tts-narrator`, Windows to `%APPDATA%`): Two kinds of files:
 
 - `config.json` — the global bits: `default_model` (the preselected model on
   cold start) and the per-provider settings block (secrets).
 - `<alias>.json` — one file per model: its id, the provider that serves it,
   the request wiring, default voice, pricing, and friendly voice aliases.
 
-Cross-platform paths (via `path_provider`):
-- macOS: `~/Library/Application Support/tts-narrator/`
+Cross-platform paths:
+- macOS: `~/.config/tts-narrator/`
+- Linux: `~/.config/tts-narrator/`
 - Windows: `%APPDATA%/tts-narrator/`
-- Linux: `~/.config/tts-narrator/` (or `$XDG_CONFIG_HOME/tts-narrator/`)
 
 `<path_provider_dir>/tts-narrator/config.json`:
 
