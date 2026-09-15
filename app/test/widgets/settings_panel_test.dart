@@ -16,6 +16,7 @@ import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_button.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_segmented.dart';
+import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart';
 
 import '../support/fake_tts_provider.dart';
 
@@ -133,7 +134,12 @@ void main() {
 
   /// Expands the collapsed "Advanced Voice ID" disclosure.
   Future<void> expandVoiceRaw(WidgetTester tester) async {
-    await tester.tap(find.byKey(const Key('voiceAdvancedDisclosure')));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('voiceAdvancedDisclosure')),
+        matching: find.text('Advanced Voice ID'),
+      ),
+    );
     await tester.pump();
   }
 
@@ -661,10 +667,21 @@ void main() {
       // Collapsed by default: the caption mirrors the status.
       expect(find.byKey(const Key('apiKeyField')), findsNothing);
       expect(find.text('Not set'), findsOneWidget);
+      // The section header carries a tooltip explaining what the key is for.
+      expect(
+        find.byTooltip(TextTokens.gui_settings_apiKeySectionTooltip),
+        findsOneWidget,
+      );
 
       await expandApiKey(tester);
 
       expect(find.byKey(const Key('apiKeyField')), findsOneWidget);
+      // The empty field shows a placeholder so the input area stays visible
+      // against the dark rail background.
+      expect(
+        find.text(TextTokens.gui_settings_apiKeyFieldPlaceholder),
+        findsOneWidget,
+      );
       expect(find.text('Not set'), findsOneWidget);
       expect(buttonWith(tester, 'apiKeySaveButton').onPressed, isNotNull);
       expect(buttonWith(tester, 'apiKeyRemoveButton').onPressed, isNull);

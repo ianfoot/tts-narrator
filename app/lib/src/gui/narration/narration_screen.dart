@@ -471,9 +471,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
             borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
           ),
           child: DefaultTextStyle(
-            style: _tokens.typography.caption.copyWith(
-              color: colors.textPrimary,
-            ),
+            style: _tokens.typography.body.copyWith(color: colors.textPrimary),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [icon, const SizedBox(width: 4), Text(label)],
@@ -494,7 +492,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
         icon: icon,
         label: Text(
           label,
-          style: _tokens.typography.caption.copyWith(color: colors.textPrimary),
+          style: _tokens.typography.body.copyWith(color: colors.textPrimary),
         ),
       );
     }

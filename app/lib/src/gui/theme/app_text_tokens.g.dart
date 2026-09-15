@@ -190,10 +190,12 @@ final class TextTokens {
   static const String gui_settings_accentFieldTooltip = 'Voice accent description (e.g., \'southern British English\')';
   static const String gui_settings_advancedVoiceId = 'Advanced Voice ID';
   static const String gui_settings_advancedVoiceIdTooltip = 'Enter custom voice settings';
+  static const String gui_settings_apiKeyFieldPlaceholder = 'Paste your API key here';
   static const String gui_settings_apiKeyFieldTooltip = 'OpenRouter API key, saved to the system keychain';
   static const String gui_settings_apiKeyRemove = 'Remove';
   static const String gui_settings_apiKeySave = 'Save';
   static const String gui_settings_apiKeySection = 'API key';
+  static const String gui_settings_apiKeySectionTooltip = 'API key for OpenRouter authentication';
   static const String gui_settings_apiKeyStatusConfig = 'Set in config.json';
   static const String gui_settings_apiKeyStatusEnvironment = 'Set via environment variable';
   static const String gui_settings_apiKeyStatusKeychain = 'Stored in keychain';

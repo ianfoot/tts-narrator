@@ -185,25 +185,14 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// sitting 4px above its control and 12px below the preceding one.
   Widget _label(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 4, top: 12),
-    child: Text(
-      text,
-      style: _tokens.typography.body.copyWith(
-        fontWeight: FontWeight.w500,
-        color: _tokens.colors.textPrimary,
-      ),
-    ),
+    child: Text(text, style: _tokens.typography.body),
   );
 
   /// Inline control label (e.g. "Sample mode", "Skip completed segments") —
   /// Tier 2: 13pt Medium primary, matching the field titles so toggle labels
   /// (previously 14pt/bold) sit at the same visual weight.
-  Widget _controlLabel(String text) => Text(
-    text,
-    style: _tokens.typography.body.copyWith(
-      fontWeight: FontWeight.w500,
-      color: _tokens.colors.textPrimary,
-    ),
-  );
+  Widget _controlLabel(String text) =>
+      Text(text, style: _tokens.typography.body);
 
   @override
   Widget build(BuildContext context) {
@@ -301,6 +290,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
               controller: _voiceRaw,
               onChanged: _onVoiceRawChanged,
               hintText: TextTokens.gui_settings_freeFormVoiceHint,
+              style: _tokens.typography.body.copyWith(
+                color: _tokens.colors.textPrimary,
+              ),
             ),
           ),
         ],
@@ -444,6 +436,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
       child: PlatformDisclosure(
         key: const Key('apiKeyDisclosure'),
         label: TextTokens.gui_settings_apiKeySection,
+        tooltip: TextTokens.gui_settings_apiKeySectionTooltip,
         caption: _controller.apiKeyStatusLabel,
         expanded: _apiKeyExpanded,
         onToggle: (value) => setState(() => _apiKeyExpanded = value),
@@ -454,7 +447,6 @@ class _SettingsPanelState extends State<SettingsPanel> {
             Text(
               _controller.apiKeyStatusLabel,
               style: _tokens.typography.body.copyWith(
-                fontWeight: FontWeight.w500,
                 color: _controller.apiKeyMissing
                     ? _tokens.colors.accentError
                     : _tokens.colors.textSecondary,
@@ -466,6 +458,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
               tooltip: TextTokens.gui_settings_apiKeyFieldTooltip,
               controller: _apiKey,
               obscureText: true,
+              hintText: TextTokens.gui_settings_apiKeyFieldPlaceholder,
+              hintStyle: _tokens.typography.body.copyWith(
+                color: _tokens.colors.textTertiary,
+              ),
             ),
             const SizedBox(height: 8),
             Row(
@@ -609,10 +605,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                   Expanded(
                     child: Text(
                       TextTokens.gui_settings_narrateFirstSegments,
-                      style: _tokens.typography.body.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: _tokens.colors.textPrimary,
-                      ),
+                      style: _tokens.typography.body
                     ),
                   ),
                   const SizedBox(width: 8),

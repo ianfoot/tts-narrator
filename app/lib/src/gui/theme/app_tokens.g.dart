@@ -29,8 +29,7 @@ class _GeneratedPalette {
 class _GeneratedTypography {
   const _GeneratedTypography();
 
-  TextStyle get body => const TextStyle(fontSize: 13);
-  TextStyle get caption => const TextStyle(fontSize: 11);
+  TextStyle get body => const TextStyle(fontSize: 13).color: _tokens.colors.textPrimary;
   TextStyle get control => const TextStyle(fontSize: 14);
   TextStyle get headerSemibold => const TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
   TextStyle get mono => const TextStyle(fontSize: 12);

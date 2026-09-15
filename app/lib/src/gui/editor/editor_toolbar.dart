@@ -198,9 +198,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
             borderRadius: BorderRadius.circular(4),
           ),
           child: DefaultTextStyle(
-            style: tokens.typography.caption.copyWith(
-              color: colors.textPrimary,
-            ),
+            style: tokens.typography.body.copyWith(color: colors.textPrimary),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [btnIcon, const SizedBox(width: 4), Text(label)],
@@ -221,7 +219,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
       icon: btnIcon,
       label: Text(
         label,
-        style: tokens.typography.caption.copyWith(color: colors.textPrimary),
+        style: tokens.typography.body.copyWith(color: colors.textPrimary),
       ),
     );
   }

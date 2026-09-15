@@ -202,9 +202,6 @@ class AppTypography {
   /// 13pt UI body (sans).
   TextStyle get body => _t.body;
 
-  /// 11pt captions (sans).
-  TextStyle get caption => _t.caption;
-
   /// 14pt settings/dropdown control text (sans).
   TextStyle get control => _t.control;
 
