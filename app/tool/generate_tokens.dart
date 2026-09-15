@@ -242,6 +242,7 @@ class TypeEntry {
     this.height,
     this.fontWeight,
     this.fontFamily,
+    this.color,
   });
 
   final String name;
@@ -250,6 +251,9 @@ class TypeEntry {
 
   /// Either `"wNNN"` (emits `FontWeight.wNNN`) or null.
   final String? fontWeight;
+
+  /// Either a palette token reference (`textPrimary`, etc.) or null.
+  final String? color;
 
   /// Either starts with `platform:` (emits a `fontFamily: <name>` reference
   /// to the AppTypography getter) or is a literal family name, or null.
@@ -293,12 +297,17 @@ class TypeEntry {
     if (fontFamily != null && fontFamily is! String) {
       throw FormatException('Typography `$name.fontFamily` must be a string.');
     }
+    final color = json['color'];
+    if (color != null && color is! String) {
+      throw FormatException('Typography `$name.color` must be a string.');
+    }
     return TypeEntry(
       name: name,
       fontSize: fontSize,
       height: heightD,
       fontWeight: fontWeight as String?,
       fontFamily: fontFamily as String?,
+      color: color as String?,
     );
   }
 }

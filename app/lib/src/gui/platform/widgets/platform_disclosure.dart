@@ -49,11 +49,7 @@ class PlatformDisclosure extends StatelessWidget {
             color: colors.textPrimary.withValues(alpha: 0.85),
           ),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: AppTokens.of(context).typography.body
-                .copyWith(color: colors.textPrimary),
-          ),
+          Text(label, style: AppTokens.of(context).typography.body),
         ],
       ),
     );

@@ -38,7 +38,10 @@ Brightness resolveBrightness(AppThemeMode mode, Brightness system) {
 class AppTokens {
   AppTokens(this.brightness)
     : colors = AppPalette.of(brightness),
-      typography = AppTypography(defaultTargetPlatform);
+      typography = AppTypography(
+        defaultTargetPlatform,
+        colors: AppPalette.of(brightness),
+      );
 
   /// The ambient brightness the tokens resolve for.
   final Brightness brightness;
@@ -167,9 +170,13 @@ class AppPalette {
 /// platform-resolved family getters below stay in Dart because they depend
 /// on [TargetPlatform].
 class AppTypography {
-  AppTypography(this.platform);
+  AppTypography(this.platform, {AppPalette? colors})
+    : colors = colors ?? AppPalette.of(Brightness.light);
 
   final TargetPlatform platform;
+
+  /// The palette providing the shared default text colour ([textPrimary]).
+  final AppPalette colors;
 
   static const _GeneratedTypography _t = _GeneratedTypography();
 
@@ -199,24 +206,28 @@ class AppTypography {
     }
   }
 
-  /// 13pt UI body (sans).
+  /// 13pt UI body (sans) with default colour from the palette.
   TextStyle get body => _t.body;
 
-  /// 14pt settings/dropdown control text (sans).
+  /// 14pt settings/dropdown control text (sans) with default colour.
   TextStyle get control => _t.control;
 
-  /// 15pt semibold section / header (sans).
+  /// 15pt semibold section / header (sans) with default colour.
   TextStyle get headerSemibold => _t.headerSemibold;
 
-  /// 12pt monospace metadata + readouts.
-  TextStyle get mono =>
-      TextStyle(fontSize: _t.mono.fontSize, fontFamily: monoFamily);
+  /// 12pt monospace metadata + readouts with default colour.
+  TextStyle get mono => TextStyle(
+    fontSize: _t.mono.fontSize,
+    fontFamily: monoFamily,
+    color: colors.textPrimary,
+  );
 
-  /// 16pt / 1.6x serif editor body.
+  /// 16pt / 1.6x serif editor body with default colour.
   TextStyle get editorBody => TextStyle(
     fontSize: _t.editorBody.fontSize,
     height: _t.editorBody.height,
     fontFamily: editorSerifFamily,
+    color: colors.textPrimary,
   );
 }
 

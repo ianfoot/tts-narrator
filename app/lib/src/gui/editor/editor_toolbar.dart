@@ -162,7 +162,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
           child: Text(
             controller.documentName,
             overflow: TextOverflow.ellipsis,
-            style: tokens.typography.mono.copyWith(color: colors.textPrimary),
+            style: tokens.typography.mono,
           ),
         ),
       ],
@@ -198,7 +198,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
             borderRadius: BorderRadius.circular(4),
           ),
           child: DefaultTextStyle(
-            style: tokens.typography.body.copyWith(color: colors.textPrimary),
+            style: tokens.typography.body,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [btnIcon, const SizedBox(width: 4), Text(label)],
@@ -217,10 +217,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
       ),
       onPressed: widget.onTogglePlayFull ?? () {},
       icon: btnIcon,
-      label: Text(
-        label,
-        style: tokens.typography.body.copyWith(color: colors.textPrimary),
-      ),
+      label: Text(label, style: tokens.typography.body),
     );
   }
 

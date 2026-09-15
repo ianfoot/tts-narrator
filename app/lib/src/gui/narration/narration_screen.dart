@@ -4,19 +4,17 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-
-import '../controller/app_controller.dart';
-import 'active_run_confirm.dart';
-import '../platform/platform_page.dart';
-
 import 'package:tts_narrator_core/tts_narrator_core.dart' show formatCostUsd;
 
+import '../controller/app_controller.dart';
+import '../platform/platform_page.dart';
 import '../platform/widgets/platform_activity_indicator.dart';
 import '../platform/widgets/platform_button.dart';
 import '../platform/widgets/platform_icon_button.dart';
 import '../platform/widgets/platform_progress_bar.dart';
 import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart';
+import 'active_run_confirm.dart';
 
 /// Narration run view: a back-arrow header with the document name, a frozen
 /// summary pill, a full-width progress rail, and 3-column segment cards
@@ -471,7 +469,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
             borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
           ),
           child: DefaultTextStyle(
-            style: _tokens.typography.body.copyWith(color: colors.textPrimary),
+            style: _tokens.typography.body,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [icon, const SizedBox(width: 4), Text(label)],
@@ -490,10 +488,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
         ),
         onPressed: () => _togglePlay(segment),
         icon: icon,
-        label: Text(
-          label,
-          style: _tokens.typography.body.copyWith(color: colors.textPrimary),
-        ),
+        label: Text(label, style: _tokens.typography.body),
       );
     }
     // Reused clips get a Material-only tooltip (Cupertino has none).
