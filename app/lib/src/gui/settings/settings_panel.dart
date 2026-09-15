@@ -43,6 +43,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// Whether the advanced voice id disclosure is expanded.
   bool _voiceRawExpanded = false;
 
+  /// Whether the API key disclosure is expanded. Collapsed by default so the
+  /// key source/entry controls stay out of the way until opened.
+  bool _apiKeyExpanded = false;
+
   /// Whether sample mode is on (revealing the inline segment count input).
   bool _sampleOn = false;
 
@@ -431,59 +435,67 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// field to enter a new one, and Save / Remove buttons backed by the OS
   /// secure store. The stored key is a fallback only — a key already present
   /// in config.json or the environment keeps precedence (see
-  /// [SettingsController._resolveProviderSettings]).
+  /// [SettingsController._resolveProviderSettings]). Wrapped in a collapsed
+  /// [PlatformDisclosure] so the key controls stay out of the way; the status
+  /// line serves as its caption.
   Widget _buildApiKeySection() {
-    return PlatformSection(
-      title: TextTokens.gui_settings_apiKeySection,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _label(TextTokens.gui_settings_apiKeyStatusLabel),
-          Text(
-            _controller.apiKeyStatusLabel,
-            style: _tokens.typography.body.copyWith(
-              fontWeight: FontWeight.w500,
-              color: _controller.apiKeyMissing
-                  ? _tokens.colors.accentError
-                  : _tokens.colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          PlatformTextField(
-            key: const Key('apiKeyField'),
-            tooltip: TextTokens.gui_settings_apiKeyFieldTooltip,
-            controller: _apiKey,
-            hintText: TextTokens.gui_settings_apiKeyFieldHint,
-            obscureText: true,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              PlatformButton(
-                key: const Key('apiKeySaveButton'),
-                onPressed: () => _saveApiKey(),
-                child: Text(TextTokens.gui_settings_apiKeySave),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: PlatformDisclosure(
+        key: const Key('apiKeyDisclosure'),
+        label: TextTokens.gui_settings_apiKeySection,
+        caption: _controller.apiKeyStatusLabel,
+        expanded: _apiKeyExpanded,
+        onToggle: (value) => setState(() => _apiKeyExpanded = value),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label(TextTokens.gui_settings_apiKeyStatusLabel),
+            Text(
+              _controller.apiKeyStatusLabel,
+              style: _tokens.typography.body.copyWith(
+                fontWeight: FontWeight.w500,
+                color: _controller.apiKeyMissing
+                    ? _tokens.colors.accentError
+                    : _tokens.colors.textSecondary,
               ),
-              const SizedBox(width: 8),
-              PlatformButton(
-                key: const Key('apiKeyRemoveButton'),
-                style: PlatformButtonStyle.outlined,
-                onPressed: _controller.hasStoredApiKey ? _removeApiKey : null,
-                child: Text(TextTokens.gui_settings_apiKeyRemove),
+            ),
+            const SizedBox(height: 12),
+            PlatformTextField(
+              key: const Key('apiKeyField'),
+              tooltip: TextTokens.gui_settings_apiKeyFieldTooltip,
+              controller: _apiKey,
+              obscureText: true,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PlatformButton(
+                  key: const Key('apiKeySaveButton'),
+                  onPressed: () => _saveApiKey(),
+                  child: Text(TextTokens.gui_settings_apiKeySave),
+                ),
+                const SizedBox(width: 8),
+                PlatformButton(
+                  key: const Key('apiKeyRemoveButton'),
+                  style: PlatformButtonStyle.outlined,
+                  onPressed: _controller.hasStoredApiKey ? _removeApiKey : null,
+                  child: Text(TextTokens.gui_settings_apiKeyRemove),
+                ),
+              ],
+            ),
+            if (_apiKeyError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _apiKeyError!,
+                style: _tokens.typography.body.copyWith(
+                  color: _tokens.colors.accentError,
+                ),
               ),
             ],
-          ),
-          if (_apiKeyError != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _apiKeyError!,
-              style: _tokens.typography.body.copyWith(
-                color: _tokens.colors.accentError,
-              ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }

@@ -190,7 +190,6 @@ final class TextTokens {
   static const String gui_settings_accentFieldTooltip = 'Voice accent description (e.g., \'southern British English\')';
   static const String gui_settings_advancedVoiceId = 'Advanced Voice ID';
   static const String gui_settings_advancedVoiceIdTooltip = 'Enter custom voice settings';
-  static const String gui_settings_apiKeyFieldHint = 'sk-or-...';
   static const String gui_settings_apiKeyFieldTooltip = 'OpenRouter API key, saved to the system keychain';
   static const String gui_settings_apiKeyRemove = 'Remove';
   static const String gui_settings_apiKeySave = 'Save';

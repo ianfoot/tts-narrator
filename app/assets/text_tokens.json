@@ -196,7 +196,6 @@
       "apiKeyStatusConfig": "Set in config.json",
       "apiKeyStatusEnvironment": "Set via environment variable",
       "apiKeyStatusMissing": "Not set",
-      "apiKeyFieldHint": "sk-or-...",
       "apiKeyFieldTooltip": "OpenRouter API key, saved to the system keychain",
       "apiKeySave": "Save",
       "apiKeyRemove": "Remove",

@@ -639,12 +639,30 @@ void main() {
     PlatformButton buttonWith(WidgetTester tester, String key) =>
         tester.widget<PlatformButton>(find.byKey(Key(key)));
 
+    /// The API key section is collapsed by default; tap its header label (the
+    /// tappable GestureDetector row, not the whole disclosure) to expand.
+    Future<void> expandApiKey(WidgetTester tester) async {
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('apiKeyDisclosure')),
+          matching: find.text('API key'),
+        ),
+      );
+      await tester.pump();
+    }
+
     testWidgets('shows "Not set" and a disabled Remove when no key exists', (
       tester,
     ) async {
       writeFishConfig(); // no providers block -> no config/env key.
       final c = makeController();
       await pumpRail(tester, c);
+
+      // Collapsed by default: the caption mirrors the status.
+      expect(find.byKey(const Key('apiKeyField')), findsNothing);
+      expect(find.text('Not set'), findsOneWidget);
+
+      await expandApiKey(tester);
 
       expect(find.byKey(const Key('apiKeyField')), findsOneWidget);
       expect(find.text('Not set'), findsOneWidget);
@@ -658,6 +676,7 @@ void main() {
         writeFishConfig();
         final c = makeController();
         await pumpRail(tester, c);
+        await expandApiKey(tester);
 
         await tester.enterText(
           find.descendant(
@@ -720,6 +739,7 @@ void main() {
       );
       await pumpRail(tester, c);
 
+      // "Stored in keychain" shows as the collapsed caption.
       expect(find.text('Stored in keychain'), findsOneWidget);
       expect(
         c.buildConfig().providerSettings['OPENROUTER_API_KEY'],
