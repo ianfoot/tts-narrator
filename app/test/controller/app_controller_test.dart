@@ -3,9 +3,15 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tts_narrator/src/gui/controller/api_key_store.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
+import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
+    show ApiKeySource;
+import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart'
+    show TextTokens;
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
@@ -292,6 +298,132 @@ void main() {
       c.changeModel('gemini');
       expect(c.voice, isEmpty);
       expect(() => c.buildConfig(), throwsFormatException);
+    });
+  });
+
+  group('API key secure-store fallback', () {
+    setUp(() {
+      // Every test in this file runs in the same isolate; reset the mock so a
+      // stored key never leaks between tests. Mutable: the mock also accepts
+      // writes from save/remove.
+      FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    });
+
+    /// Writes the fish config whose openrouter block references a `${ENV}`
+    /// that is guaranteed absent — the exact double-click scenario the
+    /// secure-store fallback exists for.
+    void writeEnvRefFishConfig(String ref) {
+      writeConfig({
+        'default_model': 'fish',
+        'providers': {
+          'openrouter': {'OPENROUTER_API_KEY': ref},
+        },
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+        },
+        'defaults': {'fish': 'British Female Narrator'},
+        'voices': {
+          'fish': {
+            'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          },
+        },
+      });
+    }
+
+    /// An [ApiKeyStore] that has already completed its startup [ApiKeyStore.load]
+    /// (against the in-memory mock) so the cached [ApiKeyStore.value] is
+    /// deterministically [key].
+    Future<ApiKeyStore> storeLoadedWith(String? key) async {
+      FlutterSecureStorage.setMockInitialValues(<String, String>{
+        'openrouter_api_key': ?key,
+      });
+      final store = ApiKeyStore();
+      await store.load();
+      return store;
+    }
+
+    test(
+      'an unresolvable \${ENV} ref falls back to the securely stored key',
+      () async {
+        writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
+        final c = AppController(
+          loader: UserVoiceConfigLoader(configDir: configDir),
+          apiKeyStore: await storeLoadedWith('sk-stored'),
+        )..setText('A sentence.');
+        final cfg = c.buildConfig();
+        expect(cfg.providerSettings['OPENROUTER_API_KEY'], 'sk-stored');
+        expect(c.apiKeySource, ApiKeySource.keychain);
+        expect(c.apiKeyMissing, isFalse);
+      },
+    );
+
+    test('a config literal keeps precedence over the stored key', () async {
+      writeFishConfig(); // `api_key: sk-test` literal.
+      final c = AppController(
+        loader: UserVoiceConfigLoader(configDir: configDir),
+        apiKeyStore: await storeLoadedWith('sk-stored'),
+      )..setText('A sentence.');
+      final cfg = c.buildConfig();
+      expect(cfg.providerSettings['api_key'], 'sk-test');
+      expect(c.apiKeySource, ApiKeySource.config);
+    });
+
+    test(
+      'a resolvable \${ENV} ref flows through and reads as environment',
+      () async {
+        writeEnvRefFishConfig(r'${HOME}'); // always set on the test host.
+        final c = AppController(
+          loader: UserVoiceConfigLoader(configDir: configDir),
+          apiKeyStore: await storeLoadedWith('sk-stored'),
+        )..setText('A sentence.');
+        final cfg = c.buildConfig();
+        expect(
+          cfg.providerSettings['OPENROUTER_API_KEY'],
+          Platform.environment['HOME'],
+        );
+        expect(c.apiKeySource, ApiKeySource.environment);
+      },
+    );
+
+    test(
+      'plan errors with the friendly message when no key exists anywhere',
+      () {
+        writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
+        final c = AppController(
+          loader: UserVoiceConfigLoader(configDir: configDir),
+          apiKeyStore: ApiKeyStore(),
+        )..setText('A sentence.');
+        expect(
+          () => c.buildConfig(),
+          throwsA(
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              TextTokens.gui_controller_errors_noApiKey,
+            ),
+          ),
+        );
+        expect(c.apiKeyMissing, isTrue);
+      },
+    );
+
+    test('saving/removing through the store flips the rail status', () async {
+      writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
+      final c = AppController(
+        loader: UserVoiceConfigLoader(configDir: configDir),
+        apiKeyStore: await storeLoadedWith(null),
+      );
+      expect(c.apiKeyMissing, isTrue);
+      await c.saveApiKey(' sk-stored ');
+      expect(c.hasStoredApiKey, isTrue);
+      expect(c.apiKeySource, ApiKeySource.keychain);
+      expect(
+        c.buildConfig().providerSettings['OPENROUTER_API_KEY'],
+        'sk-stored',
+      );
+      await c.removeApiKey();
+      expect(c.hasStoredApiKey, isFalse);
+      expect(c.apiKeyMissing, isTrue);
     });
   });
 
