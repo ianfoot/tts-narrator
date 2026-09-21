@@ -63,10 +63,27 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   bool _downloading = false;
   bool _ready = false;
 
+  /// Created once and reused across rebuilds (including hot reload), so the
+  /// controller identity stays stable and widget listeners stay attached.
+  AppController? _controller;
+
+  AppController _ensureController() => _controller ??= AppController(
+    loader: UserVoiceConfigLoader(configDir: widget.configDir),
+    prefs: widget.prefs,
+  );
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkConfig());
+  }
+
+  @override
+  void dispose() {
+    // Subtree children unmount before parent dispose, so their listeners are
+    // removed before the controller dies.
+    _controller?.dispose();
+    super.dispose();
   }
 
   void _checkConfig() async {
@@ -144,12 +161,7 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
     }
 
     if (_ready) {
-      return AppRoot(
-        controller: AppController(
-          loader: UserVoiceConfigLoader(configDir: widget.configDir),
-          prefs: widget.prefs,
-        ),
-      );
+      return AppRoot(controller: _ensureController());
     }
 
     // Waiting for user confirmation
