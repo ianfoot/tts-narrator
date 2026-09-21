@@ -182,7 +182,7 @@ Future<void> main() async {
   ttsProviderRegistry.register('mlx_audio', MlxAudioTtsProvider.new);
 
   final appSupportDir = await getApplicationSupportDirectory();
-  final configDir = '${appSupportDir.path}/tts-narrator';
+  final configDir = appSupportDir.path;
 
   runApp(BootstrapApp(configDir: configDir, prefs: prefs));
 }

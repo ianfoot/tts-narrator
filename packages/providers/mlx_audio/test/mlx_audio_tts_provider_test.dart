@@ -56,8 +56,8 @@ void main() {
   });
 
   group('synthesize request shape', () {
-    test('posts the Kokoro model, default voice, mp3 format and speed to the '
-        'local endpoint', () async {
+    test('posts the Kokoro model, default voice, requested format and speed to '
+        'the local endpoint', () async {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       final received = Completer<String>();
       final serverDone = server.listen((request) async {
@@ -72,7 +72,7 @@ void main() {
       final audio = await provider.synthesize(
         model: 'irrelevant',
         voice: null,
-        responseFormat: 'irrelevant',
+        responseFormat: 'wav',
         input: 'The quick brown fox.',
         settings: const {},
       );
@@ -81,7 +81,7 @@ void main() {
       final decoded = jsonDecode(await received.future) as Map;
       expect(decoded['model'], 'mlx-community/Kokoro-82M-bf16');
       expect(decoded['voice'], 'bm_george');
-      expect(decoded['response_format'], 'mp3');
+      expect(decoded['response_format'], 'wav');
       expect(decoded['speed'], 0.8);
       expect(decoded['input'], 'The quick brown fox.');
 

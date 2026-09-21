@@ -46,8 +46,8 @@ class MlxAudioTtsProvider implements TtsProvider {
       'model': 'mlx-community/Kokoro-82M-bf16',
       'input': input,
       'voice': voice ?? 'bm_george',
-      'response_format': 'mp3',
-      'speed': 0.8,
+      'response_format': responseFormat,
+      'speed': 1.0,
     };
 
     var attempt = 0;
