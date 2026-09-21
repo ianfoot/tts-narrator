@@ -15,7 +15,7 @@ import 'wav.dart';
 /// sentence boundaries. Balances call count vs per-call drift: Google
 /// recommends avoiding fragments (short segments lose voice lock-in) while
 /// keeping outputs under a few minutes.
-const _maxSegmentLength = 4000;
+const _maxSegmentLength = 1500;
 
 /// Max characters for a single whole-file narration call
 /// ([NarrationConfig.sendWholeFile]). The whole document goes to the TTS
