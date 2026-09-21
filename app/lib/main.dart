@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 import 'package:tts_narrator_openrouter/openrouter_tts_provider.dart';
+import 'package:tts_narrator_mlx_audio/mlx_audio_tts_provider.dart';
 
 import 'src/gui/controller/app_controller.dart';
 import 'src/gui/controller/config_loader.dart';
@@ -88,7 +89,12 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
 
   void _checkConfig() async {
     final configFile = File('${widget.configDir}/config.json');
-    final modelFiles = ['fish.json', 'gemini.json', 'kokoro.json'];
+    final modelFiles = [
+      'fish.json',
+      'gemini.json',
+      'kokoro.json',
+      'mlx_kokoro.json',
+    ];
     final missing =
         !configFile.existsSync() ||
         modelFiles.any((f) => !File('${widget.configDir}/$f').existsSync());
@@ -108,7 +114,7 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
         title: const Text('Download Voice Configurations?'),
         content: const Text(
           'No voice configurations found. Would you like to download starter '
-          'configurations (Fish, Gemini, Kokoro) from GitHub?',
+          'configurations (Fish, Gemini, Kokoro, MLX Kokoro) from GitHub?',
         ),
         actions: [
           TextButton(
@@ -173,6 +179,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   ttsProviderRegistry.register('openrouter', OpenRouterTtsProvider.new);
+  ttsProviderRegistry.register('mlx_audio', MlxAudioTtsProvider.new);
 
   final appSupportDir = await getApplicationSupportDirectory();
   final configDir = '${appSupportDir.path}/tts-narrator';

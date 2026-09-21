@@ -22,6 +22,8 @@ dependencies:
     path: ../packages/core
   tts_narrator_openrouter:
     path: ../packages/providers/openrouter
+  tts_narrator_mlx_audio:
+    path: ../packages/providers/mlx_audio
 
 dev_dependencies:
   flutter_test:

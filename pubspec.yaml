@@ -10,3 +10,4 @@ workspace:
   - app
   - packages/core
   - packages/providers/openrouter
+  - packages/providers/mlx_audio

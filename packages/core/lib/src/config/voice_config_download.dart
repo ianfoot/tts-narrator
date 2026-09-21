@@ -9,7 +9,13 @@ Future<void> downloadVoiceConfigFiles(
 }) async {
   const repoUrl = 'https://github.com/ianfoot/tts-narrator';
   const branch = 'main';
-  final files = ['config.json', 'fish.json', 'gemini.json', 'kokoro.json'];
+  final files = [
+    'config.json',
+    'fish.json',
+    'gemini.json',
+    'kokoro.json',
+    'mlx_kokoro.json',
+  ];
   final separator = Platform.pathSeparator;
 
   final dir = Directory(configDir);
