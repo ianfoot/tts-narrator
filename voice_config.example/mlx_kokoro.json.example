@@ -1,0 +1,17 @@
+{
+  "id": "mlx-community/Kokoro-82M-bf16",
+  "provider": "mlx_audio",
+  "format": "mp3",
+  "display_name": "MLX Kokoro 82M",
+  "default_voice": "bm_george",
+  "voices": {
+    "George": {"id": "bm_george", "gender": "male"},
+    "Daniel": {"id": "bm_daniel", "gender": "male"},
+    "Fable": {"id": "bm_fable", "gender": "male"},
+    "Lewis": {"id": "bm_lewis", "gender": "male"},
+    "Alice": {"id": "bf_alice", "gender": "female"},
+    "Emma": {"id": "bf_emma", "gender": "female"},
+    "Isabella": {"id": "bf_isabella", "gender": "female"},
+    "Lily": {"id": "bf_lily", "gender": "female"}
+  }
+}

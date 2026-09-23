@@ -3,9 +3,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'package:tts_narrator/src/gui/platform/widgets/platform_activity_indicator.dart';
 import 'package:tts_narrator/main.dart';
+import 'package:tts_narrator/src/gui/platform/widgets/platform_activity_indicator.dart';
 
 void main() {
   SharedPreferences.setMockInitialValues({});
@@ -51,6 +50,7 @@ void main() {
       File('$tempDir/fish.json').writeAsStringSync('{}');
       File('$tempDir/gemini.json').writeAsStringSync('{}');
       File('$tempDir/kokoro.json').writeAsStringSync('{}');
+      File('$tempDir/mlx_kokoro.json').writeAsStringSync('{}');
 
       await pumpBootstrap(tester);
       await tester.pumpAndSettle();
