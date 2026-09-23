@@ -4,19 +4,18 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:tts_narrator_core/tts_narrator_core.dart';
-
+import 'package:flutter_test/flutter_test.dart';
 import 'package:tts_narrator/src/gui/controller/api_key_store.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
     show ApiKeySource;
-import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_button.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_segmented.dart';
+import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
 import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart';
+import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/fake_tts_provider.dart';
 
