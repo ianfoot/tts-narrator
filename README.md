@@ -245,65 +245,10 @@ so a runaway document isn't sent as one unbounded request — the GUI hides the
 toggle above that size and rejects the plan with a clear error.
 
 The mood of Gemini 3.1 Flash TTS is controlled through the prompt text
-(inline tags like `[calm]`, accent/style descriptions) rather than a separate
+(accent/style/`[calm]`, accent/style descriptions) rather than a separate
 pitch/rate parameter. There is no per-call voice memory, so keeping the prompt
 identical and segment sizes in the ~30–300 word range produces the most
 consistent narrator.
-
-## Project layout
-
-A Dart **pub workspace** — `pubspec.yaml` at the repo root lists the members
-and holds the single shared lockfile.
-
-```
-packages/core/            # tts_narrator_core — pure Dart narration core
-  lib/
-    tts_narrator_core.dart # public barrel (the GUI imports this)
-    src/
-      config/voice_config.dart   # models/voices/defaults/pricing/providers JSON load/save
-      narration/
-        abort.dart            # AbortToken for the GUI Cancel button
-        config.dart           # NarrationConfig
-        cost.dart             # duration + cost estimates
-        model_profiles.dart   # request wiring (models come only from config files)
-        model_ui.dart         # ModelUiSpec — GUI options declared by a model's plugin
-        narration.dart       # segmentText + narration orchestrator
-        prompt.dart           # per-paragraph prompt template (Gemini only)
-        tts_provider.dart     # TtsProvider interface, registry, resolveSettings
-        wav.dart              # PCM -> WAV header writer
-  test/                       # unit tests (dart test)
-packages/providers/openrouter/  # tts_narrator_openrouter — OpenRouter TtsProvider
-  lib/openrouter_tts_provider.dart
-app/                        # tts_narrator — Flutter macOS GUI
-  lib/
-    main.dart                 # Flutter entry point (registers the OpenRouter provider)
-    src/gui/
-      controller/
-        app_controller.dart   # document + settings + run state, command slots
-        config_loader.dart    # read-only voice-config access via core
-      editor/editor_screen.dart   # editor-first home: toolbar, editor, status bar
-      settings/inspector_rail.dart # collapsible settings rail
-      narration/narration_screen.dart # run view: progress, playback, Cancel, Back
-      menu/
-        macos_menu.dart       # PlatformMenuBar tree (macOS menu bar)
-        edit_actions.dart     # platform-neutral Edit-menu dispatch to the focused field
-      platform/
-        app_root.dart         # CupertinoApp (macOS) / MaterialApp (elsewhere)
-        platform_page.dart
-        widgets/              # PlatformButton/TextField/Dropdown/Switch/Section/...
-      theme/                  # design tokens (see "Design tokens" below)
-  assets/theme/tokens.json    # color + typography source of truth (drives app_tokens.g.dart)
-  tool/generate_tokens.dart   # codegen: tokens.json → app_tokens.g.dart
-  test/
-    controller/               # app controller unit tests
-    menu/                     # menu bar structure + dispatch tests
-    widgets/                  # widget tests (flutter test)
-    support/                  # shared test fixtures
-    theme/                    # token value tests + codegen golden test
-voice_config.example/       # sample config: config.json (providers/${ENV} refs, no secrets) + <alias>.json per model
-```
-
-Note: `output/`, `.dart_tool/`, and `build/` are gitignored.
 
 ## GUI (macOS)
 
