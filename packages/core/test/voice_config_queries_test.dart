@@ -258,27 +258,32 @@ void main() {
   });
 
   group('voiceEntries', () {
-    test('a configured default voice yields that entry, not a compiled one', () {
-      final cfg = _cfg(
-        defaults: const {'fish': 'British Female Narrator'},
-        voices: const {
-          'fish': {
-            'British Female Narrator': Voice(
-              id: '89f41ea230034706881f85a8227d6ab9',
-            ),
+    test(
+      'a configured default voice yields that entry, not a compiled one',
+      () {
+        final cfg = _cfg(
+          defaults: const {'fish': 'British Female Narrator'},
+          voices: const {
+            'fish': {
+              'British Female Narrator': Voice(
+                id: '89f41ea230034706881f85a8227d6ab9',
+              ),
+            },
           },
-        },
-        models: {'fish': _model(alias: 'fish', id: 'fish-audio/s2.1-pro-free')},
-      );
-      final entries = voiceEntries(
-        model: profileFor('fish', cfg)!,
-        config: cfg,
-      );
-      expect(entries, hasLength(1));
-      expect(entries.single.id, '89f41ea230034706881f85a8227d6ab9');
-      expect(entries.single.label, 'British Female Narrator');
-      expect(entries.single.isAlias, isTrue);
-    });
+          models: {
+            'fish': _model(alias: 'fish', id: 'fish-audio/s2.1-pro-free'),
+          },
+        );
+        final entries = voiceEntries(
+          model: profileFor('fish', cfg)!,
+          config: cfg,
+        );
+        expect(entries, hasLength(1));
+        expect(entries.single.id, '89f41ea230034706881f85a8227d6ab9');
+        expect(entries.single.label, 'British Female Narrator');
+        expect(entries.single.isAlias, isTrue);
+      },
+    );
 
     test('a model without aliases or a config default yields no entries', () {
       final entries = voiceEntries(

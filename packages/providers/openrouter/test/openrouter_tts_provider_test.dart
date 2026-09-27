@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
@@ -117,15 +118,104 @@ void main() {
       expect(spec.options, hasLength(4));
     });
 
-    test('models without prompt styling declare nothing', () {
+    test('the kokoro-family model declares a speed control', () {
+      final provider = OpenRouterTtsProvider();
+      const kokoro = TtsModelProfile(alias: 'kokoro', id: 'hexgrad/kokoro-82m');
+      final spec = provider.modelUiSpecFor(kokoro);
+      expect(spec.isEmpty, isFalse);
+      expect(spec.options.map((o) => o.key), ['speed']);
+      expect(
+        spec.options.firstWhere((o) => o.key == 'speed').type,
+        ModelUiOptionType.speed,
+      );
+      // A prompt-styled model keeps its styling options and gains no speed
+      // control (only kokoro-family ids declare one).
+      const styled = TtsModelProfile(
+        alias: 'gemini',
+        id: 'google/gemini-3.1-flash-tts-preview',
+        promptStyle: true,
+      );
+      final styledSpec = provider.modelUiSpecFor(styled);
+      expect(
+        styledSpec.options.map((o) => o.key),
+        ['gender', 'accent', 'style', 'passagePrefix'],
+      );
+      expect(styledSpec.options.map((o) => o.key), isNot(contains('speed')));
+    });
+
+    test('models without prompt styling or a kokoro id declare nothing', () {
       final provider = OpenRouterTtsProvider();
       const fish = TtsModelProfile(
         alias: 'fish',
         id: 'fish-audio/s2.1-pro-free',
       );
-      const kokoro = TtsModelProfile(alias: 'kokoro', id: 'hexgrad/kokoro-82m');
       expect(provider.modelUiSpecFor(fish).isEmpty, isTrue);
-      expect(provider.modelUiSpecFor(kokoro).isEmpty, isTrue);
     });
   });
+
+  group('synthesize speed', () {
+    test('a non-default speed is posted in the request body', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final received = Completer<Map>();
+      final serverDone = server.listen((request) async {
+        received.complete(jsonDecode(await _readBody(request)) as Map);
+        request.response.write('fake-audio-bytes');
+        await request.response.close();
+      });
+      final provider = OpenRouterTtsProvider(
+        environment: const {},
+        endpoint: 'http://${server.address.address}:${server.port}',
+      );
+      final audio = await provider.synthesize(
+        model: 'hexgrad/kokoro-82m',
+        voice: 'bf_emma',
+        responseFormat: 'mp3',
+        input: 'The quick brown fox.',
+        settings: const {'api_key': 'sk-test'},
+        speed: 0.75,
+      );
+      expect(utf8.decode(audio.bytes), 'fake-audio-bytes');
+      final decoded = await received.future;
+      expect(decoded['speed'], 0.75);
+      await serverDone.cancel();
+      await server.close(force: true);
+    });
+
+    test(
+      'default speed (1.0) is omitted so existing requests are unchanged',
+      () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        final received = Completer<Map>();
+        final serverDone = server.listen((request) async {
+          received.complete(jsonDecode(await _readBody(request)) as Map);
+          request.response.write('x');
+          await request.response.close();
+        });
+        final provider = OpenRouterTtsProvider(
+          environment: const {},
+          endpoint: 'http://${server.address.address}:${server.port}',
+        );
+        await provider.synthesize(
+          model: 'google/gemini-3.1-flash-tts-preview',
+          voice: null,
+          responseFormat: 'mp3',
+          input: 'Hi',
+          settings: const {'api_key': 'sk-test'},
+        );
+        final decoded = await received.future;
+        expect(decoded.containsKey('speed'), isFalse);
+        await serverDone.cancel();
+        await server.close(force: true);
+      },
+    );
+  });
+}
+
+/// Folds the request body into a decoded string.
+Future<String> _readBody(HttpRequest request) async {
+  final bytes = await request.fold<List<int>>(
+    <int>[],
+    (acc, segment) => acc..addAll(segment),
+  );
+  return utf8.decode(bytes);
 }

@@ -15,6 +15,7 @@ class NarrationConfig {
     this.minWords = 30,
     this.sendWholeFile = false,
     this.sampleLen,
+    this.speed = 1.0,
     this.outDir = 'output',
     this.dryRun = false,
     this.resume = false,
@@ -63,6 +64,9 @@ class NarrationConfig {
   /// If set, only narrate this many paragraphs (smoke test).
   final int? sampleLen;
 
+  /// Speech rate multiplier passed to providers that support it (1.0 = normal).
+  final double speed;
+
   /// Merge a paragraph into the next one when it has fewer than this many
   /// words, so tiny fragments don't get an isolated (off-register) reading.
   final int minWords;
@@ -103,6 +107,7 @@ class NarrationConfig {
     minWords: minWords,
     sendWholeFile: sendWholeFile,
     sampleLen: sampleLen,
+    speed: speed,
     outDir: outDir,
     dryRun: dryRun,
     resume: resume,

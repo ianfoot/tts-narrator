@@ -21,15 +21,26 @@ class MlxAudioTtsProvider implements TtsProvider {
   @override
   String get name => 'MLX Audio';
 
-  /// Model plugin UI: the MLX Kokoro model has fixed voices and no prompt
-  /// styling, so it declares no options.
+  /// Model plugin UI: the MLX Kokoro model has no prompt styling, but it does
+  /// expose a `speed` control (the local server accepts a speech-rate
+  /// multiplier) for any kokoro-family model id.
   @override
-  ModelUiSpec modelUiSpecFor(TtsModelProfile model) =>
-      const ModelUiSpec.empty();
+  ModelUiSpec modelUiSpecFor(TtsModelProfile model) {
+    if (model.id.toLowerCase().contains('kokoro')) {
+      return const ModelUiSpec([
+        ModelUiControl(
+          key: 'speed',
+          label: 'Speed',
+          type: ModelUiOptionType.speed,
+        ),
+      ]);
+    }
+    return const ModelUiSpec.empty();
+  }
 
   /// Synthesizes [input] as audio, optionally choosing a [voice] (defaults to
-  /// the model's `bm_george` voice), returning the raw bytes. Retries on
-  /// transient 5xx / empty-stream failures.
+  /// the model's `bm_george` voice) at a [speed] multiplier (1.0 = normal),
+  /// returning the raw bytes. Retries on transient 5xx / empty-stream failures.
   ///
   /// [abort] is checked between retries (and before the first attempt); an
   /// already-cancelled token throws [AbortException] without calling the API.
@@ -40,6 +51,7 @@ class MlxAudioTtsProvider implements TtsProvider {
     required String input,
     required String responseFormat,
     required Map<String, String> settings,
+    double speed = 1.0,
     AbortToken? abort,
   }) async {
     final body = <String, Object?>{
@@ -47,7 +59,7 @@ class MlxAudioTtsProvider implements TtsProvider {
       'input': input,
       'voice': voice ?? 'bm_george',
       'response_format': responseFormat,
-      'speed': 1.0,
+      'speed': speed,
     };
 
     var attempt = 0;

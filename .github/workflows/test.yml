@@ -28,6 +28,10 @@ jobs:
         run: dart test
         working-directory: packages/providers/openrouter
 
+      - name: Run MLX Audio provider Dart tests
+        run: dart test
+        working-directory: packages/providers/mlx_audio
+
       - name: Run Flutter widget tests
         run: flutter test
         working-directory: app

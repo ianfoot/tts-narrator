@@ -15,6 +15,7 @@ class FakeTtsProvider implements TtsProvider {
       String input,
       String responseFormat,
       Map<String, String> settings,
+      double speed,
     })
   >
   calls = [];
@@ -40,6 +41,7 @@ class FakeTtsProvider implements TtsProvider {
     required String input,
     required String responseFormat,
     required Map<String, String> settings,
+    double speed = 1.0,
     AbortToken? abort,
   }) async {
     abort?.throwIfCancelled();
@@ -49,6 +51,7 @@ class FakeTtsProvider implements TtsProvider {
       input: input,
       responseFormat: responseFormat,
       settings: Map.unmodifiable(settings),
+      speed: speed,
     ));
     return GeneratedAudio(bytes: bytes);
   }

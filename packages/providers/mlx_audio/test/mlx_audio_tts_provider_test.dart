@@ -75,6 +75,7 @@ void main() {
         responseFormat: 'wav',
         input: 'The quick brown fox.',
         settings: const {},
+        speed: 0.8,
       );
       expect(utf8.decode(audio.bytes), 'fake-audio-bytes');
 
@@ -116,13 +117,25 @@ void main() {
   });
 
   group('modelUiSpecFor', () {
-    test('declares no options for any model', () {
+    test('declares a speed control for kokoro-family models', () {
       final provider = MlxAudioTtsProvider();
       const kokoro = TtsModelProfile(
         alias: 'kokoro',
         id: 'mlx-community/Kokoro-82M-bf16',
       );
-      expect(provider.modelUiSpecFor(kokoro).isEmpty, isTrue);
+      final spec = provider.modelUiSpecFor(kokoro);
+      expect(spec.isEmpty, isFalse);
+      expect(spec.options.map((o) => o.key), contains('speed'));
+      expect(
+        spec.options.map((o) => o.type),
+        contains(ModelUiOptionType.speed),
+      );
+    });
+
+    test('declares nothing for non-kokoro models', () {
+      final provider = MlxAudioTtsProvider();
+      const other = TtsModelProfile(alias: 'other', id: 'some/model');
+      expect(provider.modelUiSpecFor(other).isEmpty, isTrue);
     });
 
     test('reports id and name', () {

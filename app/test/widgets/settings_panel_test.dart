@@ -328,6 +328,72 @@ void main() {
       expect(find.text('Daniel (m)').last, findsOneWidget);
     });
 
+    testWidgets('the kokoro panel surfaces a speed slider; fish does not', (
+      tester,
+    ) async {
+      writeConfig({
+        'default_model': 'fish',
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'format': 'mp3',
+            'display_name': 'Kokoro 82M',
+          },
+        },
+        'defaults': {'kokoro': 'Emma'},
+        'voices': {
+          'kokoro': {
+            'Alice': {'id': 'bf_alice', 'gender': 'female'},
+            'Daniel': {'id': 'bm_daniel', 'gender': 'male'},
+            'Emma': {'id': 'bf_emma', 'gender': 'female'},
+            'Fable': {'id': 'bm_fable', 'gender': 'male'},
+            'George': {'id': 'bm_george', 'gender': 'male'},
+            'Isabella': {'id': 'bf_isabella', 'gender': 'female'},
+            'Lewis': {'id': 'bm_lewis', 'gender': 'male'},
+            'Lily': {'id': 'bf_lily', 'gender': 'female'},
+          },
+        },
+      });
+      // The real openrouter plugin declares a speed option for the
+      // kokoro-family model; emulate that spec per-alias via the fake.
+      final fake = FakeTtsProvider()
+        ..specsByAlias['kokoro'] = const ModelUiSpec([
+          ModelUiControl(
+            key: 'speed',
+            label: 'Speed',
+            type: ModelUiOptionType.speed,
+          ),
+        ]);
+      fake.register();
+      final c = makeController();
+      await pumpRail(tester, c);
+
+      // Fish's plugin declares no model options -> no speed slider.
+      expect(c.modelAlias, 'fish');
+      expect(find.text('MODEL OPTIONS'), findsNothing);
+      expect(find.byKey(const Key('speedSlider')), findsNothing);
+
+      // Switch to kokoro: its panel gains the speed slider alongside voice.
+      await tester.tap(find.byKey(const Key('modelDropdown')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Kokoro 82M').last);
+      await tester.pumpAndSettle();
+
+      expect(c.modelAlias, 'kokoro');
+      expect(find.byKey(const Key('voiceAdvancedDisclosure')), findsOneWidget);
+      expect(find.text('Speed'), findsOneWidget);
+      expect(find.byKey(const Key('speedSlider')), findsOneWidget);
+
+      // The slider writes through to the controller's speed setting.
+      await tester.drag(
+        find.byKey(const Key('speedSlider')),
+        const Offset(600, 0),
+      );
+      await tester.pump();
+      expect(c.speed, 2.0);
+    });
+
     testWidgets('gemini shows no voice-picker gender control without tags', (
       tester,
     ) async {
@@ -450,7 +516,7 @@ void main() {
       // not render and must not throw during build.
       final fake = FakeTtsProvider()
         ..modelUiSpec = const ModelUiSpec([
-          ModelUiControl(key: 'speed', label: 'Speaking rate'),
+          ModelUiControl(key: 'tone', label: 'Tone'),
           ModelUiControl(key: 'accent', label: 'Accent'),
         ]);
       fake.register();
@@ -458,8 +524,46 @@ void main() {
       await pumpRail(tester, c);
 
       expect(tester.takeException(), isNull);
-      expect(find.byKey(const Key('speedField')), findsNothing);
+      expect(find.byKey(const Key('toneField')), findsNothing);
       expect(find.byKey(const Key('accentField')), findsOneWidget);
+    });
+
+    testWidgets('a declared speed option renders a slider and writes through', (
+      tester,
+    ) async {
+      writeFishConfig();
+      final fake = FakeTtsProvider()
+        ..modelUiSpec = const ModelUiSpec([
+          ModelUiControl(
+            key: 'speed',
+            label: 'Speed',
+            type: ModelUiOptionType.speed,
+          ),
+        ]);
+      fake.register();
+      final c = makeController();
+      await pumpRail(tester, c);
+
+      expect(find.text('Speed'), findsOneWidget);
+      expect(find.byKey(const Key('speedSlider')), findsOneWidget);
+      expect(find.byKey(const Key('speedBadge')), findsOneWidget);
+      expect(c.speed, 1.0);
+
+      // Drag to the far right -> 2.0 (the slider's maximum).
+      await tester.drag(
+        find.byKey(const Key('speedSlider')),
+        const Offset(600, 0),
+      );
+      await tester.pump();
+      expect(c.speed, 2.0);
+
+      // Drag to the far left -> 0.25 (the slider's minimum).
+      await tester.drag(
+        find.byKey(const Key('speedSlider')),
+        const Offset(-600, 0),
+      );
+      await tester.pump();
+      expect(c.speed, 0.25);
     });
 
     testWidgets('a declared hint shows as the field placeholder', (

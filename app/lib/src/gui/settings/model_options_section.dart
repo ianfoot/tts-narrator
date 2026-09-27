@@ -8,11 +8,12 @@ import '../platform/widgets/platform_text_field.dart';
 import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart';
 import 'settings_labels.dart';
+import 'speed_widget.dart';
 
 /// The "Model options" section: renders the active model's plugin-declared
-/// options one per row. Built-in keys (`accent`, `style`, `passagePrefix`)
-/// bind to the narration settings the controller owns; any other key is
-/// ignored — the app interprets the shared convention, never model-specific
+/// options one per row. Built-in keys (`accent`, `style`, `passagePrefix`,
+/// `speed`) bind to the narration settings the controller owns; any other key
+/// is ignored — the app interprets the shared convention, never model-specific
 /// knowledge. Renders nothing when the active model declares no options.
 class ModelOptionsSection extends StatefulWidget {
   const ModelOptionsSection({super.key, required this.controller});
@@ -39,6 +40,7 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
     'accent',
     'style',
     'passagePrefix',
+    'speed',
   };
 
   AppController get _controller => widget.controller;
@@ -146,6 +148,8 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
             ),
           ],
         );
+      case ModelUiOptionType.speed:
+        return SpeedWidget(controller: _controller);
     }
   }
 

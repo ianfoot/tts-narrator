@@ -12,7 +12,13 @@ class FakeTtsProvider implements TtsProvider {
   final List<int> bytes;
 
   final List<
-    ({String model, String? voice, String input, String responseFormat})
+    ({
+      String model,
+      String? voice,
+      String input,
+      String responseFormat,
+      double speed,
+    })
   >
   calls = [];
 
@@ -41,6 +47,7 @@ class FakeTtsProvider implements TtsProvider {
     required String input,
     required String responseFormat,
     required Map<String, String> settings,
+    double speed = 1.0,
     AbortToken? abort,
   }) async {
     abort?.throwIfCancelled();
@@ -57,6 +64,7 @@ class FakeTtsProvider implements TtsProvider {
       voice: voice,
       input: input,
       responseFormat: responseFormat,
+      speed: speed,
     ));
     return GeneratedAudio(bytes: bytes);
   }

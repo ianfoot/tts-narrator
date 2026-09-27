@@ -228,6 +228,8 @@ final class TextTokens {
   static const String gui_settings_sendWholeFile = 'Send whole file';
   static const String gui_settings_sendWholeFileTooltip = 'Generate single audio file instead of segments';
   static const String gui_settings_skipCompletedSegments = 'Skip completed segments (Resume)';
+  static const String gui_settings_speedLabel = 'Speed';
+  static const String gui_settings_speedTooltip = 'Speech rate multiplier (1.0 = normal)';
   static const String gui_settings_styleFieldTooltip = 'Voice style personality (e.g., \'warm, composed\')';
   static const String gui_settings_voiceAliasLabel = 'Voice alias';
   static const String gui_settings_voiceDropdownTooltip = 'Choose voice for current model';

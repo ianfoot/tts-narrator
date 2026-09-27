@@ -44,16 +44,18 @@ abstract class TtsProvider {
   /// Synthesizes [input] as audio in [responseFormat], optionally choosing a
   /// [voice], returning the raw bytes.
   ///
-  /// [settings] is the run's resolved provider settings map (see
-  /// [resolveSettings]); [abort] is checked between retries (and before the
-  /// first attempt) — an already-cancelled token throws [AbortException]
-  /// without calling the API.
+  /// [speed] is a speech-rate multiplier (1.0 = normal); providers that have
+  /// no speed concept should ignore it. [settings] is the run's resolved
+  /// provider settings map (see [resolveSettings]); [abort] is checked between
+  /// retries (and before the first attempt) — an already-cancelled token
+  /// throws [AbortException] without calling the API.
   Future<GeneratedAudio> synthesize({
     required String model,
     required String? voice,
     required String input,
     required String responseFormat,
     required Map<String, String> settings,
+    double speed = 1.0,
     AbortToken? abort,
   });
 }
