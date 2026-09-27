@@ -37,6 +37,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            tts-narrator-${GITHUB_REF_NAME}-macos.zip
-            tts-narrator-${GITHUB_REF_NAME}-macos.dmg
+            tts-narrator-${{ github.ref_name }}-macos.zip
+            tts-narrator-${{ github.ref_name }}-macos.dmg
           token: ${{ secrets.GITHUB_TOKEN }}
