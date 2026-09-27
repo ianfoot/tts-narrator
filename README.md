@@ -1,7 +1,7 @@
 # tts-narrator
 
-Narrate a text file as an audiobook via TTS providers (the OpenRouter
-provider ships with this repo). The default model is **fish**
+Narrate a text file as an audiobook via TTS providers (two ship with this
+repo: OpenRouter and the local MLX Audio server). The default model is **fish**
 (`fish-audio/s2.1-pro-free`) — free — so a first run costs nothing, with a
 friendly "British Female Narrator" voice out of the box. Other models: Gemini
 (`google/gemini-3.1-flash-tts-preview`) and Kokoro (`hexgrad/kokoro-82m`).
@@ -9,11 +9,20 @@ friendly "British Female Narrator" voice out of the box. Other models: Gemini
 Uses the [OpenRouter text-to-speech endpoint](https://openrouter.ai/docs/guides/overview/multimodal/tts)
 (`POST /api/v1/audio/speech`) through the OpenRouter provider.
 
+It can also run **fully locally** — no API key, no cloud — on Apple Silicon
+Macs (M1–M4): the `mlx_audio` provider (model `MLX Kokoro 82M`) synthesizes
+via the local [mlx-audio](https://github.com/Blaizzy/mlx-audio) server running
+on your own Mac. The local server can be used instead of OpenRouter, or
+alongside it (each model picks its provider). Setup instructions live in
+**[MAC.md](MAC.md)**.
+
 A Dart **pub workspace** with three packages:
 - `packages/core` — pure-Dart narration core (segmentation, provider-agnostic TTS
   dispatch, voice config, cost estimates), no Flutter or GUI deps.
 - `packages/providers/openrouter` — the OpenRouter TTS provider, registered by
   the GUI at startup.
+- `packages/providers/mlx_audio` — the local MLX Audio TTS provider (Apple
+  Silicon, offline), also registered at startup.
 - `app` — the Flutter macOS GUI (adds `audioplayers`, `file_selector`).
 
 The core has no Flutter dependencies and no provider-specific logic, so the same
@@ -21,7 +30,7 @@ core can be driven from the GUI (or new providers) without rework.
 
 ## Download & Installation (macOS)
 
-Pre-built macOS releases (`TTS Narrator.app`) and Gatekeeper security bypass instructions are documented in **[MAC.md](MAC.md)**.
+Pre-built macOS releases (`TTS Narrator.app`) and Gatekeeper security bypass instructions are documented in **[MAC.md](MAC.md)**. The same file covers setting up the **local MLX Audio TTS server** (Apple Silicon only) so the app can narrate fully offline.
 
 ## Requirements
 
@@ -122,6 +131,7 @@ config. Model differences drive how requests are built:
 | `fish` (default) | free-form 32-hex fish.audio id | ✗ (read aloud — prompt styling disabled) | `.mp3` (free) |
 | `gemini` | named voices (rated on the OpenRouter page) | ✓ (accent/style/`[calm]`) | 24 kHz PCM `.wav` |
 | `kokoro` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — prompt styling disabled) | `.mp3` |
+| `mlx_kokoro` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — prompt styling disabled) | `.mp3` (local, free) |
 
 Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
 Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma`
@@ -154,6 +164,11 @@ in their own workspace packages and are registered by the GUI at startup.
   interface for OpenRouter's `/audio/speech` endpoint — Bearer auth from the
   resolved settings, retry/backoff on transient failures, and
   `X-Generation-Id` mapped onto `ProviderAudio.generationId`.
+- **The MLX Audio provider**: `packages/providers/mlx_audio` synthesizes via a
+  local [mlx-audio](https://github.com/Blaizzy/mlx-audio) server (default
+  `http://localhost:8000/v1/audio/speech`, OpenAI-compatible, no API key) on
+  Apple Silicon Macs — fully offline narration. Its model config ships as
+  `voice_config.example/mlx_kokoro.json.example`.
 - **Adding a provider** = a workspace package implementing `TtsProvider`,
   registered at startup, plus a `providers.<id>` block in `config.json`
   for its secrets. Route models to it with `"provider": "<id>"` in their model
