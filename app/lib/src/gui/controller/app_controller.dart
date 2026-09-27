@@ -246,6 +246,14 @@ class AppController extends ChangeNotifier {
     _settings.passagePrefix = value;
   }
 
+  /// Speech-rate multiplier (1.0 = normal, clamped 0.25-2.0 by
+  /// [SettingsController.speed]).
+  double get speed => _settings.speed;
+
+  set speed(double value) {
+    _settings.speed = value;
+  }
+
   /// Minimum words per segment (clamped to the settings rail's 10-100 slider
   /// range). Changing it revises the live segment plan and estimate the editor
   /// shows.

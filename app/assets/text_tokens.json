@@ -183,6 +183,8 @@
       "genderFemale": "Female",
       "genderMale": "Male",
       "modelOptionsSection": "Model options",
+      "speedLabel": "Speed",
+      "speedTooltip": "Speech rate multiplier (1.0 = normal)",
       "runSection": "Run",
       "sendWholeFile": "Send whole file",
       "minWordsLabel": "Min words per segment",

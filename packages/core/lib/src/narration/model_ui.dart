@@ -13,7 +13,9 @@
 ///   `accent`/`style`/`passagePrefix` — editable text against the matching
 ///   narration settings;
 ///   `gender` — a narrator-gender (male/female/any) segmented control that the
-///   app wires to its voice/narrator gender state.
+///   app wires to its voice/narrator gender state;
+///   `speed` — a speech-rate slider bound to the `NarrationConfig.speed`
+///   setting (1.0 = normal).
 ///
 /// A model whose plugin declares no spec gets no model-option controls.
 class ModelUiSpec {
@@ -51,4 +53,4 @@ class ModelUiControl {
 }
 
 /// How a [ModelUiControl] is edited in the GUI.
-enum ModelUiOptionType { text, multiline, bool, gender }
+enum ModelUiOptionType { text, multiline, bool, gender, speed }

@@ -95,6 +95,7 @@ class SettingsController extends ChangeNotifier {
   bool _resume = false;
   String _style = TextTokens.defaults_style;
   String _passagePrefix = TextTokens.defaults_passagePrefix;
+  double _speed = 1.0;
 
   String get accent => _accent;
 
@@ -117,6 +118,17 @@ class SettingsController extends ChangeNotifier {
   set passagePrefix(String value) {
     if (value == _passagePrefix) return;
     _passagePrefix = value;
+    notifyListeners();
+  }
+
+  /// Speech-rate multiplier (1.0 = normal), clamped to the settings rail's
+  /// 0.25-2.0 slider range. Sent to providers via `NarrationConfig.speed`.
+  double get speed => _speed;
+
+  set speed(double value) {
+    final clamped = value.clamp(0.25, 2.0);
+    if (clamped == _speed) return;
+    _speed = clamped;
     notifyListeners();
   }
 
@@ -403,6 +415,7 @@ class SettingsController extends ChangeNotifier {
       minWords: minWords,
       sendWholeFile: sendWholeFile,
       sampleLen: sampleLen,
+      speed: speed,
       outDir: outDir.trim().isEmpty
           ? TextTokens.defaults_outDir
           : outDir.trim(),

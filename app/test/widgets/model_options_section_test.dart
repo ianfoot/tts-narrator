@@ -96,7 +96,7 @@ void main() {
     // not render and must not throw during build.
     final fake = FakeTtsProvider()
       ..modelUiSpec = const ModelUiSpec([
-        ModelUiControl(key: 'speed', label: 'Speaking rate'),
+        ModelUiControl(key: 'tone', label: 'Tone'),
         ModelUiControl(key: 'accent', label: 'Accent'),
       ]);
     fake.register();
@@ -104,8 +104,46 @@ void main() {
     await pumpSection(tester, c);
 
     expect(tester.takeException(), isNull);
-    expect(find.byKey(const Key('speedField')), findsNothing);
+    expect(find.byKey(const Key('toneField')), findsNothing);
     expect(find.byKey(const Key('accentField')), findsOneWidget);
+  });
+
+  testWidgets('a declared speed option renders a slider and writes through', (
+    tester,
+  ) async {
+    writeFishConfig(configDir);
+    final fake = FakeTtsProvider()
+      ..modelUiSpec = const ModelUiSpec([
+        ModelUiControl(
+          key: 'speed',
+          label: 'Speed',
+          type: ModelUiOptionType.speed,
+        ),
+      ]);
+    fake.register();
+    final c = makeController(configDir);
+    await pumpSection(tester, c);
+
+    expect(find.text('Speed'), findsOneWidget);
+    expect(find.byKey(const Key('speedSlider')), findsOneWidget);
+    expect(find.byKey(const Key('speedBadge')), findsOneWidget);
+    expect(c.speed, 1.0);
+
+    // Drag to the far right -> 2.0 (the slider's maximum).
+    await tester.drag(
+      find.byKey(const Key('speedSlider')),
+      const Offset(600, 0),
+    );
+    await tester.pump();
+    expect(c.speed, 2.0);
+
+    // Drag to the far left -> 0.25 (the slider's minimum).
+    await tester.drag(
+      find.byKey(const Key('speedSlider')),
+      const Offset(-600, 0),
+    );
+    await tester.pump();
+    expect(c.speed, 0.25);
   });
 
   testWidgets('a declared hint shows as the field placeholder', (tester) async {

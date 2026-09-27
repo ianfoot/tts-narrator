@@ -35,6 +35,7 @@ class _BlockingProvider implements TtsProvider {
     required String input,
     required String responseFormat,
     required Map<String, String> settings,
+    double speed = 1.0,
     AbortToken? abort,
   }) async {
     await Completer<void>().future;

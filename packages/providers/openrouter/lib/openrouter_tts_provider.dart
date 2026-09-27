@@ -28,37 +28,51 @@ class OpenRouterTtsProvider implements TtsProvider {
   /// Model plugin UI: models with the config's `prompt_style` flag understand
   /// accent/style/prefix/[calm] directives woven into the text, so declare
   /// those styling options — plus a narrator-gender control that the app
-  /// rewrites into the narrated prose — for them and nothing otherwise. Keyed
-  /// off the model request shape (`TtsModelProfile.promptStyle`) so it survives
-  /// any alias or model-id change; interface docs re `TtsProvider.modelUiSpecFor`.
+  /// rewrites into the narrated prose — for them and nothing otherwise. The
+  /// Kokoro family additionally exposes a `speed` control (the model accepts a
+  /// speech-rate multiplier). Keyed off the model request shape
+  /// (`TtsModelProfile.promptStyle` / model id) so it survives any alias or
+  /// model-id change; interface docs re `TtsProvider.modelUiSpecFor`.
   @override
   ModelUiSpec modelUiSpecFor(TtsModelProfile model) {
-    if (!model.promptStyle) return const ModelUiSpec.empty();
-    return const ModelUiSpec([
-      ModelUiControl(
-        key: 'gender',
-        label: 'Narrator gender',
-        type: ModelUiOptionType.gender,
-      ),
-      ModelUiControl(
-        key: 'accent',
-        label: 'Accent',
-        hint: 'e.g., Southern British English',
-      ),
-      ModelUiControl(
-        key: 'style',
-        label: 'Style / register',
-        hint: 'e.g., Warm, composed, literary',
-      ),
-      ModelUiControl(
-        key: 'passagePrefix',
-        label: 'Passage prefix',
-        hint:
-            'An opening directive woven into the first passage, read aloud '
-            'before the story starts. Add `[calm] ` here for a calm style.',
-        type: ModelUiOptionType.multiline,
-      ),
-    ]);
+    final options = <ModelUiControl>[];
+    if (model.promptStyle) {
+      options.addAll([
+        ModelUiControl(
+          key: 'gender',
+          label: 'Narrator gender',
+          type: ModelUiOptionType.gender,
+        ),
+        ModelUiControl(
+          key: 'accent',
+          label: 'Accent',
+          hint: 'e.g., Southern British English',
+        ),
+        ModelUiControl(
+          key: 'style',
+          label: 'Style / register',
+          hint: 'e.g., Warm, composed, literary',
+        ),
+        ModelUiControl(
+          key: 'passagePrefix',
+          label: 'Passage prefix',
+          hint:
+              'An opening directive woven into the first passage, read aloud '
+              'before the story starts. Add `[calm] ` here for a calm style.',
+          type: ModelUiOptionType.multiline,
+        ),
+      ]);
+    }
+    if (model.id.toLowerCase().contains('kokoro')) {
+      options.add(
+        ModelUiControl(
+          key: 'speed',
+          label: 'Speed',
+          type: ModelUiOptionType.speed,
+        ),
+      );
+    }
+    return ModelUiSpec(options);
   }
 
   /// Resolves the API key from the run's resolved [settings] (generic rule
@@ -93,6 +107,7 @@ class OpenRouterTtsProvider implements TtsProvider {
     required String input,
     required String responseFormat,
     required Map<String, String> settings,
+    double speed = 1.0,
     AbortToken? abort,
   }) async {
     final key = _apiKey(settings);
@@ -104,6 +119,9 @@ class OpenRouterTtsProvider implements TtsProvider {
     };
     if (voice != null && voice.isNotEmpty) {
       body['voice'] = voice;
+    }
+    if (speed != 1.0) {
+      body['speed'] = speed;
     }
 
     var attempt = 0;

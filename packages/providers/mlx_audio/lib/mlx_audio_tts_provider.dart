@@ -28,8 +28,8 @@ class MlxAudioTtsProvider implements TtsProvider {
       const ModelUiSpec.empty();
 
   /// Synthesizes [input] as audio, optionally choosing a [voice] (defaults to
-  /// the model's `bm_george` voice), returning the raw bytes. Retries on
-  /// transient 5xx / empty-stream failures.
+  /// the model's `bm_george` voice) at a [speed] multiplier (1.0 = normal),
+  /// returning the raw bytes. Retries on transient 5xx / empty-stream failures.
   ///
   /// [abort] is checked between retries (and before the first attempt); an
   /// already-cancelled token throws [AbortException] without calling the API.
@@ -40,6 +40,7 @@ class MlxAudioTtsProvider implements TtsProvider {
     required String input,
     required String responseFormat,
     required Map<String, String> settings,
+    double speed = 1.0,
     AbortToken? abort,
   }) async {
     final body = <String, Object?>{
@@ -47,7 +48,7 @@ class MlxAudioTtsProvider implements TtsProvider {
       'input': input,
       'voice': voice ?? 'bm_george',
       'response_format': responseFormat,
-      'speed': 1.0,
+      'speed': speed,
     };
 
     var attempt = 0;

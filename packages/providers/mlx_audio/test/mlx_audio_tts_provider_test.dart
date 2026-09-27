@@ -75,6 +75,7 @@ void main() {
         responseFormat: 'wav',
         input: 'The quick brown fox.',
         settings: const {},
+        speed: 0.8,
       );
       expect(utf8.decode(audio.bytes), 'fake-audio-bytes');
 

@@ -248,6 +248,7 @@ Future<void> narrate(
       responseFormat: config.profile.format,
       settings: config.providerSettings,
       input: input,
+      speed: config.speed,
       abort: abort,
     );
 
