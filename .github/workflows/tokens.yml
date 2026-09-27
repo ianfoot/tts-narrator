@@ -7,7 +7,7 @@ name: tokens
 
 on:
   pull_request:
-    paths:
+    paths: &token-paths
       - 'app/assets/theme/tokens.json'
       - 'app/assets/text_tokens.json'
       - 'app/tool/generate_tokens.dart'
@@ -18,15 +18,7 @@ on:
       - '.github/workflows/tokens.yml'
   push:
     branches: [main]
-    paths:
-      - 'app/assets/theme/tokens.json'
-      - 'app/assets/text_tokens.json'
-      - 'app/tool/generate_tokens.dart'
-      - 'app/lib/src/gui/theme/app_tokens.dart'
-      - 'app/lib/src/gui/theme/app_tokens.g.dart'
-      - 'app/lib/src/gui/theme/app_text_tokens.dart'
-      - 'app/lib/src/gui/theme/app_text_tokens.g.dart'
-      - '.github/workflows/tokens.yml'
+    paths: *token-paths
 
 jobs:
   regenerate:
@@ -39,7 +31,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version-file: .fvmrc
+          cache: true
       - name: Install dependencies
         run: flutter pub get
       - name: Run codegen

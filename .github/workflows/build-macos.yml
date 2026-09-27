@@ -16,7 +16,7 @@ jobs:
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version-file: .fvmrc
           cache: true
 
       - name: Install dependencies
@@ -27,11 +27,16 @@ jobs:
         working-directory: app
         run: flutter build macos --release
 
-      - name: Package app
-        run: ditto -c -k --sequesterRsrc --keepParent "app/build/macos/Build/Products/Release/TTS Narrator.app" tts-narrator-macos.zip
+      - name: Package zip
+        run: ditto -c -k --sequesterRsrc --keepParent "app/build/macos/Build/Products/Release/TTS Narrator.app" tts-narrator-${GITHUB_REF_NAME}-macos.zip
+
+      - name: Build DMG
+        run: hdiutil create -volname "TTS Narrator" -srcfolder "app/build/macos/Build/Products/Release/TTS Narrator.app" -ov -format UDZO tts-narrator-${GITHUB_REF_NAME}-macos.dmg
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: tts-narrator-macos.zip
+          files: |
+            tts-narrator-${GITHUB_REF_NAME}-macos.zip
+            tts-narrator-${GITHUB_REF_NAME}-macos.dmg
           token: ${{ secrets.GITHUB_TOKEN }}
