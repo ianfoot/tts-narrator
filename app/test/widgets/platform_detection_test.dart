@@ -35,5 +35,25 @@ void main() {
       expect(platform.isLinux, isFalse);
       expect(platform.isWindows, isFalse);
     });
+
+    test('platformTag maps macOS', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      expect(platform.platformTag, 'macos');
+    });
+
+    test('platformTag maps Linux', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      expect(platform.platformTag, 'linux');
+    });
+
+    test('platformTag maps Windows', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      expect(platform.platformTag, 'windows');
+    });
+
+    test('platformTag falls back to linux for unknown platforms', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      expect(platform.platformTag, 'linux');
+    });
   });
 }

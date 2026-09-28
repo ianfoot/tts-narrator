@@ -1,0 +1,20 @@
+{
+  "platforms": {
+    "macos": [
+      "fish.json",
+      "gemini.json",
+      "kokoro.json",
+      "mlx_kokoro.json"
+    ],
+    "linux": [
+      "fish.json",
+      "gemini.json",
+      "kokoro.json"
+    ],
+    "windows": [
+      "fish.json",
+      "gemini.json",
+      "kokoro.json"
+    ]
+  }
+}

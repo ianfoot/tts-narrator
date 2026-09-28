@@ -2,8 +2,10 @@
 
 **tts-narrator** converts text into spoken audio. It splits your text into
 segments, calls a text-to-speech engine for each one, and saves the results as
-audio files. It ships with two providers: OpenRouter (cloud) and the MLX Audio
-server (fully local, Apple Silicon).
+audio files. It ships with two providers: OpenRouter (cloud) and a generic
+OpenAI-compatible local audio server (the `mlx_audio` provider, defaulting to a
+fully local [mlx-audio](https://github.com/Blaizzy/mlx-audio) endpoint on Apple
+Silicon).
 
 ## Getting started
 
@@ -21,8 +23,8 @@ For pre-built releases and full installation instructions, see
 
 Pre-built macOS releases (`TTS Narrator.app`) and Gatekeeper security bypass
 instructions are documented in **[MAC.md](MAC.md)**. The same file covers
-setting up the **local MLX Audio TTS server** (Apple Silicon only) so the app
-can narrate fully offline.
+setting up the local OpenAI-compatible audio server (`mlx_audio`, a.k.a. the
+MLX Audio server, Apple Silicon only) so the app can narrate fully offline.
 
 ## Voice configuration
 
@@ -107,7 +109,7 @@ Model differences drive how requests are built:
 | `fish` (default) | free-form 32-hex fish.audio id | ✗ (read aloud — prompt styling disabled) | `.mp3` (free) |
 | `gemini` | named voices (rated on the OpenRouter page) | ✓ (accent/style/`[calm]`) | 24 kHz PCM `.wav` |
 | `kokoro` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — prompt styling disabled) | `.mp3` |
-| `mlx_kokoro` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — prompt styling disabled) | `.mp3` (local, free) |
+| `mlx_kokoro` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — prompt styling disabled) | `.wav` (local, free) |
 
 Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
 Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma`
@@ -139,7 +141,8 @@ still works via the raw-id field in the settings rail.
 ### Kokoro voices
 
 The Kokoro model has two flavors: the cloud `kokoro` above, and `mlx_kokoro`
-for the local MLX Audio server. British voices (prefix `b`): female `bf_alice`,
+for the local OpenAI-compatible audio server (the `mlx_audio` provider, Apple
+Silicon's MLX Audio runtimes). British voices (prefix `b`): female `bf_alice`,
 `bf_emma`, `bf_isabella`, `bf_lily`; male `bm_daniel`, `bm_fable`, `bm_george`,
 `bm_lewis`. Any `bf_*`/`bm_*` (or other accent prefixes) id is accepted.
 Friendly aliases live under `voices` in `kokoro.json`.
@@ -160,6 +163,7 @@ count, so files sort numerically), plus a `manifest.json` describing the run:
 - `gemini` → 24 kHz mono 16-bit PCM `.wav`
 - `kokoro` → `.mp3` (raw provider bytes)
 - `fish` → `.mp3` (raw provider bytes)
+- `mlx_kokoro` → `.wav` (raw provider bytes)
 
 So `story.txt` → `output/story/story_01.mp3` … `story_16.mp3`
 

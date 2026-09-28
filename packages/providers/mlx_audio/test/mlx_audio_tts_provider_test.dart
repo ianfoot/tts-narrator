@@ -56,8 +56,8 @@ void main() {
   });
 
   group('synthesize request shape', () {
-    test('posts the Kokoro model, default voice, requested format and speed to '
-        'the local endpoint', () async {
+    test('posts the requested model, default voice, requested format and speed '
+        'to the local endpoint', () async {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       final received = Completer<String>();
       final serverDone = server.listen((request) async {
@@ -70,7 +70,7 @@ void main() {
         endpoint: 'http://${server.address.address}:${server.port}',
       );
       final audio = await provider.synthesize(
-        model: 'irrelevant',
+        model: 'some/other-model',
         voice: null,
         responseFormat: 'wav',
         input: 'The quick brown fox.',
@@ -80,12 +80,38 @@ void main() {
       expect(utf8.decode(audio.bytes), 'fake-audio-bytes');
 
       final decoded = jsonDecode(await received.future) as Map;
-      expect(decoded['model'], 'mlx-community/Kokoro-82M-bf16');
+      expect(decoded['model'], 'some/other-model');
       expect(decoded['voice'], 'bm_george');
       expect(decoded['response_format'], 'wav');
       expect(decoded['speed'], 0.8);
       expect(decoded['input'], 'The quick brown fox.');
 
+      await serverDone.cancel();
+      await server.close(force: true);
+    });
+
+    test('falls back to the Kokoro model when the profile model is empty',
+        () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final received = Completer<String>();
+      final serverDone = server.listen((request) async {
+        final body = await _readBody(request);
+        received.complete(body);
+        request.response.write('x');
+        await request.response.close();
+      });
+      final provider = MlxAudioTtsProvider(
+        endpoint: 'http://${server.address.address}:${server.port}',
+      );
+      await provider.synthesize(
+        model: '  ',
+        voice: null,
+        responseFormat: 'wav',
+        input: 'Hi',
+        settings: const {},
+      );
+      final decoded = jsonDecode(await received.future) as Map;
+      expect(decoded['model'], 'mlx-community/Kokoro-82M-bf16');
       await serverDone.cancel();
       await server.close(force: true);
     });
@@ -111,6 +137,81 @@ void main() {
       );
       final decoded = jsonDecode(await received.future) as Map;
       expect(decoded['voice'], 'bf_emma');
+      await serverDone.cancel();
+      await server.close(force: true);
+    });
+
+    test('uses the endpoint from provider settings over the constructor value',
+        () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final served = Completer<String?>();
+      final serverDone = server.listen((request) async {
+        served.complete(request.headers.value(HttpHeaders.authorizationHeader));
+        request.response.write('x');
+        await request.response.close();
+      });
+      final provider = MlxAudioTtsProvider(
+        endpoint: 'http://unreachable.invalid', // superseded by settings
+      );
+      await provider.synthesize(
+        model: 'mlx-community/Kokoro-82M-bf16',
+        voice: null,
+        responseFormat: 'wav',
+        input: 'Hi',
+        settings: {
+          'endpoint': 'http://${server.address.address}:${server.port}',
+        },
+      );
+      // The request reached the settings-provided server, and carried no auth.
+      expect(await served.future, isNull);
+      await serverDone.cancel();
+      await server.close(force: true);
+    });
+
+    test('sends a Bearer token only when an api_key setting exists',
+        () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final served = Completer<String>();
+      final serverDone = server.listen((request) async {
+        served.complete(request.headers.value(HttpHeaders.authorizationHeader));
+        request.response.write('x');
+        await request.response.close();
+      });
+      final provider = MlxAudioTtsProvider(
+        endpoint: 'http://${server.address.address}:${server.port}',
+      );
+      // With an api_key setting the header is present.
+      await provider.synthesize(
+        model: 'mlx-community/Kokoro-82M-bf16',
+        voice: null,
+        responseFormat: 'wav',
+        input: 'Hi',
+        settings: {'api_key': 'secret'},
+      );
+      expect(await served.future, 'Bearer secret');
+      await serverDone.cancel();
+      await server.close(force: true);
+    });
+
+    test('omits the auth header when no api_key setting exists', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final served = Completer<String?>();
+      final serverDone = server.listen((request) async {
+        served.complete(request.headers.value(HttpHeaders.authorizationHeader));
+        request.response.write('x');
+        await request.response.close();
+      });
+      final provider = MlxAudioTtsProvider(
+        endpoint: 'http://${server.address.address}:${server.port}',
+      );
+      await provider.synthesize(
+        model: 'mlx-community/Kokoro-82M-bf16',
+        voice: null,
+        responseFormat: 'wav',
+        input: 'Hi',
+        settings: const {},
+      );
+      expect(await served.future, isNull);
       await serverDone.cancel();
       await server.close(force: true);
     });
@@ -141,7 +242,7 @@ void main() {
     test('reports id and name', () {
       final provider = MlxAudioTtsProvider();
       expect(provider.id, 'mlx_audio');
-      expect(provider.name, 'MLX Audio');
+      expect(provider.name, 'Local OpenAI-compatible');
     });
   });
 }

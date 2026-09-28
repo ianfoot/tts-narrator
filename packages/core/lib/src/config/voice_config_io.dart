@@ -49,6 +49,7 @@ String defaultConfigDir() {
           .whereType<File>()
           .where((f) => f.path.toLowerCase().endsWith('.json'))
           .where((f) => !f.path.toLowerCase().endsWith('config.json'))
+          .where((f) => !f.path.toLowerCase().endsWith('manifest.json'))
           .toList()
         ..sort((a, b) => a.path.compareTo(b.path));
 
