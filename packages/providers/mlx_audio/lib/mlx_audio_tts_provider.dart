@@ -5,25 +5,35 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 const _endpoint = 'http://localhost:8000/v1/audio/speech';
 
-/// MLX Audio TTS provider: a local service for the MLX Kokoro model.
-/// Synthesizes via the local MLX audio server (default localhost:8000) using
-/// the Kokoro model (mlx-community/Kokoro-82M-bf16) with no API key.
+/// Default model id used when the profile does not specify one (the classic
+/// MLX Kokoro deployment served by the mlx-audio server).
+const _defaultModel = 'mlx-community/Kokoro-82M-bf16';
+
+const _defaultVoice = 'bm_george';
+
+/// Local OpenAI-compatible TTS provider (legacy id `mlx_audio`).
+///
+/// Talks to any OpenAI-compatible `/v1/audio/speech` server via HTTP; the
+/// classic target is the local mlx-audio server (Apple Silicon, no API key).
+/// The endpoint and model come from config (per-profile `provider` settings),
+/// so other local or remote compatible services work without code changes.
 class MlxAudioTtsProvider implements TtsProvider {
   MlxAudioTtsProvider({this.endpoint});
 
-  /// Injectable endpoint (defaults to the local MLX audio speech URL) so
-  /// tests can point the provider at a local server.
+  /// Injectable endpoint (defaults to the local speech URL) so tests can point
+  /// the provider at a local server. Provider settings (`endpoint`) take
+  /// precedence over this constructor value.
   final String? endpoint;
 
   @override
   String get id => 'mlx_audio';
 
   @override
-  String get name => 'MLX Audio';
+  String get name => 'Local OpenAI-compatible';
 
-  /// Model plugin UI: the MLX Kokoro model has no prompt styling, but it does
-  /// expose a `speed` control (the local server accepts a speech-rate
-  /// multiplier) for any kokoro-family model id.
+  /// Model plugin UI: the model has no prompt styling, but it exposes a
+  /// `speed` control (the server accepts a speech-rate multiplier) for any
+  /// kokoro-family model id.
   @override
   ModelUiSpec modelUiSpecFor(TtsModelProfile model) {
     if (model.id.toLowerCase().contains('kokoro')) {
@@ -39,8 +49,8 @@ class MlxAudioTtsProvider implements TtsProvider {
   }
 
   /// Synthesizes [input] as audio, optionally choosing a [voice] (defaults to
-  /// the model's `bm_george` voice) at a [speed] multiplier (1.0 = normal),
-  /// returning the raw bytes. Retries on transient 5xx / empty-stream failures.
+  /// [defaultVoice]) at a [speed] multiplier (1.0 = normal), returning the raw
+  /// bytes. Retries on transient 5xx / empty-stream failures.
   ///
   /// [abort] is checked between retries (and before the first attempt); an
   /// already-cancelled token throws [AbortException] without calling the API.
@@ -54,13 +64,17 @@ class MlxAudioTtsProvider implements TtsProvider {
     double speed = 1.0,
     AbortToken? abort,
   }) async {
+    final resolvedModel = model.trim().isEmpty ? _defaultModel : model;
+    final resolvedVoice = (voice == null || voice.isEmpty) ? _defaultVoice : voice;
+    final resolvedEndpoint = settings['endpoint'] ?? endpoint ?? _endpoint;
     final body = <String, Object?>{
-      'model': 'mlx-community/Kokoro-82M-bf16',
+      'model': resolvedModel,
       'input': input,
-      'voice': voice ?? 'bm_george',
+      'voice': resolvedVoice,
       'response_format': responseFormat,
       'speed': speed,
     };
+    final apiKey = settings['api_key'] ?? settings['apiKey'];
 
     var attempt = 0;
     while (true) {
@@ -68,6 +82,8 @@ class MlxAudioTtsProvider implements TtsProvider {
       attempt++;
       final (statusCode, bytes, generationId) = await _runAttempt(
         body,
+        endpoint: resolvedEndpoint,
+        apiKey: apiKey,
         abort: abort,
       );
       abort?.throwIfCancelled();
@@ -106,10 +122,17 @@ class MlxAudioTtsProvider implements TtsProvider {
   /// abort rather than a connection failure.
   Future<(int, List<int>, String?)> _runAttempt(
     Map<String, Object?> body, {
+    required String endpoint,
+    String? apiKey,
     AbortToken? abort,
   }) async {
     try {
-      return await _post(jsonEncode(body), abort: abort);
+      return await _post(
+        jsonEncode(body),
+        endpoint: endpoint,
+        apiKey: apiKey,
+        abort: abort,
+      );
     } on AbortException {
       rethrow;
     } catch (_) {
@@ -120,6 +143,8 @@ class MlxAudioTtsProvider implements TtsProvider {
 
   Future<(int, List<int>, String?)> _post(
     String body, {
+    required String endpoint,
+    String? apiKey,
     AbortToken? abort,
   }) async {
     final client = HttpClient();
@@ -129,8 +154,11 @@ class MlxAudioTtsProvider implements TtsProvider {
     // retry) registers a fresh hook.
     final unsubscribe = abort?.onCancel(() => client.close(force: true));
     try {
-      final request = await client.postUrl(Uri.parse(endpoint ?? _endpoint));
+      final request = await client.postUrl(Uri.parse(endpoint));
       request.headers.contentType = ContentType.json;
+      if (apiKey != null && apiKey.isNotEmpty) {
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $apiKey');
+      }
       request.write(body);
       final response = await request.close();
       final bytes = await response.fold<List<int>>(

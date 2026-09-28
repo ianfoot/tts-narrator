@@ -7,8 +7,8 @@ For end-user documentation (install, usage, voice configuration), see
 
 - Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.1`, Dart 3.13.1).
 - An OpenRouter API key for cloud narration (see the README and
-  **[MAC.md](MAC.md)** for setup options). The local MLX Audio provider needs
-  no key.
+  **[MAC.md](MAC.md)** for setup options). The local OpenAI-compatible
+  provider (`mlx_audio`) needs no key.
 
 ## Repository structure
 
@@ -20,10 +20,13 @@ and holds the single shared lockfile:
   estimates. No Flutter or GUI dependencies.
 - `packages/providers/openrouter` — the OpenRouter `TtsProvider`
   implementation.
-- `packages/providers/mlx_audio` — the local MLX Audio `TtsProvider` (Apple
-  Silicon, offline).
-- `app` — `tts_narrator`, the Flutter macOS GUI. Registers both providers at
-  startup (`lib/main.dart`).
+- `packages/providers/mlx_audio` — the local OpenAI-compatible audio
+  `TtsProvider` (id `mlx_audio`; registered on every platform). Talks to any
+  `/v1/audio/speech` endpoint — defaulting to the Apple-Silicon-only
+  [mlx-audio](https://github.com/Blaizzy/mlx-audio) server at
+  `http://localhost:8000` — so endpoint and model are data, not code.
+- `app` — `tts_narrator`, the Flutter macOS GUI (Linux/Windows scaffolded).
+  Registers both providers at startup (`lib/main.dart`).
 - `voice_config.example/` — sample config: `config.json` (providers / `${ENV}`
   references, no secrets) plus one `<alias>.json` per model.
 
@@ -68,15 +71,31 @@ in their own workspace packages and are registered by the GUI at startup.
   interface for OpenRouter's `/audio/speech` endpoint — Bearer auth from the
   resolved settings, retry/backoff on transient failures, and
   `X-Generation-Id` mapped onto `ProviderAudio.generationId`.
-- **The MLX Audio provider**: `packages/providers/mlx_audio` synthesizes via a
-  local [mlx-audio](https://github.com/Blaizzy/mlx-audio) server (default
-  `http://localhost:8000/v1/audio/speech`, OpenAI-compatible, no API key) on
-  Apple Silicon Macs — fully offline narration. Its model config ships as
-  `voice_config.example/mlx_kokoro.json.example`.
+- **The local OpenAI-compatible provider**: `packages/providers/mlx_audio`
+  synthesizes via any OpenAI-compatible `/v1/audio/speech` server (default
+  `http://localhost:8000`, no API key needed, optional Bearer token from an
+  `api_key`/`apiKey` provider setting). The endpoint is resolved from the
+  provider settings (`endpoint`) before the constructor default, and the
+  requested model is the model file's `id` — so other local runtimes (MLX or
+  otherwise) work with no code, just a model file + settings. Its default
+  preset ships as `voice-config/mlx_kokoro.json`.
 - **Adding a provider** = a workspace package implementing `TtsProvider`,
   registered at startup, plus a `providers.<id>` block in `config.json`
   for its secrets. Route models to it with `"provider": "<id>"` in their model
   file.
+
+## Per-platform starter configs
+
+Which starter model files the first-run bootstrap downloads is decided by data,
+not code: `voice-config/manifest.json` maps a platform tag (`macos`/`linux`/
+`windows`) to the `<alias>.json` files shipped there by default (e.g. Linux and
+Windows omit `mlx_kokoro.json`). `packages/core` fetches/parses the manifest
+(`ManifestVoiceConfig`, `fetchVoiceConfigManifest`) and the GUI caches a copy
+in its config dir, then only requires/downloads the current platform's list —
+`config.json` is always fetched. Providers are registered on **every**
+platform; platform affinity lives in the manifest, and a model file that
+references an unregistered provider fails with the core's `'Unknown provider'`
+error (the hard gate).
 
 ## GUI internals
 
