@@ -9,12 +9,24 @@ const _voiceConfigDir = 'voice-config';
 /// directory (both in the repo and when cached locally).
 const kVoiceConfigManifestName = 'manifest.json';
 
+/// Platform tags used as manifest keys.
+///
+/// Single source of truth for the tag strings: app code (see
+/// `platform_detection.dart`) maps a running platform to a tag via these
+/// constants instead of repeating the literals.
+const kPlatformTagMacos = 'macos';
+const kPlatformTagLinux = 'linux';
+const kPlatformTagWindows = 'windows';
+
 /// Per-platform starter model file lists, parsed from the repo's
 /// `voice-config/manifest.json`.
 ///
 /// Maps a platform tag (`macos` / `linux` / `windows`) to the list of starter
 /// model `<alias>.json` file names that ship by default on that platform.
 /// `config.json` is always downloaded and is not listed here.
+///
+/// A platform with no starter files is expressed by omitting its key entirely
+/// (filesFor then returns an empty list).
 class ManifestVoiceConfig {
   ManifestVoiceConfig._(Map<String, List<String>> platforms)
     : _platforms = platforms;

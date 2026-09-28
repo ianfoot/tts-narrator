@@ -172,5 +172,53 @@ void main() {
         expect(find.textContaining('MLX Kokoro'), findsNothing);
       });
     });
+
+    testWidgets(
+      'entire flow: manifest drives dialog, download lands on disk, '
+      'relaunch skips straight to the app',
+      (tester) async {
+        // Partial state: two starters present, config.json + fish.json missing
+        // -> the dialog must appear listing the manifest starters.
+        File('$tempDir/gemini.json').writeAsStringSync('{}');
+        File('$tempDir/kokoro.json').writeAsStringSync('{}');
+
+        // Downloader mirrors downloadVoiceConfigFiles semantics: config.json
+        // always, plus each manifest starter.
+        Future<void> downloader(String configDir, List<String> files) async {
+          File('$configDir/config.json').writeAsStringSync('{}');
+          for (final file in files) {
+            File('$configDir/$file').writeAsStringSync('{}');
+          }
+        }
+
+        await pumpBootstrap(
+          tester,
+          downloader: downloader,
+          manifestLoader: () async => _linuxManifest,
+        );
+        await tester.pumpAndSettle();
+
+        // The manifest names the starters for the dialog copy.
+        expect(find.text('Download Voice Configurations?'), findsOneWidget);
+        expect(find.textContaining('Fish, Gemini, Kokoro'), findsOneWidget);
+
+        await tester.tap(find.text('Download'));
+        await tester.pumpAndSettle();
+
+        // The GUI download actually wrote the files.
+        expect(File('$tempDir/config.json').existsSync(), isTrue);
+        expect(File('$tempDir/fish.json').existsSync(), isTrue);
+
+        // A fresh bootstrap sees a complete config dir and skips the dialog.
+        await pumpBootstrap(
+          tester,
+          downloader: downloader,
+          manifestLoader: () async => _linuxManifest,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Download Voice Configurations?'), findsNothing);
+        expect(find.byType(PlatformActivityIndicator), findsNothing);
+      },
+    );
   });
 }
