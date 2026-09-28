@@ -207,20 +207,23 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
     }
   }
 
+  /// Stems whose display name is not plain title-casing.
+  static const _stemOverrides = {'mlx': 'MLX'};
+
   /// 'mlx_kokoro.json' -> 'MLX Kokoro'; 'fish.json' -> 'Fish'.
   static String _starterDisplayName(String file) {
-    final stem = file.replaceAll('.json', '');
-    return stem
-        .split('_')
-        .map(
-          (word) =>
-              word == 'mlx'
-                  ? 'MLX'
-                  : word.isEmpty
-                  ? word
-                  : word[0].toUpperCase() + word.substring(1),
-        )
-        .join(' ');
+    return _withoutExtension(file).split('_').map(_capitalizeWord).join(' ');
+  }
+
+  static String _withoutExtension(String file) => file.endsWith('.json')
+      ? file.substring(0, file.length - '.json'.length)
+      : file;
+
+  static String _capitalizeWord(String word) {
+    final override = _stemOverrides[word];
+    if (override != null) return override;
+    if (word.isEmpty) return word;
+    return '${word[0].toUpperCase()}${word.substring(1)}';
   }
 
   @override
