@@ -275,6 +275,14 @@
       "deletedTitle": "Segments deleted",
       "removedMessage": "Removed $removedCount segment $fileWord.",
       "cleanupFailedTitle": "Cleanup failed"
+    },
+    "bootstrap": {
+      "downloadTitle": "Download Voice Configurations?",
+      "downloadPrompt": "No voice configurations found. Would you like to download starter configurations ($files) from GitHub?",
+      "notNow": "Not Now",
+      "download": "Download",
+      "downloading": "Downloading voice configurations...",
+      "initializing": "Initializing..."
     }
   }
 }

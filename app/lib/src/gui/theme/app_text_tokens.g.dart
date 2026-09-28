@@ -109,6 +109,12 @@ final class TextTokens {
   static const String defaults_outDir = 'output';
   static const String defaults_passagePrefix = 'Narrate this passage for an audiobook. You are a warm, composed female narrator.';
   static const String defaults_style = 'warm, composed, restrained, literary';
+  static const String gui_bootstrap_download = 'Download';
+  static const String gui_bootstrap_downloadPrompt = 'No voice configurations found. Would you like to download starter configurations (\u0024files) from GitHub?';
+  static const String gui_bootstrap_downloadTitle = 'Download Voice Configurations?';
+  static const String gui_bootstrap_downloading = 'Downloading voice configurations...';
+  static const String gui_bootstrap_initializing = 'Initializing...';
+  static const String gui_bootstrap_notNow = 'Not Now';
   static const String gui_cleanup_cancel = 'Cancel';
   static const String gui_cleanup_cleanupFailedTitle = 'Cleanup failed';
   static const String gui_cleanup_confirmMessage = 'This deletes the per-segment audio clips. The combined track and the manifest are kept. Deleted segments can\'t be reused by --resume, so a re-run narrates them again.';

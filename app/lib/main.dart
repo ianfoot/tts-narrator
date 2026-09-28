@@ -13,6 +13,7 @@ import 'src/gui/controller/config_loader.dart';
 import 'src/gui/platform/app_root.dart';
 import 'src/gui/platform/platform_detection.dart';
 import 'src/gui/platform/widgets/platform_activity_indicator.dart';
+import 'src/gui/theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 
 /// Root app that provides a Navigator so ConfigBootstrap can show dialogs.
 class BootstrapApp extends StatelessWidget {
@@ -38,7 +39,7 @@ class BootstrapApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TTS Narrator',
+      title: TextTokens.app_title,
       debugShowCheckedModeBanner: false,
       home: ConfigBootstrap(
         configDir: configDir,
@@ -167,20 +168,20 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Download Voice Configurations?'),
+        title: const Text(TextTokens.gui_bootstrap_downloadTitle),
         content: Text(
-          'No voice configurations found. Would you like to download starter '
-          'configurations (${_starterFiles.map(_starterDisplayName).join(', ')}) '
-          'from GitHub?',
+          fillTextTemplate(TextTokens.gui_bootstrap_downloadPrompt, {
+            'files': _starterFiles.map(_starterDisplayName).join(', '),
+          }),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Not Now'),
+            child: const Text(TextTokens.gui_bootstrap_notNow),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Download'),
+            child: const Text(TextTokens.gui_bootstrap_download),
           ),
         ],
       ),
@@ -236,7 +237,7 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
             children: [
               PlatformActivityIndicator(size: 32),
               SizedBox(height: 16),
-              Text('Downloading voice configurations...'),
+              Text(TextTokens.gui_bootstrap_downloading),
             ],
           ),
         ),
@@ -248,7 +249,7 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
     }
 
     // Waiting for user confirmation
-    return const Scaffold(body: Center(child: Text('Initializing...')));
+    return const Scaffold(body: Center(child: Text(TextTokens.gui_bootstrap_initializing)));
   }
 }
 

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator/main.dart';
 import 'package:tts_narrator/src/gui/platform/widgets/platform_activity_indicator.dart';
+import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 final _linuxManifest = ManifestVoiceConfig.fromJson({
@@ -71,9 +72,9 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Download Voice Configurations?'), findsOneWidget);
-      expect(find.text('Not Now'), findsOneWidget);
-      expect(find.text('Download'), findsOneWidget);
+      expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsOneWidget);
+      expect(find.text(TextTokens.gui_bootstrap_notNow), findsOneWidget);
+      expect(find.text(TextTokens.gui_bootstrap_download), findsOneWidget);
     });
 
     testWidgets('shows AppRoot when config files exist', (tester) async {
@@ -86,7 +87,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // No dialog, no spinner — straight to the app.
-      expect(find.text('Download Voice Configurations?'), findsNothing);
+      expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsNothing);
       expect(find.byType(PlatformActivityIndicator), findsNothing);
     });
 
@@ -106,8 +107,8 @@ void main() {
 
       // Dialog is up; confirm the download.
       await tester.pumpAndSettle();
-      expect(find.text('Download Voice Configurations?'), findsOneWidget);
-      await tester.tap(find.text('Download'));
+      expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsOneWidget);
+      await tester.tap(find.text(TextTokens.gui_bootstrap_download));
       // The downloader is gated, so pump explicit frames (pumpAndSettle would
       // wait forever on the pending future).
       await tester.pump();
@@ -115,13 +116,13 @@ void main() {
 
       // The downloader is gated, so the spinner stays visible.
       expect(find.byType(PlatformActivityIndicator), findsOneWidget);
-      expect(find.text('Downloading voice configurations...'), findsOneWidget);
+      expect(find.text(TextTokens.gui_bootstrap_downloading), findsOneWidget);
 
       // Releasing the downloader lands the app.
       gate.complete();
       await tester.pumpAndSettle();
       expect(find.byType(PlatformActivityIndicator), findsNothing);
-      expect(find.text('Download Voice Configurations?'), findsNothing);
+      expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsNothing);
       expect(calls.single.$1, tempDir);
       expect(calls.single.$2, ['fish.json', 'gemini.json', 'kokoro.json']);
     });
@@ -139,12 +140,12 @@ void main() {
       );
 
       await tester.pumpAndSettle();
-      expect(find.text('Download Voice Configurations?'), findsOneWidget);
-      await tester.tap(find.text('Not Now'));
+      expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsOneWidget);
+      await tester.tap(find.text(TextTokens.gui_bootstrap_notNow));
       await tester.pumpAndSettle();
 
       expect(downloaded, isFalse);
-      expect(find.text('Download Voice Configurations?'), findsNothing);
+      expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsNothing);
     });
 
     testWidgets('on macOS the dialog lists the MLX Kokoro starter', (
@@ -155,7 +156,7 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        expect(find.text('Download Voice Configurations?'), findsOneWidget);
+        expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsOneWidget);
         expect(find.textContaining('MLX Kokoro'), findsOneWidget);
       });
     });
@@ -168,7 +169,7 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        expect(find.text('Download Voice Configurations?'), findsOneWidget);
+        expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsOneWidget);
         expect(find.textContaining('MLX Kokoro'), findsNothing);
       });
     });
@@ -199,10 +200,10 @@ void main() {
         await tester.pumpAndSettle();
 
         // The manifest names the starters for the dialog copy.
-        expect(find.text('Download Voice Configurations?'), findsOneWidget);
+        expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsOneWidget);
         expect(find.textContaining('Fish, Gemini, Kokoro'), findsOneWidget);
 
-        await tester.tap(find.text('Download'));
+        await tester.tap(find.text(TextTokens.gui_bootstrap_download));
         await tester.pumpAndSettle();
 
         // The GUI download actually wrote the files.
@@ -216,7 +217,7 @@ void main() {
           manifestLoader: () async => _linuxManifest,
         );
         await tester.pumpAndSettle();
-        expect(find.text('Download Voice Configurations?'), findsNothing);
+        expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsNothing);
         expect(find.byType(PlatformActivityIndicator), findsNothing);
       },
     );
