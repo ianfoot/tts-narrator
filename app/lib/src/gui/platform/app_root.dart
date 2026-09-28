@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
@@ -11,6 +10,7 @@ import '../menu/macos_menu.dart';
 import '../narration/narration_screen.dart';
 import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart';
+import 'platform_detection.dart';
 
 /// Cross-platform app root: a [CupertinoApp] on macOS, a [MaterialApp]
 /// elsewhere, sharing one [AppController] and navigator key.
@@ -29,8 +29,6 @@ class AppRoot extends StatefulWidget {
 
 class _AppRootState extends State<AppRoot> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-
-  bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
 
   @override
   void initState() {
@@ -143,7 +141,7 @@ class _AppRootState extends State<AppRoot> {
       valueListenable: widget.controller.themeNotifier,
       builder: (context, themeMode, _) {
         final home = EditorScreen(controller: widget.controller);
-        if (_isMac) {
+        if (isMac) {
           final dark =
               resolveBrightness(
                 themeMode,

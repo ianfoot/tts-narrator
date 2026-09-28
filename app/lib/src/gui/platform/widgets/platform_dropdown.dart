@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_tokens.dart';
+import '../platform_detection.dart';
 
 /// Platform-aware single-select dropdown: a [CupertinoMenuAnchor] popup button
 /// on macOS (no Material dependency), a [DropdownButton] inside an
@@ -42,7 +42,7 @@ class PlatformDropdown<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget dropdown;
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isMac) {
       dropdown = _buildCupertino();
     } else {
       dropdown = _buildMaterial(context);

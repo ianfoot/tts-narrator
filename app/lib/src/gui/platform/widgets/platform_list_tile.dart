@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import '../platform_detection.dart';
 
 /// Platform-aware list tile: [CupertinoListTile] on macOS, [ListTile]
 /// elsewhere. Both render a leading/title/subtitle/trailing row without
@@ -21,7 +22,7 @@ class PlatformListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isMac) {
       return CupertinoListTile(
         leading: leading,
         title: title,

@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_tokens.dart';
+import '../platform_detection.dart';
 
 /// Platform-aware expandable disclosure group: a tappable header (chevron +
 /// [label]) that toggles [child] visibility. Collapsed by default.
@@ -91,7 +91,7 @@ class PlatformDisclosure extends StatelessWidget {
   /// Platform-native chevron: CupertinoIcons on macOS, Material expand icon
   /// elsewhere.
   static IconData _chevron(BuildContext context) {
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isMac) {
       return CupertinoIcons.chevron_right;
     }
     return Icons.expand_more;

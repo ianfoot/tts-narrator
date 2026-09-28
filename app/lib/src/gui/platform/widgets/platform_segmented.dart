@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_tokens.dart';
+import '../platform_detection.dart';
 
 /// Platform-aware single-select segmented control: a custom token-driven
 /// control on macOS (modeled on System Settings' Appearance switch), a
@@ -43,7 +43,7 @@ class PlatformSegmentedControl<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget segmented;
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isMac) {
       segmented = _buildCupertino(context);
     } else {
       segmented = _buildMaterial();

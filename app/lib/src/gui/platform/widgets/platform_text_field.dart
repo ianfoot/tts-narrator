@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import '../platform_detection.dart';
 
 /// Platform-aware text field: [CupertinoTextField] on macOS, [TextField]
 /// elsewhere. Supports a full-height multiline editor via [expands].
@@ -48,7 +49,7 @@ class PlatformTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget textField;
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isMac) {
       textField = CupertinoTextField(
         controller: controller,
         onChanged: onChanged,
