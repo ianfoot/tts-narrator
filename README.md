@@ -1,43 +1,11 @@
 # tts-narrator
 
-Narrate a text file as an audiobook via TTS providers (two ship with this
-repo: OpenRouter and the local MLX Audio server). The default model is **fish**
-(`fish-audio/s2.1-pro-free`) — free — so a first run costs nothing, with a
-friendly "British Female Narrator" voice out of the box. Other models: Gemini
-(`google/gemini-3.1-flash-tts-preview`) and Kokoro (`hexgrad/kokoro-82m`).
+**tts-narrator** converts text into spoken audio. It splits your text into
+segments, calls a text-to-speech engine for each one, and saves the results as
+audio files. It ships with two providers: OpenRouter (cloud) and the MLX Audio
+server (fully local, Apple Silicon).
 
-Uses the [OpenRouter text-to-speech endpoint](https://openrouter.ai/docs/guides/overview/multimodal/tts)
-(`POST /api/v1/audio/speech`) through the OpenRouter provider.
-
-It can also run **fully locally** — no API key, no cloud — on Apple Silicon
-Macs (M1–M4): the `mlx_audio` provider (model `MLX Kokoro 82M`) synthesizes
-via the local [mlx-audio](https://github.com/Blaizzy/mlx-audio) server running
-on your own Mac. The local server can be used instead of OpenRouter, or
-alongside it (each model picks its provider). Setup instructions live in
-**[MAC.md](MAC.md)**.
-
-A Dart **pub workspace** with three packages:
-- `packages/core` — pure-Dart narration core (segmentation, provider-agnostic TTS
-  dispatch, voice config, cost estimates), no Flutter or GUI deps.
-- `packages/providers/openrouter` — the OpenRouter TTS provider, registered by
-  the GUI at startup.
-- `packages/providers/mlx_audio` — the local MLX Audio TTS provider (Apple
-  Silicon, offline), also registered at startup.
-- `app` — the Flutter macOS GUI (adds `audioplayers`, `file_selector`).
-
-The core has no Flutter dependencies and no provider-specific logic, so the same
-core can be driven from the GUI (or new providers) without rework.
-
-## Download & Installation (macOS)
-
-Pre-built macOS releases (`TTS Narrator.app`) and Gatekeeper security bypass instructions are documented in **[MAC.md](MAC.md)**. The same file covers setting up the **local MLX Audio TTS server** (Apple Silicon only) so the app can narrate fully offline.
-
-## Requirements
-
-- Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.1`, Dart 3.13.1).
-- An OpenRouter API key, configured in the `providers.openrouter` block in the [voice config](#voice-configuration) (a literal value or a runtime `${ENV}` reference), via the `OPENROUTER_API_KEY` environment variable, or — for double-click launches that have no shell environment — through the Settings rail's **API key** section, which stores it in the OS secure store (macOS Keychain / Windows Credential Manager / Linux `libsecret`).
-
-## Usage
+## Getting started
 
 To run the application in development:
 
@@ -46,12 +14,22 @@ cd app
 fvm flutter run -d macos
 ```
 
+For pre-built releases and full installation instructions, see
+[Download & Installation (macOS)](#download--installation-macos) below.
+
+## Download & Installation (macOS)
+
+Pre-built macOS releases (`TTS Narrator.app`) and Gatekeeper security bypass
+instructions are documented in **[MAC.md](MAC.md)**. The same file covers
+setting up the **local MLX Audio TTS server** (Apple Silicon only) so the app
+can narrate fully offline.
+
 ## Voice configuration
 
 Everything user-facing — the default model, per-provider settings, models,
 per-model providers and default voices, prices, and friendly voice aliases —
-lives in a config **directory** shared by the CLI and the GUI (macOS/Linux
-default to `~/.config/tts-narrator`, Windows to `%APPDATA%`): Two kinds of files:
+lives in a config **directory** shared by the CLI and the GUI. Two kinds of
+files:
 
 - `config.json` — the global bits: `default_model` (the preselected model on
   cold start) and the per-provider settings block (secrets).
@@ -120,11 +98,9 @@ Cross-platform paths:
 }
 ```
 
-### Models
+## Models
 
-The fish bootstrap is compiled in (`packages/core/lib/src/narration/model_profiles.dart`);
-every other model comes from its own `<alias>.json` file in the voice
-config. Model differences drive how requests are built:
+Model differences drive how requests are built:
 
 | Alias | Voice format | Prompt styling | Output |
 | --- | --- | --- | --- |
@@ -135,7 +111,8 @@ config. Model differences drive how requests are built:
 
 Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
 Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma`
-("Emma"). The voice can be selected in the GUI settings rail.
+("Emma"), `mlx_kokoro`=`bm_george` ("George"). The voice can be selected in the
+GUI settings rail.
 
 Gender tags drive a narrator-gender filter (and, for prompt-driven models, may
 rewrite the "narrator" phrase in the passage prefix). Tagging is per-voice and
@@ -152,46 +129,20 @@ gemini (and any other prompt-styled model).
 Add or swap a model by adding/editing its `<alias>.json` file; it then
 becomes selectable via the model dropdown in the UI.
 
-### Providers
-
-The narration layer is provider-agnostic: **core** (`packages/core`) defines a
-`TtsProvider` interface — `synthesize(model, voice, input, responseFormat,
-settings)` → `ProviderAudio` — and a `TtsProviderRegistry` that maps a provider
-id to a factory function. Core ships **no** provider; concrete providers live
-in their own workspace packages and are registered by the GUI at startup.
-
-- **The built-in provider**: `packages/providers/openrouter` implements the
-  interface for OpenRouter's `/audio/speech` endpoint — Bearer auth from the
-  resolved settings, retry/backoff on transient failures, and
-  `X-Generation-Id` mapped onto `ProviderAudio.generationId`.
-- **The MLX Audio provider**: `packages/providers/mlx_audio` synthesizes via a
-  local [mlx-audio](https://github.com/Blaizzy/mlx-audio) server (default
-  `http://localhost:8000/v1/audio/speech`, OpenAI-compatible, no API key) on
-  Apple Silicon Macs — fully offline narration. Its model config ships as
-  `voice_config.example/mlx_kokoro.json.example`.
-- **Adding a provider** = a workspace package implementing `TtsProvider`,
-  registered at startup, plus a `providers.<id>` block in `config.json`
-  for its secrets. Route models to it with `"provider": "<id>"` in their model
-  file.
-- **Secrets**: `providers.<id>` is an opaque string→string map. A value of the
-  form `${ENV_NAME}` reads that environment variable once at run-config build
-  time (a missing or empty variable is an error naming it); any other value is
-  used literally. The rule is generic — core never interprets the keys, and
-  each provider keeps its own key names.
-
 ### Gemini voices
 
 Voices are the named ones on the OpenRouter page (e.g. `Charon`, `Zephyr`,
 `Puck`). Add friendly aliases for the ones you use under `voices` in
-`gemini.json` — the drop-down shows whatever you
-configure. Any unlisted id still works via the raw-id field in the settings rail.
+`gemini.json` — the drop-down shows whatever you configure. Any unlisted id
+still works via the raw-id field in the settings rail.
 
 ### Kokoro voices
 
-British voices (prefix `b`): female `bf_alice`, `bf_emma`, `bf_isabella`,
-`bf_lily`; male `bm_daniel`, `bm_fable`, `bm_george`, `bm_lewis`. Any
-`bf_*`/`bm_*` (or other accent prefixes) id is accepted. Friendly aliases live
-under `voices` in `kokoro.json`.
+The Kokoro model has two flavors: the cloud `kokoro` above, and `mlx_kokoro`
+for the local MLX Audio server. British voices (prefix `b`): female `bf_alice`,
+`bf_emma`, `bf_isabella`, `bf_lily`; male `bm_daniel`, `bm_fable`, `bm_george`,
+`bm_lewis`. Any `bf_*`/`bm_*` (or other accent prefixes) id is accepted.
+Friendly aliases live under `voices` in `kokoro.json`.
 
 ### Fish voices
 
@@ -202,9 +153,9 @@ page and in `voice_config.example/fish.json`.
 
 ## Output
 
-Each segment is written to `output/<input-stem>/` as `<input-stem>_<nn>.<ext>`
-(padded to the width of the segment count, so files sort numerically), plus a
-`manifest.json` describing the run:
+Each segment is written to an output folder you choose (default `output/`), as
+`<input-stem>/<input-stem>_<nn>.<ext>` (padded to the width of the segment
+count, so files sort numerically), plus a `manifest.json` describing the run:
 
 - `gemini` → 24 kHz mono 16-bit PCM `.wav`
 - `kokoro` → `.mp3` (raw provider bytes)
@@ -227,7 +178,8 @@ Playback (macOS): `afplay output/story/story_1.wav` (Gemini),
 
 ## How narration text is segmented
 
-By default the text is segmented so each paragraph gets a controlled, consistent reading:
+By default the text is segmented so each paragraph gets a controlled,
+consistent reading:
 
 1. Split the input on blank lines into paragraphs.
 2. Merge a paragraph into the next when it is shorter than the "Min words per segment" setting
@@ -252,9 +204,9 @@ consistent narrator.
 
 ## GUI (macOS)
 
-A Flutter desktop app (`app/`) provides an editor-first interface: type or paste the text you want narrated right into the window
-(no backing file — the core reads the in-memory text via `sourceText`), then
-click **Narrate**. A collapsible settings rail controls the model, voice, and
+A Flutter desktop app (`app/`) provides an editor-first interface: type or
+paste the text you want narrated right into the window (no backing file — the
+core reads the in-memory text via `sourceText`), then click **Narrate**. A collapsible settings rail controls the model, voice, and
 model-specific options (declared by each model's provider plugin), the run view
 shows per-segment progress with in-app playback of finished clips, Cancel, and
 Back — and the editor is intact when you return. The native macOS menu bar
@@ -272,67 +224,6 @@ fvm flutter build macos --debug     # build the .app (SPM-only, no CocoaPods)
 fvm flutter build macos --release
 ```
 
-- The UI is built from Flutter's built-in Cupertino widgets on macOS (Material
-  on Linux/Windows when those are scaffolded), selected by a thin platform
-  root — no third-party UI package. The `PlatformMenuBar` menu bar is
-  macOS-only; the same controller command slots are what in-app menus bind on
-  other platforms.
-- The sandboxed macOS app needs the **`com.apple.security.network.client`**
-  entitlement to reach the OpenRouter API; it's already present in
-  `app/macos/Runner/DebugProfile.entitlements` and `Release.entitlements`.
-- Linux/Windows are planned but not yet scaffolded (macOS-only for now).
-- The GUI reads the `path_provider` `getApplicationSupportDirectory()` config
-  (`tts-narrator/` subfolder)
-  for voice aliases and the per-provider settings block, but never writes it —
-  edit those files directly. It has no secret-key field; each
-  provider's key comes from the `providers.<id>` block in `config.json`. The
-  GUI resolves `${ENV}` references from its own environment at run-config build
-  time. Note: a GUI app launched from the Finder doesn't inherit a shell's
-  environment, so for double-click use write a literal key in
-  `providers.openrouter` instead of a `${OPENROUTER_API_KEY}` reference.
-
-### Design tokens
-
-The GUI's colors, type sizes, and font weights live in
-`app/assets/theme/tokens.json` and are emitted into the private
-`app/lib/src/gui/theme/app_tokens.g.dart` (a `part of` of the public
-`app_tokens.dart`) by `app/tool/generate_tokens.dart`. Hand-editing the
-`.g.dart` file will be overwritten on the next regeneration, and CI
-fails any PR that changes the JSON without committing the regenerated
-output. `AppMetrics` (radii, gaps, the toolbar/status bar heights, the
-default/minimum window sizes) is intentionally **not** in the JSON —
-those are layout-grid constants that don't change with the brand.
-
-To change a color or a font size:
-
-```bash
-cd app
-# 1. Edit app/assets/theme/tokens.json.
-# 2. Regenerate the .g.dart from the JSON.
-fvm dart run tool/generate_tokens.dart
-# 3. Run the test suite — the golden test in
-#    test/theme/codegen_test.dart re-runs the codegen into a temp
-#    tree and asserts the output is byte-identical to the checked-in
-#    app_tokens.g.dart. It fails if you forgot step 2.
-fvm flutter test
-# 4. Commit both files.
-```
-
-The JSON shape:
-
-- `colors.<name>.{light,dark}` — hex strings including alpha, e.g.
-  `"0xFFFBFBF9"` or `"0x14000000"`. The codegen emits a `Color(int)` so
-  `0xAARRGGBB` form is required.
-- `m3Seed` — the Material 3 `ColorScheme.fromSeed` value (theme-
-  independent). Same hex format as the colors.
-- `typography.<name>` — at minimum a `fontSize` integer; optional
-  `height` (number), `fontWeight` (`"w600"` style — maps to
-  `FontWeight.w600`), and `fontFamily`. A `fontFamily` of
-  `"platform:mono"` or `"platform:editorSerif"` is a sentinel: the
-  family is resolved at runtime by `AppTypography.monoFamily` /
-  `.editorSerifFamily` against `defaultTargetPlatform`. Anything else
-  is treated as a literal family name.
-
 ## Notes / current behaviour
 
 - OpenRouter's Gemini model page lists `response_format: mp3` as supported, but
@@ -346,3 +237,9 @@ The JSON shape:
   are approximate: pricing comes from each model's OpenRouter page (gemini
   `$1/$20` per 1M text/audio tokens, kokoro `$0.62/M` chars, fish free);
   duration assumes ~160 words/min and Gemini audio billed at ~160 tokens/sec.
+
+## Development
+
+For contributor documentation — repository structure, voice-config schema,
+provider architecture, GUI internals, and the design-token workflow — see
+**[DEVELOPER.md](DEVELOPER.md)**.
