@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
+import '../platform/platform_detection.dart';
 import '../platform/platform_page.dart';
 
 import '../cleanup_segments_flow.dart';
@@ -54,8 +54,6 @@ class _EditorScreenState extends State<EditorScreen> {
   bool _playingFull = false;
 
   AppController get _controller => widget.controller;
-
-  bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
 
   @override
   void initState() {
@@ -263,7 +261,7 @@ class _EditorScreenState extends State<EditorScreen> {
       child: Row(
         children: [
           Icon(
-            _isMac ? CupertinoIcons.exclamationmark_triangle : Icons.warning,
+            isMac ? CupertinoIcons.exclamationmark_triangle : Icons.warning,
             size: 14,
             color: foreground,
           ),

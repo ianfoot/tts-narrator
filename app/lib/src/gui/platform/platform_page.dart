@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_tokens.dart';
+import 'platform_detection.dart';
 
 /// Platform-aware full-screen page: Cupertino on macOS, Material elsewhere.
 /// Replaces the Scaffold/CupertinoPageScaffold pair so the editor reuses one
@@ -16,7 +16,7 @@ class PlatformPage extends StatelessWidget {
   Widget build(BuildContext context) {
     // `bg-app` paints the whole window backdrop behind the surface columns.
     final bgApp = AppTokens.of(context).colors.bgApp;
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isMac) {
       return CupertinoPageScaffold(
         backgroundColor: bgApp,
         child: SafeArea(child: child),

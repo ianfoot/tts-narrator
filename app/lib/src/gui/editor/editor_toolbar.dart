@@ -1,9 +1,9 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
+import '../platform/platform_detection.dart';
 import '../platform/widgets/platform_button.dart';
 import '../platform/widgets/platform_icon_button.dart';
 import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
@@ -60,8 +60,6 @@ class _EditorToolbarState extends State<EditorToolbar> {
     if (mounted) setState(() {});
   }
 
-  bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
-
   /// Opens the native directory picker for the output destination; leaves the
   /// current directory unchanged when cancelled or on a platform error.
   Future<void> _pickOutputDirectory() async {
@@ -86,11 +84,10 @@ class _EditorToolbarState extends State<EditorToolbar> {
         {'mode': _themeModeLabel(currentMode)},
       ),
       icon: Icon(switch (currentMode) {
-        AppThemeMode.light =>
-          _isMac ? CupertinoIcons.sun_max : Icons.light_mode,
-        AppThemeMode.dark => _isMac ? CupertinoIcons.moon : Icons.dark_mode,
+        AppThemeMode.light => isMac ? CupertinoIcons.sun_max : Icons.light_mode,
+        AppThemeMode.dark => isMac ? CupertinoIcons.moon : Icons.dark_mode,
         AppThemeMode.system =>
-          _isMac ? CupertinoIcons.circle_lefthalf_fill : Icons.brightness_auto,
+          isMac ? CupertinoIcons.circle_lefthalf_fill : Icons.brightness_auto,
       }),
       onPressed: () {
         controller.themeMode = switch (controller.themeMode) {
@@ -112,7 +109,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
     return PlatformIconButton(
       key: const Key('outDirPickerButton'),
       tooltip: TextTokens.gui_editor_toolbar_setOutputFolder,
-      icon: Icon(_isMac ? CupertinoIcons.folder_badge_plus : Icons.output),
+      icon: Icon(isMac ? CupertinoIcons.folder_badge_plus : Icons.output),
       onPressed: _pickOutputDirectory,
     );
   }
@@ -124,7 +121,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
       key: const Key('editorSaveButton'),
       tooltip: TextTokens.gui_editor_toolbar_save,
       icon: Icon(
-        _isMac ? CupertinoIcons.square_arrow_down : Icons.save_outlined,
+        isMac ? CupertinoIcons.square_arrow_down : Icons.save_outlined,
       ),
       onPressed: controller.dirty ? () => controller.save() : null,
     );
@@ -136,7 +133,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
     return PlatformIconButton(
       key: const Key('editorClearButton'),
       tooltip: 'Clear text (⌘⇧L)',
-      icon: Icon(_isMac ? CupertinoIcons.delete_left : Icons.clear),
+      icon: Icon(isMac ? CupertinoIcons.delete_left : Icons.clear),
       onPressed: controller.canClearText ? () => controller.clearText() : null,
     );
   }
@@ -176,7 +173,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
         ? TextTokens.gui_editor_toolbar_stop
         : TextTokens.gui_editor_toolbar_playFull;
     final btnIcon = Icon(
-      _isMac
+      isMac
           ? (widget.playingFull
                 ? CupertinoIcons.stop_circle
                 : CupertinoIcons.play_fill)
@@ -186,7 +183,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
       size: 14,
       color: colors.textPrimary,
     );
-    if (_isMac) {
+    if (isMac) {
       return CupertinoButton(
         key: const Key('editorFullPlayButton'),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
@@ -229,7 +226,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
     return PlatformIconButton(
       key: const Key('editorCleanupButton'),
       tooltip: TextTokens.gui_editor_toolbar_cleanupSegments,
-      icon: Icon(_isMac ? CupertinoIcons.trash : Icons.delete_outline),
+      icon: Icon(isMac ? CupertinoIcons.trash : Icons.delete_outline),
       onPressed: widget.onCleanupSegments,
     );
   }
@@ -249,7 +246,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
         },
         compact: true,
         icon: Icon(
-          _isMac ? CupertinoIcons.play_fill : Icons.play_arrow,
+          isMac ? CupertinoIcons.play_fill : Icons.play_arrow,
           size: 18,
         ),
         child: Row(
@@ -283,7 +280,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
                 key: const Key('railToggleButton'),
                 tooltip: TextTokens.gui_editor_toolbar_showHideSettings,
                 icon: Icon(
-                  _isMac
+                  isMac
                       ? CupertinoIcons.sidebar_left
                       : (widget.railVisible
                             ? Icons.settings
@@ -297,7 +294,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
               PlatformIconButton(
                 key: const Key('editorOpenButton'),
                 tooltip: TextTokens.gui_editor_toolbar_openTextFile,
-                icon: Icon(_isMac ? CupertinoIcons.folder : Icons.folder_open),
+                icon: Icon(isMac ? CupertinoIcons.folder : Icons.folder_open),
                 onPressed: () => controller.commands.onOpen?.call(),
               ),
               const SizedBox(width: 6),

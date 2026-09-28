@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_tokens.dart';
+import '../platform_detection.dart';
 
 /// Enabled toolbar icons rest at ~78% opacity and step up to full
 /// [AppPalette.textPrimary] only while hovered (or pressed), so quiet chrome
@@ -58,7 +58,7 @@ class _PlatformIconButtonState extends State<PlatformIconButton> {
       child: widget.icon,
     );
     final Widget button;
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isMac) {
       button = CupertinoButton(
         onPressed: widget.onPressed,
         padding: const EdgeInsets.all(8),

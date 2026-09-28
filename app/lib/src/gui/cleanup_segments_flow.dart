@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'controller/app_controller.dart';
+import 'platform/platform_detection.dart';
 import 'theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 
 /// Runs the "Clean Up Segments…" flow: asks for confirmation (deleting the
@@ -56,14 +56,12 @@ Future<void> runCleanupSegmentsFlow({
   }
 }
 
-bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
-
 /// Platform-aware confirmation dialog; returns true only when the user
 /// confirmed deletion.
 Future<bool?> _confirmDeletion(BuildContext context) {
   const title = TextTokens.gui_cleanup_confirmTitle;
   const message = TextTokens.gui_cleanup_confirmMessage;
-  if (_isMac) {
+  if (isMac) {
     return showCupertinoDialog<bool>(
       context: context,
       builder: (dialogContext) => CupertinoAlertDialog(
@@ -108,7 +106,7 @@ void _showInfoDialog(
   required String title,
   required String message,
 }) {
-  if (_isMac) {
+  if (isMac) {
     showCupertinoDialog<void>(
       context: context,
       builder: (dialogContext) => CupertinoAlertDialog(

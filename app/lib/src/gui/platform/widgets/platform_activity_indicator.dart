@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import '../platform_detection.dart';
 
 /// Platform-aware indeterminate/spinner activity indicator:
 /// [CupertinoActivityIndicator] on macOS, [CircularProgressIndicator]
@@ -12,7 +13,7 @@ class PlatformActivityIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isMac) {
       return CupertinoActivityIndicator(radius: size / 2);
     }
     return SizedBox(

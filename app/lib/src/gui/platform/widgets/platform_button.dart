@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_tokens.dart';
+import '../platform_detection.dart';
 
 /// Visual weighting for [PlatformButton].
 enum PlatformButtonStyle { filled, outlined }
@@ -49,7 +49,7 @@ class PlatformButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget button;
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isMac) {
       button = _buildCupertino(context);
     } else {
       button = _buildMaterial();

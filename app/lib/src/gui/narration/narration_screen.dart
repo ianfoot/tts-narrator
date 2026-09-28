@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart' show formatCostUsd;
 
 import '../controller/app_controller.dart';
+import '../platform/platform_detection.dart';
 import '../platform/platform_page.dart';
 import '../platform/widgets/platform_activity_indicator.dart';
 import '../platform/widgets/platform_button.dart';
@@ -48,8 +48,6 @@ class _NarrationScreenState extends State<NarrationScreen> {
   static const _confirmLeaveDelay = Duration(milliseconds: 250);
 
   AppController get _controller => widget.controller;
-
-  bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
 
   @override
   void initState() {
@@ -146,13 +144,13 @@ class _NarrationScreenState extends State<NarrationScreen> {
 
   /// Confirms leaving via the extracted dialog class.
   Future<bool> _confirmCancel() =>
-      ActiveRunConfirmDialog.show(context: context, isMac: _isMac);
+      ActiveRunConfirmDialog.show(context: context, isMac: isMac);
 
   AppTokens get _tokens => AppTokens.of(context);
 
-  IconData _playIcon() => _isMac ? CupertinoIcons.play_fill : Icons.play_arrow;
+  IconData _playIcon() => isMac ? CupertinoIcons.play_fill : Icons.play_arrow;
   IconData _stopIcon() =>
-      _isMac ? CupertinoIcons.stop_circle : Icons.stop_circle_outlined;
+      isMac ? CupertinoIcons.stop_circle : Icons.stop_circle_outlined;
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +209,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
           PlatformIconButton(
             key: const Key('runBackButton'),
             tooltip: TextTokens.gui_narration_backToEditor,
-            icon: Icon(_isMac ? CupertinoIcons.back : Icons.arrow_back),
+            icon: Icon(isMac ? CupertinoIcons.back : Icons.arrow_back),
             onPressed: () => _onBack(),
           ),
           const SizedBox(width: 8),
@@ -338,7 +336,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     final Widget indicator;
     if (segment.resumed) {
       indicator = Icon(
-        _isMac ? CupertinoIcons.refresh : Icons.refresh,
+        isMac ? CupertinoIcons.refresh : Icons.refresh,
         key: Key('segStatus_resumed_${segment.index}'),
         size: 18,
         color: colors.accentWarning,
@@ -360,7 +358,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
           shape: BoxShape.circle,
         ),
         child: Icon(
-          _isMac ? CupertinoIcons.check_mark : Icons.check,
+          isMac ? CupertinoIcons.check_mark : Icons.check,
           size: 12,
           color: colors.textOnAccent,
         ),
@@ -457,7 +455,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
       color: colors.textPrimary,
     );
     final Widget button;
-    if (_isMac) {
+    if (isMac) {
       button = CupertinoButton(
         key: Key('segAction_${segment.index}'),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
@@ -492,7 +490,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
       );
     }
     // Reused clips get a Material-only tooltip (Cupertino has none).
-    if (segment.resumed && !_isMac) {
+    if (segment.resumed && !isMac) {
       return Tooltip(
         message: TextTokens.gui_narration_resumedTooltip,
         child: button,
@@ -528,7 +526,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
             PlatformButton(
               key: const Key('runCancelButton'),
               onPressed: _onCancel,
-              icon: Icon(_isMac ? CupertinoIcons.stop : Icons.stop),
+              icon: Icon(isMac ? CupertinoIcons.stop : Icons.stop),
               child: const Text(TextTokens.gui_narration_cancelRun),
             ),
         ],

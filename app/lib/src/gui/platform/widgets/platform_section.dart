@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_tokens.dart';
+import '../platform_detection.dart';
 
 /// Platform-aware settings group: a muted title above its [child], bordered
 /// group styling on macOS (Cupertino-like section) and a plain labeled column
@@ -14,7 +14,7 @@ class PlatformSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isMac) {
       return _buildCupertino(context);
     }
     return _buildMaterial(context);

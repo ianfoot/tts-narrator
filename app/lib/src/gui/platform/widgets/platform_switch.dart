@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_tokens.dart';
+import '../platform_detection.dart';
 
 /// Platform-aware switch: [CupertinoSwitch] on macOS, [Switch] elsewhere.
 class PlatformSwitch extends StatelessWidget {
@@ -25,7 +25,7 @@ class PlatformSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget switchWidget;
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isMac) {
       switchWidget = Transform.scale(
         scale: AppMetrics.controlKnobScale,
         child: CupertinoSwitch(value: value, onChanged: onChanged),
