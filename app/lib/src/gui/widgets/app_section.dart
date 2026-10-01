@@ -10,8 +10,11 @@ class AppSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // `stretch` (not `start`) so the surface container always spans the full
+    // rail width. With `start` the background only widened to the section's
+    // widest child, leaving a ragged edge against the neighbouring section.
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
