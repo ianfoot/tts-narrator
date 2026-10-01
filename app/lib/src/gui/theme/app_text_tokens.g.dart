@@ -152,7 +152,6 @@ final class TextTokens {
   static const String gui_menu_appearance = 'Appearance';
   static const String gui_menu_checkmarkPrefix = '✓ ';
   static const String gui_menu_cleanUpSegments = 'Clean Up Segments…';
-  static const String gui_menu_close = 'Close';
   static const String gui_menu_copy = 'Copy';
   static const String gui_menu_cut = 'Cut';
   static const String gui_menu_edit = 'Edit';
@@ -162,6 +161,7 @@ final class TextTokens {
   static const String gui_menu_outputFolder = 'Output Folder…';
   static const String gui_menu_paste = 'Paste';
   static const String gui_menu_preferences = 'Preferences…';
+  static const String gui_menu_quit = 'Quit';
   static const String gui_menu_redo = 'Redo';
   static const String gui_menu_save = 'Save';
   static const String gui_menu_saveAs = 'Save As…';

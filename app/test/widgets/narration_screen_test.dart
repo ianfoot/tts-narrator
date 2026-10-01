@@ -332,8 +332,8 @@ void main() {
       c.startRun();
       await pumpPushedRun(tester, c);
 
-      // A system back (macOS ⌘W / Close menu) while generating must not pop the
-      // view silently - it funnels through the same confirmation.
+      // A system back gesture while generating must not pop the view silently - it
+      // funnels through the same confirmation as the Back buttons.
       await tester.binding.handlePopRoute();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Cancel active narration run?'), findsOneWidget);

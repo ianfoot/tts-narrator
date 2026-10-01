@@ -100,10 +100,19 @@ error (the hard gate).
 ## GUI internals
 
 - The UI is built from Flutter's built-in Cupertino widgets on every platform —
-  no Material, no third-party UI package. The `PlatformMenuBar` menu bar is
-  macOS-only; on Linux/Windows a `CallbackShortcuts` accelerator map (mounted
-  above the `Navigator` via `CupertinoApp.builder`) binds the same controller
-  command slots.
+  no third-party UI package. macOS uses the native `PlatformMenuBar` (its items
+  are sent over the menu channel, so they have no enabled flag and guard inside
+  their handlers). Linux/Windows have no native menu, so `LinuxMenuBar` renders
+  the same File / Edit / View commands as real Material `SubmenuButton`s above
+  the editor — the one place the app reaches for Material, which lets each item
+  be *disabled* instead of silently swallowing taps. Two constraints on that bar:
+  items never pass `MenuItemButton.shortcut` (it forces a `MaterialLocalizations`
+  lookup, which a `CupertinoApp` host doesn't provide — the key is drawn as a
+  trailing label instead), and the document/run accelerators live on the menu
+  buttons rather than the app's `CallbackShortcuts` map (mounted above the
+  `Navigator` via `CupertinoApp.builder`), because Flutter keeps focus on an open
+  menu's buttons so the menu's own key handling wins. Both bars end Quit through
+  `quitApp()`.
 - The sandboxed macOS app needs the **`com.apple.security.network.client`**
   entitlement to reach the OpenRouter API; it's already present in
   `app/macos/Runner/DebugProfile.entitlements` and `Release.entitlements`.

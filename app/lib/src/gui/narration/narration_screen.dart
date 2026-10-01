@@ -106,9 +106,8 @@ class _NarrationScreenState extends State<NarrationScreen> {
   }
 
   /// Leaves the run view. While a run is generating every pop request (header
-  /// Back, action-bar Back, ⌘W/Close, system back gesture) funnels through
-  /// here via [PopScope]; the confirmation modal must play out before the
-  /// route pops.
+  /// Back, action-bar Back, system back gesture) funnels through here via
+  /// [PopScope]; the confirmation modal must play out before the route pops.
   Future<void> _onBack() async {
     final controller = _controller;
     final runActive = controller.narrating && !controller.runStopped;
@@ -145,6 +144,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
   AppTokens get _tokens => AppTokens.of(context);
 
   IconData _playIcon() => CupertinoIcons.play_fill;
+
   IconData _stopIcon() => CupertinoIcons.stop_circle;
 
   @override

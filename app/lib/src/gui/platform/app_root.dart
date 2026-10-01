@@ -6,16 +6,18 @@ import 'package:flutter/services.dart';
 
 import '../controller/app_controller.dart';
 import '../editor/editor_screen.dart';
+import '../menu/linux_menu_bar.dart';
 import '../menu/macos_menu.dart';
+import '../menu/quit_app.dart';
 import '../narration/narration_screen.dart';
 import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart';
 import 'platform_detection.dart';
 
 /// Cross-platform app root: a single [CupertinoApp] shell that mounts the
-/// native menu bar on macOS (whose items carry their own ⌘ shortcuts) and a
-/// [CallbackShortcuts] accelerator map on Linux/Windows, all dispatching
-/// through one [AppController] and navigator key.
+/// native menu bar on macOS (whose items carry their own ⌘ shortcuts) and an
+/// in-app [LinuxMenuBar] plus a [CallbackShortcuts] accelerator map on
+/// Linux/Windows, all dispatching through one [AppController] and navigator key.
 ///
 /// Wires the controller's command slots: the native Open file picker and the
 /// Narrate / Cancel slots (navigate to the run view; Cancel stops the run).
@@ -171,7 +173,11 @@ class _AppRootState extends State<AppRoot> {
           // Keyboard accelerators for the platforms without a native menu bar;
           // they drive the same command slots the macOS menu binds. Mounted
           // above the Navigator so pushed routes keep them.
-          home = editor;
+          home = LinuxMenuBar(
+            controller: widget.controller,
+            navigatorKey: _navigatorKey,
+            child: editor,
+          );
           acceleratorHost = (context, child) => CallbackShortcuts(
             bindings: _desktopShortcuts(),
             child: child ?? const SizedBox.shrink(),
@@ -196,38 +202,19 @@ class _AppRootState extends State<AppRoot> {
 
   /// Ctrl/Shift accelerators for Linux/Windows, mirroring the macOS menu items
   /// and their guards: Open, Output Folder, Narrate, Clear, Save, Save As,
-  /// Toggle Settings Panel and Close.
+  /// Toggle Settings Panel and Quit.
+  ///
+  /// Accelerators that would alter the document or start a run are deliberately
+  /// absent: those now live on the in-app menu bar's buttons, which Flutter
+  /// keeps focused while a submenu is open, so the menu's own key handling wins
+  /// over these bindings instead of both firing.
   Map<ShortcutActivator, VoidCallback> _desktopShortcuts() {
     final controller = widget.controller;
     return <ShortcutActivator, VoidCallback>{
-      const SingleActivator(LogicalKeyboardKey.keyO, control: true): () =>
-          controller.commands.onOpen?.call(),
-      const SingleActivator(LogicalKeyboardKey.keyE, control: true): () =>
-          controller.commands.onSetOutputFolder?.call(),
-      const SingleActivator(LogicalKeyboardKey.keyN, control: true): () {
-        if (controller.narrateBlockReason() != null) return;
-        controller.commands.onNarrate?.call();
-      },
-      const SingleActivator(
-        LogicalKeyboardKey.keyL,
-        control: true,
-        shift: true,
-      ): () {
-        if (!controller.canClearText) return;
-        controller.clearText();
-      },
-      const SingleActivator(LogicalKeyboardKey.keyS, control: true): () =>
-          controller.save(),
-      const SingleActivator(
-        LogicalKeyboardKey.keyS,
-        control: true,
-        shift: true,
-      ): () =>
-          controller.saveAs(),
       const SingleActivator(LogicalKeyboardKey.backslash, control: true): () =>
           controller.commands.onToggleSettingsPanel?.call(),
-      const SingleActivator(LogicalKeyboardKey.keyW, control: true): () =>
-          _navigatorKey.currentState?.maybePop(),
+      const SingleActivator(LogicalKeyboardKey.keyQ, control: true): () =>
+          quitApp(),
     };
   }
 }
