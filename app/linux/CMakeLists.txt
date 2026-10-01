@@ -7,7 +7,20 @@ project(runner LANGUAGES CXX)
 set(BINARY_NAME "tts_narrator")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "tts_narrator")
+# Must be reverse-DNS: at least one '.', every element starting with an ASCII
+# letter and containing only [A-Za-z0-9_-] with no trailing '_' or '-'. GLib
+# turns this into a D-Bus bus name and object path and rejects it outright when
+# invalid (g_application_id_is_valid), which silently costs the app its bus
+# name, taskbar grouping and StartupWMClass match.
+# Must stay in step with PRODUCT_BUNDLE_IDENTIFIER in
+# app/macos/Runner/Configs/AppInfo.xcconfig. macOS additionally forbids '_' in
+# a bundle ID, so use '-' as the separator here too rather than '_'.
+set(APPLICATION_ID "com.wyrdness.tts-narrator")
+# The GTK window title. Keep in sync with "app_title" in
+# app/lib/l10n/app_en.arb and PRODUCT_NAME in
+# app/macos/Runner/Configs/AppInfo.xcconfig — the GTK runner cannot read the
+# Flutter arb, so this CMake variable is the only place Linux can learn it.
+set(TITLE "TTS Narrator")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

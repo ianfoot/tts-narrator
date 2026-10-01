@@ -7,8 +7,11 @@
 // The application's name. By default this is also the title of the Flutter window.
 PRODUCT_NAME = TTS Narrator
 
-// The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = TtsNarrator
+// The application's bundle identifier. Must match APPLICATION_ID in
+// app/linux/CMakeLists.txt — a sweeping rename across platforms is what
+// silently broke Linux in commit af48c86. Xcode restricts this to
+// [A-Za-z0-9.-], so the separator must be '-' and never '_'.
+PRODUCT_BUNDLE_IDENTIFIER = com.wyrdness.tts-narrator
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 Ian Paul Foot. All rights reserved.

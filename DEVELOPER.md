@@ -25,8 +25,8 @@ and holds the single shared lockfile:
   `/v1/audio/speech` endpoint — defaulting to the Apple-Silicon-only
   [mlx-audio](https://github.com/Blaizzy/mlx-audio) server at
   `http://localhost:8000` — so endpoint and model are data, not code.
-- `app` — `tts_narrator`, the Flutter macOS GUI (Linux/Windows scaffolded).
-  Registers both providers at startup (`lib/main.dart`).
+- `app` — `tts_narrator`, the Flutter GUI (macOS, with a scaffolded Linux
+  runner). Registers both providers at startup (`lib/main.dart`).
 - `voice_config.example/` — sample config: `config.json` (providers / `${ENV}`
   references, no secrets) plus one `<alias>.json` per model.
 
@@ -116,7 +116,9 @@ error (the hard gate).
 - The sandboxed macOS app needs the **`com.apple.security.network.client`**
   entitlement to reach the OpenRouter API; it's already present in
   `app/macos/Runner/DebugProfile.entitlements` and `Release.entitlements`.
-- Linux/Windows are planned but not yet scaffolded (macOS-only for now).
+- Windows is planned but not yet scaffolded; the Linux runner is scaffolded but
+  never compiled in CI, so changes to `app/linux/` are unverified by
+  `flutter analyze`/`flutter test`.
 
 ## Design tokens
 
