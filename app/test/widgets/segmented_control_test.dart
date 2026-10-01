@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart';
@@ -11,51 +10,51 @@ const _items = <(String, String)>[
   ('dark', 'Dark'),
 ];
 
+Widget _host(Widget child) => CupertinoApp(
+  theme: const CupertinoThemeData(brightness: Brightness.light),
+  home: Center(child: SizedBox(width: 300, child: child)),
+);
+
 void main() {
-  testWidgets('renders the custom token-driven control', (tester) async {
+  testWidgets('renders the Cupertino control with token-driven labels', (
+    tester,
+  ) async {
     await tester.pumpWidget(
-      CupertinoApp(
-        theme: const CupertinoThemeData(brightness: Brightness.light),
-        home: Center(
-          child: SizedBox(
-            width: 300,
-            child: SegmentedControl<String>(
-              value: 'auto',
-              items: _items,
-              onChanged: (_) {},
-            ),
-          ),
+      _host(
+        SegmentedControl<String>(
+          value: 'auto',
+          items: _items,
+          onChanged: (_) {},
         ),
       ),
     );
 
-    expect(find.byType(SegmentedButton<String>), findsNothing);
+    expect(
+      find.byType(CupertinoSlidingSegmentedControl<String>),
+      findsOneWidget,
+    );
     expect(find.text('Light'), findsOneWidget);
     expect(find.text('Auto'), findsOneWidget);
     expect(find.text('Dark'), findsOneWidget);
     // Selected label resolves to text-primary, unselected to text-secondary.
-    final lightStyle = tester.widget<Text>(find.text('Light')).style!;
-    final autoStyle = tester.widget<Text>(find.text('Auto')).style!;
-    expect(lightStyle.color, AppPalette.light.textSecondary);
-    expect(autoStyle.color, AppPalette.light.textPrimary);
+    expect(
+      tester.widget<Text>(find.text('Light')).style!.color,
+      AppPalette.light.textSecondary,
+    );
+    expect(
+      tester.widget<Text>(find.text('Auto')).style!.color,
+      AppPalette.light.textPrimary,
+    );
   });
 
-  testWidgets('tapping a segment reports the new value and slides', (
-    tester,
-  ) async {
+  testWidgets('tapping a segment reports the new value', (tester) async {
     String? changed;
     await tester.pumpWidget(
-      CupertinoApp(
-        theme: const CupertinoThemeData(brightness: Brightness.light),
-        home: Center(
-          child: SizedBox(
-            width: 300,
-            child: SegmentedControl<String>(
-              value: 'auto',
-              items: _items,
-              onChanged: (v) => changed = v,
-            ),
-          ),
+      _host(
+        SegmentedControl<String>(
+          value: 'auto',
+          items: _items,
+          onChanged: (v) => changed = v,
         ),
       ),
     );
@@ -65,30 +64,41 @@ void main() {
     expect(changed, 'dark');
   });
 
-  testWidgets('tapping the null-valued segment reports null', (tester) async {
-    String? changed = 'unset';
-    const items = <(String?, String)>[
-      (null, 'Any'),
-      ('female', 'Female'),
-      ('male', 'Male'),
-    ];
+  testWidgets('tapping the selected segment does not re-report the value', (
+    tester,
+  ) async {
+    var changes = 0;
     await tester.pumpWidget(
-      CupertinoApp(
-        home: Center(
-          child: SizedBox(
-            width: 300,
-            child: SegmentedControl<String?>(
-              value: 'male',
-              items: items,
-              onChanged: (v) => changed = v,
-            ),
-          ),
+      _host(
+        SegmentedControl<String>(
+          value: 'auto',
+          items: _items,
+          onChanged: (_) => changes++,
         ),
       ),
     );
 
-    await tester.tap(find.text('Any'));
+    await tester.tap(find.text('Auto'));
     await tester.pump();
-    expect(changed, isNull);
+    expect(changes, 0);
+  });
+
+  testWidgets('a null value selects nothing and still reports taps', (
+    tester,
+  ) async {
+    String? changed;
+    await tester.pumpWidget(
+      _host(
+        SegmentedControl<String>(
+          value: null,
+          items: _items,
+          onChanged: (v) => changed = v,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Light'));
+    await tester.pump();
+    expect(changed, 'light');
   });
 }
