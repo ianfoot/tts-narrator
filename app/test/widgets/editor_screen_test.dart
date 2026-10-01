@@ -482,12 +482,13 @@ void main() {
       tester,
     ) async {
       final controller = await makeController();
+      final before = controller.outDir;
       await pumpEditor(tester, controller, pickDirectory: () async => null);
 
       await tester.tap(find.byKey(const Key('outDirPickerButton')));
       await tester.pump();
 
-      expect(controller.outDir, 'output');
+      expect(controller.outDir, before);
     });
   });
 }

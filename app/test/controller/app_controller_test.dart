@@ -9,7 +9,7 @@ import 'package:tts_narrator/src/gui/controller/api_key_store.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
-    show ApiKeySource;
+    show ApiKeySource, SettingsController;
 import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart'
     show TextTokens;
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
@@ -1120,7 +1120,12 @@ void main() {
         loader: UserVoiceConfigLoader(configDir: configDir),
         prefs: prefs,
       );
-      expect(c.outDir, 'output');
+      // Absolute and under the system temp dir: playback on Linux runs
+      // through GStreamer, which cannot resolve a path relative to the
+      // working directory a packaged app happens to inherit.
+      expect(c.outDir, SettingsController.defaultOutDir());
+      expect(c.outDir, startsWith(Directory.systemTemp.path));
+      expect(Directory(c.outDir).existsSync(), isTrue);
     });
 
     test('falls back to the default when the saved value is empty', () async {
@@ -1130,7 +1135,8 @@ void main() {
         loader: UserVoiceConfigLoader(configDir: configDir),
         prefs: prefs,
       );
-      expect(c.outDir, 'output');
+      expect(c.outDir, SettingsController.defaultOutDir());
+      expect(c.outDir, startsWith(Directory.systemTemp.path));
     });
   });
 }

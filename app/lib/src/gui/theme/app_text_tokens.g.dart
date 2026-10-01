@@ -106,7 +106,6 @@ final class TextTokens {
   static const String core_plurals_words = 'words';
   static const String defaults_accent = 'southern British English, neutral and clear';
   static const int defaults_minWords = 30;
-  static const String defaults_outDir = 'output';
   static const String defaults_passagePrefix = 'Narrate this passage for an audiobook. You are a warm, composed female narrator.';
   static const String defaults_style = 'warm, composed, restrained, literary';
   static const String gui_bootstrap_download = 'Download';

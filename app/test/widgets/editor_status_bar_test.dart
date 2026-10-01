@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
+import 'package:tts_narrator/src/gui/controller/settings_controller.dart';
 import 'package:tts_narrator/src/gui/editor/editor_status_bar.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart';
 
@@ -59,7 +60,15 @@ void main() {
       find.textContaining('0 segments · ~0 mins · ~\$0.00 (free) est.'),
       findsOneWidget,
     );
-    expect(statusOutDirText(tester), 'output');
+    // The default output folder is an absolute path under the system temp dir
+    // so gstreamer can resolve it without depending on the process cwd. It is
+    // long enough to be left-truncated in the status bar slot, so assert on the
+    // controller value and only require that what the slot could fit is a
+    // suffix of it (how much survives depends on the surface width).
+    expect(controller.outDir, SettingsController.defaultOutDir());
+    expect(controller.outDir, startsWith(Directory.systemTemp.path));
+    final shown = statusOutDirText(tester);
+    expect(controller.outDir.endsWith(shown.replaceFirst('\u2026', '')), isTrue);
   });
 
   testWidgets('shows the full output folder path when it fits the slot', (

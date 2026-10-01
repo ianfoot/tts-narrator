@@ -55,6 +55,26 @@ class SettingsController extends ChangeNotifier {
   /// Preferences key holding the last output folder the user picked.
   static const _outDirPrefsKey = 'outDir';
 
+  /// Folder name created under the system temp dir for the default output.
+  static const _defaultOutDirName = 'tts_narrator_output';
+
+  /// The default output folder, created on demand and always absolute.
+  ///
+  /// Absolute because the rendered files are handed to GStreamer-backed
+  /// playback on Linux, which resolves a relative path against a working
+  /// directory a packaged app does not control; the old relative `output`
+  /// default only resolved because the dev launcher happened to start in a
+  /// checkout containing that folder. Under the system temp dir because the
+  /// rendered audio is disposable — nothing is expected to outlive the run.
+  static String defaultOutDir() {
+    final dir = Directory(
+      '${Directory.systemTemp.path}${Platform.pathSeparator}'
+      '$_defaultOutDirName',
+    );
+    if (!dir.existsSync()) dir.createSync(recursive: true);
+    return dir.path;
+  }
+
   /// The persistent preference store; null when the host has none (tests).
   final SharedPreferences? _prefs;
 
@@ -91,7 +111,7 @@ class SettingsController extends ChangeNotifier {
   int _minWords = TextTokens.defaults_minWords;
   bool _sendWholeFile = false;
   int? _sampleLen;
-  String _outDir = TextTokens.defaults_outDir;
+  String _outDir = defaultOutDir();
   bool _resume = false;
   String _style = TextTokens.defaults_style;
   String _passagePrefix = TextTokens.defaults_passagePrefix;
@@ -416,9 +436,7 @@ class SettingsController extends ChangeNotifier {
       sendWholeFile: sendWholeFile,
       sampleLen: sampleLen,
       speed: speed,
-      outDir: outDir.trim().isEmpty
-          ? TextTokens.defaults_outDir
-          : outDir.trim(),
+      outDir: outDir.trim().isEmpty ? defaultOutDir() : outDir.trim(),
       resume: resume,
       providerSettings: _resolveProviderSettings(p),
       pricing: _model.pricing,

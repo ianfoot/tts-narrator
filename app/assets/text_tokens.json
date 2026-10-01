@@ -8,7 +8,6 @@
     "accent": "southern British English, neutral and clear",
     "style": "warm, composed, restrained, literary",
     "passagePrefix": "Narrate this passage for an audiobook. You are a warm, composed female narrator.",
-    "outDir": "output",
     "minWords": 30
   },
   "prompt": {
