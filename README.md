@@ -213,12 +213,15 @@ paste the text you want narrated right into the window (no backing file — the
 core reads the in-memory text via `sourceText`), then click **Narrate**. A collapsible settings rail controls the model, voice, and
 model-specific options (declared by each model's provider plugin), the run view
 shows per-segment progress with in-app playback of finished clips, Cancel, and
-Back — and the editor is intact when you return. The native macOS menu bar
-(`PlatformMenuBar`) provides the standard App / File / Edit / View / Window
-menus: Open (⌘O), Save (⌘S), Save As (⇧⌘S), Narrate (⌘N), Close (⌘W), and the
-Edit menu's undo/redo/cut/copy/paste/select-all, which dispatch to the focused
-text field. Saving writes the document to a `.txt`; once saved, narration names
-its output from the real filename.
+Back — and the editor is intact when you return. macOS gets the standard native
+menu bar (`PlatformMenuBar`) with App / File / Edit / View / Window: Open (⌘O),
+Save (⌘S), Save As (⇧⌘S), Narrate (⌘N), and the Edit menu's
+undo/redo/cut/copy/paste/select-all, which dispatch to the focused text field.
+Linux and Windows get the same commands in an in-app menu bar
+(`LinuxMenuBar`), where each item shows its shortcut and can be disabled when the
+command is unavailable; Quit (⌃Q on Linux/Windows, ⌘Q natively) ends the app.
+Saving writes the document to a `.txt`; once saved, narration names its output
+from the real filename.
 
 ```bash
 cd app

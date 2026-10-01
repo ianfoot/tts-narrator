@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/menu/edit_actions.dart';
@@ -34,8 +33,8 @@ Future<AppController> makeController() async {
 
 /// The leaf items of [menu], expanding [PlatformMenuItemGroup] members and
 /// recursing into submenus ([PlatformMenu]) so grouped commands (Preferences,
-/// Close, the Edit group, the Appearance submenu) appear alongside the
-/// standalone ones.
+/// the Edit group, the Appearance submenu) appear alongside the standalone
+/// ones.
 List<PlatformMenuItem> leafItems(PlatformMenu menu) => <PlatformMenuItem>[
   for (final item in menu.menus) ...leafChildren(item),
 ];
@@ -127,36 +126,29 @@ void main() {
       ]);
     });
 
-    test(
-      'File has Open, Narrate, Save and Close with their shortcuts',
-      () async {
-        final file = buildMacMenu(
-          controller: await makeController(),
-          navigatorKey: GlobalKey<NavigatorState>(),
-        )[1];
+    test('File has Open, Narrate and Save with their shortcuts', () async {
+      final file = buildMacMenu(
+        controller: await makeController(),
+        navigatorKey: GlobalKey<NavigatorState>(),
+      )[1];
 
-        expectMetaShortcut(
-          leafItem(file, 'Open Text…'),
-          LogicalKeyboardKey.keyO,
-        );
-        expectMetaShortcut(
-          leafItem(file, 'Output Folder…'),
-          LogicalKeyboardKey.keyE,
-        );
-        expectMetaShortcut(leafItem(file, 'Narrate'), LogicalKeyboardKey.keyN);
-        expectMetaShortcut(leafItem(file, 'Save'), LogicalKeyboardKey.keyS);
-        expectMetaShortcut(
-          leafItem(file, 'Save As…'),
-          LogicalKeyboardKey.keyS,
-          shift: true,
-        );
-        expect(
-          leafItem(file, 'Clean Up Segments…').label,
-          'Clean Up Segments…',
-        );
-        expectMetaShortcut(leafItem(file, 'Close'), LogicalKeyboardKey.keyW);
-      },
-    );
+      expectMetaShortcut(leafItem(file, 'Open Text…'), LogicalKeyboardKey.keyO);
+      expectMetaShortcut(
+        leafItem(file, 'Output Folder…'),
+        LogicalKeyboardKey.keyE,
+      );
+      expectMetaShortcut(leafItem(file, 'Narrate'), LogicalKeyboardKey.keyN);
+      expectMetaShortcut(leafItem(file, 'Save'), LogicalKeyboardKey.keyS);
+      expectMetaShortcut(
+        leafItem(file, 'Save As…'),
+        LogicalKeyboardKey.keyS,
+        shift: true,
+      );
+      expect(leafItem(file, 'Clean Up Segments…').label, 'Clean Up Segments…');
+      // Close never closed anything - it popped the current route, which is
+      // a no-op on the root editor - so it is gone rather than inert.
+      expect(leafItems(file).map(bareLabel), isNot(contains('Close')));
+    });
 
     test(
       'Edit has undo/redo/cut/copy/paste/select all with shortcuts',

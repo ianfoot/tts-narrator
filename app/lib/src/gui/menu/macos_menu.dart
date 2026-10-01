@@ -8,17 +8,17 @@ import '../theme/app_tokens.dart' show AppThemeMode;
 import 'edit_actions.dart';
 
 /// Builds the macOS menu bar — the [PlatformMenu] tree the app mounts through a
-/// [PlatformMenuBar] on macOS (kept macOS-only for now; Linux/Windows bind the
-/// same controller slots to in-app menus later).
+/// [PlatformMenuBar] on macOS. Linux/Windows get the in-app LinuxMenuBar
+/// instead, which mirrors these commands as widgets.
 ///
 /// Pure configuration over the controller's platform-neutral command slots and
 /// the app navigator: App (About/Preferences/Services/Hide/Quit), File
-/// (Open/Save/Save As/Narrate/Close), Edit (undo/redo/cut/copy/paste/select
-/// all, dispatched to the focused text field by [EditActions]), View
-/// (Appearance, Toggle Settings Panel, Full Screen) and Window
-/// (Minimize/Zoom/Front). The menu items are *not* widgets; they are sent to
-/// the platform over the menu channel, so there is no [enabled] flag — the
-/// Narrate item guards in its handler instead of graying out.
+/// (Open/Save/Save As/Narrate), Edit (undo/redo/cut/copy/paste/select all,
+/// dispatched to the focused text field by [EditActions]), View (Appearance,
+/// Toggle Settings Panel, Full Screen) and Window (Minimize/Zoom/Front). The
+/// menu items are *not* widgets; they are sent to the platform over the menu
+/// channel, so there is no [enabled] flag — the Narrate item guards in its
+/// handler instead of graying out.
 List<PlatformMenu> buildMacMenu({
   required AppController controller,
   required GlobalKey<NavigatorState> navigatorKey,
@@ -144,18 +144,6 @@ PlatformMenu _fileMenu(
               if (context == null) return;
               runCleanupSegmentsFlow(controller: controller, context: context);
             },
-          ),
-        ],
-      ),
-      PlatformMenuItemGroup(
-        members: <PlatformMenuItem>[
-          PlatformMenuItem(
-            label: TextTokens.gui_menu_close,
-            shortcut: const SingleActivator(
-              LogicalKeyboardKey.keyW,
-              meta: true,
-            ),
-            onSelected: () => navigatorKey.currentState?.maybePop(),
           ),
         ],
       ),
