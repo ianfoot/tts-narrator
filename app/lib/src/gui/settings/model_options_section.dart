@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
-import '../platform/widgets/platform_section.dart';
-import '../platform/widgets/platform_segmented.dart';
-import '../platform/widgets/platform_text_field.dart';
 import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart';
+import '../widgets/app_section.dart';
+import '../widgets/app_text_field.dart';
+import '../widgets/segmented_control.dart';
 import 'settings_labels.dart';
 import 'speed_widget.dart';
 
@@ -90,7 +90,7 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
         .where((o) => _bindableModelOptionKeys.contains(o.key))
         .toList();
     if (options.isEmpty) return const SizedBox.shrink();
-    return PlatformSection(
+    return AppSection(
       title: TextTokens.gui_settings_modelOptionsSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -114,7 +114,7 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
             children: [
               settingsFieldLabel(_tokens, option.label),
               const SizedBox(height: 6),
-              PlatformSegmentedControl<VoiceGender>(
+              SegmentedControl<VoiceGender>(
                 key: const Key('genderOptionSegmented'),
                 value: g,
                 items: const [
@@ -133,7 +133,7 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             settingsFieldLabel(_tokens, option.label),
-            PlatformTextField(
+            AppTextField(
               key: Key('${option.key}Field'),
               tooltip: switch (option.key) {
                 'accent' => TextTokens.gui_settings_accentFieldTooltip,

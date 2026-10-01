@@ -11,10 +11,10 @@ import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
     show ApiKeySource;
-import 'package:tts_narrator/src/gui/platform/widgets/platform_button.dart';
-import 'package:tts_narrator/src/gui/platform/widgets/platform_segmented.dart';
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
 import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart';
+import 'package:tts_narrator/src/gui/widgets/app_button.dart';
+import 'package:tts_narrator/src/gui/widgets/segmented_control.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/fake_tts_provider.dart';
@@ -288,7 +288,7 @@ void main() {
       c.changeModel('kokoro');
       await pumpRail(tester, c);
 
-      final control = tester.widget<PlatformSegmentedControl<VoiceGender>>(
+      final control = tester.widget<SegmentedControl<VoiceGender>>(
         find.byKey(const Key('genderControl')),
       );
       expect(control.value, VoiceGender.neutral);
@@ -745,8 +745,8 @@ void main() {
       FlutterSecureStorage.setMockInitialValues(<String, String>{});
     });
 
-    PlatformButton buttonWith(WidgetTester tester, String key) =>
-        tester.widget<PlatformButton>(find.byKey(Key(key)));
+    AppButton buttonWith(WidgetTester tester, String key) =>
+        tester.widget<AppButton>(find.byKey(Key(key)));
 
     /// The API key section is collapsed by default; tap its header label (the
     /// tappable GestureDetector row, not the whole disclosure) to expand.

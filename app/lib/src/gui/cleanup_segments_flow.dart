@@ -1,8 +1,6 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 
 import 'controller/app_controller.dart';
-import 'platform/platform_detection.dart';
 import 'theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 
 /// Runs the "Clean Up Segments…" flow: asks for confirmation (deleting the
@@ -12,9 +10,7 @@ import 'theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 /// Shared by every surface that exposes the command — the macOS menu bar
 /// (which mounts dialogs on the navigator's overlay context) and the editor
 /// toolbar (which uses the screen's own context) — so both surfaces present
-/// the same confirm and summary dialogs. The dialogs are platform-aware
-/// (Cupertino on macOS, Material elsewhere) so the flow stays valid if
-/// Linux/Windows later gain a menu surface.
+/// the same confirm and summary dialogs.
 Future<void> runCleanupSegmentsFlow({
   required AppController controller,
   required BuildContext context,
@@ -56,42 +52,22 @@ Future<void> runCleanupSegmentsFlow({
   }
 }
 
-/// Platform-aware confirmation dialog; returns true only when the user
-/// confirmed deletion.
+/// Confirmation dialog; returns true only when the user confirmed deletion.
 Future<bool?> _confirmDeletion(BuildContext context) {
   const title = TextTokens.gui_cleanup_confirmTitle;
   const message = TextTokens.gui_cleanup_confirmMessage;
-  if (isMac) {
-    return showCupertinoDialog<bool>(
-      context: context,
-      builder: (dialogContext) => CupertinoAlertDialog(
-        title: const Text(title),
-        content: const Text(message),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text(TextTokens.gui_cleanup_cancel),
-          ),
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text(TextTokens.gui_cleanup_delete),
-          ),
-        ],
-      ),
-    );
-  }
-  return showDialog<bool>(
+  return showCupertinoDialog<bool>(
     context: context,
-    builder: (dialogContext) => AlertDialog(
+    builder: (dialogContext) => CupertinoAlertDialog(
       title: const Text(title),
       content: const Text(message),
       actions: [
-        TextButton(
+        CupertinoDialogAction(
           onPressed: () => Navigator.of(dialogContext).pop(false),
           child: const Text(TextTokens.gui_cleanup_cancel),
         ),
-        FilledButton(
+        CupertinoDialogAction(
+          isDefaultAction: true,
           onPressed: () => Navigator.of(dialogContext).pop(true),
           child: const Text(TextTokens.gui_cleanup_delete),
         ),
@@ -100,35 +76,19 @@ Future<bool?> _confirmDeletion(BuildContext context) {
   );
 }
 
-/// Platform-aware dismissible notice (success summary or error).
+/// Dismissible notice (success summary or error).
 void _showInfoDialog(
   BuildContext context, {
   required String title,
   required String message,
 }) {
-  if (isMac) {
-    showCupertinoDialog<void>(
-      context: context,
-      builder: (dialogContext) => CupertinoAlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text(TextTokens.gui_cleanup_ok),
-          ),
-        ],
-      ),
-    );
-    return;
-  }
-  showDialog<void>(
+  showCupertinoDialog<void>(
     context: context,
-    builder: (dialogContext) => AlertDialog(
+    builder: (dialogContext) => CupertinoAlertDialog(
       title: Text(title),
       content: Text(message),
       actions: [
-        TextButton(
+        CupertinoDialogAction(
           onPressed: () => Navigator.of(dialogContext).pop(),
           child: const Text(TextTokens.gui_cleanup_ok),
         ),

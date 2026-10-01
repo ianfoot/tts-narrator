@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
@@ -12,7 +12,6 @@ import 'src/gui/controller/app_controller.dart';
 import 'src/gui/controller/config_loader.dart';
 import 'src/gui/platform/app_root.dart';
 import 'src/gui/platform/platform_detection.dart';
-import 'src/gui/platform/widgets/platform_activity_indicator.dart';
 import 'src/gui/theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 
 /// Root app that provides a Navigator so ConfigBootstrap can show dialogs.
@@ -38,7 +37,7 @@ class BootstrapApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return CupertinoApp(
       title: TextTokens.app_title,
       debugShowCheckedModeBanner: false,
       home: ConfigBootstrap(
@@ -164,10 +163,10 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   }
 
   Future<void> _promptDownload() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCupertinoDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (context) => CupertinoAlertDialog(
         title: const Text(TextTokens.gui_bootstrap_downloadTitle),
         content: Text(
           fillTextTemplate(TextTokens.gui_bootstrap_downloadPrompt, {
@@ -175,11 +174,11 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
           }),
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text(TextTokens.gui_bootstrap_notNow),
           ),
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text(TextTokens.gui_bootstrap_download),
           ),
@@ -230,12 +229,12 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   @override
   Widget build(BuildContext context) {
     if (_downloading) {
-      return const Scaffold(
-        body: Center(
+      return const CupertinoPageScaffold(
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              PlatformActivityIndicator(size: 32),
+              CupertinoActivityIndicator(radius: 16),
               SizedBox(height: 16),
               Text(TextTokens.gui_bootstrap_downloading),
             ],
@@ -249,7 +248,9 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
     }
 
     // Waiting for user confirmation
-    return const Scaffold(body: Center(child: Text(TextTokens.gui_bootstrap_initializing)));
+    return const CupertinoPageScaffold(
+      child: Center(child: Text(TextTokens.gui_bootstrap_initializing)),
+    );
   }
 }
 

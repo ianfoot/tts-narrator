@@ -5,13 +5,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
-import 'package:tts_narrator/src/gui/platform/widgets/platform_text_field.dart';
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
+import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
@@ -210,10 +209,10 @@ void main() {
 
     await pumpEditor(tester, controller);
 
-    final field = tester.widget<PlatformTextField>(
+    final field = tester.widget<AppTextField>(
       find.byKey(const Key('editorTextField')),
     );
-    expect(field.controller!.text, contains('freshly opened chapter'));
+    expect(field.controller.text, contains('freshly opened chapter'));
     expect(find.textContaining('story.txt'), findsOneWidget);
     expect(controller.dirty, isFalse);
     expect(find.byKey(const Key('dirtyDot')), findsNothing);

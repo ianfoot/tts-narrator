@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
 import '../platform/platform_detection.dart';
-import '../platform/widgets/platform_button.dart';
-import '../platform/widgets/platform_icon_button.dart';
 import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart';
+import '../widgets/app_button.dart';
+import '../widgets/app_icon_button.dart';
 
 /// Extracted toolbar widget (JSON UI Schema `header_toolbar`) that receives
 /// its injectable picker dependency directly so tests can fake the dialog.
@@ -77,17 +77,16 @@ class _EditorToolbarState extends State<EditorToolbar> {
 
   Widget _buildAppearanceButton(AppTokens tokens) {
     final currentMode = controller.themeMode;
-    return PlatformIconButton(
+    return AppIconButton(
       key: const Key('appearanceToggleButton'),
       tooltip: fillTextTemplate(
         TextTokens.gui_editor_toolbar_appearanceTooltip,
         {'mode': _themeModeLabel(currentMode)},
       ),
       icon: Icon(switch (currentMode) {
-        AppThemeMode.light => isMac ? CupertinoIcons.sun_max : Icons.light_mode,
-        AppThemeMode.dark => isMac ? CupertinoIcons.moon : Icons.dark_mode,
-        AppThemeMode.system =>
-          isMac ? CupertinoIcons.circle_lefthalf_fill : Icons.brightness_auto,
+        AppThemeMode.light => CupertinoIcons.sun_max,
+        AppThemeMode.dark => CupertinoIcons.moon,
+        AppThemeMode.system => CupertinoIcons.circle_lefthalf_fill,
       }),
       onPressed: () {
         controller.themeMode = switch (controller.themeMode) {
@@ -106,10 +105,11 @@ class _EditorToolbarState extends State<EditorToolbar> {
   };
 
   Widget _buildOutputFolderButton() {
-    return PlatformIconButton(
+    return AppIconButton(
       key: const Key('outDirPickerButton'),
-      tooltip: TextTokens.gui_editor_toolbar_setOutputFolder,
-      icon: Icon(isMac ? CupertinoIcons.folder_badge_plus : Icons.output),
+      tooltip:
+          '${TextTokens.gui_editor_toolbar_setOutputFolder} (${acceleratorLabel('E')})',
+      icon: const Icon(CupertinoIcons.folder_badge_plus),
       onPressed: _pickOutputDirectory,
     );
   }
@@ -117,12 +117,11 @@ class _EditorToolbarState extends State<EditorToolbar> {
   /// Saves the document, mirroring the menu bar's File ▸ Save (⌘S). Disabled
   /// (greyed, via a null callback) while there is nothing unsaved.
   Widget _buildSaveButton() {
-    return PlatformIconButton(
+    return AppIconButton(
       key: const Key('editorSaveButton'),
-      tooltip: TextTokens.gui_editor_toolbar_save,
-      icon: Icon(
-        isMac ? CupertinoIcons.square_arrow_down : Icons.save_outlined,
-      ),
+      tooltip:
+          '${TextTokens.gui_editor_toolbar_save} (${acceleratorLabel('S')})',
+      icon: const Icon(CupertinoIcons.square_arrow_down),
       onPressed: controller.dirty ? () => controller.save() : null,
     );
   }
@@ -130,10 +129,11 @@ class _EditorToolbarState extends State<EditorToolbar> {
   /// Clears the document; greyed out (null onPressed) when text is empty or
   /// narration is in progress.
   Widget _buildClearButton() {
-    return PlatformIconButton(
+    return AppIconButton(
       key: const Key('editorClearButton'),
-      tooltip: 'Clear text (⌘⇧L)',
-      icon: Icon(isMac ? CupertinoIcons.delete_left : Icons.clear),
+      tooltip:
+          'Clear text (${acceleratorLabel('L', shift: true)})',
+      icon: const Icon(CupertinoIcons.delete_left),
       onPressed: controller.canClearText ? () => controller.clearText() : null,
     );
   }
@@ -173,48 +173,28 @@ class _EditorToolbarState extends State<EditorToolbar> {
         ? TextTokens.gui_editor_toolbar_stop
         : TextTokens.gui_editor_toolbar_playFull;
     final btnIcon = Icon(
-      isMac
-          ? (widget.playingFull
-                ? CupertinoIcons.stop_circle
-                : CupertinoIcons.play_fill)
-          : (widget.playingFull
-                ? Icons.stop_circle_outlined
-                : Icons.play_arrow),
+      widget.playingFull ? CupertinoIcons.stop_circle : CupertinoIcons.play_fill,
       size: 14,
       color: colors.textPrimary,
     );
-    if (isMac) {
-      return CupertinoButton(
-        key: const Key('editorFullPlayButton'),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        onPressed: widget.onTogglePlayFull ?? () {},
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            border: Border.all(color: colors.borderSubtle, width: 0.8),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: DefaultTextStyle(
-            style: tokens.typography.body,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [btnIcon, const SizedBox(width: 4), Text(label)],
-            ),
+    return CupertinoButton(
+      key: const Key('editorFullPlayButton'),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      onPressed: widget.onTogglePlayFull ?? () {},
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          border: Border.all(color: colors.borderSubtle, width: 0.8),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: DefaultTextStyle(
+          style: tokens.typography.body,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [btnIcon, const SizedBox(width: 4), Text(label)],
           ),
         ),
-      );
-    }
-    return OutlinedButton.icon(
-      key: const Key('editorFullPlayButton'),
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        minimumSize: const Size(0, 0),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
       ),
-      onPressed: widget.onTogglePlayFull ?? () {},
-      icon: btnIcon,
-      label: Text(label, style: tokens.typography.body),
     );
   }
 
@@ -223,18 +203,19 @@ class _EditorToolbarState extends State<EditorToolbar> {
   /// still has cleanable segments; the shared flow it dispatches to confirms
   /// deletion before touching anything.
   Widget _buildCleanupButton() {
-    return PlatformIconButton(
+    return AppIconButton(
       key: const Key('editorCleanupButton'),
       tooltip: TextTokens.gui_editor_toolbar_cleanupSegments,
-      icon: Icon(isMac ? CupertinoIcons.trash : Icons.delete_outline),
+      icon: const Icon(CupertinoIcons.trash),
       onPressed: widget.onCleanupSegments,
     );
   }
 
   Widget _buildNarrateButton(AppTokens tokens) {
     return Tooltip(
-      message: TextTokens.gui_editor_toolbar_narrateShortcut,
-      child: PlatformButton(
+      message:
+          '${TextTokens.gui_editor_toolbar_narrate} (${acceleratorLabel('N')})',
+      child: AppButton(
         key: const Key('editorNarrateButton'),
         onPressed: () {
           final reason = controller.narrateBlockReason();
@@ -245,10 +226,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
           controller.commands.onNarrate?.call();
         },
         compact: true,
-        icon: Icon(
-          isMac ? CupertinoIcons.play_fill : Icons.play_arrow,
-          size: 18,
-        ),
+        icon: const Icon(CupertinoIcons.play_fill, size: 18),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [const Text(TextTokens.gui_editor_toolbar_narrate)],
@@ -276,25 +254,20 @@ class _EditorToolbarState extends State<EditorToolbar> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              PlatformIconButton(
+              AppIconButton(
                 key: const Key('railToggleButton'),
                 tooltip: TextTokens.gui_editor_toolbar_showHideSettings,
-                icon: Icon(
-                  isMac
-                      ? CupertinoIcons.sidebar_left
-                      : (widget.railVisible
-                            ? Icons.settings
-                            : Icons.settings_outlined),
-                ),
+                icon: const Icon(CupertinoIcons.sidebar_left),
                 onPressed: widget.onToggleRail,
               ),
               const SizedBox(width: 6),
               _buildAppearanceButton(tokens),
               const SizedBox(width: 6),
-              PlatformIconButton(
+              AppIconButton(
                 key: const Key('editorOpenButton'),
-                tooltip: TextTokens.gui_editor_toolbar_openTextFile,
-                icon: Icon(isMac ? CupertinoIcons.folder : Icons.folder_open),
+                tooltip:
+                    '${TextTokens.gui_editor_toolbar_openTextFile} (${acceleratorLabel('O')})',
+                icon: const Icon(CupertinoIcons.folder),
                 onPressed: () => controller.commands.onOpen?.call(),
               ),
               const SizedBox(width: 6),

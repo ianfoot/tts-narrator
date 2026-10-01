@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
-import '../platform/widgets/platform_dropdown.dart';
-import '../platform/widgets/platform_section.dart';
 import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart';
+import '../widgets/app_dropdown.dart';
+import '../widgets/app_section.dart';
 import 'advanced_voice_widget.dart';
 import 'settings_labels.dart';
 import 'voice_picker_widget.dart';
@@ -53,13 +53,13 @@ class _ModelVoiceSectionState extends State<ModelVoiceSection> {
   @override
   Widget build(BuildContext context) {
     final tokens = _tokens;
-    return PlatformSection(
+    return AppSection(
       title: TextTokens.gui_settings_modelVoiceSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           settingsFieldLabel(tokens, TextTokens.gui_settings_modelLabel),
-          PlatformDropdown<String>(
+          AppDropdown<String>(
             key: const Key('modelDropdown'),
             tooltip: TextTokens.gui_settings_modelDropdownTooltip,
             value: _controller.modelAlias,

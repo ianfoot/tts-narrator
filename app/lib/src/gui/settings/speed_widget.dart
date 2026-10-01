@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
-import '../platform/widgets/platform_slider.dart';
 import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart';
+import '../widgets/app_slider.dart';
 import 'settings_labels.dart';
 
 /// A speech-rate slider bound to the controller's `speed` setting. Rendered for
@@ -26,7 +26,7 @@ class SpeedWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: PlatformSlider(
+              child: AppSlider(
                 key: const Key('speedSlider'),
                 tooltip: TextTokens.gui_settings_speedTooltip,
                 value: controller.speed,

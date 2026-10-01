@@ -4,17 +4,13 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-
-import '../controller/app_controller.dart';
-import '../platform/platform_detection.dart';
-import '../platform/platform_page.dart';
 
 import '../cleanup_segments_flow.dart';
-import '../platform/widgets/platform_text_field.dart';
+import '../controller/app_controller.dart';
 import '../settings/settings_panel.dart';
 import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart';
+import '../widgets/app_text_field.dart';
 import 'editor_status_bar.dart';
 import 'editor_toolbar.dart';
 
@@ -148,70 +144,73 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PlatformPage(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          EditorToolbar(
-            controller: _controller,
-            railVisible: _controller.settingsPanelVisible,
-            onToggleRail: _controller.toggleSettingsPanel,
-            pickDirectory: widget.pickDirectory,
-            playingFull: _playingFull,
-            onTogglePlayFull: _togglePlayFull,
-            onShowGuard: _showGuard,
-            onCleanupSegments: _cleanUpSegments,
-          ),
-          if (_controller.configWarnings.isNotEmpty)
-            _buildConfigWarningsBanner(_controller.configWarnings),
-          AnimatedSwitcher(
-            duration: _bannerDuration,
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, -1),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
+    return CupertinoPageScaffold(
+      backgroundColor: AppTokens.of(context).colors.bgApp,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            EditorToolbar(
+              controller: _controller,
+              railVisible: _controller.settingsPanelVisible,
+              onToggleRail: _controller.toggleSettingsPanel,
+              pickDirectory: widget.pickDirectory,
+              playingFull: _playingFull,
+              onTogglePlayFull: _togglePlayFull,
+              onShowGuard: _showGuard,
+              onCleanupSegments: _cleanUpSegments,
+            ),
+            if (_controller.configWarnings.isNotEmpty)
+              _buildConfigWarningsBanner(_controller.configWarnings),
+            AnimatedSwitcher(
+              duration: _bannerDuration,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, -1),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              ),
+              child: _guardMessage == null
+                  ? const SizedBox.shrink(key: Key('guardSlot'))
+                  : _buildGuardBanner(
+                      _guardMessage!,
+                      key: const Key('narrateGuard'),
+                    ),
+            ),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AnimatedSwitcher(
+                    duration: _railSlideDuration,
+                    reverseDuration: _railSlideDuration,
+                    switchInCurve: Curves.easeInOut,
+                    switchOutCurve: Curves.easeInOut,
+                    transitionBuilder: (child, animation) => SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(-1, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                    child: _controller.settingsPanelVisible
+                        ? SettingsPanel(
+                            key: const ValueKey('railVisible'),
+                            controller: _controller,
+                          )
+                        : const SizedBox.shrink(key: ValueKey('railHidden')),
+                  ),
+                  Expanded(child: _buildEditor()),
+                ],
               ),
             ),
-            child: _guardMessage == null
-                ? const SizedBox.shrink(key: Key('guardSlot'))
-                : _buildGuardBanner(
-                    _guardMessage!,
-                    key: const Key('narrateGuard'),
-                  ),
-          ),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AnimatedSwitcher(
-                  duration: _railSlideDuration,
-                  reverseDuration: _railSlideDuration,
-                  switchInCurve: Curves.easeInOut,
-                  switchOutCurve: Curves.easeInOut,
-                  transitionBuilder: (child, animation) => SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(-1, 0),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
-                  ),
-                  child: _controller.settingsPanelVisible
-                      ? SettingsPanel(
-                          key: const ValueKey('railVisible'),
-                          controller: _controller,
-                        )
-                      : const SizedBox.shrink(key: ValueKey('railHidden')),
-                ),
-                Expanded(child: _buildEditor()),
-              ],
-            ),
-          ),
-          EditorStatusBar(controller: _controller),
-        ],
+            EditorStatusBar(controller: _controller),
+          ],
+        ),
       ),
     );
   }
@@ -227,7 +226,7 @@ class _EditorScreenState extends State<EditorScreen> {
         AppMetrics.editorOuterPadding,
         AppMetrics.editorVerticalPadding,
       ),
-      child: PlatformTextField(
+      child: AppTextField(
         key: const Key('editorTextField'),
         controller: _textController,
         onChanged: _onTextChanged,
@@ -261,7 +260,7 @@ class _EditorScreenState extends State<EditorScreen> {
       child: Row(
         children: [
           Icon(
-            isMac ? CupertinoIcons.exclamationmark_triangle : Icons.warning,
+            CupertinoIcons.exclamationmark_triangle,
             size: 14,
             color: foreground,
           ),

@@ -9,9 +9,9 @@ import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
     show ApiKeySource;
-import 'package:tts_narrator/src/gui/platform/widgets/platform_button.dart';
 import 'package:tts_narrator/src/gui/settings/api_key_section.dart';
 import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart';
+import 'package:tts_narrator/src/gui/widgets/app_button.dart';
 
 import '../support/settings_fixtures.dart';
 
@@ -47,8 +47,8 @@ void main() {
   Future<void> pumpSection(WidgetTester tester, AppController c) =>
       pumpSettingsSection(tester, ApiKeySection(controller: c));
 
-  PlatformButton buttonWith(WidgetTester tester, String key) =>
-      tester.widget<PlatformButton>(find.byKey(Key(key)));
+  AppButton buttonWith(WidgetTester tester, String key) =>
+      tester.widget<AppButton>(find.byKey(Key(key)));
 
   testWidgets('shows "Not set" and a disabled Remove when no key exists', (
     tester,

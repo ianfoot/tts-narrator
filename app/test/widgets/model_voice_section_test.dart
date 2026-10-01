@@ -5,8 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
-import 'package:tts_narrator/src/gui/platform/widgets/platform_segmented.dart';
 import 'package:tts_narrator/src/gui/settings/model_voice_section.dart';
+import 'package:tts_narrator/src/gui/widgets/segmented_control.dart';
 
 import '../support/settings_fixtures.dart';
 
@@ -186,7 +186,7 @@ void main() {
       c.changeModel('kokoro');
       await pumpSection(tester, c);
 
-      final control = tester.widget<PlatformSegmentedControl<VoiceGender>>(
+      final control = tester.widget<SegmentedControl<VoiceGender>>(
         find.byKey(const Key('genderControl')),
       );
       expect(control.value, VoiceGender.neutral);

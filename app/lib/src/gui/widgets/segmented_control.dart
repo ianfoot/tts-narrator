@@ -1,22 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_tokens.dart';
-import '../platform_detection.dart';
+import '../theme/app_tokens.dart';
 
-/// Platform-aware single-select segmented control: a custom token-driven
-/// control on macOS (modeled on System Settings' Appearance switch), a
-/// Material 3 [SegmentedButton] elsewhere.
-///
-/// macOS renders a full-width container in `bg-surface-elevated` with an inset
-/// "selected" pill in `bg-surface` that slides between segments via
-/// [AnimatedAlign] — the compact capsule macOS cues for a cheap binary/
-/// ternary choice — while unselected segments stay muted in `text-secondary`.
-/// All colors resolve from [AppTokens] so the control matches the rail.
-///
-/// [value] is the currently selected item value. Selecting calls [onChanged]
-/// with the new value (like [PlatformDropdown]).
-class PlatformSegmentedControl<T> extends StatelessWidget {
-  const PlatformSegmentedControl({
+/// macOS-style segmented control: an elevated track with a sliding selected
+/// pill; the only dialect (Material's SegmentedButton is gone).
+class SegmentedControl<T> extends StatelessWidget {
+  const SegmentedControl({
     super.key,
     required this.value,
     required this.items,
@@ -24,42 +13,23 @@ class PlatformSegmentedControl<T> extends StatelessWidget {
     this.tooltip,
   });
 
-  /// Selected item value (from [items]).
+  static const Duration _slideDuration = Duration(milliseconds: 130);
+
   final T? value;
-
-  /// Selectable entries: the value and its display label.
   final List<(T value, String label)> items;
-
-  /// Called when the user picks an entry.
   final ValueChanged<T>? onChanged;
-
-  /// Hover text shown when the mouse interacts with the segmented control.
   final String? tooltip;
-
-  /// macOS: the sliding selection glides between segments over 130ms on an
-  /// ease-in-out curve, mirroring the system control's motion.
-  static const _slideDuration = Duration(milliseconds: 130);
 
   @override
   Widget build(BuildContext context) {
-    Widget segmented;
-    if (isMac) {
-      segmented = _buildCupertino(context);
-    } else {
-      segmented = _buildMaterial();
-    }
-    return tooltip == null
-        ? segmented
-        : Localizations.override(
-            context: context,
-            delegates: const [DefaultMaterialLocalizations.delegate],
-            child: Tooltip(message: tooltip!, child: segmented),
-          );
+    final control = _buildControl(context);
+    if (tooltip == null) return control;
+    return Tooltip(message: tooltip!, child: control);
   }
 
-  Widget _buildCupertino(BuildContext context) {
+  Widget _buildControl(BuildContext context) {
     final colors = AppTokens.of(context).colors;
-    final selectedIndex = items.indexWhere((it) => it.$1 == value);
+    final selectedIndex = items.indexWhere((item) => item.$1 == value);
     return Container(
       height: 32,
       padding: const EdgeInsets.all(2),
@@ -121,39 +91,13 @@ class PlatformSegmentedControl<T> extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildMaterial() {
-    // A null [value] selects whichever item carries a null value (e.g. an
-    // "Any" segment); keep the set non-empty so [SegmentedButton] renders.
-    final selected = <T>{
-      if (value != null) value!,
-      if (value == null)
-        for (final it in items)
-          if (it.$1 == null) it.$1,
-    };
-    return SegmentedButton<T>(
-      segments: [
-        for (final item in items)
-          ButtonSegment<T>(value: item.$1, label: Text(item.$2)),
-      ],
-      selected: selected,
-      onSelectionChanged: (selection) {
-        if (onChanged == null) return;
-        // [emptySelectionAllowed] is false, so [selection] is never empty;
-        // a null value selects the null-valued segment (e.g. "Any").
-        onChanged!(selection.first);
-      },
-      showSelectedIcon: false,
-    );
-  }
 }
 
-/// One tappable segment label inside the macOS control.
 class _SegmentButton extends StatelessWidget {
   const _SegmentButton({
     required this.label,
     required this.selected,
-    this.onTap,
+    required this.onTap,
   });
 
   final String label;
@@ -163,7 +107,6 @@ class _SegmentButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = AppTokens.of(context);
-    final colors = tokens.colors;
     return Semantics(
       selected: selected,
       button: true,
@@ -175,7 +118,9 @@ class _SegmentButton extends StatelessWidget {
             label,
             style: tokens.typography.body.copyWith(
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              color: selected ? colors.textPrimary : colors.textSecondary,
+              color: selected
+                  ? tokens.colors.textPrimary
+                  : tokens.colors.textSecondary,
             ),
           ),
         ),

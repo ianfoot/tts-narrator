@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../controller/app_controller.dart';
 import '../editor/editor_screen.dart';
@@ -12,12 +12,14 @@ import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart';
 import 'platform_detection.dart';
 
-/// Cross-platform app root: a [CupertinoApp] on macOS, a [MaterialApp]
-/// elsewhere, sharing one [AppController] and navigator key.
+/// Cross-platform app root: a single [CupertinoApp] shell that mounts the
+/// native menu bar on macOS (whose items carry their own ⌘ shortcuts) and a
+/// [CallbackShortcuts] accelerator map on Linux/Windows, all dispatching
+/// through one [AppController] and navigator key.
 ///
 /// Wires the controller's command slots: the native Open file picker and the
 /// Narrate / Cancel slots (navigate to the run view; Cancel stops the run).
-/// Preferences stays reserved for the native menu bar (Task 5).
+/// Preferences stays reserved for the native menu bar.
 class AppRoot extends StatefulWidget {
   const AppRoot({super.key, required this.controller});
 
@@ -103,7 +105,8 @@ class _AppRootState extends State<AppRoot> {
   }
 
   /// The run view's 250ms cross-fade slide-up from a 20px offset (UI spec §4).
-  /// A bare [PageRouteBuilder] so macOS and Material present identically.
+  /// A bare [PageRouteBuilder] so the run view presents identically on every
+  /// platform.
   PageRouteBuilder<void> _runRoute() {
     const duration = Duration(milliseconds: 250);
     final screenHeight = MediaQuery.sizeOf(
@@ -140,76 +143,86 @@ class _AppRootState extends State<AppRoot> {
     return ValueListenableBuilder<AppThemeMode>(
       valueListenable: widget.controller.themeNotifier,
       builder: (context, themeMode, _) {
-        final home = EditorScreen(controller: widget.controller);
+        final dark =
+            resolveBrightness(
+              themeMode,
+              WidgetsBinding.instance.platformDispatcher.platformBrightness,
+            ) ==
+            Brightness.dark;
+        final palette = AppPalette.of(
+          dark ? Brightness.dark : Brightness.light,
+        );
+        final editor = EditorScreen(controller: widget.controller);
+        final Widget home;
         if (isMac) {
-          final dark =
-              resolveBrightness(
-                themeMode,
-                WidgetsBinding.instance.platformDispatcher.platformBrightness,
-              ) ==
-              Brightness.dark;
-          final palette = AppPalette.of(
-            dark ? Brightness.dark : Brightness.light,
+          // The native macOS menu bar lives above the editor route, so it
+          // stays mounted (and functional) while the narration run view is
+          // pushed on top. Home stays mounted under the pushed route.
+          home = PlatformMenuBar(
+            menus: buildMacMenu(
+              controller: widget.controller,
+              navigatorKey: _navigatorKey,
+            ),
+            child: editor,
           );
-          return CupertinoApp(
-            title: TextTokens.app_title,
-            navigatorKey: _navigatorKey,
-            debugShowCheckedModeBanner: false,
-            theme: CupertinoThemeData(
-              // Follows the system appearance (see the platformBrightness
-              // listener).
-              brightness: dark ? Brightness.dark : Brightness.light,
-              primaryColor: palette.accentPrimary,
-            ),
-            // The native macOS menu bar lives above the editor route, so it
-            // stays mounted (and functional) while the narration run view is
-            // pushed on top. Home stays mounted under the pushed route.
-            home: PlatformMenuBar(
-              menus: buildMacMenu(
-                controller: widget.controller,
-                navigatorKey: _navigatorKey,
-              ),
-              child: home,
-            ),
+        } else {
+          // Keyboard accelerators for the platforms without a native menu bar;
+          // they drive the same command slots the macOS menu binds.
+          home = CallbackShortcuts(
+            bindings: _desktopShortcuts(),
+            child: editor,
           );
         }
-        final light = _materialTheme(Brightness.light);
-        final dark = _materialTheme(Brightness.dark);
-        return MaterialApp(
+        return CupertinoApp(
           title: TextTokens.app_title,
           navigatorKey: _navigatorKey,
           debugShowCheckedModeBanner: false,
-          theme: light,
-          darkTheme: dark,
-          themeMode: switch (themeMode) {
-            AppThemeMode.light => ThemeMode.light,
-            AppThemeMode.dark => ThemeMode.dark,
-            AppThemeMode.system => ThemeMode.system,
-          },
+          theme: CupertinoThemeData(
+            // Follows the system appearance (see the platformBrightness
+            // listener).
+            brightness: dark ? Brightness.dark : Brightness.light,
+            primaryColor: palette.accentPrimary,
+          ),
           home: home,
         );
       },
     );
   }
 
-  /// Material [ThemeData] whose surfaces/text/accents map 1:1 onto the spec
-  /// tokens, so the Material path renders the same palette as Cupertino.
-  ThemeData _materialTheme(Brightness brightness) {
-    final palette = AppPalette.of(brightness);
-    final scheme =
-        ColorScheme.fromSeed(
-          seedColor: AppPalette.m3Seed,
-          brightness: brightness,
-        ).copyWith(
-          primary: palette.accentPrimary,
-          onSurface: palette.textPrimary,
-          onSurfaceVariant: palette.textSecondary,
-          surface: palette.bgApp,
-          surfaceContainerHighest: palette.bgSurfaceElevated,
-          errorContainer: palette.accentError.withValues(alpha: 0.12),
-          onErrorContainer: palette.accentError,
-          outlineVariant: palette.borderSubtle,
-        );
-    return ThemeData(colorScheme: scheme);
+  /// Ctrl/Shift accelerators for Linux/Windows, mirroring the macOS menu items
+  /// and their guards: Open, Output Folder, Narrate, Clear, Save, Save As,
+  /// Toggle Settings Panel and Close.
+  Map<ShortcutActivator, VoidCallback> _desktopShortcuts() {
+    final controller = widget.controller;
+    return <ShortcutActivator, VoidCallback>{
+      const SingleActivator(LogicalKeyboardKey.keyO, control: true): () =>
+          controller.commands.onOpen?.call(),
+      const SingleActivator(LogicalKeyboardKey.keyE, control: true): () =>
+          controller.commands.onSetOutputFolder?.call(),
+      const SingleActivator(LogicalKeyboardKey.keyN, control: true): () {
+        if (controller.narrateBlockReason() != null) return;
+        controller.commands.onNarrate?.call();
+      },
+      const SingleActivator(
+        LogicalKeyboardKey.keyL,
+        control: true,
+        shift: true,
+      ): () {
+        if (!controller.canClearText) return;
+        controller.clearText();
+      },
+      const SingleActivator(LogicalKeyboardKey.keyS, control: true): () =>
+          controller.save(),
+      const SingleActivator(
+        LogicalKeyboardKey.keyS,
+        control: true,
+        shift: true,
+      ): () =>
+          controller.saveAs(),
+      const SingleActivator(LogicalKeyboardKey.backslash, control: true): () =>
+          controller.commands.onToggleSettingsPanel?.call(),
+      const SingleActivator(LogicalKeyboardKey.keyW, control: true): () =>
+          _navigatorKey.currentState?.maybePop(),
+    };
   }
 }

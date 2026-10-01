@@ -56,4 +56,34 @@ void main() {
       expect(platform.platformTag, 'linux');
     });
   });
+
+  group('acceleratorLabel', () {
+    // Reset override between every test so expectations never leak.
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    test('uses Command on macOS', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      expect(platform.acceleratorLabel('N'), '⌘N');
+    });
+
+    test('uses Command+Shift on macOS', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      expect(platform.acceleratorLabel('L', shift: true), '⌘⇧L');
+    });
+
+    test('uses Ctrl on Linux', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      expect(platform.acceleratorLabel('N'), 'Ctrl+N');
+    });
+
+    test('uses Ctrl on Windows', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      expect(platform.acceleratorLabel('N'), 'Ctrl+N');
+    });
+
+    test('uses Ctrl+Shift on non-macOS platforms', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      expect(platform.acceleratorLabel('L', shift: true), 'Ctrl+Shift+L');
+    });
+  });
 }

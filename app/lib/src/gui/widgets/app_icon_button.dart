@@ -1,8 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../../theme/app_tokens.dart';
-import '../platform_detection.dart';
+import '../theme/app_tokens.dart';
 
 /// Enabled toolbar icons rest at ~78% opacity and step up to full
 /// [AppPalette.textPrimary] only while hovered (or pressed), so quiet chrome
@@ -10,19 +9,13 @@ import '../platform_detection.dart';
 /// around it.
 const double kIconButtonRestOpacity = 0.78;
 
-/// Platform-aware icon-only button: [CupertinoButton] (transparent) on macOS,
-/// [IconButton] elsewhere.
+/// Icon-only toolbar button, single Cupertino dialect.
 ///
 /// Icons render at [kIconButtonRestOpacity] when enabled and idle, brighten to
 /// full opacity on hover/press (the "active" state), and drop to a disabled
 /// grey (0.6 alpha) when [onPressed] is null.
-///
-/// [tooltip] renders on every platform: the macOS build wraps the button in a
-/// [Localizations.override] for Material's localizations so the Material
-/// [Tooltip] works even though the app shell is a [CupertinoApp] (which
-/// provides no Material localizations of its own).
-class PlatformIconButton extends StatefulWidget {
-  const PlatformIconButton({
+class AppIconButton extends StatefulWidget {
+  const AppIconButton({
     super.key,
     required this.icon,
     this.tooltip,
@@ -37,10 +30,10 @@ class PlatformIconButton extends StatefulWidget {
   final VoidCallback? onPressed;
 
   @override
-  State<PlatformIconButton> createState() => _PlatformIconButtonState();
+  State<AppIconButton> createState() => _AppIconButtonState();
 }
 
-class _PlatformIconButtonState extends State<PlatformIconButton> {
+class _AppIconButtonState extends State<AppIconButton> {
   bool _hovered = false;
 
   @override
@@ -57,31 +50,22 @@ class _PlatformIconButtonState extends State<PlatformIconButton> {
       data: IconThemeData(color: iconColor),
       child: widget.icon,
     );
-    final Widget button;
-    if (isMac) {
-      button = CupertinoButton(
-        onPressed: widget.onPressed,
-        padding: const EdgeInsets.all(8),
-        // Keep the icon at full brightness while pressing: the hover state
-        // already telegraphs interactivity, and dimming here would dip below
-        // the resting opacity (jarring against the "active = full" rule).
-        pressedOpacity: 1.0,
-        borderRadius: BorderRadius.circular(6),
-        child: themedIcon,
-      );
-    } else {
-      button = IconButton(icon: themedIcon, onPressed: widget.onPressed);
-    }
+    final button = CupertinoButton(
+      onPressed: widget.onPressed,
+      padding: const EdgeInsets.all(8),
+      // Keep the icon at full brightness while pressing: the hover state
+      // already telegraphs interactivity, and dimming here would dip below
+      // the resting opacity (jarring against the "active = full" rule).
+      pressedOpacity: 1.0,
+      borderRadius: BorderRadius.circular(6),
+      child: themedIcon,
+    );
     final Widget hoverAware = MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: button,
     );
     if (widget.tooltip == null) return hoverAware;
-    return Localizations.override(
-      context: context,
-      delegates: const [DefaultMaterialLocalizations.delegate],
-      child: Tooltip(message: widget.tooltip!, child: hoverAware),
-    );
+    return Tooltip(message: widget.tooltip!, child: hoverAware);
   }
 }

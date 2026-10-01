@@ -140,11 +140,10 @@ final class TextTokens {
   static const String gui_editor_toolbar_appearanceTooltip = 'Appearance: \u0024mode';
   static const String gui_editor_toolbar_cleanupSegments = 'Clean up segments';
   static const String gui_editor_toolbar_narrate = 'Narrate';
-  static const String gui_editor_toolbar_narrateShortcut = 'Narrate (⌘N)';
-  static const String gui_editor_toolbar_openTextFile = 'Open text file (⌘O)';
+  static const String gui_editor_toolbar_openTextFile = 'Open text file';
   static const String gui_editor_toolbar_playFull = 'Play Full';
-  static const String gui_editor_toolbar_save = 'Save (⌘S)';
-  static const String gui_editor_toolbar_setOutputFolder = 'Set output folder (⌘E)';
+  static const String gui_editor_toolbar_save = 'Save';
+  static const String gui_editor_toolbar_setOutputFolder = 'Set output folder';
   static const String gui_editor_toolbar_showHideSettings = 'Show / hide settings';
   static const String gui_editor_toolbar_stop = 'Stop';
   static const String gui_editor_toolbar_themeModeAuto = 'Auto';

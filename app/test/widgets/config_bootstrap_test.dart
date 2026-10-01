@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator/main.dart';
-import 'package:tts_narrator/src/gui/platform/widgets/platform_activity_indicator.dart';
 import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
@@ -88,7 +88,7 @@ void main() {
 
       // No dialog, no spinner — straight to the app.
       expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsNothing);
-      expect(find.byType(PlatformActivityIndicator), findsNothing);
+      expect(find.byType(CupertinoActivityIndicator), findsNothing);
     });
 
     testWidgets('shows a spinner during a confirmed download', (tester) async {
@@ -115,13 +115,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       // The downloader is gated, so the spinner stays visible.
-      expect(find.byType(PlatformActivityIndicator), findsOneWidget);
+      expect(find.byType(CupertinoActivityIndicator), findsOneWidget);
       expect(find.text(TextTokens.gui_bootstrap_downloading), findsOneWidget);
 
       // Releasing the downloader lands the app.
       gate.complete();
       await tester.pumpAndSettle();
-      expect(find.byType(PlatformActivityIndicator), findsNothing);
+      expect(find.byType(CupertinoActivityIndicator), findsNothing);
       expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsNothing);
       expect(calls.single.$1, tempDir);
       expect(calls.single.$2, ['fish.json', 'gemini.json', 'kokoro.json']);
@@ -156,7 +156,10 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsOneWidget);
+        expect(
+          find.text(TextTokens.gui_bootstrap_downloadTitle),
+          findsOneWidget,
+        );
         expect(find.textContaining('MLX Kokoro'), findsOneWidget);
       });
     });
@@ -169,57 +172,57 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsOneWidget);
+        expect(
+          find.text(TextTokens.gui_bootstrap_downloadTitle),
+          findsOneWidget,
+        );
         expect(find.textContaining('MLX Kokoro'), findsNothing);
       });
     });
 
-    testWidgets(
-      'entire flow: manifest drives dialog, download lands on disk, '
-      'relaunch skips straight to the app',
-      (tester) async {
-        // Partial state: two starters present, config.json + fish.json missing
-        // -> the dialog must appear listing the manifest starters.
-        File('$tempDir/gemini.json').writeAsStringSync('{}');
-        File('$tempDir/kokoro.json').writeAsStringSync('{}');
+    testWidgets('entire flow: manifest drives dialog, download lands on disk, '
+        'relaunch skips straight to the app', (tester) async {
+      // Partial state: two starters present, config.json + fish.json missing
+      // -> the dialog must appear listing the manifest starters.
+      File('$tempDir/gemini.json').writeAsStringSync('{}');
+      File('$tempDir/kokoro.json').writeAsStringSync('{}');
 
-        // Downloader mirrors downloadVoiceConfigFiles semantics: config.json
-        // always, plus each manifest starter.
-        Future<void> downloader(String configDir, List<String> files) async {
-          File('$configDir/config.json').writeAsStringSync('{}');
-          for (final file in files) {
-            File('$configDir/$file').writeAsStringSync('{}');
-          }
+      // Downloader mirrors downloadVoiceConfigFiles semantics: config.json
+      // always, plus each manifest starter.
+      Future<void> downloader(String configDir, List<String> files) async {
+        File('$configDir/config.json').writeAsStringSync('{}');
+        for (final file in files) {
+          File('$configDir/$file').writeAsStringSync('{}');
         }
+      }
 
-        await pumpBootstrap(
-          tester,
-          downloader: downloader,
-          manifestLoader: () async => _linuxManifest,
-        );
-        await tester.pumpAndSettle();
+      await pumpBootstrap(
+        tester,
+        downloader: downloader,
+        manifestLoader: () async => _linuxManifest,
+      );
+      await tester.pumpAndSettle();
 
-        // The manifest names the starters for the dialog copy.
-        expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsOneWidget);
-        expect(find.textContaining('Fish, Gemini, Kokoro'), findsOneWidget);
+      // The manifest names the starters for the dialog copy.
+      expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsOneWidget);
+      expect(find.textContaining('Fish, Gemini, Kokoro'), findsOneWidget);
 
-        await tester.tap(find.text(TextTokens.gui_bootstrap_download));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text(TextTokens.gui_bootstrap_download));
+      await tester.pumpAndSettle();
 
-        // The GUI download actually wrote the files.
-        expect(File('$tempDir/config.json').existsSync(), isTrue);
-        expect(File('$tempDir/fish.json').existsSync(), isTrue);
+      // The GUI download actually wrote the files.
+      expect(File('$tempDir/config.json').existsSync(), isTrue);
+      expect(File('$tempDir/fish.json').existsSync(), isTrue);
 
-        // A fresh bootstrap sees a complete config dir and skips the dialog.
-        await pumpBootstrap(
-          tester,
-          downloader: downloader,
-          manifestLoader: () async => _linuxManifest,
-        );
-        await tester.pumpAndSettle();
-        expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsNothing);
-        expect(find.byType(PlatformActivityIndicator), findsNothing);
-      },
-    );
+      // A fresh bootstrap sees a complete config dir and skips the dialog.
+      await pumpBootstrap(
+        tester,
+        downloader: downloader,
+        manifestLoader: () async => _linuxManifest,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(TextTokens.gui_bootstrap_downloadTitle), findsNothing);
+      expect(find.byType(CupertinoActivityIndicator), findsNothing);
+    });
   });
 }

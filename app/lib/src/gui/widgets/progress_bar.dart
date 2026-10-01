@@ -3,8 +3,8 @@ import 'package:flutter/widgets.dart';
 /// Platform-neutral determinate progress bar (Cupertino has no built-in
 /// determinate bar in this SDK). A thin track with a rounded fill sized to
 /// [value]; has no Material dependency, so it is safe under Cupertino too.
-class PlatformProgressBar extends StatelessWidget {
-  const PlatformProgressBar({
+class ProgressBar extends StatelessWidget {
+  const ProgressBar({
     super.key,
     required this.value,
     required this.valueColor,
@@ -12,9 +12,8 @@ class PlatformProgressBar extends StatelessWidget {
     this.minHeight = 4,
   });
 
-  /// Progress from 0.0 to 1.0.
+  /// Fill fraction from 0.0 to 1.0 (clamped).
   final double value;
-
   final Color valueColor;
   final Color backgroundColor;
   final double minHeight;

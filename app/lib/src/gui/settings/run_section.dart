@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
-import '../platform/widgets/platform_section.dart';
-import '../platform/widgets/platform_slider.dart';
-import '../platform/widgets/platform_switch.dart';
-import '../platform/widgets/platform_text_field.dart';
 import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart';
+import '../widgets/app_section.dart';
+import '../widgets/app_slider.dart';
+import '../widgets/app_switch.dart';
+import '../widgets/app_text_field.dart';
 import 'settings_labels.dart';
 
 /// The "Run" section of the settings rail: whole-file toggle, the minimum
@@ -96,7 +96,7 @@ class _RunSectionState extends State<RunSection> {
 
   @override
   Widget build(BuildContext context) {
-    return PlatformSection(
+    return AppSection(
       title: TextTokens.gui_settings_runSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -112,7 +112,7 @@ class _RunSectionState extends State<RunSection> {
                       TextTokens.gui_settings_sendWholeFile,
                     ),
                   ),
-                  PlatformSwitch(
+AppSwitch(
                     key: const Key('wholeFileSwitch'),
                     tooltip: TextTokens.gui_settings_sendWholeFileTooltip,
                     value: _controller.sendWholeFile,
@@ -127,7 +127,7 @@ class _RunSectionState extends State<RunSection> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: PlatformSlider(
+                  child: AppSlider(
                     key: const Key('minWordsSlider'),
                     tooltip: TextTokens.gui_settings_minWordsSliderTooltip,
                     value: _controller.minWords.toDouble(),
@@ -165,7 +165,7 @@ class _RunSectionState extends State<RunSection> {
                     TextTokens.gui_settings_sampleMode,
                   ),
                 ),
-                PlatformSwitch(
+                AppSwitch(
                   key: const Key('sampleSwitch'),
                   tooltip: TextTokens.gui_settings_sampleModeTooltip,
                   value: _sampleOn,
@@ -188,7 +188,7 @@ class _RunSectionState extends State<RunSection> {
                   const SizedBox(width: 8),
                   SizedBox(
                     width: 48,
-                    child: PlatformTextField(
+                    child: AppTextField(
                       key: const Key('sampleLenField'),
                       tooltip: TextTokens.gui_settings_sampleLenFieldTooltip,
                       controller: _sampleLen,
@@ -209,7 +209,7 @@ class _RunSectionState extends State<RunSection> {
                     TextTokens.gui_settings_skipCompletedSegments,
                   ),
                 ),
-                PlatformSwitch(
+                AppSwitch(
                   key: const Key('resumeSwitch'),
                   tooltip: TextTokens.gui_settings_resumeTooltip,
                   value: _controller.resume,
