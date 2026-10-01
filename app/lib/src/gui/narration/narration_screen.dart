@@ -307,7 +307,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     );
   }
 
-  /// 3-column segment card: status (32px) · body (flex) · action (100px).
+  /// 3-column segment card: status (32px) · body (flex) · action.
   Widget _buildSegmentCard(NarrationSegment segment) {
     final colors = _tokens.colors;
     final trimmed = segment.paragraph.trim();
@@ -324,6 +324,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
           _statusColumn(segment),
           const SizedBox(width: 12),
           Expanded(child: _bodyColumn(segment, trimmed)),
+          SizedBox(width: AppMetrics.segmentActionWidth),
           _actionColumn(segment),
         ],
       ),
@@ -435,54 +436,33 @@ class _NarrationScreenState extends State<NarrationScreen> {
     } else {
       child = _playStopButton(segment, isPlaying);
     }
-    return SizedBox(
-      width: AppMetrics.segmentActionWidth,
-      child: Align(alignment: Alignment.centerRight, child: child),
-    );
+    // Sized to its content rather than a fixed width: [AppButton]'s outlined
+    // geometry carries CupertinoButton's default 16px padding, so a hard
+    // column width clipped the label on narrow surfaces.
+    return Align(alignment: Alignment.centerRight, child: child);
   }
 
-  /// Compact `▶ Play` / `⏹ Stop` toggle sized to fit the 100px action column
-  /// (the shared [AppButton] outlined geometry is too wide for it).
+  /// Compact `▶ Play` / `⏹ Stop` toggle sized to fit the action column via
+  /// [AppButton]'s compact outlined geometry.
   Widget _playStopButton(NarrationSegment segment, bool isPlaying) {
     final colors = _tokens.colors;
     final label = isPlaying
         ? TextTokens.gui_narration_stop
         : TextTokens.gui_narration_play;
-    final button = CupertinoButton(
+    return AppButton(
       key: Key('segAction_${segment.index}'),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       onPressed: () => _togglePlay(segment),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          border: Border.all(color: colors.borderSubtle, width: 0.8),
-          borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
-        ),
-        child: DefaultTextStyle(
-          style: _tokens.typography.body,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isPlaying ? _stopIcon() : _playIcon(),
-                size: 14,
-                color: colors.textPrimary,
-              ),
-              const SizedBox(width: 4),
-              Text(label),
-            ],
-          ),
-        ),
+      style: AppButtonStyle.outlined,
+      compact: true,
+      icon: Icon(
+        isPlaying ? _stopIcon() : _playIcon(),
+        size: 14,
+        color: colors.textPrimary,
       ),
+      // Reused clips explain themselves; the rest just restate the label.
+      tooltip: segment.resumed ? TextTokens.gui_narration_resumedTooltip : label,
+      child: Text(label, style: _tokens.typography.body),
     );
-    // Reused clips get a hover tooltip on every platform.
-    if (segment.resumed) {
-      return Tooltip(
-        message: TextTokens.gui_narration_resumedTooltip,
-        child: button,
-      );
-    }
-    return button;
   }
 
   Widget _buildProgressBar(AppController controller) {
