@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart' show formatCostUsd;
 
 import '../controller/app_controller.dart';
@@ -460,7 +459,9 @@ class _NarrationScreenState extends State<NarrationScreen> {
         color: colors.textPrimary,
       ),
       // Reused clips explain themselves; the rest just restate the label.
-      tooltip: segment.resumed ? TextTokens.gui_narration_resumedTooltip : label,
+      tooltip: segment.resumed
+          ? TextTokens.gui_narration_resumedTooltip
+          : label,
       child: Text(label, style: _tokens.typography.body),
     );
   }
