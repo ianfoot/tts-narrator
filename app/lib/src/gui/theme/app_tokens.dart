@@ -166,6 +166,11 @@ class AppPalette {
 /// UI sans-serif text omits a family so the platform default system font
 /// renders (.SF NS on macOS, Segoe UI on Windows, Ubuntu etc. on Linux).
 ///
+/// The editor body and the mono readouts are the exception: they pin a
+/// concrete family per platform (plus a metric-similar fallback chain) so the
+/// macOS and Linux builds render the same shapes instead of drifting to each
+/// platform's default.
+///
 /// Type sizes and weights come from `app/assets/theme/tokens.json`; the
 /// platform-resolved family getters below stay in Dart because they depend
 /// on [TargetPlatform].
@@ -180,29 +185,68 @@ class AppTypography {
 
   static const _GeneratedTypography _t = _GeneratedTypography();
 
-  /// Serif stack for the editor body: macOS/iOS → Georgia (New York is not
-  /// loadable by Flutter), Windows → Georgia / Times New Roman, Linux →
-  /// Nimbus / `serif` fallback.
-  String? get editorSerifFamily {
+  /// Sans stack for the editor body, pinned on every platform so the two
+  /// desktop builds lay out identically instead of falling back to each
+  /// platform's default face.
+  ///
+  /// macOS/iOS → Helvetica, Windows → Arial, Linux → Nimbus Sans. Nimbus Sans
+  /// is the metric-compatible URW clone of Helvetica, so glyph advance widths
+  /// match the macOS build exactly; see [editorSansFallback] for the chains
+  /// used when the primary family is missing.
+  String? get editorSansFamily {
     switch (platform) {
       case TargetPlatform.macOS:
+      case TargetPlatform.iOS:
+        return 'Helvetica';
       case TargetPlatform.windows:
-        return 'Georgia';
+        return 'Arial';
       default:
-        return 'serif';
+        return 'Nimbus Sans';
     }
   }
 
-  /// Monospace stack for metadata/readouts: SF Mono / Menlo, Consolas,
-  /// Liberation Mono.
+  /// Metric-similar substitutes for [editorSansFamily], tried in order.
+  List<String>? get editorSansFallback {
+    switch (platform) {
+      case TargetPlatform.macOS:
+      case TargetPlatform.iOS:
+        return const ['Helvetica Neue', 'Arial', 'sans-serif'];
+      case TargetPlatform.windows:
+        return const ['Liberation Sans', 'DejaVu Sans', 'sans-serif'];
+      default:
+        return const ['Liberation Sans', 'DejaVu Sans', 'Noto Sans'];
+    }
+  }
+
+  /// Monospace stack for metadata/readouts: Menlo (macOS/iOS), Consolas
+  /// (Windows), DejaVu Sans Mono (Linux).
+  ///
+  /// DejaVu Sans Mono is the direct successor of Bitstream Vera Sans Mono — the
+  /// face Menlo was derived from — so the readouts keep the same advance widths
+  /// on both platforms. The generic `monospace` alias was deliberately avoided
+  /// because it resolves to different faces on different distros.
   String? get monoFamily {
     switch (platform) {
       case TargetPlatform.macOS:
+      case TargetPlatform.iOS:
         return 'Menlo';
       case TargetPlatform.windows:
         return 'Consolas';
       default:
-        return 'monospace';
+        return 'DejaVu Sans Mono';
+    }
+  }
+
+  /// Metric-similar substitutes for [monoFamily], tried in order.
+  List<String>? get monoFallback {
+    switch (platform) {
+      case TargetPlatform.macOS:
+      case TargetPlatform.iOS:
+        return const ['Courier New', 'monospace'];
+      case TargetPlatform.windows:
+        return const ['Cascadia Mono', 'Courier New', 'monospace'];
+      default:
+        return const ['Liberation Mono', 'Noto Sans Mono', 'monospace'];
     }
   }
 
@@ -219,14 +263,16 @@ class AppTypography {
   TextStyle get mono => TextStyle(
     fontSize: _t.mono.fontSize,
     fontFamily: monoFamily,
+    fontFamilyFallback: monoFallback,
     color: colors.textPrimary,
   );
 
-  /// 16pt / 1.6x serif editor body with default colour.
+  /// 16pt / 1.6x sans editor body with default colour.
   TextStyle get editorBody => TextStyle(
     fontSize: _t.editorBody.fontSize,
     height: _t.editorBody.height,
-    fontFamily: editorSerifFamily,
+    fontFamily: editorSansFamily,
+    fontFamilyFallback: editorSansFallback,
     color: colors.textPrimary,
   );
 }

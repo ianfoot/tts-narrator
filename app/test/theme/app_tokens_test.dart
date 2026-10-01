@@ -109,16 +109,41 @@ void main() {
   });
 
   group('AppTypography', () {
-    test('resolves the serif + mono family per platform', () {
-      expect(AppTypography(TargetPlatform.macOS).editorSerifFamily, 'Georgia');
+    test('resolves the sans + mono family per platform', () {
+      expect(AppTypography(TargetPlatform.macOS).editorSansFamily, 'Helvetica');
       expect(
-        AppTypography(TargetPlatform.windows).editorSerifFamily,
-        'Georgia',
+        AppTypography(TargetPlatform.windows).editorSansFamily,
+        'Arial',
       );
-      expect(AppTypography(TargetPlatform.android).editorSerifFamily, 'serif');
+      expect(
+        AppTypography(TargetPlatform.linux).editorSansFamily,
+        'Nimbus Sans',
+      );
+      expect(
+        AppTypography(TargetPlatform.android).editorSansFamily,
+        'Nimbus Sans',
+      );
       expect(AppTypography(TargetPlatform.macOS).monoFamily, 'Menlo');
       expect(AppTypography(TargetPlatform.windows).monoFamily, 'Consolas');
-      expect(AppTypography(TargetPlatform.linux).monoFamily, 'monospace');
+      expect(AppTypography(TargetPlatform.linux).monoFamily, 'DejaVu Sans Mono');
+    });
+
+    test('pairs every family with a metric-similar fallback chain', () {
+      final mac = AppTypography(TargetPlatform.macOS);
+      final linux = AppTypography(TargetPlatform.linux);
+
+      // Helvetica <-> Nimbus Sans and Menlo <-> DejaVu Sans Mono are both
+      // metric-compatible pairs, so the fallback must never silently drop to a
+      // proportional or generic face.
+      expect(linux.editorSansFallback, contains('Liberation Sans'));
+      expect(mac.editorSansFallback, contains('Helvetica Neue'));
+      expect(linux.monoFallback, contains('Liberation Mono'));
+      expect(linux.monoFallback, contains('monospace'));
+
+      // The generated tokens carry no family, so the getters own it.
+      expect(mac.body.fontFamily, isNull);
+      expect(mac.editorBody.fontFamilyFallback, isNotEmpty);
+      expect(mac.mono.fontFamilyFallback, isNotEmpty);
     });
 
     test('exposes the spec type scale (spec §1)', () {
@@ -130,7 +155,7 @@ void main() {
       expect(t.mono.fontFamily, 'Menlo');
       expect(t.editorBody.fontSize, 16);
       expect(t.editorBody.height, 1.6);
-      expect(t.editorBody.fontFamily, 'Georgia');
+      expect(t.editorBody.fontFamily, 'Helvetica');
     });
   });
 

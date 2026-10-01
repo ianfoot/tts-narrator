@@ -147,9 +147,9 @@ The JSON shape:
 - `typography.<name>` — at minimum a `fontSize` integer; optional
   `height` (number), `fontWeight` (`"w600"` style — maps to
   `FontWeight.w600`), and `fontFamily`. A `fontFamily` of
-  `"platform:mono"` or `"platform:editorSerif"` is a sentinel: the
+  `"platform:mono"` or `"platform:editorSans"` is a sentinel: the
   family is resolved at runtime by `AppTypography.monoFamily` /
-  `.editorSerifFamily` against `defaultTargetPlatform`. Anything else
+  `.editorSansFamily` against `defaultTargetPlatform`. Anything else
   is treated as a literal family name.
 
 ## Notes / current behaviour

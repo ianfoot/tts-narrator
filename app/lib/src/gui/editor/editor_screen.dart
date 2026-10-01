@@ -16,7 +16,7 @@ import 'editor_toolbar.dart';
 
 /// Editor-first home screen (JSON UI Schema `header_toolbar` /
 /// `editor_surface` / `status_bar`): a fixed toolbar with the document title,
-/// a large serif editor, and a status bar with a live estimate pill.
+/// a large editor, and a status bar with a live estimate pill.
 ///
 /// All command dispatch goes through [AppController]; the screen only renders
 /// controller state and surfaces controller guards (e.g. the empty-text
