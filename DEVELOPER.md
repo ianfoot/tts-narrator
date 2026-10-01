@@ -99,11 +99,11 @@ error (the hard gate).
 
 ## GUI internals
 
-- The UI is built from Flutter's built-in Cupertino widgets on macOS (Material
-  on Linux/Windows when those are scaffolded), selected by a thin platform
-  root — no third-party UI package. The `PlatformMenuBar` menu bar is
-  macOS-only; the same controller command slots are what in-app menus bind on
-  other platforms.
+- The UI is built from Flutter's built-in Cupertino widgets on every platform —
+  no Material, no third-party UI package. The `PlatformMenuBar` menu bar is
+  macOS-only; on Linux/Windows a `CallbackShortcuts` accelerator map (mounted
+  above the `Navigator` via `CupertinoApp.builder`) binds the same controller
+  command slots.
 - The sandboxed macOS app needs the **`com.apple.security.network.client`**
   entitlement to reach the OpenRouter API; it's already present in
   `app/macos/Runner/DebugProfile.entitlements` and `Release.entitlements`.
@@ -142,7 +142,8 @@ The JSON shape:
   `"0xFFFBFBF9"` or `"0x14000000"`. The codegen emits a `Color(int)` so
   `0xAARRGGBB` form is required.
 - `m3Seed` — the Material 3 `ColorScheme.fromSeed` value (theme-
-  independent). Same hex format as the colors.
+  independent). Same hex format as the colors. The key is still required by
+  the codegen but no longer read by the running app.
 - `typography.<name>` — at minimum a `fontSize` integer; optional
   `height` (number), `fontWeight` (`"w600"` style — maps to
   `FontWeight.w600`), and `fontFamily`. A `fontFamily` of

@@ -28,8 +28,7 @@ class BootstrapApp extends StatelessWidget {
 
   /// Injectable config downloader (defaults to [downloadVoiceConfigFiles]);
   /// tests inject a controllable fake so the spinner is observable.
-  final Future<void> Function(String configDir, List<String> files)?
-      downloader;
+  final Future<void> Function(String configDir, List<String> files)? downloader;
 
   /// Injectable starter-manifest loader (defaults to a cached-fetch from
   /// GitHub); tests inject a fake so the bootstrap is hermetic.
@@ -64,8 +63,7 @@ class ConfigBootstrap extends StatefulWidget {
   final SharedPreferences prefs;
 
   /// Injectable config downloader (defaults to [downloadVoiceConfigFiles]).
-  final Future<void> Function(String configDir, List<String> files)?
-      downloader;
+  final Future<void> Function(String configDir, List<String> files)? downloader;
 
   /// Injectable starter-manifest loader (defaults to a cached-fetch from
   /// GitHub); tests inject a fake so the bootstrap is hermetic.

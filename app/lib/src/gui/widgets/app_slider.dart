@@ -1,8 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Tooltip;
 
-import '../theme/app_tokens.dart';
-
 class AppSlider extends StatelessWidget {
   const AppSlider({
     super.key,
@@ -23,16 +21,12 @@ class AppSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final slider = Transform.scale(
-      alignment: Alignment.centerLeft,
-      scale: AppMetrics.controlKnobScale,
-      child: CupertinoSlider(
-        value: value,
-        onChanged: onChanged,
-        min: min,
-        max: max,
-        divisions: divisions,
-      ),
+    final slider = CupertinoSlider(
+      value: value,
+      onChanged: onChanged,
+      min: min,
+      max: max,
+      divisions: divisions,
     );
     if (tooltip == null) return slider;
     return Tooltip(message: tooltip!, child: slider);

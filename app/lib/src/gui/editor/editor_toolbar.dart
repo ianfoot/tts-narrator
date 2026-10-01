@@ -131,8 +131,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
   Widget _buildClearButton() {
     return AppIconButton(
       key: const Key('editorClearButton'),
-      tooltip:
-          'Clear text (${acceleratorLabel('L', shift: true)})',
+      tooltip: 'Clear text (${acceleratorLabel('L', shift: true)})',
       icon: const Icon(CupertinoIcons.delete_left),
       onPressed: controller.canClearText ? () => controller.clearText() : null,
     );
@@ -173,7 +172,9 @@ class _EditorToolbarState extends State<EditorToolbar> {
         ? TextTokens.gui_editor_toolbar_stop
         : TextTokens.gui_editor_toolbar_playFull;
     final btnIcon = Icon(
-      widget.playingFull ? CupertinoIcons.stop_circle : CupertinoIcons.play_fill,
+      widget.playingFull
+          ? CupertinoIcons.stop_circle
+          : CupertinoIcons.play_fill,
       size: 14,
       color: colors.textPrimary,
     );

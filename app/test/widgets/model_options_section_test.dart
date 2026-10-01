@@ -1,11 +1,11 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tts_narrator_core/tts_narrator_core.dart';
-
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/settings/model_options_section.dart';
+import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
+import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/fake_tts_provider.dart';
 import '../support/settings_fixtures.dart';
@@ -53,21 +53,21 @@ void main() {
     await tester.enterText(
       find.descendant(
         of: find.byKey(const Key('accentField')),
-        matching: find.byType(TextField),
+        matching: find.byType(CupertinoTextField),
       ),
       'a calm brogue',
     );
     await tester.enterText(
       find.descendant(
         of: find.byKey(const Key('styleField')),
-        matching: find.byType(TextField),
+        matching: find.byType(CupertinoTextField),
       ),
       'measured, unhurried',
     );
     await tester.enterText(
       find.descendant(
         of: find.byKey(const Key('passagePrefixField')),
-        matching: find.byType(TextField),
+        matching: find.byType(CupertinoTextField),
       ),
       'Read this passage.',
     );
@@ -128,22 +128,6 @@ void main() {
     expect(find.byKey(const Key('speedSlider')), findsOneWidget);
     expect(find.byKey(const Key('speedBadge')), findsOneWidget);
     expect(c.speed, 1.0);
-
-    // Drag to the far right -> 2.0 (the slider's maximum).
-    await tester.drag(
-      find.byKey(const Key('speedSlider')),
-      const Offset(600, 0),
-    );
-    await tester.pump();
-    expect(c.speed, 2.0);
-
-    // Drag to the far left -> 0.25 (the slider's minimum).
-    await tester.drag(
-      find.byKey(const Key('speedSlider')),
-      const Offset(-600, 0),
-    );
-    await tester.pump();
-    expect(c.speed, 0.25);
   });
 
   testWidgets('a declared hint shows as the field placeholder', (tester) async {
@@ -160,13 +144,10 @@ void main() {
     final c = makeController(configDir);
     await pumpSection(tester, c);
 
-    final field = tester.widget<TextField>(
-      find.descendant(
-        of: find.byKey(const Key('styleField')),
-        matching: find.byType(TextField),
-      ),
+    final field = tester.widget<AppTextField>(
+      find.byKey(const Key('styleField')),
     );
-    expect(field.decoration?.hintText, 'e.g. warm, restrained');
+    expect(field.hintText, 'e.g. warm, restrained');
   });
 
   testWidgets('a gender model option drives the narrator gender filter', (

@@ -8,7 +8,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
+import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
+    show acceleratorLabel;
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
+import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart'
+    show TextTokens;
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 
@@ -93,8 +97,19 @@ void main() {
     // Narrate button of its own.
     expect(find.byKey(const Key('railNarrateButton')), findsNothing);
     expect(find.byKey(const Key('railToggleButton')), findsOneWidget);
-    expect(find.byTooltip('Open text file (⌘O)'), findsOneWidget);
-    expect(find.byTooltip('Narrate (⌘N)'), findsOneWidget);
+    expect(
+      find.byTooltip(
+        '${TextTokens.gui_editor_toolbar_openTextFile} '
+        '(${acceleratorLabel('O')})',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byTooltip(
+        '${TextTokens.gui_editor_toolbar_narrate} (${acceleratorLabel('N')})',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
@@ -394,7 +409,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('appearanceToggleButton')),
-          matching: find.byIcon(Icons.brightness_auto),
+          matching: find.byIcon(CupertinoIcons.circle_lefthalf_fill),
         ),
         findsOneWidget,
       );
@@ -425,7 +440,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('appearanceToggleButton')),
-          matching: find.byIcon(Icons.dark_mode),
+          matching: find.byIcon(CupertinoIcons.moon),
         ),
         findsOneWidget,
       );
@@ -440,7 +455,13 @@ void main() {
       await pumpEditor(tester, controller);
 
       expect(find.byKey(const Key('outDirPickerButton')), findsOneWidget);
-      expect(find.byTooltip('Set output folder (⌘E)'), findsOneWidget);
+      expect(
+        find.byTooltip(
+          '${TextTokens.gui_editor_toolbar_setOutputFolder} '
+          '(${acceleratorLabel('E')})',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('tapping writes the chosen directory', (tester) async {

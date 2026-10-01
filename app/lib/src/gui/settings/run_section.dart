@@ -112,7 +112,7 @@ class _RunSectionState extends State<RunSection> {
                       TextTokens.gui_settings_sendWholeFile,
                     ),
                   ),
-AppSwitch(
+                  AppSwitch(
                     key: const Key('wholeFileSwitch'),
                     tooltip: TextTokens.gui_settings_sendWholeFileTooltip,
                     value: _controller.sendWholeFile,

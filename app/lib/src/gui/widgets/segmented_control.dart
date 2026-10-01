@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_tokens.dart';
 
 /// macOS-style segmented control: an elevated track with a sliding selected
-/// pill; the only dialect (Material's SegmentedButton is gone).
+/// pill;
 class SegmentedControl<T> extends StatelessWidget {
   const SegmentedControl({
     super.key,

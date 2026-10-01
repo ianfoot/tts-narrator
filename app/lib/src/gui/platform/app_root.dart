@@ -154,6 +154,7 @@ class _AppRootState extends State<AppRoot> {
         );
         final editor = EditorScreen(controller: widget.controller);
         final Widget home;
+        final TransitionBuilder? acceleratorHost;
         if (isMac) {
           // The native macOS menu bar lives above the editor route, so it
           // stays mounted (and functional) while the narration run view is
@@ -165,18 +166,22 @@ class _AppRootState extends State<AppRoot> {
             ),
             child: editor,
           );
+          acceleratorHost = null;
         } else {
           // Keyboard accelerators for the platforms without a native menu bar;
-          // they drive the same command slots the macOS menu binds.
-          home = CallbackShortcuts(
+          // they drive the same command slots the macOS menu binds. Mounted
+          // above the Navigator so pushed routes keep them.
+          home = editor;
+          acceleratorHost = (context, child) => CallbackShortcuts(
             bindings: _desktopShortcuts(),
-            child: editor,
+            child: child ?? const SizedBox.shrink(),
           );
         }
         return CupertinoApp(
           title: TextTokens.app_title,
           navigatorKey: _navigatorKey,
           debugShowCheckedModeBanner: false,
+          builder: acceleratorHost,
           theme: CupertinoThemeData(
             // Follows the system appearance (see the platformBrightness
             // listener).

@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart'
-    show Tooltip;
+import 'package:flutter/material.dart' show Tooltip;
 
 import '../theme/app_tokens.dart';
 
@@ -61,7 +60,9 @@ class Disclosure extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 caption!,
-                style: tokens.typography.body.copyWith(color: colors.textSecondary),
+                style: tokens.typography.body.copyWith(
+                  color: colors.textSecondary,
+                ),
               ),
             ),
         ],
