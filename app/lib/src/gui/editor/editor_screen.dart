@@ -277,7 +277,6 @@ class _EditorScreenState extends State<EditorScreen> {
     );
   }
 
-  //  Persistent, non-fatal notice that one or more model config files were--
   Widget _buildConfigWarningsBanner(List<String> warnings) {
     final colors = _tokens.colors;
     final background = colors.accentWarning.withValues(alpha: 0.12);

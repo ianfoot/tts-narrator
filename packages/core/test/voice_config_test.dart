@@ -209,6 +209,43 @@ void main() {
       expect(warnings.single, contains('Skipped model "bad"'));
     });
 
+    test('an unrelated json file in the config dir is ignored silently', () {
+      // The GUI config dir is also its application-support dir, so on Linux
+      // `shared_preferences.json` lands beside the model files. It is not a
+      // model config, so it must not raise a warning.
+      writeModel('fish', '{"id": "a/b", "provider": "openrouter"}');
+      writeModel('shared_preferences', '{"flutter.appearance": "system"}');
+      final (cfg, warnings) = load();
+      expect(cfg.models.keys, ['fish']);
+      expect(warnings, isEmpty);
+    });
+
+    test('a non-object json file in the config dir is ignored silently', () {
+      writeModel('whatever', '[1, 2, 3]');
+      final (cfg, warnings) = load();
+      expect(cfg.models, isEmpty);
+      expect(warnings, isEmpty);
+    });
+
+    test('a model file missing only its id still warns', () {
+      // Loses diagnosability only if every model key vanished at once; a
+      // hand-edited file keeps at least one, so the warning survives.
+      writeModel('x', '{"provider": "openrouter"}');
+      final (cfg, warnings) = load();
+      expect(cfg.models, isEmpty);
+      expect(warnings.single, contains('Skipped model "x"'));
+      expect(warnings.single, contains('"id"'));
+    });
+
+    test('a json file with no model keys at all is treated as unrelated', () {
+      // The deliberate cost of classification: a file sharing no key with the
+      // model schema cannot be reported on without re-nagging stray JSON.
+      writeModel('x', '{"totally": "unrelated"}');
+      final (cfg, warnings) = load();
+      expect(cfg.models, isEmpty);
+      expect(warnings, isEmpty);
+    });
+
     test('a wrong-typed model field is skipped with a warning', () {
       writeModel('x', '{"id": "a/b", "sample_rate": "lots"}');
       final (cfg, warnings) = load();

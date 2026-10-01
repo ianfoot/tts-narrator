@@ -26,7 +26,9 @@ String defaultConfigDir() {
 ///
 /// If files don't exist, [downloadVoiceConfigFiles] fetches them from GitHub.
 ///
-/// Returns the loaded config plus warnings for skipped models.
+/// Returns the loaded config plus warnings for skipped models. A `*.json` file
+/// in the directory that is not a model config at all is ignored silently;
+/// see [_isModelFileCandidate].
 (VoiceConfig, List<String>) loadVoiceConfig(String configDir) {
   // Note: download is no longer triggered automatically here so
   // loadVoiceConfig stays pure synchronous disk I/O. Callers that
@@ -66,7 +68,13 @@ String defaultConfigDir() {
       if (m.pricing != null) pricing[alias] = m.pricing!;
       if (m.voices.isNotEmpty) voices[alias] = m.voices;
     } on VoiceConfigurationError catch (e) {
-      warnings.add('Skipped model "$alias": ${e.message}');
+      // The config directory doubles as the GUI's application-support
+      // directory, so on Linux it also holds JSON this package never wrote
+      // (e.g. `shared_preferences.json`). Report only files that actually
+      // claim to be a model config; ignore unrelated JSON silently.
+      if (_isModelFileCandidate(f.path)) {
+        warnings.add('Skipped model "$alias": ${e.message}');
+      }
     }
   }
 
@@ -235,6 +243,43 @@ _parseModelFile(String path, String alias) {
     pricing: pricing,
     voices: voices,
   );
+}
+
+/// Top-level keys that mark a JSON object as a voice-config model file: the
+/// union of what [_modelJson] writes and [_parseModelFile] reads.
+const _modelFileKeys = {
+  'id',
+  'provider',
+  'display_name',
+  'format',
+  'sample_rate',
+  'prompt_style',
+  'sends_voice',
+  'default_voice',
+  'pricing',
+  'voices',
+};
+
+/// Whether [path] holds something meant to be a model config, and so deserves
+/// a warning when it fails to parse.
+///
+/// True when the file is unreadable or is not valid JSON -- a model file
+/// truncated mid-write must still be reported -- and when it is a JSON object
+/// carrying at least one [_modelFileKeys] entry. False for an object with no
+/// voice-config keys at all, and for a non-object top level: neither can be a
+/// mis-typed model file, so they are unrelated neighbours in a shared
+/// directory rather than broken configuration.
+bool _isModelFileCandidate(String path) {
+  Object? raw;
+  try {
+    raw = jsonDecode(File(path).readAsStringSync());
+  } on FormatException {
+    return true;
+  } on IOException {
+    return true;
+  }
+  if (raw is! Map<String, dynamic>) return false;
+  return raw.keys.any(_modelFileKeys.contains);
 }
 
 Object? _readJson(String path) {
