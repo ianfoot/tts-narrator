@@ -4,7 +4,9 @@ import 'package:flutter/material.dart' show Tooltip;
 import '../theme/app_tokens.dart';
 
 /// Expandable disclosure group: a tappable header (chevron + [label]) that
-/// toggles [child] visibility. Collapsed by default.
+/// toggles [child] visibility, driven entirely by the caller's [expanded].
+/// Callers own that state and start it collapsed; while collapsed the optional
+/// [caption] stands in as a hint for the hidden [child].
 class Disclosure extends StatelessWidget {
   const Disclosure({
     super.key,
@@ -25,6 +27,12 @@ class Disclosure extends StatelessWidget {
   final String? caption;
   final String? tooltip;
 
+  /// The header glyph: a right-pointing chevron when collapsed, flipping to
+  /// down-pointing when expanded so the header carries the open/closed state
+  /// visually. Cupertino glyphs on every platform, as in `AppDropdown`.
+  static IconData _chevron(bool expanded) =>
+      expanded ? CupertinoIcons.chevron_down : CupertinoIcons.chevron_right;
+
   @override
   Widget build(BuildContext context) {
     final disclosure = _buildDisclosure(context);
@@ -41,7 +49,7 @@ class Disclosure extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            CupertinoIcons.chevron_right,
+            _chevron(expanded),
             size: 16,
             color: colors.textPrimary.withValues(alpha: 0.85),
           ),
@@ -50,29 +58,23 @@ class Disclosure extends StatelessWidget {
         ],
       ),
     );
-    if (!expanded) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(padding: const EdgeInsets.only(top: 8), child: header),
-          if (caption != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                caption!,
-                style: tokens.typography.body.copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-            ),
-        ],
-      );
-    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(padding: const EdgeInsets.only(top: 8), child: header),
-        Padding(padding: const EdgeInsets.all(12), child: child),
+        // Collapsed: the caption stands in for the hidden child as a hint.
+        if (!expanded && caption != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              caption!,
+              style: tokens.typography.body.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+          ),
+        // Expanded: the child replaces the caption entirely.
+        if (expanded) Padding(padding: const EdgeInsets.all(12), child: child),
       ],
     );
   }
