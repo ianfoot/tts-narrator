@@ -1,12 +1,12 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tts_narrator_core/tts_narrator_core.dart';
-
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
-import 'package:tts_narrator/src/gui/platform/widgets/platform_segmented.dart';
 import 'package:tts_narrator/src/gui/settings/model_voice_section.dart';
+import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
+import 'package:tts_narrator/src/gui/widgets/segmented_control.dart';
+import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/settings_fixtures.dart';
 
@@ -74,13 +74,10 @@ void main() {
       expect(c.voice, 'CN2pVME9cDEeMRXJzcMPYj0p');
       expect(c.voiceLabel, 'Charon');
       // The raw id field follows the new default.
-      final raw = tester.widget<TextField>(
-        find.descendant(
-          of: find.byKey(const Key('voiceRawField')),
-          matching: find.byType(TextField),
-        ),
+      final raw = tester.widget<AppTextField>(
+        find.byKey(const Key('voiceRawField')),
       );
-      expect(raw.controller!.text, 'CN2pVME9cDEeMRXJzcMPYj0p');
+      expect(raw.controller.text, 'CN2pVME9cDEeMRXJzcMPYj0p');
     });
 
     testWidgets('a user-set raw voice survives a model switch', (tester) async {
@@ -135,7 +132,7 @@ void main() {
       await tester.enterText(
         find.descendant(
           of: find.byKey(const Key('voiceRawField')),
-          matching: find.byType(TextField),
+          matching: find.byType(CupertinoTextField),
         ),
         'custom_raw_id',
       );
@@ -186,7 +183,7 @@ void main() {
       c.changeModel('kokoro');
       await pumpSection(tester, c);
 
-      final control = tester.widget<PlatformSegmentedControl<VoiceGender>>(
+      final control = tester.widget<SegmentedControl<VoiceGender>>(
         find.byKey(const Key('genderControl')),
       );
       expect(control.value, VoiceGender.neutral);

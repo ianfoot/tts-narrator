@@ -260,8 +260,10 @@ class AppMetrics {
   /// Settings rail width (fixed when expanded).
   static const double railWidth = 320;
 
-  /// Width of the run view's per-segment action column.
-  static const double segmentActionWidth = 100;
+  /// Minimum breathing room around the run view's per-segment action column.
+  /// The column itself is content-sized; this is the gap kept between the
+  /// segment body and its play/stop action.
+  static const double segmentActionWidth = 12;
 
   /// Outer left/right padding framing the editor text column.
   static const double editorOuterPadding = 48;

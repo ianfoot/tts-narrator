@@ -148,14 +148,13 @@
     "editor": {
       "toolbar": {
         "narrate": "Narrate",
-        "narrateShortcut": "Narrate (⌘N)",
         "playFull": "Play Full",
         "stop": "Stop",
         "appearanceTooltip": "Appearance: $mode",
         "showHideSettings": "Show / hide settings",
-        "setOutputFolder": "Set output folder (⌘E)",
-        "openTextFile": "Open text file (⌘O)",
-        "save": "Save (⌘S)",
+        "setOutputFolder": "Set output folder",
+        "openTextFile": "Open text file",
+        "save": "Save",
         "cleanupSegments": "Clean up segments",
         "themeModeAuto": "Auto",
         "themeModeLight": "Light",

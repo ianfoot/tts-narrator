@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
-import '../platform/widgets/platform_disclosure.dart';
-import '../platform/widgets/platform_text_field.dart';
 import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart';
+import '../widgets/app_text_field.dart';
+import '../widgets/disclosure.dart';
 
 /// The collapsible advanced voice-id entry of the settings rail: a disclosure
 /// revealing a free-form raw voice id field that overrides the picked alias.
@@ -72,14 +72,14 @@ class _AdvancedVoiceWidgetState extends State<AdvancedVoiceWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return PlatformDisclosure(
+    return Disclosure(
       key: const Key('voiceAdvancedDisclosure'),
       tooltip: TextTokens.gui_settings_advancedVoiceIdTooltip,
       label: TextTokens.gui_settings_advancedVoiceId,
       expanded: _voiceRawExpanded,
       caption: TextTokens.gui_settings_overridesSelectedAlias,
       onToggle: (value) => setState(() => _voiceRawExpanded = value),
-      child: PlatformTextField(
+      child: AppTextField(
         key: const Key('voiceRawField'),
         tooltip: TextTokens.gui_settings_voiceRawFieldTooltip,
         controller: _voiceRaw,

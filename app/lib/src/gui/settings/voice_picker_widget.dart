@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
-import '../platform/widgets/platform_dropdown.dart';
-import '../platform/widgets/platform_segmented.dart';
 import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart';
+import '../widgets/app_dropdown.dart';
+import '../widgets/segmented_control.dart';
 import 'settings_labels.dart';
 
 /// The voice half of the settings rail: an optional narrator-gender filter
@@ -31,7 +31,7 @@ class VoicePickerWidget extends StatelessWidget {
         settingsFieldLabel(tokens, TextTokens.gui_settings_voiceAliasLabel),
         if (controller.hasGenderTags) ...[
           const SizedBox(height: 12),
-          PlatformSegmentedControl<VoiceGender>(
+          SegmentedControl<VoiceGender>(
             key: const Key('genderControl'),
             tooltip: TextTokens.gui_settings_genderControlTooltip,
             value: controller.voiceGenderFilter,
@@ -44,7 +44,7 @@ class VoicePickerWidget extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
-        PlatformDropdown<String>(
+        AppDropdown<String>(
           key: const Key('voiceDropdown'),
           tooltip: TextTokens.gui_settings_voiceDropdownTooltip,
           value: _selectedVoiceLabel,

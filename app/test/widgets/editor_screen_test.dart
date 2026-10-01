@@ -5,13 +5,16 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
-import 'package:tts_narrator/src/gui/platform/widgets/platform_text_field.dart';
+import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
+    show acceleratorLabel;
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
+import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart'
+    show TextTokens;
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
+import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
@@ -94,8 +97,19 @@ void main() {
     // Narrate button of its own.
     expect(find.byKey(const Key('railNarrateButton')), findsNothing);
     expect(find.byKey(const Key('railToggleButton')), findsOneWidget);
-    expect(find.byTooltip('Open text file (⌘O)'), findsOneWidget);
-    expect(find.byTooltip('Narrate (⌘N)'), findsOneWidget);
+    expect(
+      find.byTooltip(
+        '${TextTokens.gui_editor_toolbar_openTextFile} '
+        '(${acceleratorLabel('O')})',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byTooltip(
+        '${TextTokens.gui_editor_toolbar_narrate} (${acceleratorLabel('N')})',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
@@ -210,10 +224,10 @@ void main() {
 
     await pumpEditor(tester, controller);
 
-    final field = tester.widget<PlatformTextField>(
+    final field = tester.widget<AppTextField>(
       find.byKey(const Key('editorTextField')),
     );
-    expect(field.controller!.text, contains('freshly opened chapter'));
+    expect(field.controller.text, contains('freshly opened chapter'));
     expect(find.textContaining('story.txt'), findsOneWidget);
     expect(controller.dirty, isFalse);
     expect(find.byKey(const Key('dirtyDot')), findsNothing);
@@ -395,7 +409,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('appearanceToggleButton')),
-          matching: find.byIcon(Icons.brightness_auto),
+          matching: find.byIcon(CupertinoIcons.circle_lefthalf_fill),
         ),
         findsOneWidget,
       );
@@ -426,7 +440,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('appearanceToggleButton')),
-          matching: find.byIcon(Icons.dark_mode),
+          matching: find.byIcon(CupertinoIcons.moon),
         ),
         findsOneWidget,
       );
@@ -441,7 +455,13 @@ void main() {
       await pumpEditor(tester, controller);
 
       expect(find.byKey(const Key('outDirPickerButton')), findsOneWidget);
-      expect(find.byTooltip('Set output folder (⌘E)'), findsOneWidget);
+      expect(
+        find.byTooltip(
+          '${TextTokens.gui_editor_toolbar_setOutputFolder} '
+          '(${acceleratorLabel('E')})',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('tapping writes the chosen directory', (tester) async {

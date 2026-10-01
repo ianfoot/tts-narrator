@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -9,9 +9,10 @@ import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
     show ApiKeySource;
-import 'package:tts_narrator/src/gui/platform/widgets/platform_button.dart';
 import 'package:tts_narrator/src/gui/settings/api_key_section.dart';
 import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart';
+import 'package:tts_narrator/src/gui/widgets/app_button.dart';
+import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 
 import '../support/settings_fixtures.dart';
 
@@ -47,8 +48,8 @@ void main() {
   Future<void> pumpSection(WidgetTester tester, AppController c) =>
       pumpSettingsSection(tester, ApiKeySection(controller: c));
 
-  PlatformButton buttonWith(WidgetTester tester, String key) =>
-      tester.widget<PlatformButton>(find.byKey(Key(key)));
+  AppButton buttonWith(WidgetTester tester, String key) =>
+      tester.widget<AppButton>(find.byKey(Key(key)));
 
   testWidgets('shows "Not set" and a disabled Remove when no key exists', (
     tester,
@@ -91,7 +92,7 @@ void main() {
     await tester.enterText(
       find.descendant(
         of: find.byKey(const Key('apiKeyField')),
-        matching: find.byType(TextField),
+        matching: find.byType(CupertinoTextField),
       ),
       'sk-gui-saved',
     );
@@ -103,13 +104,10 @@ void main() {
     expect(find.text('Stored in keychain'), findsOneWidget);
     expect(buttonWith(tester, 'apiKeyRemoveButton').onPressed, isNotNull);
     // The secret never lingers in the edit box.
-    final field = tester.widget<TextField>(
-      find.descendant(
-        of: find.byKey(const Key('apiKeyField')),
-        matching: find.byType(TextField),
-      ),
+    final field = tester.widget<AppTextField>(
+      find.byKey(const Key('apiKeyField')),
     );
-    expect(field.controller!.text, isEmpty);
+    expect(field.controller.text, isEmpty);
 
     // Removing clears the store and reverts the status.
     await tester.tap(find.byKey(const Key('apiKeyRemoveButton')));
@@ -133,7 +131,7 @@ void main() {
     await tester.enterText(
       find.descendant(
         of: find.byKey(const Key('apiKeyField')),
-        matching: find.byType(TextField),
+        matching: find.byType(CupertinoTextField),
       ),
       'sk-wont-save',
     );
@@ -143,13 +141,10 @@ void main() {
     // The failure lands on the status row instead of surfacing as an
     // unhandled async error, and the typed key stays editable.
     expect(find.text(TextTokens.gui_settings_apiKeyStoreError), findsOneWidget);
-    final field = tester.widget<TextField>(
-      find.descendant(
-        of: find.byKey(const Key('apiKeyField')),
-        matching: find.byType(TextField),
-      ),
+    final field = tester.widget<AppTextField>(
+      find.byKey(const Key('apiKeyField')),
     );
-    expect(field.controller!.text, 'sk-wont-save');
+    expect(field.controller.text, 'sk-wont-save');
     expect(c.hasStoredApiKey, isFalse);
     expect(tester.takeException(), isNull);
   });

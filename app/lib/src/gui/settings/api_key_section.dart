@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
-import '../platform/widgets/platform_button.dart';
-import '../platform/widgets/platform_disclosure.dart';
-import '../platform/widgets/platform_text_field.dart';
 import '../theme/app_text_tokens.dart' show TextTokens;
 import '../theme/app_tokens.dart';
+import '../widgets/app_button.dart';
+import '../widgets/app_text_field.dart';
+import '../widgets/disclosure.dart';
 import 'settings_labels.dart';
 
 /// The "API key" section of the settings rail: where the active model's key
@@ -13,7 +13,7 @@ import 'settings_labels.dart';
 /// backed by the OS secure store. The stored key is a fallback only — a key
 /// already present in config.json or the environment keeps precedence (see
 /// [SettingsController._resolveProviderSettings]). Wrapped in a collapsed
-/// [PlatformDisclosure] so the key controls stay out of the way; the status
+/// [Disclosure] so the key controls stay out of the way; the status
 /// line serves as its caption.
 class ApiKeySection extends StatefulWidget {
   const ApiKeySection({super.key, required this.controller});
@@ -92,7 +92,7 @@ class _ApiKeySectionState extends State<ApiKeySection> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: PlatformDisclosure(
+      child: Disclosure(
         key: const Key('apiKeyDisclosure'),
         label: TextTokens.gui_settings_apiKeySection,
         tooltip: TextTokens.gui_settings_apiKeySectionTooltip,
@@ -115,7 +115,7 @@ class _ApiKeySectionState extends State<ApiKeySection> {
               ),
             ),
             const SizedBox(height: 12),
-            PlatformTextField(
+            AppTextField(
               key: const Key('apiKeyField'),
               tooltip: TextTokens.gui_settings_apiKeyFieldTooltip,
               controller: _apiKey,
@@ -129,15 +129,15 @@ class _ApiKeySectionState extends State<ApiKeySection> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                PlatformButton(
+                AppButton(
                   key: const Key('apiKeySaveButton'),
                   onPressed: () => _saveApiKey(),
                   child: Text(TextTokens.gui_settings_apiKeySave),
                 ),
                 const SizedBox(width: 8),
-                PlatformButton(
+                AppButton(
                   key: const Key('apiKeyRemoveButton'),
-                  style: PlatformButtonStyle.outlined,
+                  style: AppButtonStyle.outlined,
                   onPressed: _controller.hasStoredApiKey ? _removeApiKey : null,
                   child: Text(TextTokens.gui_settings_apiKeyRemove),
                 ),

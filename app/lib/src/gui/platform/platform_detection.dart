@@ -27,3 +27,14 @@ String get platformTag {
   if (isWindows) return kPlatformTagWindows;
   return kPlatformTagLinux;
 }
+
+/// Platform-appropriate accelerator label for a key: `⌘O` on macOS and
+/// `Ctrl+O` elsewhere, e.g. `acceleratorLabel('N')` → `Ctrl+N`.
+///
+/// Used to annotate tooltips without hardcoding macOS-style shortcuts for all
+/// platforms.
+String acceleratorLabel(String key, {bool shift = false}) {
+  final modifier = isMac ? '⌘' : 'Ctrl+';
+  final shiftLabel = isMac ? '⇧' : 'Shift+';
+  return shift ? '$modifier$shiftLabel$key' : '$modifier$key';
+}

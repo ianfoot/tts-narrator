@@ -1,13 +1,19 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_toolbar.dart';
+import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
+    show acceleratorLabel;
+import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart'
+    show TextTokens;
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
+import 'package:tts_narrator/src/gui/widgets/app_icon_button.dart';
 
 import '../support/fake_tts_provider.dart';
 import '../support/recording_cleanup_controller.dart';
@@ -153,7 +159,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('appearanceToggleButton')),
-          matching: find.byIcon(Icons.brightness_auto),
+          matching: find.byIcon(CupertinoIcons.circle_lefthalf_fill),
         ),
         findsOneWidget,
       );
@@ -184,7 +190,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('appearanceToggleButton')),
-          matching: find.byIcon(Icons.dark_mode),
+          matching: find.byIcon(CupertinoIcons.moon),
         ),
         findsOneWidget,
       );
@@ -198,7 +204,13 @@ void main() {
       final controller = makeController();
       await pumpToolbar(tester, controller);
       expect(find.byKey(const Key('outDirPickerButton')), findsOneWidget);
-      expect(find.byTooltip('Set output folder (⌘E)'), findsOneWidget);
+      expect(
+        find.byTooltip(
+          '${TextTokens.gui_editor_toolbar_setOutputFolder} '
+          '(${acceleratorLabel('E')})',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('tapping writes the chosen directory', (tester) async {
@@ -228,11 +240,8 @@ void main() {
     testWidgets('is disabled until the document is dirty', (tester) async {
       final controller = makeController();
       await pumpToolbar(tester, controller);
-      final button = tester.widget<IconButton>(
-        find.descendant(
-          of: find.byKey(const Key('editorSaveButton')),
-          matching: find.byType(IconButton),
-        ),
+      final button = tester.widget<AppIconButton>(
+        find.byKey(const Key('editorSaveButton')),
       );
       expect(button.onPressed, isNull);
     });

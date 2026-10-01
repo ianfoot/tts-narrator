@@ -294,12 +294,14 @@ void main() {
     // The dialog's "Back" keeps the run going and stays on the run view.
     await tester.tap(
       find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(CupertinoAlertDialog),
         matching: find.text('Back'),
       ),
     );
+    // pumpAndSettle can't be used while narrating: the progress animation
+    // never settles. Pump past the dialog's dismiss transition instead.
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(seconds: 1));
     expect(find.text('Cancel active narration run?'), findsNothing);
     expect(c.narrating, isTrue);
 
@@ -309,7 +311,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(
       find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(CupertinoAlertDialog),
         matching: find.text('Cancel Run'),
       ),
     );
@@ -341,7 +343,7 @@ void main() {
       // Deferring keeps the run on screen and generating.
       await tester.tap(
         find.descendant(
-          of: find.byType(AlertDialog),
+          of: find.byType(CupertinoAlertDialog),
           matching: find.text('Back'),
         ),
       );
@@ -355,7 +357,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await tester.tap(
         find.descendant(
-          of: find.byType(AlertDialog),
+          of: find.byType(CupertinoAlertDialog),
           matching: find.text('Cancel Run'),
         ),
       );
@@ -396,7 +398,7 @@ void main() {
     // already blocked, and the run is no longer active anyway.
     await tester.tap(
       find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(CupertinoAlertDialog),
         matching: find.text('Cancel Run'),
       ),
     );

@@ -2,18 +2,14 @@ import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart' show formatCostUsd;
 
 import '../controller/app_controller.dart';
-import '../platform/platform_detection.dart';
-import '../platform/platform_page.dart';
-import '../platform/widgets/platform_activity_indicator.dart';
-import '../platform/widgets/platform_button.dart';
-import '../platform/widgets/platform_icon_button.dart';
-import '../platform/widgets/platform_progress_bar.dart';
 import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart';
+import '../widgets/app_button.dart';
+import '../widgets/app_icon_button.dart';
+import '../widgets/progress_bar.dart';
 import 'active_run_confirm.dart';
 
 /// Narration run view: a back-arrow header with the document name, a frozen
@@ -144,13 +140,12 @@ class _NarrationScreenState extends State<NarrationScreen> {
 
   /// Confirms leaving via the extracted dialog class.
   Future<bool> _confirmCancel() =>
-      ActiveRunConfirmDialog.show(context: context, isMac: isMac);
+      ActiveRunConfirmDialog.show(context: context);
 
   AppTokens get _tokens => AppTokens.of(context);
 
-  IconData _playIcon() => isMac ? CupertinoIcons.play_fill : Icons.play_arrow;
-  IconData _stopIcon() =>
-      isMac ? CupertinoIcons.stop_circle : Icons.stop_circle_outlined;
+  IconData _playIcon() => CupertinoIcons.play_fill;
+  IconData _stopIcon() => CupertinoIcons.stop_circle;
 
   @override
   Widget build(BuildContext context) {
@@ -163,32 +158,35 @@ class _NarrationScreenState extends State<NarrationScreen> {
           _onBack();
         }
       },
-      child: PlatformPage(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeader(controller),
-            if (controller.runConfig != null) _buildSummaryPill(controller),
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: _buildProgressBar(controller),
-            ),
-            if (controller.runPlanError != null)
-              _buildMessageCard(controller.runPlanError!, isError: true)
-            else if (controller.runError != null)
-              _buildMessageCard(
-                fillTextTemplate(TextTokens.gui_narration_narrationFailed, {
-                  'runError': controller.runError,
-                }),
-                isError: true,
-              )
-            else if (controller.runStopped)
-              _buildMessageCard(TextTokens.gui_narration_narrationStopped)
-            else if (controller.runFinished)
-              _buildMessageCard(TextTokens.gui_narration_narrationComplete),
-            Expanded(child: _buildSegmentList(controller)),
-            _buildActionBar(controller),
-          ],
+      child: CupertinoPageScaffold(
+        backgroundColor: AppTokens.of(context).colors.bgApp,
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeader(controller),
+              if (controller.runConfig != null) _buildSummaryPill(controller),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _buildProgressBar(controller),
+              ),
+              if (controller.runPlanError != null)
+                _buildMessageCard(controller.runPlanError!, isError: true)
+              else if (controller.runError != null)
+                _buildMessageCard(
+                  fillTextTemplate(TextTokens.gui_narration_narrationFailed, {
+                    'runError': controller.runError,
+                  }),
+                  isError: true,
+                )
+              else if (controller.runStopped)
+                _buildMessageCard(TextTokens.gui_narration_narrationStopped)
+              else if (controller.runFinished)
+                _buildMessageCard(TextTokens.gui_narration_narrationComplete),
+              Expanded(child: _buildSegmentList(controller)),
+              _buildActionBar(controller),
+            ],
+          ),
         ),
       ),
     );
@@ -206,10 +204,10 @@ class _NarrationScreenState extends State<NarrationScreen> {
       ),
       child: Row(
         children: [
-          PlatformIconButton(
+          AppIconButton(
             key: const Key('runBackButton'),
             tooltip: TextTokens.gui_narration_backToEditor,
-            icon: Icon(isMac ? CupertinoIcons.back : Icons.arrow_back),
+            icon: const Icon(CupertinoIcons.back),
             onPressed: () => _onBack(),
           ),
           const SizedBox(width: 8),
@@ -308,7 +306,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     );
   }
 
-  /// 3-column segment card: status (32px) · body (flex) · action (100px).
+  /// 3-column segment card: status (32px) · body (flex) · action.
   Widget _buildSegmentCard(NarrationSegment segment) {
     final colors = _tokens.colors;
     final trimmed = segment.paragraph.trim();
@@ -325,6 +323,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
           _statusColumn(segment),
           const SizedBox(width: 12),
           Expanded(child: _bodyColumn(segment, trimmed)),
+          SizedBox(width: AppMetrics.segmentActionWidth),
           _actionColumn(segment),
         ],
       ),
@@ -336,7 +335,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     final Widget indicator;
     if (segment.resumed) {
       indicator = Icon(
-        isMac ? CupertinoIcons.refresh : Icons.refresh,
+        CupertinoIcons.refresh,
         key: Key('segStatus_resumed_${segment.index}'),
         size: 18,
         color: colors.accentWarning,
@@ -346,7 +345,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
         key: Key('segStatus_processing_${segment.index}'),
         width: 18,
         height: 18,
-        child: PlatformActivityIndicator(size: 18),
+        child: const CupertinoActivityIndicator(radius: 9),
       );
     } else if (segment.filePath != null) {
       indicator = Container(
@@ -358,7 +357,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
           shape: BoxShape.circle,
         ),
         child: Icon(
-          isMac ? CupertinoIcons.check_mark : Icons.check,
+          CupertinoIcons.check_mark,
           size: 12,
           color: colors.textOnAccent,
         ),
@@ -436,72 +435,40 @@ class _NarrationScreenState extends State<NarrationScreen> {
     } else {
       child = _playStopButton(segment, isPlaying);
     }
-    return SizedBox(
-      width: AppMetrics.segmentActionWidth,
-      child: Align(alignment: Alignment.centerRight, child: child),
-    );
+    // Sized to its content rather than a fixed width: [AppButton]'s outlined
+    // geometry carries CupertinoButton's default 16px padding, so a hard
+    // column width clipped the label on narrow surfaces.
+    return Align(alignment: Alignment.centerRight, child: child);
   }
 
-  /// Compact `▶ Play` / `⏹ Stop` toggle sized to fit the 100px action column
-  /// (the shared [PlatformButton] outlined geometry is too wide for it).
+  /// Compact `▶ Play` / `⏹ Stop` toggle sized to fit the action column via
+  /// [AppButton]'s compact outlined geometry.
   Widget _playStopButton(NarrationSegment segment, bool isPlaying) {
     final colors = _tokens.colors;
     final label = isPlaying
         ? TextTokens.gui_narration_stop
         : TextTokens.gui_narration_play;
-    final icon = Icon(
-      isPlaying ? _stopIcon() : _playIcon(),
-      size: 14,
-      color: colors.textPrimary,
+    return AppButton(
+      key: Key('segAction_${segment.index}'),
+      onPressed: () => _togglePlay(segment),
+      style: AppButtonStyle.outlined,
+      compact: true,
+      icon: Icon(
+        isPlaying ? _stopIcon() : _playIcon(),
+        size: 14,
+        color: colors.textPrimary,
+      ),
+      // Reused clips explain themselves; the rest just restate the label.
+      tooltip: segment.resumed
+          ? TextTokens.gui_narration_resumedTooltip
+          : label,
+      child: Text(label, style: _tokens.typography.body),
     );
-    final Widget button;
-    if (isMac) {
-      button = CupertinoButton(
-        key: Key('segAction_${segment.index}'),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        onPressed: () => _togglePlay(segment),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            border: Border.all(color: colors.borderSubtle, width: 0.8),
-            borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
-          ),
-          child: DefaultTextStyle(
-            style: _tokens.typography.body,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [icon, const SizedBox(width: 4), Text(label)],
-            ),
-          ),
-        ),
-      );
-    } else {
-      button = OutlinedButton.icon(
-        key: Key('segAction_${segment.index}'),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          minimumSize: const Size(0, 0),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          visualDensity: VisualDensity.compact,
-        ),
-        onPressed: () => _togglePlay(segment),
-        icon: icon,
-        label: Text(label, style: _tokens.typography.body),
-      );
-    }
-    // Reused clips get a Material-only tooltip (Cupertino has none).
-    if (segment.resumed && !isMac) {
-      return Tooltip(
-        message: TextTokens.gui_narration_resumedTooltip,
-        child: button,
-      );
-    }
-    return button;
   }
 
   Widget _buildProgressBar(AppController controller) {
     final colors = _tokens.colors;
-    return PlatformProgressBar(
+    return ProgressBar(
       key: const Key('runProgressBar'),
       value: controller.runProgress,
       valueColor: colors.accentPrimary,
@@ -515,18 +482,18 @@ class _NarrationScreenState extends State<NarrationScreen> {
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          PlatformButton(
+          AppButton(
             key: const Key('runActionBack'),
             onPressed: () => _onBack(),
-            style: PlatformButtonStyle.outlined,
+            style: AppButtonStyle.outlined,
             child: const Text(TextTokens.gui_narration_back),
           ),
           const Spacer(),
           if (controller.narrating && !controller.runStopped)
-            PlatformButton(
+            AppButton(
               key: const Key('runCancelButton'),
               onPressed: _onCancel,
-              icon: Icon(isMac ? CupertinoIcons.stop : Icons.stop),
+              icon: const Icon(CupertinoIcons.stop),
               child: const Text(TextTokens.gui_narration_cancelRun),
             ),
         ],
