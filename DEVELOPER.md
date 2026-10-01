@@ -5,7 +5,7 @@ For end-user documentation (install, usage, voice configuration), see
 
 ## Requirements
 
-- Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.1`, Dart 3.13.1).
+- Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.5`, Dart 3.13.4).
 - An OpenRouter API key for cloud narration (see the README and
   **[MAC.md](MAC.md)** for setup options). The local OpenAI-compatible
   provider (`mlx_audio`) needs no key.
@@ -124,9 +124,8 @@ The GUI's colors, type sizes, and font weights live in
 `app/assets/theme/tokens.json` and are emitted into the private
 `app/lib/src/gui/theme/app_tokens.g.dart` (a `part of` of the public
 `app_tokens.dart`) by `app/tool/generate_tokens.dart`. Hand-editing the
-`.g.dart` file will be overwritten on the next regeneration, and CI
-fails any PR that changes the JSON without committing the regenerated
-output. `AppMetrics` (radii, gaps, the toolbar/status bar heights, the
+`.g.dart` file will be overwritten on the next regeneration. `AppMetrics`
+(radii, gaps, the toolbar/status bar heights, the
 default/minimum window sizes) is intentionally **not** in the JSON —
 those are layout-grid constants that don't change with the brand.
 
@@ -137,13 +136,13 @@ cd app
 # 1. Edit app/assets/theme/tokens.json.
 # 2. Regenerate the .g.dart from the JSON.
 fvm dart run tool/generate_tokens.dart
-# 3. Run the test suite — the golden test in
-#    test/theme/codegen_test.dart re-runs the codegen into a temp
-#    tree and asserts the output is byte-identical to the checked-in
-#    app_tokens.g.dart. It fails if you forgot step 2.
+# 3. Run the test suite.
 fvm flutter test
 # 4. Commit both files.
 ```
+
+Drift is caught in CI (`.github/workflows/tokens.yml`), which re-runs both
+generators and fails on any diff.
 
 The JSON shape:
 
@@ -160,6 +159,104 @@ The JSON shape:
   family is resolved at runtime by `AppTypography.monoFamily` /
   `.editorSansFamily` against `defaultTargetPlatform`. Anything else
   is treated as a literal family name.
+
+## Localization
+
+User-facing strings live in `app/lib/l10n/app_en.arb` (ARB, ICU message
+syntax), compiled by `flutter gen-l10n` into the committed
+`app/lib/l10n/app_localizations.dart` + `app_localizations_en.dart`.
+Config is `app/l10n.yaml`.
+
+To add or change a string:
+
+```bash
+cd app
+# 1. Edit app/lib/l10n/app_en.arb.
+# 2. Regenerate.
+fvm flutter gen-l10n
+# 3. Run the test suite.
+fvm flutter test
+# 4. Commit both the ARB and the regenerated output.
+```
+
+CI re-runs `gen-l10n` and fails on any diff, so a forgotten regeneration is a
+build failure rather than a silent drift. Adding a language = dropping in an
+`app_xx.arb` and committing the regenerated output; no code changes.
+
+### Two rules that are easy to get wrong
+
+**Never localize inside a controller.** The controllers (`SettingsController`,
+`RunController`, `DocumentController`) are `ChangeNotifier`s with no
+`BuildContext`, so they cannot reach `AppLocalizations`. They return *data* —
+enums, nullable fields, and typed exceptions — and the widget layer renders it:
+
+- `NarrationBlockReason?` → `NarrationBlockReasonX.message(l10n)`
+- `String? documentName` → `documentNameX.display(l10n)`
+- `ApiKeySource` → `ApiKeySourceX.apiKeyStatusLabel(l10n)`
+- `NoApiKeyConfigured` / `NoVoiceSelected` / `CannotOpenTextFile` /
+  `NoModelConfigured` (in `controller_errors.dart`) →
+  `ControllerErrorMessage.localizedMessage(l10n)`
+
+Those extensions all live in
+`app/lib/src/gui/controller/l10n_labels.dart`. **If you find yourself wanting a
+controller getter that returns a `String` for display, add an extension there
+instead.** A `null` field means "not set, pick a localized fallback", not an
+empty string.
+
+**Format numbers in Dart; pluralize the noun in the ARB.** `Intl.pluralLogic`
+returns only the noun and discards the number, so a count can never sit outside
+its own plural case. Pass the locale-formatted number as a `String` and the
+noun from a `core_plurals_*` key:
+
+```jsonc
+// Wrong — renders "segments", dropping the count.
+"gui_cleanup_removedMessage": "Removed {removedCount} {segmentLabel}."
+// Right — the caller supplies both halves.
+"gui_cleanup_removedMessage": "Removed {removedCount} segment {fileLabel}."
+```
+
+```dart
+l10n.gui_cleanup_removedMessage(
+  removed,
+  l10n.core_plurals_file(removed), // "file" / "files"
+);
+```
+
+This is why the status bar formats `wordCount`/`charCount` through
+`NumberFormat.decimalPattern(locale)` and then passes `core_plurals_word` /
+`core_plurals_character` alongside. A plural noun hardcoded outside ICU
+(`"... ~{minutes} min ..."`) is the bug this rule exists to prevent.
+
+### Wiring
+
+Both app shells pass the delegate list explicitly rather than
+`AppLocalizations.localizationsDelegates`:
+
+```dart
+localizationsDelegates: const [
+  AppLocalizations.delegate,
+  DefaultWidgetsLocalizations.delegate,
+  DefaultCupertinoLocalizations.delegate,
+],
+```
+
+Deliberate — the convenience bundle adds `GlobalMaterialLocalizations`, which
+would resolve framework strings for the Material widgets in the shared widget
+layer. `LinuxMenuBar` relies on staying Material-free (see above); adding
+Material localization is a separately-audited change.
+
+`l10n.yaml` sets `nullable-getter: false`, so `AppLocalizations.of(context)`
+**throws** rather than returning `null` when no delegate is in scope. That is
+intentional: it turns a missing delegate into a loud failure in tests instead of
+silently blank UI. Any new widget or test host mounting a screen must sit under
+the delegate list — in tests, use `testApp(...)` or
+`testLocalizationsDelegates` from `app/test/support/l10n_test_support.dart`.
+
+One trap: a widget that returns the `CupertinoApp`/`MaterialApp` **cannot**
+localize its own `title`, because its context sits above the delegate scope it
+is about to install. `AppRoot` gets away with it only because it is mounted
+below `BootstrapApp`'s shell; `BootstrapApp` itself uses a plain `'TTS Narrator'`
+title.
 
 ## Notes / current behaviour
 

@@ -10,8 +10,7 @@ import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_toolbar.dart';
 import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
     show acceleratorLabel;
-import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart'
-    show TextTokens;
+import '../support/l10n_test_support.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator/src/gui/widgets/app_icon_button.dart';
 
@@ -71,6 +70,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: testLocalizationsDelegates,
+        supportedLocales: testSupportedLocales,
         home: Scaffold(
           body: EditorToolbar(
             controller: controller,
@@ -206,7 +207,7 @@ void main() {
       expect(find.byKey(const Key('outDirPickerButton')), findsOneWidget);
       expect(
         find.byTooltip(
-          '${TextTokens.gui_editor_toolbar_setOutputFolder} '
+          '${testL10n.gui_editor_toolbar_setOutputFolder} '
           '(${acceleratorLabel('E')})',
         ),
         findsOneWidget,

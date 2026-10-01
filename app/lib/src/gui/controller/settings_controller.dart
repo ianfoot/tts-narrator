@@ -2,13 +2,14 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'document_controller.dart';
 import 'api_key_store.dart';
+import 'controller_errors.dart';
 import 'model_profile_voice_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 
 /// Where the effective API key for the active model's provider comes from.
 enum ApiKeySource {
@@ -50,10 +51,30 @@ class SettingsController extends ChangeNotifier {
     if (savedOutDir != null && savedOutDir.trim().isNotEmpty) {
       _outDir = savedOutDir;
     }
+    final savedLocale = prefs?.getString(_localePrefsKey);
+    if (savedLocale != null && savedLocale.trim().isNotEmpty) {
+      _locale = _parseLocale(savedLocale);
+    }
   }
 
   /// Preferences key holding the last output folder the user picked.
   static const _outDirPrefsKey = 'outDir';
+
+  /// Preferences key holding the language tag the user last selected.
+  static const _localePrefsKey = 'locale';
+
+  /// Parses a stored language tag into a [Locale], or null when it is not one
+  /// this build supports (a tag left behind by a removed translation).
+  static Locale? _parseLocale(String tag) {
+    final code = tag.replaceAll('_', '-');
+    final dash = code.indexOf('-');
+    final language = dash == -1 ? code : code.substring(0, dash);
+    if (language.isEmpty) return null;
+    final country = dash == -1 ? null : code.substring(dash + 1);
+    return country == null || country.isEmpty
+        ? Locale(language)
+        : Locale(language, country);
+  }
 
   /// Folder name created under the system temp dir for the default output.
   static const _defaultOutDirName = 'tts_narrator_output';
@@ -107,15 +128,40 @@ class SettingsController extends ChangeNotifier {
 
   // --- Narration settings -------------------------------------------
 
-  String _accent = TextTokens.defaults_accent;
-  int _minWords = TextTokens.defaults_minWords;
+  // Narration defaults come from the core's English-only [PromptDefaults] —
+  // they are instructions for the TTS model, not UI copy, so they are
+  // deliberately not localized.
+  String _accent = PromptDefaults.accent;
+  int _minWords = PromptDefaults.minWords;
   bool _sendWholeFile = false;
   int? _sampleLen;
   String _outDir = defaultOutDir();
   bool _resume = false;
-  String _style = TextTokens.defaults_style;
-  String _passagePrefix = TextTokens.defaults_passagePrefix;
+  String _style = PromptDefaults.style;
+  String _passagePrefix = PromptDefaults.passagePrefix;
   double _speed = 1.0;
+
+  /// Selected UI locale, or null to follow the platform's resolution against
+  /// [AppLocalizations.supportedLocales].
+  ///
+  /// Only English is translated today, so the default is null (system-driven).
+  /// The preference is persisted now so adding a second `app_xx.arb` is a data
+  /// change rather than a settings-plumbing change.
+  Locale? _locale;
+
+  /// The locale the UI renders in, or null to let the platform choose.
+  Locale? get locale => _locale;
+
+  set locale(Locale? value) {
+    if (value == _locale) return;
+    _locale = value;
+    notifyListeners();
+    if (value == null) {
+      _prefs?.remove(_localePrefsKey);
+    } else {
+      _prefs?.setString(_localePrefsKey, value.toString());
+    }
+  }
 
   String get accent => _accent;
 
@@ -223,9 +269,11 @@ class SettingsController extends ChangeNotifier {
 
   // --- Gendered narrator phrase (prompt-style models) -----------------
 
-  static const _genderFemalePhrase =
-      TextTokens.gui_controller_genderPhrases_female;
-  static const _genderMalePhrase = TextTokens.gui_controller_genderPhrases_male;
+  // The gendered narrator phrase is matched as a literal substring, so these
+  // must stay byte-identical to [PromptDefaults.passagePrefix]'s wording — see
+  // [PromptDefaults.assertPrefixCarriesGender].
+  static const _genderFemalePhrase = PromptDefaults.femalePhrase;
+  static const _genderMalePhrase = PromptDefaults.malePhrase;
 
   /// Whether [prefix] contains the exact male-phrase form. `female narrator`
   /// already contains `male narrator` as a substring, so a plain
@@ -322,14 +370,14 @@ class SettingsController extends ChangeNotifier {
     if (resolved != null && _hasUsableApiKey(resolved)) return resolved;
     final stored = apiKeyStore?.value;
     if (stored == null || stored.isEmpty) {
-      throw StateError(TextTokens.gui_controller_errors_noApiKey);
+      throw const NoApiKeyConfigured();
     }
     final retried = _model.resolveProviderSettings(
       p,
       overrides: _apiKeyOverridesWith(p, stored),
     );
     if (_hasUsableApiKey(retried)) return retried;
-    throw StateError(TextTokens.gui_controller_errors_noApiKey);
+    throw const NoApiKeyConfigured();
   }
 
   /// Overrides injecting the stored [key] into [profile]'s provider block:
@@ -373,14 +421,6 @@ class SettingsController extends ChangeNotifier {
         : ApiKeySource.missing;
   }
 
-  /// Status label for [apiKeySource], rendered in the settings rail.
-  String get apiKeyStatusLabel => switch (apiKeySource) {
-    ApiKeySource.keychain => TextTokens.gui_settings_apiKeyStatusKeychain,
-    ApiKeySource.config => TextTokens.gui_settings_apiKeyStatusConfig,
-    ApiKeySource.environment => TextTokens.gui_settings_apiKeyStatusEnvironment,
-    ApiKeySource.missing => TextTokens.gui_settings_apiKeyStatusMissing,
-  };
-
   /// Whether no API key is configured anywhere for the active model.
   bool get apiKeyMissing => apiKeySource == ApiKeySource.missing;
 
@@ -396,7 +436,7 @@ class SettingsController extends ChangeNotifier {
   NarrationConfig buildConfig() {
     final p = _model.profile;
     if (p == null) {
-      throw FormatException(TextTokens.gui_controller_errors_noModelConfigured);
+      throw const NoModelConfigured();
     }
     final raw = _model.voice.trim();
     String voiceId;
@@ -404,11 +444,7 @@ class SettingsController extends ChangeNotifier {
     if (raw.isEmpty) {
       final def = _model.defaultVoice;
       if (def == null) {
-        throw FormatException(
-          fillTextTemplate(TextTokens.gui_controller_errors_noVoiceSelected, {
-            'modelAlias': p.alias,
-          }),
-        );
+        throw NoVoiceSelected(p.alias);
       }
       voiceId = def.$1;
       label = def.$2 == def.$1 ? null : def.$2;
@@ -424,7 +460,7 @@ class SettingsController extends ChangeNotifier {
           : (resolvedLabel != id ? resolvedLabel : null);
     }
     return NarrationConfig(
-      inputPath: _document.documentPath ?? TextTokens.app_untitledDocument,
+      inputPath: _document.documentPath ?? untitledDocumentName,
       sourceText: _document.text,
       profile: p,
       voice: voiceId,

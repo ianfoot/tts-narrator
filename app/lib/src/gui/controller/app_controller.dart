@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
@@ -203,9 +204,6 @@ class AppController extends ChangeNotifier {
   /// none), mirroring the run-config precedence.
   ApiKeySource get apiKeySource => _settings.apiKeySource;
 
-  /// Status label for [apiKeySource], rendered in the settings rail.
-  String get apiKeyStatusLabel => _settings.apiKeyStatusLabel;
-
   /// Whether no API key is configured anywhere for the active model.
   bool get apiKeyMissing => _settings.apiKeyMissing;
 
@@ -291,6 +289,12 @@ class AppController extends ChangeNotifier {
 
   bool get resume => _settings.resume;
 
+  /// The UI locale, or null to follow the platform. Read by both app shells to
+  /// pin `CupertinoApp.locale`.
+  Locale? get locale => _settings.locale;
+
+  set locale(Locale? value) => _settings.locale = value;
+
   set resume(bool value) {
     _settings.resume = value;
   }
@@ -325,7 +329,7 @@ class AppController extends ChangeNotifier {
   /// sets it true).
   bool get dirty => _document.dirty;
 
-  String get documentName => _document.documentName;
+  String? get documentName => _document.documentName;
 
   /// Replaces the document text (typing/paste path). Marks the document dirty.
   void setText(String value) => _document.setText(value);
@@ -482,7 +486,7 @@ class AppController extends ChangeNotifier {
   /// Returns null when narration may start, otherwise the reason it is
   /// blocked (empty text / already running). The Narrate entrypoints guard on
   /// this before dispatching to [PlatformCommands.onNarrate].
-  String? narrateBlockReason() => _run.narrateBlockReason();
+  NarrationBlockReason? narrateBlockReason() => _run.narrateBlockReason();
 
   /// Clears the document text. Disabled when no text or while narrating.
   /// Saves current text to undo stack before clearing.

@@ -9,6 +9,8 @@ import 'package:tts_narrator/src/gui/controller/settings_controller.dart';
 import 'package:tts_narrator/src/gui/editor/editor_status_bar.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart';
 
+import '../support/l10n_test_support.dart';
+
 void main() {
   late Directory dir;
   late String configDir;
@@ -35,6 +37,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: testLocalizationsDelegates,
+        supportedLocales: testSupportedLocales,
         theme: ThemeData(brightness: brightness),
         home: Scaffold(body: EditorStatusBar(controller: controller)),
       ),

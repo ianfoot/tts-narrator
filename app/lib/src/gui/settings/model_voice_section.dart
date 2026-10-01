@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
+import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_dropdown.dart';
 import '../widgets/app_section.dart';
@@ -52,18 +52,19 @@ class _ModelVoiceSectionState extends State<ModelVoiceSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final tokens = _tokens;
     return AppSection(
-      title: TextTokens.gui_settings_modelVoiceSection,
+      title: l10n.gui_settings_modelVoiceSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          settingsFieldLabel(tokens, TextTokens.gui_settings_modelLabel),
+          settingsFieldLabel(tokens, l10n.gui_settings_modelLabel),
           AppDropdown<String>(
             key: const Key('modelDropdown'),
-            tooltip: TextTokens.gui_settings_modelDropdownTooltip,
+            tooltip: l10n.gui_settings_modelDropdownTooltip,
             value: _controller.modelAlias,
-            items: _modelItems,
+            items: _modelItems(l10n),
             onChanged: (alias) => _controller.changeModel(alias),
           ),
           VoicePickerWidget(controller: _controller),
@@ -76,15 +77,11 @@ class _ModelVoiceSectionState extends State<ModelVoiceSection> {
   /// Human-readable model display names, taken from the model's config file
   /// (`display_name`). Unknown/custom aliases without one fall back to the
   /// `alias — id` format.
-  List<(String, String)> get _modelItems => [
+  List<(String, String)> _modelItems(AppLocalizations l10n) => [
     for (final p in effectiveModels(_controller.voiceConfig))
       (
         p.alias,
-        p.displayName ??
-            fillTextTemplate(TextTokens.gui_settings_modelDisplayFallback, {
-              'alias': p.alias,
-              'id': p.id,
-            }),
+        p.displayName ?? l10n.gui_settings_modelDisplayFallback(p.alias, p.id),
       ),
   ];
 }

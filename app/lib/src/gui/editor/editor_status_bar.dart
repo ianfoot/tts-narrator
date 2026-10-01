@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show NumberFormat;
 
 import '../controller/app_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
+import '../../../l10n/app_localizations.dart';
 
 import 'package:tts_narrator_core/tts_narrator_core.dart' show formatCostUsd;
 
@@ -24,13 +24,17 @@ class EditorStatusBar extends StatefulWidget {
 class _EditorStatusBarState extends State<EditorStatusBar> {
   static const _tickerDuration = Duration(milliseconds: 100);
 
-  /// Pin the count grouping so the status bar renders the same separators on
-  /// every machine; the GUI is English-only.
-  static final NumberFormat _countFormat = NumberFormat.decimalPattern('en_US');
+  /// Grouping separators follow the resolved locale so a locale with a
+  /// different decimal/group convention renders its own way. Callers are
+  /// expected to be mounted under an `AppLocalizations` delegate.
+  static NumberFormat _countFormatFor(BuildContext context) =>
+      NumberFormat.decimalPattern(Localizations.localeOf(context).toString());
 
   AppController get controller => widget.controller;
 
   AppTokens get tokens => AppTokens.of(context);
+
+  AppLocalizations get l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -57,14 +61,13 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
     final monoReadout = tokens.typography.mono.copyWith(
       color: colors.textSecondary.withValues(alpha: 0.75),
     );
-    final words = _countFormat.format(controller.wordCount);
-    final chars = _countFormat.format(controller.charCount);
+    final countFormat = _countFormatFor(context);
+    final words = countFormat.format(controller.wordCount);
+    final chars = countFormat.format(controller.charCount);
     final segments = controller.plannedSegments.length;
     final minutes = controller.estimatedMinutes.round();
     final cost = formatCostUsd(controller.estimatedCostUsd);
-    final segmentLabel = segments == 1
-        ? TextTokens.core_plurals_segment
-        : TextTokens.core_plurals_segments;
+    final segmentLabel = l10n.core_plurals_segment(segments);
     return Container(
       key: const Key('statusBar'),
       height: AppMetrics.statusBarHeight,
@@ -78,9 +81,11 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
             child: AnimatedSwitcher(
               duration: _tickerDuration,
               child: Text(
-                fillTextTemplate(
-                  TextTokens.gui_editor_statusBar_wordCharCount,
-                  {'words': words, 'chars': chars},
+                l10n.gui_editor_statusBar_wordCharCount(
+                  words,
+                  l10n.core_plurals_word(controller.wordCount),
+                  chars,
+                  l10n.core_plurals_character(controller.charCount),
                 ),
                 key: ValueKey('$words-$chars'),
                 maxLines: 1,
@@ -116,12 +121,13 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
             child: KeyedSubtree(
               key: ValueKey('$segments-$minutes-$cost'),
               child: Text(
-                fillTextTemplate(TextTokens.gui_editor_statusBar_estimate, {
-                  'segments': segments,
-                  'segmentLabel': segmentLabel,
-                  'minutes': minutes,
-                  'cost': cost,
-                }),
+                l10n.gui_editor_statusBar_estimate(
+                  segments,
+                  segmentLabel,
+                  minutes.toString(),
+                  l10n.core_plurals_minute(minutes),
+                  cost,
+                ),
                 key: const Key('editorEstimate'),
                 maxLines: 1,
                 softWrap: false,

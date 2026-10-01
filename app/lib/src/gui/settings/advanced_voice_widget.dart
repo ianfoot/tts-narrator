@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens;
+import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/disclosure.dart';
@@ -72,19 +72,20 @@ class _AdvancedVoiceWidgetState extends State<AdvancedVoiceWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Disclosure(
       key: const Key('voiceAdvancedDisclosure'),
-      tooltip: TextTokens.gui_settings_advancedVoiceIdTooltip,
-      label: TextTokens.gui_settings_advancedVoiceId,
+      tooltip: l10n.gui_settings_advancedVoiceIdTooltip,
+      label: l10n.gui_settings_advancedVoiceId,
       expanded: _voiceRawExpanded,
-      caption: TextTokens.gui_settings_overridesSelectedAlias,
+      caption: l10n.gui_settings_overridesSelectedAlias,
       onToggle: (value) => setState(() => _voiceRawExpanded = value),
       child: AppTextField(
         key: const Key('voiceRawField'),
-        tooltip: TextTokens.gui_settings_voiceRawFieldTooltip,
+        tooltip: l10n.gui_settings_voiceRawFieldTooltip,
         controller: _voiceRaw,
         onChanged: _onVoiceRawChanged,
-        hintText: TextTokens.gui_settings_freeFormVoiceHint,
+        hintText: l10n.gui_settings_freeFormVoiceHint,
         style: _tokens.typography.body.copyWith(
           color: _tokens.colors.textPrimary,
         ),

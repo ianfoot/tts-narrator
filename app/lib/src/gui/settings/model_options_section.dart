@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens;
+import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_section.dart';
 import '../widgets/app_text_field.dart';
@@ -85,21 +85,22 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final spec = _controller.modelUiSpec;
     final options = spec.options
         .where((o) => _bindableModelOptionKeys.contains(o.key))
         .toList();
     if (options.isEmpty) return const SizedBox.shrink();
     return AppSection(
-      title: TextTokens.gui_settings_modelOptionsSection,
+      title: l10n.gui_settings_modelOptionsSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [for (final option in options) _buildModelOption(option)],
+        children: [for (final option in options) _buildModelOption(l10n, option)],
       ),
     );
   }
 
-  Widget _buildModelOption(ModelUiControl option) {
+  Widget _buildModelOption(AppLocalizations l10n, ModelUiControl option) {
     switch (option.type) {
       case ModelUiOptionType.bool:
         throw UnsupportedError(
@@ -117,10 +118,10 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
               SegmentedControl<VoiceGender>(
                 key: const Key('genderOptionSegmented'),
                 value: g,
-                items: const [
-                  (VoiceGender.neutral, TextTokens.gui_settings_genderAny),
-                  (VoiceGender.female, TextTokens.gui_settings_genderFemale),
-                  (VoiceGender.male, TextTokens.gui_settings_genderMale),
+                items: [
+                  (VoiceGender.neutral, l10n.gui_settings_genderAny),
+                  (VoiceGender.female, l10n.gui_settings_genderFemale),
+                  (VoiceGender.male, l10n.gui_settings_genderMale),
                 ],
                 onChanged: (v) => _controller.voiceGenderFilter = v,
               ),
@@ -136,9 +137,9 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
             AppTextField(
               key: Key('${option.key}Field'),
               tooltip: switch (option.key) {
-                'accent' => TextTokens.gui_settings_accentFieldTooltip,
-                'style' => TextTokens.gui_settings_styleFieldTooltip,
-                'passagePrefix' => TextTokens.gui_settings_prefixFieldTooltip,
+                'accent' => l10n.gui_settings_accentFieldTooltip,
+                'style' => l10n.gui_settings_styleFieldTooltip,
+                'passagePrefix' => l10n.gui_settings_prefixFieldTooltip,
                 _ => null,
               },
               controller: _modelOptionController(option.key),

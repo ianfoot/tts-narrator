@@ -14,6 +14,8 @@ dependencies:
   file_selector: ^1.1.0
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   flutter_secure_storage: ^11.1.1
   intl: ^0.20.3
   path_provider: ^2.1.0
@@ -34,3 +36,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Regenerates lib/l10n/app_localizations*.dart from lib/l10n/app_*.arb on build.
+  generate: true

@@ -1,0 +1,255 @@
+{
+  "@@locale": "en",
+
+  "app_title": "TTS Narrator",
+  "app_untitledDocument": "untitled.txt",
+  "app_fileTypeGroup": "Text",
+
+  "core_plurals_segment": "{count, plural, =1{segment} other{segments}}",
+  "@core_plurals_segment": {
+    "description": "Segment count noun; used in the editor status bar and the narration summary.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "core_plurals_word": "{count, plural, =1{word} other{words}}",
+  "@core_plurals_word": {
+    "description": "Word count noun; used under each narration segment.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "core_plurals_minute": "{count, plural, =1{min} other{mins}}",
+  "@core_plurals_minute": {
+    "description": "Minute count noun; used in the editor status bar estimate.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "core_plurals_character": "{count, plural, =1{character} other{characters}}",
+  "@core_plurals_character": {
+    "description": "Character count noun; used in the editor status bar.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "core_plurals_file": "{count, plural, =1{file} other{files}}",
+  "@core_plurals_file": {
+    "description": "File count noun; used in the segment-cleanup confirmation.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "gui_controller_errors_noModelConfigured": "No voice model is configured. Download the starter configs, or add model files to the voice config directory.",
+  "gui_controller_errors_noVoiceSelected": "No voice selected for \"{modelAlias}\" — pick an alias or set a default in the voice config.",
+  "@gui_controller_errors_noVoiceSelected": {
+    "description": "Raised when the active model has neither a selected nor a default voice.",
+    "placeholders": { "modelAlias": { "type": "String", "example": "fish" } }
+  },
+  "gui_controller_errors_noApiKey": "No OpenRouter API key set. Add one to the \"providers.openrouter\" block in config.json, set the OPENROUTER_API_KEY environment variable, or enter it in the Settings rail (stored in the system keychain).",
+  "gui_controller_errors_cannotOpenTextFile": "Cannot open text file",
+
+  "gui_controller_blockReasons_emptyText": "Editor text is empty",
+  "gui_controller_blockReasons_alreadyRunning": "Narration is already running.",
+
+  "gui_editor_toolbar_narrate": "Narrate",
+  "gui_editor_toolbar_playFull": "Play Full",
+  "gui_editor_toolbar_stop": "Stop",
+  "gui_editor_toolbar_appearanceTooltip": "Appearance: {mode}",
+  "@gui_editor_toolbar_appearanceTooltip": {
+    "description": "Tooltip on the theme-mode button.",
+    "placeholders": { "mode": { "type": "String", "example": "System" } }
+  },
+  "gui_editor_toolbar_showHideSettings": "Show / hide settings",
+  "gui_editor_toolbar_setOutputFolder": "Set output folder",
+  "gui_editor_toolbar_openTextFile": "Open text file",
+  "gui_editor_toolbar_save": "Save",
+  "gui_editor_toolbar_cleanupSegments": "Clean up segments",
+  "gui_editor_toolbar_themeModeAuto": "Auto",
+  "gui_editor_toolbar_themeModeLight": "Light",
+  "gui_editor_toolbar_themeModeDark": "Dark",
+
+  "gui_editor_hintText": "Type, paste text, or open a .txt file...",
+
+  "gui_editor_cannotNarratePrefix": "Cannot narrate: {message}",
+  "@gui_editor_cannotNarratePrefix": {
+    "description": "Tooltip shown when narration is blocked; {message} is the localized block reason.",
+    "placeholders": { "message": { "type": "String" } }
+  },
+
+  "gui_editor_statusBar_wordCharCount": "{words} {wordLabel} · {chars} {charLabel}",
+  "@gui_editor_statusBar_wordCharCount": {
+    "description": "Word and character count under the editor. {words}/{chars} are pre-formatted for the active locale (grouping separators); {wordLabel}/{charLabel} are localized plurals.",
+    "placeholders": {
+      "words": { "type": "String" },
+      "wordLabel": { "type": "String" },
+      "chars": { "type": "String" },
+      "charLabel": { "type": "String" }
+    }
+  },
+  "gui_editor_statusBar_estimate": "{segments} {segmentLabel} · ~{minutes} {minuteLabel} · ~{cost} est.",
+  "@gui_editor_statusBar_estimate": {
+    "description": "Live estimate under the editor. {minutes} is a locale-formatted number; {minuteLabel} is a localized plural of 'minute'.",
+    "placeholders": {
+      "segments": { "type": "int" },
+      "segmentLabel": { "type": "String" },
+      "minutes": { "type": "String" },
+      "minuteLabel": { "type": "String", "example": "mins" },
+      "cost": { "type": "String" }
+    }
+  },
+
+  "gui_settings_header": "Settings",
+  "gui_settings_modelVoiceSection": "Model & voice",
+  "gui_settings_modelLabel": "Model",
+  "gui_settings_voiceAliasLabel": "Voice alias",
+  "gui_settings_advancedVoiceId": "Advanced Voice ID",
+  "gui_settings_overridesSelectedAlias": "Overrides selected alias",
+  "gui_settings_freeFormVoiceHint": "free-form id or provider voice",
+  "gui_settings_selectVoiceHint": "Select a Voice...",
+  "gui_settings_genderAny": "Any",
+  "gui_settings_genderFemale": "Female",
+  "gui_settings_genderMale": "Male",
+  "gui_settings_modelOptionsSection": "Model options",
+  "gui_settings_speedLabel": "Speed",
+  "gui_settings_speedTooltip": "Speech rate multiplier (1.0 = normal)",
+  "gui_settings_runSection": "Run",
+  "gui_settings_sendWholeFile": "Send whole file",
+  "gui_settings_minWordsLabel": "Min words per segment",
+  "gui_settings_sampleMode": "Sample mode",
+  "gui_settings_narrateFirstSegments": "Narrate first segments only",
+  "gui_settings_skipCompletedSegments": "Skip completed segments (Resume)",
+  "gui_settings_modelDisplayFallback": "{alias} — {id}",
+  "@gui_settings_modelDisplayFallback": {
+    "description": "Model dropdown label when a profile has no display name.",
+    "placeholders": {
+      "alias": { "type": "String", "example": "fish" },
+      "id": { "type": "String", "example": "fishaudio/openaudio-s1" }
+    }
+  },
+  "gui_settings_apiKeySection": "API key",
+  "gui_settings_apiKeySectionTooltip": "API key for OpenRouter authentication",
+  "gui_settings_apiKeyStatusLabel": "Key source",
+  "gui_settings_apiKeyStatusKeychain": "Stored in keychain",
+  "gui_settings_apiKeyStatusConfig": "Set in config.json",
+  "gui_settings_apiKeyStatusEnvironment": "Set via environment variable",
+  "gui_settings_apiKeyStatusMissing": "Not set",
+  "gui_settings_apiKeyFieldPlaceholder": "Paste your API key here",
+  "gui_settings_apiKeyFieldTooltip": "OpenRouter API key, saved to the system keychain",
+  "gui_settings_apiKeySave": "Save",
+  "gui_settings_apiKeyRemove": "Remove",
+  "gui_settings_apiKeyStoreError": "Could not reach the system key store.",
+  "gui_settings_modelDropdownTooltip": "Select the TTS model to use for narration",
+  "gui_settings_voiceDropdownTooltip": "Choose voice for current model",
+  "gui_settings_sendWholeFileTooltip": "Generate single audio file instead of segments",
+  "gui_settings_sampleModeTooltip": "Generate only first N segments for testing",
+  "gui_settings_resumeTooltip": "Skip already generated segments when resuming",
+  "gui_settings_minWordsSliderTooltip": "Merge paragraphs shorter than this word count",
+  "gui_settings_voiceRawFieldTooltip": "Custom voice ID or provider voice identifier",
+  "gui_settings_accentFieldTooltip": "Voice accent description (e.g., 'southern British English')",
+  "gui_settings_styleFieldTooltip": "Voice style personality (e.g., 'warm, composed')",
+  "gui_settings_prefixFieldTooltip": "Text prepended to each paragraph",
+  "gui_settings_sampleLenFieldTooltip": "Number of paragraphs to narrate in sample mode",
+  "gui_settings_genderControlTooltip": "Filter voices by gender",
+  "gui_settings_advancedVoiceIdTooltip": "Enter custom voice settings",
+
+  "gui_narration_backToEditor": "Back to editor",
+  "gui_narration_narratingTitle": "Narrating: {documentName}",
+  "@gui_narration_narratingTitle": {
+    "description": "Title of the narration screen.",
+    "placeholders": { "documentName": { "type": "String", "example": "chapter-01.txt" } }
+  },
+  "gui_narration_summaryPill": "{modelName} · {voice} | {segments} {segmentLabel} · ~{minutes} min · ~{cost}",
+  "@gui_narration_summaryPill": {
+    "description": "Run summary pill above the narration segment list.",
+    "placeholders": {
+      "modelName": { "type": "String" },
+      "voice": { "type": "String" },
+      "segments": { "type": "int" },
+      "segmentLabel": { "type": "String" },
+      "minutes": { "type": "String" },
+      "cost": { "type": "String" }
+    }
+  },
+  "gui_narration_noSegmentsYet": "No segments yet.",
+  "gui_narration_narrationComplete": "Narration complete.",
+  "gui_narration_narrationStopped": "Narration was stopped.",
+  "gui_narration_narrationFailed": "Narration failed: {runError}",
+  "@gui_narration_narrationFailed": {
+    "description": "Run failure banner.",
+    "placeholders": { "runError": { "type": "String" } }
+  },
+  "gui_narration_segmentLabel": "Segment {segmentNumber}",
+  "@gui_narration_segmentLabel": {
+    "description": "Numbered segment heading in the narration list.",
+    "placeholders": { "segmentNumber": { "type": "int" } }
+  },
+  "gui_narration_wordCountSuffix": " · {words, plural, =1{word} other{words}}",
+  "@gui_narration_wordCountSuffix": {
+    "description": "Trailing word count under a segment heading.",
+    "placeholders": { "words": { "type": "int" } }
+  },
+  "gui_narration_processing": "Processing...",
+  "gui_narration_pending": "Pending",
+  "gui_narration_play": "Play",
+  "gui_narration_stop": "Stop",
+  "gui_narration_resumedTooltip": "Resumed — tap to play",
+  "gui_narration_back": "Back",
+  "gui_narration_cancelRun": "Cancel Run",
+  "gui_narration_confirmCancelTitle": "Cancel active narration run?",
+  "@gui_narration_confirmCancelTitle": {
+    "description": "Title of the dialog guarding against leaving an active run."
+  },
+  "gui_narration_confirmCancelMessage": "Generation stops now; completed clips stay playable in this session.",
+  "@gui_narration_confirmCancelMessage": {
+    "description": "Body of the dialog guarding against leaving an active run."
+  },
+
+  "gui_menu_appMenu": "TTS Narrator",
+  "gui_menu_preferences": "Preferences…",
+  "gui_menu_file": "File",
+  "gui_menu_openText": "Open Text…",
+  "gui_menu_outputFolder": "Output Folder…",
+  "gui_menu_narrate": "Narrate",
+  "gui_menu_clear": "Clear",
+  "@gui_menu_clear": {
+    "description": "File-menu item that empties the editor. Previously hardcoded in both menu bars."
+  },
+  "gui_menu_save": "Save",
+  "gui_menu_saveAs": "Save As…",
+  "gui_menu_cleanUpSegments": "Clean Up Segments…",
+  "gui_menu_quit": "Quit",
+  "gui_menu_edit": "Edit",
+  "gui_menu_undo": "Undo",
+  "gui_menu_redo": "Redo",
+  "gui_menu_cut": "Cut",
+  "gui_menu_copy": "Copy",
+  "gui_menu_paste": "Paste",
+  "gui_menu_selectAll": "Select All",
+  "gui_menu_view": "View",
+  "gui_menu_appearance": "Appearance",
+  "gui_menu_themeModeAuto": "Auto",
+  "gui_menu_themeModeLight": "Light",
+  "gui_menu_themeModeDark": "Dark",
+  "gui_menu_toggleSettingsPanel": "Toggle Settings Panel",
+  "gui_menu_window": "Window",
+  "gui_menu_checkmarkPrefix": "✓ ",
+
+  "gui_cleanup_confirmTitle": "Delete segment files?",
+  "gui_cleanup_confirmMessage": "This deletes the per-segment audio clips. The combined track and the manifest are kept. Deleted segments can't be reused by --resume, so a re-run narrates them again.",
+  "gui_cleanup_cancel": "Cancel",
+  "gui_cleanup_delete": "Delete",
+  "gui_cleanup_ok": "OK",
+  "gui_cleanup_deletedTitle": "Segments deleted",
+  "gui_cleanup_removedMessage": "Removed {removedCount} segment {fileLabel}.",
+  "@gui_cleanup_removedMessage": {
+    "description": "Cleanup result dialog. {fileLabel} is a localized plural of 'file' ('file'/'files').",
+    "placeholders": {
+      "removedCount": { "type": "int" },
+      "fileLabel": { "type": "String", "example": "files" }
+    }
+  },
+  "gui_cleanup_cleanupFailedTitle": "Cleanup failed",
+
+  "gui_bootstrap_downloadTitle": "Download Voice Configurations?",
+  "gui_bootstrap_downloadPrompt": "No voice configurations found. Would you like to download starter configurations ({files}) from GitHub?",
+  "@gui_bootstrap_downloadPrompt": {
+    "description": "First-run prompt offering to download starter voice configs.",
+    "placeholders": { "files": { "type": "String", "example": "fish.json, kokoro.json" } }
+  },
+  "gui_bootstrap_notNow": "Not Now",
+  "gui_bootstrap_download": "Download",
+  "gui_bootstrap_downloading": "Downloading voice configurations...",
+  "gui_bootstrap_initializing": "Initializing..."
+}

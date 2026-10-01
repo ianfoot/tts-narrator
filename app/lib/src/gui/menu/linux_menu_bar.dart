@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../cleanup_segments_flow.dart';
 import '../controller/app_controller.dart';
 import '../platform/platform_detection.dart';
-import '../theme/app_text_tokens.dart' show TextTokens;
+import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart' show AppMetrics, AppThemeMode, AppTokens;
 import 'edit_actions.dart';
 import 'quit_app.dart';
@@ -59,6 +59,7 @@ class LinuxMenuBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = AppTokens.of(context);
+    final l10n = AppLocalizations.of(context);
     final colors = tokens.colors;
     return Material(
       // The bar paints its own background; this transparent Material exists
@@ -84,29 +85,29 @@ class LinuxMenuBar extends StatelessWidget {
                     style: _barStyle,
                     children: [
                       SubmenuButton(
-                        menuChildren: _fileItems(tokens),
+                        menuChildren: _fileItems(tokens, l10n),
                         menuStyle: _dropdownStyle(tokens),
                         style: _buttonStyle(tokens),
                         child: Text(
-                          TextTokens.gui_menu_file,
+                          l10n.gui_menu_file,
                           style: _label(tokens),
                         ),
                       ),
                       SubmenuButton(
-                        menuChildren: _editItems(tokens),
+                        menuChildren: _editItems(tokens, l10n),
                         menuStyle: _dropdownStyle(tokens),
                         style: _buttonStyle(tokens),
                         child: Text(
-                          TextTokens.gui_menu_edit,
+                          l10n.gui_menu_edit,
                           style: _label(tokens),
                         ),
                       ),
                       SubmenuButton(
-                        menuChildren: _viewItems(tokens, controller.themeMode),
+                        menuChildren: _viewItems(tokens, l10n, controller.themeMode),
                         menuStyle: _dropdownStyle(tokens),
                         style: _buttonStyle(tokens),
                         child: Text(
-                          TextTokens.gui_menu_view,
+                          l10n.gui_menu_view,
                           style: _label(tokens),
                         ),
                       ),
@@ -170,26 +171,26 @@ class LinuxMenuBar extends StatelessWidget {
   TextStyle _label(AppTokens tokens) =>
       tokens.typography.control.copyWith(color: tokens.colors.textPrimary);
 
-  List<Widget> _fileItems(AppTokens tokens) {
+  List<Widget> _fileItems(AppTokens tokens, AppLocalizations l10n) {
     final narrateBlocked = controller.narrateBlockReason() != null;
     final canClear = controller.canClearText;
     final canCleanUp = controller.canCleanupSegments;
     return [
       _item(
         tokens,
-        TextTokens.gui_menu_openText,
+        l10n.gui_menu_openText,
         accelerator: 'O',
         onSelected: () => controller.commands.onOpen?.call(),
       ),
       _item(
         tokens,
-        TextTokens.gui_menu_outputFolder,
+        l10n.gui_menu_outputFolder,
         accelerator: 'E',
         onSelected: () => controller.commands.onSetOutputFolder?.call(),
       ),
       _item(
         tokens,
-        TextTokens.gui_menu_narrate,
+        l10n.gui_menu_narrate,
         accelerator: 'N',
         // Disabled rather than guarded: unlike a platform menu item, a widget
         // menu can show that the command is unavailable.
@@ -199,7 +200,7 @@ class LinuxMenuBar extends StatelessWidget {
       ),
       _item(
         tokens,
-        'Clear',
+        l10n.gui_menu_clear,
         accelerator: 'L',
         shift: true,
         onSelected: canClear ? controller.clearText : null,
@@ -207,13 +208,13 @@ class LinuxMenuBar extends StatelessWidget {
       const _Separator(),
       _item(
         tokens,
-        TextTokens.gui_menu_save,
+        l10n.gui_menu_save,
         accelerator: 'S',
         onSelected: controller.save,
       ),
       _item(
         tokens,
-        TextTokens.gui_menu_saveAs,
+        l10n.gui_menu_saveAs,
         accelerator: 'S',
         shift: true,
         onSelected: controller.saveAs,
@@ -221,7 +222,7 @@ class LinuxMenuBar extends StatelessWidget {
       const _Separator(),
       _item(
         tokens,
-        TextTokens.gui_menu_cleanUpSegments,
+        l10n.gui_menu_cleanUpSegments,
         onSelected: canCleanUp
             ? () {
                 final overlayContext =
@@ -237,23 +238,23 @@ class LinuxMenuBar extends StatelessWidget {
       const _Separator(),
       _item(
         tokens,
-        TextTokens.gui_menu_quit,
+        l10n.gui_menu_quit,
         accelerator: 'Q',
         onSelected: quitApp,
       ),
     ];
   }
 
-  List<Widget> _editItems(AppTokens tokens) => [
+  List<Widget> _editItems(AppTokens tokens, AppLocalizations l10n) => [
     _item(
       tokens,
-      TextTokens.gui_menu_undo,
+      l10n.gui_menu_undo,
       accelerator: 'Z',
       onSelected: EditActions.undo,
     ),
     _item(
       tokens,
-      TextTokens.gui_menu_redo,
+      l10n.gui_menu_redo,
       accelerator: 'Z',
       shift: true,
       onSelected: EditActions.redo,
@@ -261,59 +262,66 @@ class LinuxMenuBar extends StatelessWidget {
     const _Separator(),
     _item(
       tokens,
-      TextTokens.gui_menu_cut,
+      l10n.gui_menu_cut,
       accelerator: 'X',
       onSelected: EditActions.cut,
     ),
     _item(
       tokens,
-      TextTokens.gui_menu_copy,
+      l10n.gui_menu_copy,
       accelerator: 'C',
       onSelected: EditActions.copy,
     ),
     _item(
       tokens,
-      TextTokens.gui_menu_paste,
+      l10n.gui_menu_paste,
       accelerator: 'V',
       onSelected: EditActions.paste,
     ),
     _item(
       tokens,
-      TextTokens.gui_menu_selectAll,
+      l10n.gui_menu_selectAll,
       accelerator: 'A',
       onSelected: EditActions.selectAll,
     ),
   ];
 
-  List<Widget> _viewItems(AppTokens tokens, AppThemeMode themeMode) => [
+  List<Widget> _viewItems(
+    AppTokens tokens,
+    AppLocalizations l10n,
+    AppThemeMode themeMode,
+  ) => [
     SubmenuButton(
       menuChildren: [
         _appearanceItem(
           tokens,
           themeMode,
           AppThemeMode.system,
-          TextTokens.gui_menu_themeModeAuto,
+          l10n.gui_menu_themeModeAuto,
+          l10n,
         ),
         _appearanceItem(
           tokens,
           themeMode,
           AppThemeMode.light,
-          TextTokens.gui_menu_themeModeLight,
+          l10n.gui_menu_themeModeLight,
+          l10n,
         ),
         _appearanceItem(
           tokens,
           themeMode,
           AppThemeMode.dark,
-          TextTokens.gui_menu_themeModeDark,
+          l10n.gui_menu_themeModeDark,
+          l10n,
         ),
       ],
       menuStyle: _dropdownStyle(tokens),
       style: _buttonStyle(tokens),
-      child: Text(TextTokens.gui_menu_appearance, style: _label(tokens)),
+      child: Text(l10n.gui_menu_appearance, style: _label(tokens)),
     ),
     _item(
       tokens,
-      TextTokens.gui_menu_toggleSettingsPanel,
+      l10n.gui_menu_toggleSettingsPanel,
       accelerator: '\\',
       onSelected: () => controller.commands.onToggleSettingsPanel?.call(),
     ),
@@ -327,12 +335,13 @@ class LinuxMenuBar extends StatelessWidget {
     AppThemeMode current,
     AppThemeMode mode,
     String label,
+    AppLocalizations l10n,
   ) {
     return MenuItemButton(
       onPressed: () => controller.themeMode = mode,
       child: Text(
         current == mode
-            ? '${TextTokens.gui_menu_checkmarkPrefix}$label'
+            ? '${l10n.gui_menu_checkmarkPrefix}$label'
             : label,
         style: _label(tokens),
       ),

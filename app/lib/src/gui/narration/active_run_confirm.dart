@@ -1,25 +1,27 @@
 import 'package:flutter/cupertino.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 /// Confirms leaving a still-generating narration run.
 class ActiveRunConfirmDialog {
   static Future<bool> show({required BuildContext context}) async {
-    const title = 'Cancel active narration run?';
-    const message =
-        'Generation stops now; completed clips stay playable in this session.';
+    final l10n = AppLocalizations.of(context);
+    final title = l10n.gui_narration_confirmCancelTitle;
+    final message = l10n.gui_narration_confirmCancelMessage;
     final result = await showCupertinoDialog<bool>(
       context: context,
       builder: (dialogContext) => CupertinoAlertDialog(
-        title: const Text(title),
-        content: const Text(message),
+        title: Text(title),
+        content: Text(message),
         actions: [
           CupertinoDialogAction(
             isDefaultAction: true,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Cancel Run'),
+            child: Text(l10n.gui_narration_cancelRun),
           ),
           CupertinoDialogAction(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Back'),
+            child: Text(l10n.gui_narration_back),
           ),
         ],
       ),

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../cleanup_segments_flow.dart';
 import '../controller/app_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens;
+import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart' show AppThemeMode;
 import 'edit_actions.dart';
 
@@ -19,28 +19,36 @@ import 'edit_actions.dart';
 /// menu items are *not* widgets; they are sent to the platform over the menu
 /// channel, so there is no [enabled] flag — the Narrate item guards in its
 /// handler instead of graying out.
+///
+/// [l10n] is threaded in rather than read from a context because the menu items
+/// are plain values sent over the platform channel, not widgets — and the only
+/// context available here is the navigator overlay's, which sits below the
+/// `AppLocalizations` scope on some shells. The caller
+/// ([PlatformMenuBarHost] in `platform/app_root.dart`) resolves it once from
+/// its own context.
 List<PlatformMenu> buildMacMenu({
   required AppController controller,
   required GlobalKey<NavigatorState> navigatorKey,
+  required AppLocalizations l10n,
 }) {
   return <PlatformMenu>[
-    _appMenu(controller),
-    _fileMenu(controller, navigatorKey),
-    _editMenu(),
-    _viewMenu(controller),
-    _windowMenu(),
+    _appMenu(controller, l10n),
+    _fileMenu(controller, navigatorKey, l10n),
+    _editMenu(l10n),
+    _viewMenu(controller, l10n),
+    _windowMenu(l10n),
   ];
 }
 
-PlatformMenu _appMenu(AppController controller) {
+PlatformMenu _appMenu(AppController controller, AppLocalizations l10n) {
   return PlatformMenu(
-    label: TextTokens.gui_menu_appMenu,
+    label: l10n.gui_menu_appMenu,
     menus: <PlatformMenuItem>[
       const PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.about),
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenuItem(
-            label: TextTokens.gui_menu_preferences,
+            label: l10n.gui_menu_preferences,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.comma,
               meta: true,
@@ -75,22 +83,23 @@ PlatformMenu _appMenu(AppController controller) {
 PlatformMenu _fileMenu(
   AppController controller,
   GlobalKey<NavigatorState> navigatorKey,
+  AppLocalizations l10n,
 ) {
   return PlatformMenu(
-    label: TextTokens.gui_menu_file,
+    label: l10n.gui_menu_file,
     menus: <PlatformMenuItem>[
       PlatformMenuItem(
-        label: TextTokens.gui_menu_openText,
+        label: l10n.gui_menu_openText,
         shortcut: const SingleActivator(LogicalKeyboardKey.keyO, meta: true),
         onSelected: () => controller.commands.onOpen?.call(),
       ),
       PlatformMenuItem(
-        label: TextTokens.gui_menu_outputFolder,
+        label: l10n.gui_menu_outputFolder,
         shortcut: const SingleActivator(LogicalKeyboardKey.keyE, meta: true),
         onSelected: () => controller.commands.onSetOutputFolder?.call(),
       ),
       PlatformMenuItem(
-        label: TextTokens.gui_menu_narrate,
+        label: l10n.gui_menu_narrate,
         shortcut: const SingleActivator(LogicalKeyboardKey.keyN, meta: true),
         onSelected: () {
           if (controller.narrateBlockReason() != null) return;
@@ -98,7 +107,7 @@ PlatformMenu _fileMenu(
         },
       ),
       PlatformMenuItem(
-        label: 'Clear',
+        label: l10n.gui_menu_clear,
         shortcut: const SingleActivator(
           LogicalKeyboardKey.keyL,
           meta: true,
@@ -113,7 +122,7 @@ PlatformMenu _fileMenu(
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenuItem(
-            label: TextTokens.gui_menu_save,
+            label: l10n.gui_menu_save,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyS,
               meta: true,
@@ -121,7 +130,7 @@ PlatformMenu _fileMenu(
             onSelected: () => controller.save(),
           ),
           PlatformMenuItem(
-            label: TextTokens.gui_menu_saveAs,
+            label: l10n.gui_menu_saveAs,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyS,
               meta: true,
@@ -134,7 +143,7 @@ PlatformMenu _fileMenu(
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenuItem(
-            label: TextTokens.gui_menu_cleanUpSegments,
+            label: l10n.gui_menu_cleanUpSegments,
             onSelected: () {
               // Menu items have no [enabled] flag; guard here so the command
               // is a no-op before any run leaves cleanable segments behind.
@@ -151,17 +160,17 @@ PlatformMenu _fileMenu(
   );
 }
 
-PlatformMenu _editMenu() {
+PlatformMenu _editMenu(AppLocalizations l10n) {
   return PlatformMenu(
-    label: TextTokens.gui_menu_edit,
+    label: l10n.gui_menu_edit,
     menus: <PlatformMenuItem>[
       PlatformMenuItem(
-        label: TextTokens.gui_menu_undo,
+        label: l10n.gui_menu_undo,
         shortcut: const SingleActivator(LogicalKeyboardKey.keyZ, meta: true),
         onSelected: EditActions.undo,
       ),
       PlatformMenuItem(
-        label: TextTokens.gui_menu_redo,
+        label: l10n.gui_menu_redo,
         shortcut: const SingleActivator(
           LogicalKeyboardKey.keyZ,
           meta: true,
@@ -172,7 +181,7 @@ PlatformMenu _editMenu() {
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenuItem(
-            label: TextTokens.gui_menu_cut,
+            label: l10n.gui_menu_cut,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyX,
               meta: true,
@@ -180,7 +189,7 @@ PlatformMenu _editMenu() {
             onSelected: EditActions.cut,
           ),
           PlatformMenuItem(
-            label: TextTokens.gui_menu_copy,
+            label: l10n.gui_menu_copy,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyC,
               meta: true,
@@ -188,7 +197,7 @@ PlatformMenu _editMenu() {
             onSelected: EditActions.copy,
           ),
           PlatformMenuItem(
-            label: TextTokens.gui_menu_paste,
+            label: l10n.gui_menu_paste,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyV,
               meta: true,
@@ -196,7 +205,7 @@ PlatformMenu _editMenu() {
             onSelected: EditActions.paste,
           ),
           PlatformMenuItem(
-            label: TextTokens.gui_menu_selectAll,
+            label: l10n.gui_menu_selectAll,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.keyA,
               meta: true,
@@ -209,34 +218,37 @@ PlatformMenu _editMenu() {
   );
 }
 
-PlatformMenu _viewMenu(AppController controller) {
+PlatformMenu _viewMenu(AppController controller, AppLocalizations l10n) {
   return PlatformMenu(
-    label: TextTokens.gui_menu_view,
+    label: l10n.gui_menu_view,
     menus: <PlatformMenuItem>[
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenu(
-            label: TextTokens.gui_menu_appearance,
+            label: l10n.gui_menu_appearance,
             menus: <PlatformMenuItem>[
               _appearanceItem(
                 controller,
                 AppThemeMode.system,
-                TextTokens.gui_menu_themeModeAuto,
+                l10n.gui_menu_themeModeAuto,
+                l10n,
               ),
               _appearanceItem(
                 controller,
                 AppThemeMode.light,
-                TextTokens.gui_menu_themeModeLight,
+                l10n.gui_menu_themeModeLight,
+                l10n,
               ),
               _appearanceItem(
                 controller,
                 AppThemeMode.dark,
-                TextTokens.gui_menu_themeModeDark,
+                l10n.gui_menu_themeModeDark,
+                l10n,
               ),
             ],
           ),
           PlatformMenuItem(
-            label: TextTokens.gui_menu_toggleSettingsPanel,
+            label: l10n.gui_menu_toggleSettingsPanel,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.backslash,
               meta: true,
@@ -259,18 +271,19 @@ PlatformMenuItem _appearanceItem(
   AppController controller,
   AppThemeMode mode,
   String label,
+  AppLocalizations l10n,
 ) {
   return PlatformMenuItem(
     label: controller.themeMode == mode
-        ? '${TextTokens.gui_menu_checkmarkPrefix}$label'
+        ? '${l10n.gui_menu_checkmarkPrefix}$label'
         : label,
     onSelected: () => controller.themeMode = mode,
   );
 }
 
-PlatformMenu _windowMenu() {
+PlatformMenu _windowMenu(AppLocalizations l10n) {
   return PlatformMenu(
-    label: TextTokens.gui_menu_window,
+    label: l10n.gui_menu_window,
     menus: const <PlatformMenuItem>[
       PlatformProvidedMenuItem(
         type: PlatformProvidedMenuItemType.minimizeWindow,

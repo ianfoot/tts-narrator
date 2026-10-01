@@ -11,8 +11,7 @@ import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
 import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
     show acceleratorLabel;
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
-import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart'
-    show TextTokens;
+import '../support/l10n_test_support.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 
@@ -70,6 +69,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: testLocalizationsDelegates,
+        supportedLocales: testSupportedLocales,
         home: EditorScreen(
           controller: controller,
           pickDirectory: pickDirectory,
@@ -99,14 +100,14 @@ void main() {
     expect(find.byKey(const Key('railToggleButton')), findsOneWidget);
     expect(
       find.byTooltip(
-        '${TextTokens.gui_editor_toolbar_openTextFile} '
+        '${testL10n.gui_editor_toolbar_openTextFile} '
         '(${acceleratorLabel('O')})',
       ),
       findsOneWidget,
     );
     expect(
       find.byTooltip(
-        '${TextTokens.gui_editor_toolbar_narrate} (${acceleratorLabel('N')})',
+        '${testL10n.gui_editor_toolbar_narrate} (${acceleratorLabel('N')})',
       ),
       findsOneWidget,
     );
@@ -178,7 +179,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1000, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      CupertinoApp(home: EditorScreen(controller: controller)),
+      testApp(home: EditorScreen(controller: controller)),
     );
 
     final field = tester.widget<CupertinoTextField>(
@@ -457,7 +458,7 @@ void main() {
       expect(find.byKey(const Key('outDirPickerButton')), findsOneWidget);
       expect(
         find.byTooltip(
-          '${TextTokens.gui_editor_toolbar_setOutputFolder} '
+          '${testL10n.gui_editor_toolbar_setOutputFolder} '
           '(${acceleratorLabel('E')})',
         ),
         findsOneWidget,

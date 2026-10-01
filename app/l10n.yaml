@@ -1,0 +1,25 @@
+# Flutter gen-l10n configuration.
+#
+# User-facing strings live in `lib/l10n/app_*.arb` (ARB, ICU message syntax).
+# The generated `app_localizations*.dart` is committed so CI can detect drift
+# with `git diff --exit-code`; run `flutter gen-l10n` from `app/` after editing
+# any ARB file.
+#
+# `synthetic-package` is intentionally NOT set: it is a hard error on this
+# Flutter version, and omitting it emits the deprecated-synthetic-package
+# warning. Output goes to `lib/l10n/` (not `package:flutter_gen`) so it is a
+# real, trackable source file.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+
+# `of(context)` throws when no delegate is in scope instead of returning a
+# silent `null`. Every widget in this app is mounted under a delegate (see
+# `main.dart` and `platform/app_root.dart`), so a missing delegate is a wiring
+# bug we want surfaced by tests, not absorbed by a null check.
+nullable-getter: false
+
+# One locale today. Deferred loading changes the generated API shape (async
+# `load()`) without buying anything until a second locale exists — revisit when
+# a second `app_xx.arb` lands.
+use-deferred-loading: false

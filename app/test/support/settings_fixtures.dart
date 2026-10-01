@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 
+import 'l10n_test_support.dart';
+
 /// Shared fixtures for the settings-rail section widget tests. Each section
 /// takes only an [AppController], so a section-under-test is pumped directly
 /// (no full [SettingsPanel]) on a rail-sized surface.
@@ -70,7 +72,13 @@ void writeFishConfig(String configDir) {
 Future<void> pumpSettingsSection(WidgetTester tester, Widget child) async {
   await tester.binding.setSurfaceSize(const Size(1200, 1800));
   addTearDown(() => tester.binding.setSurfaceSize(null));
-  await tester.pumpWidget(MaterialApp(home: Scaffold(body: child)));
+  await tester.pumpWidget(
+    MaterialApp(
+      localizationsDelegates: testLocalizationsDelegates,
+      supportedLocales: testSupportedLocales,
+      home: Scaffold(body: child),
+    ),
+  );
 }
 
 /// Expands the collapsed "Advanced Voice ID" disclosure.

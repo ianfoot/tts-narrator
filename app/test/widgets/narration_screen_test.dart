@@ -12,6 +12,7 @@ import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/narration/narration_screen.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
+import '../support/l10n_test_support.dart';
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
 
@@ -109,7 +110,11 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1000, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      MaterialApp(home: NarrationScreen(controller: controller)),
+      MaterialApp(
+        localizationsDelegates: testLocalizationsDelegates,
+        supportedLocales: testSupportedLocales,
+        home: NarrationScreen(controller: controller),
+      ),
     );
   }
 
@@ -123,6 +128,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: testLocalizationsDelegates,
+        supportedLocales: testSupportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(child: Text('EDITOR', key: const Key('editorHost'))),
@@ -462,7 +469,7 @@ void main() {
     c.startRun();
     await tester.binding.setSurfaceSize(const Size(1000, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(CupertinoApp(home: NarrationScreen(controller: c)));
+    await tester.pumpWidget(testApp(home: NarrationScreen(controller: c)));
 
     expect(find.text('Narrating: untitled.txt'), findsOneWidget);
     expect(find.byKey(const Key('runSummaryPill')), findsOneWidget);

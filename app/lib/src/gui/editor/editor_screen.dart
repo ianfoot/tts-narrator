@@ -8,7 +8,7 @@ import 'package:flutter/cupertino.dart';
 import '../cleanup_segments_flow.dart';
 import '../controller/app_controller.dart';
 import '../settings/settings_panel.dart';
-import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
+import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_text_field.dart';
 import 'editor_status_bar.dart';
@@ -142,6 +142,8 @@ class _EditorScreenState extends State<EditorScreen> {
 
   AppTokens get _tokens => AppTokens.of(context);
 
+  AppLocalizations get _l10n => AppLocalizations.of(context);
+
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
@@ -230,7 +232,7 @@ class _EditorScreenState extends State<EditorScreen> {
         key: const Key('editorTextField'),
         controller: _textController,
         onChanged: _onTextChanged,
-        hintText: TextTokens.gui_editor_hintText,
+        hintText: _l10n.gui_editor_hintText,
         hintStyle: _tokens.typography.editorBody.copyWith(
           color: colors.textSecondary.withValues(
             alpha: _tokens.colors.isDark ? 0.45 : 0.75,
@@ -266,9 +268,7 @@ class _EditorScreenState extends State<EditorScreen> {
           ),
           const SizedBox(width: 8),
           Text(
-            fillTextTemplate(TextTokens.gui_editor_cannotNarratePrefix, {
-              'message': message,
-            }),
+            _l10n.gui_editor_cannotNarratePrefix(message),
             key: const Key('narrateGuardMessage'),
             style: _tokens.typography.body.copyWith(color: foreground),
           ),

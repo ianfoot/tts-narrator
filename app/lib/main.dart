@@ -12,7 +12,7 @@ import 'src/gui/controller/app_controller.dart';
 import 'src/gui/controller/config_loader.dart';
 import 'src/gui/platform/app_root.dart';
 import 'src/gui/platform/platform_detection.dart';
-import 'src/gui/theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
+import 'l10n/app_localizations.dart';
 
 /// Root app that provides a Navigator so ConfigBootstrap can show dialogs.
 class BootstrapApp extends StatelessWidget {
@@ -37,8 +37,20 @@ class BootstrapApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CupertinoApp(
-      title: TextTokens.app_title,
+      // Not localized: this widget's context sits ABOVE the delegate scope it
+      // is about to install, so `AppLocalizations.of(context)` cannot resolve
+      // here. BootstrapApp is a transient pre-AppRoot shell anyway — AppRoot
+      // installs the real app and owns the window title.
+      title: 'TTS Narrator',
       debugShowCheckedModeBanner: false,
+      // Matches the delegate set in `platform/app_root.dart`, and for the same
+      // reason: no GlobalMaterialLocalizations. See the comment there.
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        DefaultWidgetsLocalizations.delegate,
+        DefaultCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ConfigBootstrap(
         configDir: configDir,
         prefs: prefs,
@@ -161,24 +173,25 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   }
 
   Future<void> _promptDownload() async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showCupertinoDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) => CupertinoAlertDialog(
-        title: const Text(TextTokens.gui_bootstrap_downloadTitle),
+        title: Text(l10n.gui_bootstrap_downloadTitle),
         content: Text(
-          fillTextTemplate(TextTokens.gui_bootstrap_downloadPrompt, {
-            'files': _starterFiles.map(_starterDisplayName).join(', '),
-          }),
+          l10n.gui_bootstrap_downloadPrompt(
+            _starterFiles.map(_starterDisplayName).join(', '),
+          ),
         ),
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(TextTokens.gui_bootstrap_notNow),
+            child: Text(l10n.gui_bootstrap_notNow),
           ),
           CupertinoDialogAction(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(TextTokens.gui_bootstrap_download),
+            child: Text(l10n.gui_bootstrap_download),
           ),
         ],
       ),
@@ -226,15 +239,16 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (_downloading) {
-      return const CupertinoPageScaffold(
+      return CupertinoPageScaffold(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CupertinoActivityIndicator(radius: 16),
-              SizedBox(height: 16),
-              Text(TextTokens.gui_bootstrap_downloading),
+              const CupertinoActivityIndicator(radius: 16),
+              const SizedBox(height: 16),
+              Text(l10n.gui_bootstrap_downloading),
             ],
           ),
         ),
@@ -246,8 +260,8 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
     }
 
     // Waiting for user confirmation
-    return const CupertinoPageScaffold(
-      child: Center(child: Text(TextTokens.gui_bootstrap_initializing)),
+    return CupertinoPageScaffold(
+      child: Center(child: Text(l10n.gui_bootstrap_initializing)),
     );
   }
 }

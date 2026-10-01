@@ -1,20 +1,26 @@
 name: tokens
-# Verifies that the design- and text-token codegen is up to date.
-# Triggers on any PR that touches a token source of truth
-# (app/assets/theme/tokens.json, app/assets/text_tokens.json), the codegen
-# itself, or the public theme surface. Runs the generator and fails the build
-# if the checked-in app_tokens.g.dart / app_text_tokens.g.dart files drifted.
+# Verifies that both generators are up to date.
+#
+#  * Design tokens: `app/assets/theme/tokens.json` -> `app_tokens.g.dart`, via
+#    `dart run tool/generate_tokens.dart`.
+#  * User-facing strings: `app/lib/l10n/app_*.arb` -> `app_localizations*.dart`,
+#    via `flutter gen-l10n`.
+#
+# Both outputs are committed, so each is checked by re-running its generator and
+# failing on any diff. Adding a language means adding an `app_xx.arb` and
+# committing the regenerated output.
 
 on:
   pull_request:
     paths: &token-paths
       - 'app/assets/theme/tokens.json'
-      - 'app/assets/text_tokens.json'
+      - 'app/lib/l10n/*.arb'
+      - 'app/l10n.yaml'
       - 'app/tool/generate_tokens.dart'
       - 'app/lib/src/gui/theme/app_tokens.dart'
       - 'app/lib/src/gui/theme/app_tokens.g.dart'
-      - 'app/lib/src/gui/theme/app_text_tokens.dart'
-      - 'app/lib/src/gui/theme/app_text_tokens.g.dart'
+      - 'app/lib/l10n/app_localizations.dart'
+      - 'app/lib/l10n/app_localizations_*.dart'
       - '.github/workflows/tokens.yml'
   push:
     branches: [main]
@@ -22,7 +28,7 @@ on:
 
 jobs:
   regenerate:
-    name: codegen matches token JSON
+    name: generated output matches its source of truth
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -35,17 +41,19 @@ jobs:
           cache: true
       - name: Install dependencies
         run: flutter pub get
-      - name: Run codegen
+      - name: Run design-token codegen
         run: dart run tool/generate_tokens.dart
+      - name: Run localization codegen
+        run: flutter gen-l10n
       - name: Verify no drift
         run: |
           ok=1
           if ! git diff --exit-code -- lib/src/gui/theme/app_tokens.g.dart; then
-            echo '::error::app_tokens.g.dart is out of date. Run `dart run tool/generate_tokens.dart` from app/ and commit the result.'
+            echo '::error::lib/src/gui/theme/app_tokens.g.dart is out of date. Run `dart run tool/generate_tokens.dart` from app/ and commit the result.'
             ok=0
           fi
-          if ! git diff --exit-code -- lib/src/gui/theme/app_text_tokens.g.dart; then
-            echo '::error::app_text_tokens.g.dart is out of date. Run `dart run tool/generate_tokens.dart` from app/ and commit the result.'
+          if ! git diff --exit-code -- lib/l10n/; then
+            echo '::error::lib/l10n/ is out of date. Run `flutter gen-l10n` from app/ and commit the result.'
             ok=0
           fi
           test $ok -eq 1

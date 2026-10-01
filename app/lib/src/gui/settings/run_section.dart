@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens;
+import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_section.dart';
 import '../widgets/app_slider.dart';
@@ -96,8 +96,9 @@ class _RunSectionState extends State<RunSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AppSection(
-      title: TextTokens.gui_settings_runSection,
+      title: l10n.gui_settings_runSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -109,12 +110,12 @@ class _RunSectionState extends State<RunSection> {
                   Expanded(
                     child: settingsControlLabel(
                       _tokens,
-                      TextTokens.gui_settings_sendWholeFile,
+                      l10n.gui_settings_sendWholeFile,
                     ),
                   ),
                   AppSwitch(
                     key: const Key('wholeFileSwitch'),
-                    tooltip: TextTokens.gui_settings_sendWholeFileTooltip,
+                    tooltip: l10n.gui_settings_sendWholeFileTooltip,
                     value: _controller.sendWholeFile,
                     onChanged: (v) => _controller.sendWholeFile = v,
                   ),
@@ -122,14 +123,14 @@ class _RunSectionState extends State<RunSection> {
               ),
             ),
           if (!_controller.sendWholeFile) ...[
-            settingsFieldLabel(_tokens, TextTokens.gui_settings_minWordsLabel),
+            settingsFieldLabel(_tokens, l10n.gui_settings_minWordsLabel),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: AppSlider(
                     key: const Key('minWordsSlider'),
-                    tooltip: TextTokens.gui_settings_minWordsSliderTooltip,
+                    tooltip: l10n.gui_settings_minWordsSliderTooltip,
                     value: _controller.minWords.toDouble(),
                     onChanged: _onMinWordsChanged,
                     min: 10,
@@ -162,12 +163,12 @@ class _RunSectionState extends State<RunSection> {
                 Expanded(
                   child: settingsControlLabel(
                     _tokens,
-                    TextTokens.gui_settings_sampleMode,
+                    l10n.gui_settings_sampleMode,
                   ),
                 ),
                 AppSwitch(
                   key: const Key('sampleSwitch'),
-                  tooltip: TextTokens.gui_settings_sampleModeTooltip,
+                  tooltip: l10n.gui_settings_sampleModeTooltip,
                   value: _sampleOn,
                   onChanged: _onSampleOnChanged,
                 ),
@@ -181,7 +182,7 @@ class _RunSectionState extends State<RunSection> {
                 children: [
                   Expanded(
                     child: Text(
-                      TextTokens.gui_settings_narrateFirstSegments,
+                      l10n.gui_settings_narrateFirstSegments,
                       style: _tokens.typography.body,
                     ),
                   ),
@@ -190,7 +191,7 @@ class _RunSectionState extends State<RunSection> {
                     width: 48,
                     child: AppTextField(
                       key: const Key('sampleLenField'),
-                      tooltip: TextTokens.gui_settings_sampleLenFieldTooltip,
+                      tooltip: l10n.gui_settings_sampleLenFieldTooltip,
                       controller: _sampleLen,
                       onChanged: _onSampleLenChanged,
                       keyboardType: TextInputType.number,
@@ -206,12 +207,12 @@ class _RunSectionState extends State<RunSection> {
                 Expanded(
                   child: settingsControlLabel(
                     _tokens,
-                    TextTokens.gui_settings_skipCompletedSegments,
+                    l10n.gui_settings_skipCompletedSegments,
                   ),
                 ),
                 AppSwitch(
                   key: const Key('resumeSwitch'),
-                  tooltip: TextTokens.gui_settings_resumeTooltip,
+                  tooltip: l10n.gui_settings_resumeTooltip,
                   value: _controller.resume,
                   onChanged: (v) => _controller.resume = v,
                 ),
