@@ -4,7 +4,6 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import 'document_controller.dart';
 import 'model_profile_voice_controller.dart';
 import 'settings_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens;
 
 /// Owns the narration-run lifecycle for the TTS Narrator GUI: the running
 /// flag, the snapshotted [runConfig] + segment plan, per-segment progress,
@@ -268,21 +267,39 @@ class RunController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Returns null when narration may start, otherwise the reason it is
-  /// blocked (empty text / already running). The Narrate entrypoints guard on
-  /// this before dispatching to the facade's [startRun].
-  String? narrateBlockReason() {
+  /// Returns null when narration may start, otherwise why it is blocked. The
+  /// Narrate entrypoints guard on this before dispatching to the facade's
+  /// [startRun].
+  ///
+  /// Returns the enum rather than a ready-made sentence: every caller only
+  /// tests it against null, and the one caller that renders it has a
+  /// `BuildContext` to localize with. See
+  /// `NarrationBlockReasonX.message`.
+  NarrationBlockReason? narrateBlockReason() {
     if (_model.profile == null) {
-      return TextTokens.gui_controller_errors_noModelConfigured;
+      return NarrationBlockReason.noModelConfigured;
     }
     if (_document.text.trim().isEmpty) {
-      return TextTokens.gui_controller_blockReasons_emptyText;
+      return NarrationBlockReason.emptyText;
     }
     if (_narrating) {
-      return TextTokens.gui_controller_blockReasons_alreadyRunning;
+      return NarrationBlockReason.alreadyRunning;
     }
     return null;
   }
+}
+
+/// Why narration cannot start yet. Data only — [NarrationBlockReasonX.message]
+/// turns it into localized text.
+enum NarrationBlockReason {
+  /// No voice model is configured.
+  noModelConfigured,
+
+  /// The editor has no narratable text.
+  emptyText,
+
+  /// A run is already in flight.
+  alreadyRunning,
 }
 
 /// Per-segment run state rendered by the narration screen.

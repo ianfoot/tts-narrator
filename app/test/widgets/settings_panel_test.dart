@@ -13,7 +13,7 @@ import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
     show ApiKeySource;
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
-import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart';
+import '../support/l10n_test_support.dart';
 import 'package:tts_narrator/src/gui/widgets/app_button.dart';
 import 'package:tts_narrator/src/gui/widgets/segmented_control.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
@@ -89,6 +89,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: testLocalizationsDelegates,
+        supportedLocales: testSupportedLocales,
         home: Scaffold(body: SettingsPanel(controller: controller)),
       ),
     );
@@ -732,7 +734,7 @@ void main() {
       expect(find.text('Not set'), findsOneWidget);
       // The section header carries a tooltip explaining what the key is for.
       expect(
-        find.byTooltip(TextTokens.gui_settings_apiKeySectionTooltip),
+        find.byTooltip(testL10n.gui_settings_apiKeySectionTooltip),
         findsOneWidget,
       );
 
@@ -742,7 +744,7 @@ void main() {
       // The empty field shows a placeholder so the input area stays visible
       // against the dark rail background.
       expect(
-        find.text(TextTokens.gui_settings_apiKeyFieldPlaceholder),
+        find.text(testL10n.gui_settings_apiKeyFieldPlaceholder),
         findsOneWidget,
       );
       expect(find.text('Not set'), findsOneWidget);
@@ -864,7 +866,7 @@ void main() {
       final c = makeController();
       await tester.binding.setSurfaceSize(const Size(1200, 1800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(CupertinoApp(home: SettingsPanel(controller: c)));
+      await tester.pumpWidget(testApp(home: SettingsPanel(controller: c)));
 
       expect(find.byKey(const Key('settingsPanel')), findsOneWidget);
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);

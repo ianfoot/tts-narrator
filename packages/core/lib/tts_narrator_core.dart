@@ -16,5 +16,6 @@ export 'src/narration/model_profiles.dart';
 export 'src/narration/model_ui.dart';
 export 'src/narration/narration.dart';
 export 'src/narration/prompt.dart';
+export 'src/narration/prompt_strings.dart';
 export 'src/narration/tts_provider.dart';
 export 'src/narration/wav.dart';

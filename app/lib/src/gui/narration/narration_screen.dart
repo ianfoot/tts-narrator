@@ -5,7 +5,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart' show formatCostUsd;
 
 import '../controller/app_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
+import '../../../l10n/app_localizations.dart';
+import '../controller/l10n_labels.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_icon_button.dart';
@@ -143,6 +144,8 @@ class _NarrationScreenState extends State<NarrationScreen> {
 
   AppTokens get _tokens => AppTokens.of(context);
 
+  AppLocalizations get _l10n => AppLocalizations.of(context);
+
   IconData _playIcon() => CupertinoIcons.play_fill;
 
   IconData _stopIcon() => CupertinoIcons.stop_circle;
@@ -174,15 +177,13 @@ class _NarrationScreenState extends State<NarrationScreen> {
                 _buildMessageCard(controller.runPlanError!, isError: true)
               else if (controller.runError != null)
                 _buildMessageCard(
-                  fillTextTemplate(TextTokens.gui_narration_narrationFailed, {
-                    'runError': controller.runError,
-                  }),
+                  _l10n.gui_narration_narrationFailed(controller.runError!),
                   isError: true,
                 )
               else if (controller.runStopped)
-                _buildMessageCard(TextTokens.gui_narration_narrationStopped)
+                _buildMessageCard(_l10n.gui_narration_narrationStopped)
               else if (controller.runFinished)
-                _buildMessageCard(TextTokens.gui_narration_narrationComplete),
+                _buildMessageCard(_l10n.gui_narration_narrationComplete),
               Expanded(child: _buildSegmentList(controller)),
               _buildActionBar(controller),
             ],
@@ -206,16 +207,16 @@ class _NarrationScreenState extends State<NarrationScreen> {
         children: [
           AppIconButton(
             key: const Key('runBackButton'),
-            tooltip: TextTokens.gui_narration_backToEditor,
+            tooltip: _l10n.gui_narration_backToEditor,
             icon: const Icon(CupertinoIcons.back),
             onPressed: () => _onBack(),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              fillTextTemplate(TextTokens.gui_narration_narratingTitle, {
-                'documentName': controller.documentName,
-              }),
+              _l10n.gui_narration_narratingTitle(
+                controller.documentName.display(_l10n),
+              ),
               key: const Key('runHeaderTitle'),
               overflow: TextOverflow.ellipsis,
               style: _tokens.typography.headerSemibold.copyWith(
@@ -236,9 +237,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     final segments = controller.totalSegments;
     final minutes = controller.runEstimatedMinutes.round();
     final cost = formatCostUsd(controller.runEstimatedCostUsd);
-    final segmentLabel = segments == 1
-        ? TextTokens.core_plurals_segment
-        : TextTokens.core_plurals_segments;
+    final segmentLabel = _l10n.core_plurals_segment(segments);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
       child: Container(
@@ -248,14 +247,14 @@ class _NarrationScreenState extends State<NarrationScreen> {
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
-          fillTextTemplate(TextTokens.gui_narration_summaryPill, {
-            'modelName': config.profile.alias,
-            'voice': voice,
-            'segments': segments,
-            'segmentLabel': segmentLabel,
-            'minutes': minutes,
-            'cost': cost,
-          }),
+          _l10n.gui_narration_summaryPill(
+            config.profile.alias,
+            voice,
+            segments,
+            segmentLabel,
+            minutes.toString(),
+            cost,
+          ),
           key: const Key('runSummaryPill'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -289,7 +288,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     if (controller.runSegments.isEmpty) {
       return Center(
         child: Text(
-          TextTokens.gui_narration_noSegmentsYet,
+          _l10n.gui_narration_noSegmentsYet,
           style: _tokens.typography.body.copyWith(
             color: _tokens.colors.textSecondary,
           ),
@@ -387,21 +386,14 @@ class _NarrationScreenState extends State<NarrationScreen> {
         Row(
           children: [
             Text(
-              fillTextTemplate(TextTokens.gui_narration_segmentLabel, {
-                'segmentNumber': '${segment.index + 1}',
-              }),
+              _l10n.gui_narration_segmentLabel(segment.index + 1),
               style: body.copyWith(
                 fontWeight: FontWeight.w600,
                 color: colors.textPrimary,
               ),
             ),
             Text(
-              fillTextTemplate(TextTokens.gui_narration_wordCountSuffix, {
-                'words': words,
-                'wordWord': words == 1
-                    ? TextTokens.core_plurals_word
-                    : TextTokens.core_plurals_words,
-              }),
+              _l10n.gui_narration_wordCountSuffix(words),
               style: body.copyWith(color: colors.textSecondary),
             ),
           ],
@@ -426,8 +418,8 @@ class _NarrationScreenState extends State<NarrationScreen> {
     if (!playable) {
       child = Text(
         segment.running
-            ? TextTokens.gui_narration_processing
-            : TextTokens.gui_narration_pending,
+            ? _l10n.gui_narration_processing
+            : _l10n.gui_narration_pending,
         key: Key('segAction_${segment.index}'),
         textAlign: TextAlign.right,
         style: _tokens.typography.mono.copyWith(color: colors.textSecondary),
@@ -446,8 +438,8 @@ class _NarrationScreenState extends State<NarrationScreen> {
   Widget _playStopButton(NarrationSegment segment, bool isPlaying) {
     final colors = _tokens.colors;
     final label = isPlaying
-        ? TextTokens.gui_narration_stop
-        : TextTokens.gui_narration_play;
+        ? _l10n.gui_narration_stop
+        : _l10n.gui_narration_play;
     return AppButton(
       key: Key('segAction_${segment.index}'),
       onPressed: () => _togglePlay(segment),
@@ -460,7 +452,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
       ),
       // Reused clips explain themselves; the rest just restate the label.
       tooltip: segment.resumed
-          ? TextTokens.gui_narration_resumedTooltip
+          ? _l10n.gui_narration_resumedTooltip
           : label,
       child: Text(label, style: _tokens.typography.body),
     );
@@ -486,7 +478,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
             key: const Key('runActionBack'),
             onPressed: () => _onBack(),
             style: AppButtonStyle.outlined,
-            child: const Text(TextTokens.gui_narration_back),
+            child: Text(_l10n.gui_narration_back),
           ),
           const Spacer(),
           if (controller.narrating && !controller.runStopped)
@@ -494,7 +486,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
               key: const Key('runCancelButton'),
               onPressed: _onCancel,
               icon: const Icon(CupertinoIcons.stop),
-              child: const Text(TextTokens.gui_narration_cancelRun),
+              child: Text(_l10n.gui_narration_cancelRun),
             ),
         ],
       ),

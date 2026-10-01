@@ -5,12 +5,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
 import '../controller/app_controller.dart';
+import '../controller/document_controller.dart' show untitledDocumentName;
 import '../editor/editor_screen.dart';
 import '../menu/linux_menu_bar.dart';
 import '../menu/macos_menu.dart';
 import '../menu/quit_app.dart';
 import '../narration/narration_screen.dart';
-import '../theme/app_text_tokens.dart' show TextTokens;
+import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import 'platform_detection.dart';
 
@@ -71,13 +72,15 @@ class _AppRootState extends State<AppRoot> {
   }
 
   Future<String?> _pickSaveLocation() async {
-    const group = XTypeGroup(
-      label: TextTokens.app_fileTypeGroup,
+    final l10n = AppLocalizations.of(context);
+    final group = XTypeGroup(
+      label: l10n.app_fileTypeGroup,
       extensions: ['txt'],
     );
     final location = await getSaveLocation(
-      acceptedTypeGroups: const [group],
-      suggestedName: widget.controller.documentName,
+      acceptedTypeGroups: [group],
+      suggestedName:
+          widget.controller.documentName ?? untitledDocumentName,
     );
     return location?.path;
   }
@@ -85,11 +88,12 @@ class _AppRootState extends State<AppRoot> {
   /// Opens the native directory picker for the output destination; leaves the
   /// current directory unchanged when cancelled.
   Future<void> _openDocument() async {
-    const group = XTypeGroup(
-      label: TextTokens.app_fileTypeGroup,
+    final l10n = AppLocalizations.of(context);
+    final group = XTypeGroup(
+      label: l10n.app_fileTypeGroup,
       extensions: ['txt'],
     );
-    final file = await openFile(acceptedTypeGroups: const [group]);
+    final file = await openFile(acceptedTypeGroups: [group]);
     if (file == null) return;
     try {
       widget.controller.loadFromFile(file.path);
@@ -165,6 +169,7 @@ class _AppRootState extends State<AppRoot> {
             menus: buildMacMenu(
               controller: widget.controller,
               navigatorKey: _navigatorKey,
+              l10n: AppLocalizations.of(context),
             ),
             child: editor,
           );
@@ -184,9 +189,22 @@ class _AppRootState extends State<AppRoot> {
           );
         }
         return CupertinoApp(
-          title: TextTokens.app_title,
+          title: AppLocalizations.of(context).app_title,
           navigatorKey: _navigatorKey,
           debugShowCheckedModeBanner: false,
+          // Deliberately NOT AppLocalizations.localizationsDelegates: that
+          // bundle pulls in GlobalMaterialLocalizations, which would resolve
+          // framework strings for the Material widgets in the shared widget
+          // layer. The menu bar relies on staying Material-free (see
+          // LinuxMenuBar's class doc), so Material localization is a
+          // deliberate, separately-audited change.
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            DefaultWidgetsLocalizations.delegate,
+            DefaultCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: widget.controller.locale,
           builder: acceleratorHost,
           theme: CupertinoThemeData(
             // Follows the system appearance (see the platformBrightness

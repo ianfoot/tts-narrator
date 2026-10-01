@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens;
+import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_slider.dart';
 import 'settings_labels.dart';
@@ -17,18 +17,19 @@ class SpeedWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final tokens = AppTokens.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        settingsFieldLabel(tokens, TextTokens.gui_settings_speedLabel),
+        settingsFieldLabel(tokens, l10n.gui_settings_speedLabel),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: AppSlider(
                 key: const Key('speedSlider'),
-                tooltip: TextTokens.gui_settings_speedTooltip,
+                tooltip: l10n.gui_settings_speedTooltip,
                 value: controller.speed,
                 onChanged: (v) => controller.speed = v,
                 min: 0.25,

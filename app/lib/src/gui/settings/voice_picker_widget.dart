@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../controller/app_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens;
+import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_dropdown.dart';
 import '../widgets/segmented_control.dart';
@@ -24,21 +24,22 @@ class VoicePickerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final tokens = AppTokens.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        settingsFieldLabel(tokens, TextTokens.gui_settings_voiceAliasLabel),
+        settingsFieldLabel(tokens, l10n.gui_settings_voiceAliasLabel),
         if (controller.hasGenderTags) ...[
           const SizedBox(height: 12),
           SegmentedControl<VoiceGender>(
             key: const Key('genderControl'),
-            tooltip: TextTokens.gui_settings_genderControlTooltip,
+            tooltip: l10n.gui_settings_genderControlTooltip,
             value: controller.voiceGenderFilter,
-            items: const [
-              (VoiceGender.neutral, TextTokens.gui_settings_genderAny),
-              (VoiceGender.female, TextTokens.gui_settings_genderFemale),
-              (VoiceGender.male, TextTokens.gui_settings_genderMale),
+            items: [
+              (VoiceGender.neutral, l10n.gui_settings_genderAny),
+              (VoiceGender.female, l10n.gui_settings_genderFemale),
+              (VoiceGender.male, l10n.gui_settings_genderMale),
             ],
             onChanged: (g) => controller.voiceGenderFilter = g,
           ),
@@ -46,10 +47,10 @@ class VoicePickerWidget extends StatelessWidget {
         ],
         AppDropdown<String>(
           key: const Key('voiceDropdown'),
-          tooltip: TextTokens.gui_settings_voiceDropdownTooltip,
+          tooltip: l10n.gui_settings_voiceDropdownTooltip,
           value: _selectedVoiceLabel,
           items: controller.voiceItems,
-          hint: TextTokens.gui_settings_selectVoiceHint,
+          hint: l10n.gui_settings_selectVoiceHint,
           onChanged: (label) => controller.applyVoiceLabel(label),
         ),
       ],

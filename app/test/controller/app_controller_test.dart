@@ -8,10 +8,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator/src/gui/controller/api_key_store.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
+import 'package:tts_narrator/src/gui/controller/controller_errors.dart'
+    show CannotOpenTextFile, NoApiKeyConfigured, NoVoiceSelected;
+import 'package:tts_narrator/src/gui/controller/run_controller.dart'
+    show NarrationBlockReason;
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
     show ApiKeySource, SettingsController;
-import 'package:tts_narrator/src/gui/theme/app_text_tokens.dart'
-    show TextTokens;
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
@@ -89,7 +91,9 @@ void main() {
     test('boots an empty, untitled document with no model configured', () {
       final c = makeController();
       expect(c.text, isEmpty);
-      expect(c.documentName, 'untitled.txt');
+      // A never-saved document has no file name; the untitled placeholder is
+      // UI copy and is resolved in the widget layer via `documentNameX.display`.
+      expect(c.documentName, isNull);
       expect(c.dirty, isFalse);
       expect(c.wordCount, 0);
       expect(c.charCount, 0);
@@ -127,10 +131,10 @@ void main() {
 
     test('setText with identical value is ignored', () {
       final c = makeController();
-      c.setText('Hello');
+c.setText('Hello');
       expect(c.dirty, isTrue);
-      c.setText('Hello');
-      expect(c.documentName, 'untitled.txt');
+      // Editing does not name the document; it stays null until first save.
+      expect(c.documentName, isNull);
     });
 
     test(
@@ -151,9 +155,17 @@ void main() {
 
     test('loadFromFile throws when the file is missing', () {
       final c = makeController();
+      // Typed, not a raw FileSystemException: the widget layer matches on the
+      // type to pick the localized message.
       expect(
         () => c.loadFromFile('${dir.path}/missing.txt'),
-        throwsA(isA<FileSystemException>()),
+        throwsA(
+          isA<CannotOpenTextFile>().having(
+            (e) => e.path,
+            'path',
+            '${dir.path}/missing.txt',
+          ),
+        ),
       );
     });
   });
@@ -283,7 +295,7 @@ void main() {
       expect(c.plannedSegments, isEmpty);
     });
 
-    test('throws a FormatException when the model has no selected voice', () {
+    test('throws NoVoiceSelected when the model has no selected voice', () {
       writeConfig({
         'models': {
           'gemini': {
@@ -297,7 +309,7 @@ void main() {
       final c = makeController();
       c.changeModel('gemini');
       expect(c.voice, isEmpty);
-      expect(() => c.buildConfig(), throwsFormatException);
+      expect(() => c.buildConfig(), throwsA(isA<NoVoiceSelected>()));
     });
   });
 
@@ -393,16 +405,7 @@ void main() {
           loader: UserVoiceConfigLoader(configDir: configDir),
           apiKeyStore: ApiKeyStore(),
         )..setText('A sentence.');
-        expect(
-          () => c.buildConfig(),
-          throwsA(
-            isA<StateError>().having(
-              (e) => e.message,
-              'message',
-              TextTokens.gui_controller_errors_noApiKey,
-            ),
-          ),
-        );
+        expect(() => c.buildConfig(), throwsA(isA<NoApiKeyConfigured>()));
         expect(c.apiKeyMissing, isTrue);
       },
     );
@@ -680,12 +683,17 @@ void main() {
     test('blocks on empty text', () {
       writeFishConfig();
       final c = makeController();
-      expect(c.narrateBlockReason(), contains('Editor text is empty'));
+      // An enum, not a rendered sentence: the controller has no BuildContext,
+      // so the message is resolved later via `NarrationBlockReasonX.message`.
+      expect(c.narrateBlockReason(), NarrationBlockReason.emptyText);
     });
 
     test('blocks when no model is configured', () {
       final c = makeController();
-      expect(c.narrateBlockReason(), contains('No voice model is configured'));
+      expect(
+        c.narrateBlockReason(),
+        NarrationBlockReason.noModelConfigured,
+      );
     });
 
     test('allows narration with text present and a configured model', () {
@@ -702,7 +710,7 @@ void main() {
       c.outDir = dir.path;
       c.startRun();
       expect(c.narrating, isTrue);
-      expect(c.narrateBlockReason(), contains('already running'));
+      expect(c.narrateBlockReason(), NarrationBlockReason.alreadyRunning);
       // Let the single fake segment land.
       await Future<void>.delayed(const Duration(milliseconds: 20));
       expect(c.runFinished, isTrue);

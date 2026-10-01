@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import 'controller/app_controller.dart';
-import 'theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
+import '../../l10n/app_localizations.dart';
 
 /// Runs the "Clean Up Segments…" flow: asks for confirmation (deleting the
 /// per-segment files forfeits `--resume` reuse — a re-run would re-bill them),
@@ -19,6 +19,7 @@ Future<void> runCleanupSegmentsFlow({
   // remains live, so a new run could change the output directory underneath.
   final targetDir = controller.lastRunOutputDir;
 
+  final l10n = AppLocalizations.of(context);
   final confirmed = await _confirmDeletion(context);
   if (confirmed != true || !context.mounted) return;
 
@@ -34,19 +35,17 @@ Future<void> runCleanupSegmentsFlow({
     if (!context.mounted) return;
     _showInfoDialog(
       context,
-      title: TextTokens.gui_cleanup_deletedTitle,
-      message: fillTextTemplate(TextTokens.gui_cleanup_removedMessage, {
-        'removedCount': removed,
-        'fileWord': removed == 1
-            ? TextTokens.core_plurals_file
-            : TextTokens.core_plurals_files,
-      }),
+      title: l10n.gui_cleanup_deletedTitle,
+      message: l10n.gui_cleanup_removedMessage(
+        removed,
+        l10n.core_plurals_file(removed),
+      ),
     );
   } catch (e) {
     if (!context.mounted) return;
     _showInfoDialog(
       context,
-      title: TextTokens.gui_cleanup_cleanupFailedTitle,
+      title: l10n.gui_cleanup_cleanupFailedTitle,
       message: '$e',
     );
   }
@@ -54,22 +53,23 @@ Future<void> runCleanupSegmentsFlow({
 
 /// Confirmation dialog; returns true only when the user confirmed deletion.
 Future<bool?> _confirmDeletion(BuildContext context) {
-  const title = TextTokens.gui_cleanup_confirmTitle;
-  const message = TextTokens.gui_cleanup_confirmMessage;
+  final l10n = AppLocalizations.of(context);
+  final title = l10n.gui_cleanup_confirmTitle;
+  final message = l10n.gui_cleanup_confirmMessage;
   return showCupertinoDialog<bool>(
     context: context,
     builder: (dialogContext) => CupertinoAlertDialog(
-      title: const Text(title),
-      content: const Text(message),
+      title: Text(title),
+      content: Text(message),
       actions: [
         CupertinoDialogAction(
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text(TextTokens.gui_cleanup_cancel),
+          child: Text(l10n.gui_cleanup_cancel),
         ),
         CupertinoDialogAction(
           isDefaultAction: true,
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text(TextTokens.gui_cleanup_delete),
+          child: Text(l10n.gui_cleanup_delete),
         ),
       ],
     ),
@@ -90,7 +90,7 @@ void _showInfoDialog(
       actions: [
         CupertinoDialogAction(
           onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text(TextTokens.gui_cleanup_ok),
+          child: Text(AppLocalizations.of(context).gui_cleanup_ok),
         ),
       ],
     ),

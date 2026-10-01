@@ -10,6 +10,8 @@ import 'package:tts_narrator/src/gui/menu/linux_menu_bar.dart';
 import 'package:tts_narrator/src/gui/platform/platform_detection.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 
+import '../support/l10n_test_support.dart';
+
 /// A throwaway controller over a temp config dir, mirroring the macOS menu
 /// test so the bar is exercised against a real loaded model.
 Future<AppController> makeController() async {
@@ -44,6 +46,8 @@ Future<void> pumpBar(
   await tester.pumpWidget(
     CupertinoApp(
       navigatorKey: key,
+      localizationsDelegates: testLocalizationsDelegates,
+      supportedLocales: testSupportedLocales,
       home: LinuxMenuBar(
         controller: controller,
         navigatorKey: key,

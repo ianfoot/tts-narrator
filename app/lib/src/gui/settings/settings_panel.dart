@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../controller/app_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens;
+import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import 'api_key_section.dart';
 import 'model_options_section.dart';
@@ -22,6 +22,7 @@ class SettingsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final tokens = AppTokens.of(context);
     return Container(
       key: const Key('settingsPanel'),
@@ -37,7 +38,7 @@ class SettingsPanel extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
             child: Text(
-              TextTokens.gui_settings_header,
+              l10n.gui_settings_header,
               style: tokens.typography.headerSemibold.copyWith(
                 color: tokens.colors.accentPrimary,
               ),

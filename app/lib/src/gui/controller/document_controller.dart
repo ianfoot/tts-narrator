@@ -2,7 +2,15 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-import '../theme/app_text_tokens.dart' show TextTokens;
+import 'controller_errors.dart';
+
+/// Filename stand-in for a document that has never been saved.
+///
+/// Not localized: this becomes an on-disk filename (via [NarrationConfig]
+/// `inputPath`, which drives output naming) and a save-dialog suggestion.
+/// A localized filename would fragment the user's files on disk and sort
+/// inconsistently. The *displayed* title uses `app_untitledDocument` instead.
+const untitledDocumentName = 'untitled.txt';
 
 /// Owns the in-memory document for the TTS Narrator GUI: the text, its backing
 /// path, the dirty flag, and the save/load surface.
@@ -25,9 +33,15 @@ class DocumentController extends ChangeNotifier {
   /// sets it true).
   bool get dirty => _dirty;
 
-  String get documentName => _documentPath == null
-      ? TextTokens.app_untitledDocument
-      : _documentPath!.split(Platform.pathSeparator).last;
+  /// The document's file name, or null when it has never been saved (an
+  /// in-memory `untitled` document).
+  ///
+  /// Null rather than a placeholder string: the placeholder is UI copy that
+  /// must come from `AppLocalizations`, and this controller has no
+  /// `BuildContext`. Use `documentNameX.display` to resolve it in the widget
+  /// layer.
+  String? get documentName =>
+      _documentPath?.split(Platform.pathSeparator).last;
 
   /// Replaces the document text (typing/paste path). Marks the document dirty.
   void setText(String value) {
@@ -42,10 +56,7 @@ class DocumentController extends ChangeNotifier {
   void loadFromFile(String path) {
     final file = File(path);
     if (!file.existsSync()) {
-      throw FileSystemException(
-        TextTokens.gui_controller_errors_cannotOpenTextFile,
-        path,
-      );
+      throw CannotOpenTextFile(path);
     }
     _text = file.readAsStringSync();
     _documentPath = file.absolute.path;

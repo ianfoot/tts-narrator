@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../controller/app_controller.dart';
-import '../theme/app_text_tokens.dart' show TextTokens;
+import '../controller/l10n_labels.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
@@ -39,6 +40,8 @@ class _ApiKeySectionState extends State<ApiKeySection> {
 
   AppTokens get _tokens => AppTokens.of(context);
 
+  AppLocalizations get _l10n => AppLocalizations.of(context);
+
   @override
   void initState() {
     super.initState();
@@ -69,7 +72,7 @@ class _ApiKeySectionState extends State<ApiKeySection> {
     try {
       await _controller.saveApiKey(_apiKey.text);
     } catch (_) {
-      setState(() => _apiKeyError = TextTokens.gui_settings_apiKeyStoreError);
+      setState(() => _apiKeyError = _l10n.gui_settings_apiKeyStoreError);
       return;
     }
     _apiKey.clear();
@@ -81,7 +84,7 @@ class _ApiKeySectionState extends State<ApiKeySection> {
     try {
       await _controller.removeApiKey();
     } catch (_) {
-      setState(() => _apiKeyError = TextTokens.gui_settings_apiKeyStoreError);
+      setState(() => _apiKeyError = _l10n.gui_settings_apiKeyStoreError);
       return;
     }
     _apiKey.clear();
@@ -94,9 +97,9 @@ class _ApiKeySectionState extends State<ApiKeySection> {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Disclosure(
         key: const Key('apiKeyDisclosure'),
-        label: TextTokens.gui_settings_apiKeySection,
-        tooltip: TextTokens.gui_settings_apiKeySectionTooltip,
-        caption: _controller.apiKeyStatusLabel,
+        label: _l10n.gui_settings_apiKeySection,
+        tooltip: _l10n.gui_settings_apiKeySectionTooltip,
+        caption: _controller.apiKeySource.apiKeyStatusLabel(_l10n),
         expanded: _apiKeyExpanded,
         onToggle: (value) => setState(() => _apiKeyExpanded = value),
         child: Column(
@@ -104,10 +107,10 @@ class _ApiKeySectionState extends State<ApiKeySection> {
           children: [
             settingsFieldLabel(
               _tokens,
-              TextTokens.gui_settings_apiKeyStatusLabel,
+              _l10n.gui_settings_apiKeyStatusLabel,
             ),
             Text(
-              _controller.apiKeyStatusLabel,
+              _controller.apiKeySource.apiKeyStatusLabel(_l10n),
               style: _tokens.typography.body.copyWith(
                 color: _controller.apiKeyMissing
                     ? _tokens.colors.accentError
@@ -117,10 +120,10 @@ class _ApiKeySectionState extends State<ApiKeySection> {
             const SizedBox(height: 12),
             AppTextField(
               key: const Key('apiKeyField'),
-              tooltip: TextTokens.gui_settings_apiKeyFieldTooltip,
+              tooltip: _l10n.gui_settings_apiKeyFieldTooltip,
               controller: _apiKey,
               obscureText: true,
-              hintText: TextTokens.gui_settings_apiKeyFieldPlaceholder,
+              hintText: _l10n.gui_settings_apiKeyFieldPlaceholder,
               hintStyle: _tokens.typography.body.copyWith(
                 color: _tokens.colors.textTertiary,
               ),
@@ -132,14 +135,14 @@ class _ApiKeySectionState extends State<ApiKeySection> {
                 AppButton(
                   key: const Key('apiKeySaveButton'),
                   onPressed: () => _saveApiKey(),
-                  child: Text(TextTokens.gui_settings_apiKeySave),
+                  child: Text(_l10n.gui_settings_apiKeySave),
                 ),
                 const SizedBox(width: 8),
                 AppButton(
                   key: const Key('apiKeyRemoveButton'),
                   style: AppButtonStyle.outlined,
                   onPressed: _controller.hasStoredApiKey ? _removeApiKey : null,
-                  child: Text(TextTokens.gui_settings_apiKeyRemove),
+                  child: Text(_l10n.gui_settings_apiKeyRemove),
                 ),
               ],
             ),

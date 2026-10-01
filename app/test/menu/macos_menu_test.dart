@@ -10,6 +10,7 @@ import 'package:tts_narrator/src/gui/menu/edit_actions.dart';
 import 'package:tts_narrator/src/gui/menu/macos_menu.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 
+import '../support/l10n_test_support.dart';
 import '../support/recording_cleanup_controller.dart';
 
 Future<AppController> makeController() async {
@@ -116,6 +117,7 @@ void main() {
       final menus = buildMacMenu(
         controller: await makeController(),
         navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
       );
       expect(menus.map((m) => m.label).toList(), [
         'TTS Narrator',
@@ -130,6 +132,7 @@ void main() {
       final file = buildMacMenu(
         controller: await makeController(),
         navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
       )[1];
 
       expectMetaShortcut(leafItem(file, 'Open Text…'), LogicalKeyboardKey.keyO);
@@ -156,6 +159,7 @@ void main() {
         final edit = buildMacMenu(
           controller: await makeController(),
           navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
         )[2];
 
         expectMetaShortcut(leafItem(edit, 'Undo'), LogicalKeyboardKey.keyZ);
@@ -178,6 +182,7 @@ void main() {
       final menus = buildMacMenu(
         controller: await makeController(),
         navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
       );
       final app = menus[0];
       final view = menus[3];
@@ -221,6 +226,7 @@ void main() {
       final file = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
       )[1];
 
       leafItem(file, 'Narrate').onSelected?.call();
@@ -235,6 +241,7 @@ void main() {
       final file = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
       )[1];
 
       leafItem(file, 'Narrate').onSelected?.call();
@@ -248,6 +255,7 @@ void main() {
       final file = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
       )[1];
 
       leafItem(file, 'Open Text…').onSelected?.call();
@@ -263,6 +271,7 @@ void main() {
         final file = buildMacMenu(
           controller: controller,
           navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
         )[1];
 
         leafItem(file, 'Output Folder…').onSelected?.call();
@@ -277,6 +286,7 @@ void main() {
       final app = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
       )[0];
 
       leafItem(app, 'Preferences…').onSelected?.call();
@@ -293,6 +303,7 @@ void main() {
       final file = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
       )[1];
       leafItem(file, 'Save').onSelected?.call();
       await Future<void>.delayed(Duration.zero);
@@ -310,6 +321,7 @@ void main() {
       final file = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
       )[1];
 
       expect(controller.cleanups, 0);
@@ -325,6 +337,7 @@ void main() {
         final view = buildMacMenu(
           controller: await makeController(),
           navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
         )[3];
 
         final appearance = view.menus
@@ -352,6 +365,7 @@ void main() {
       final view = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
       )[3];
 
       leafItem(view, 'Light').onSelected?.call();
@@ -370,6 +384,7 @@ void main() {
       final view = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
       )[3];
 
       expect(leafItem(view, 'Dark').label, '✓ Dark');
@@ -383,6 +398,7 @@ void main() {
       final view = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
+        l10n: testL10n,
       )[3];
 
       leafItem(view, 'Toggle Settings Panel').onSelected?.call();

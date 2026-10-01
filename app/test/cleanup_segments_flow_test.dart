@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:tts_narrator/src/gui/cleanup_segments_flow.dart';
 
+import 'support/l10n_test_support.dart';
 import 'support/recording_cleanup_controller.dart';
 
 /// Mounts a navigator with a trigger button that runs the clean-up flow with
@@ -14,6 +15,8 @@ Future<void> pumpFlowHost(
 ) async {
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: testLocalizationsDelegates,
+      supportedLocales: testSupportedLocales,
       home: Scaffold(
         body: Builder(
           builder: (context) => TextButton(

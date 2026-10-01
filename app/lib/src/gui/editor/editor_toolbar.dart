@@ -2,9 +2,10 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../controller/app_controller.dart';
+import '../controller/l10n_labels.dart';
 import '../platform/platform_detection.dart';
-import '../theme/app_text_tokens.dart' show TextTokens, fillTextTemplate;
 import '../theme/app_tokens.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_icon_button.dart';
@@ -44,6 +45,8 @@ class EditorToolbar extends StatefulWidget {
 class _EditorToolbarState extends State<EditorToolbar> {
   AppController get controller => widget.controller;
 
+  AppLocalizations get _l10n => AppLocalizations.of(context);
+
   @override
   void initState() {
     super.initState();
@@ -79,9 +82,8 @@ class _EditorToolbarState extends State<EditorToolbar> {
     final currentMode = controller.themeMode;
     return AppIconButton(
       key: const Key('appearanceToggleButton'),
-      tooltip: fillTextTemplate(
-        TextTokens.gui_editor_toolbar_appearanceTooltip,
-        {'mode': _themeModeLabel(currentMode)},
+      tooltip: _l10n.gui_editor_toolbar_appearanceTooltip(
+        _themeModeLabel(currentMode),
       ),
       icon: Icon(switch (currentMode) {
         AppThemeMode.light => CupertinoIcons.sun_max,
@@ -99,16 +101,16 @@ class _EditorToolbarState extends State<EditorToolbar> {
   }
 
   String _themeModeLabel(AppThemeMode mode) => switch (mode) {
-    AppThemeMode.system => TextTokens.gui_editor_toolbar_themeModeAuto,
-    AppThemeMode.light => TextTokens.gui_editor_toolbar_themeModeLight,
-    AppThemeMode.dark => TextTokens.gui_editor_toolbar_themeModeDark,
+    AppThemeMode.system => _l10n.gui_editor_toolbar_themeModeAuto,
+    AppThemeMode.light => _l10n.gui_editor_toolbar_themeModeLight,
+    AppThemeMode.dark => _l10n.gui_editor_toolbar_themeModeDark,
   };
 
   Widget _buildOutputFolderButton() {
     return AppIconButton(
       key: const Key('outDirPickerButton'),
       tooltip:
-          '${TextTokens.gui_editor_toolbar_setOutputFolder} (${acceleratorLabel('E')})',
+          '${_l10n.gui_editor_toolbar_setOutputFolder} (${acceleratorLabel('E')})',
       icon: const Icon(CupertinoIcons.folder_badge_plus),
       onPressed: _pickOutputDirectory,
     );
@@ -120,7 +122,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
     return AppIconButton(
       key: const Key('editorSaveButton'),
       tooltip:
-          '${TextTokens.gui_editor_toolbar_save} (${acceleratorLabel('S')})',
+          '${_l10n.gui_editor_toolbar_save} (${acceleratorLabel('S')})',
       icon: const Icon(CupertinoIcons.square_arrow_down),
       onPressed: controller.dirty ? () => controller.save() : null,
     );
@@ -156,7 +158,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
         ],
         Flexible(
           child: Text(
-            controller.documentName,
+            controller.documentName.display(_l10n),
             overflow: TextOverflow.ellipsis,
             style: tokens.typography.mono,
           ),
@@ -169,8 +171,8 @@ class _EditorToolbarState extends State<EditorToolbar> {
     if (controller.completedAudioPath == null) return null;
     final colors = tokens.colors;
     final label = widget.playingFull
-        ? TextTokens.gui_editor_toolbar_stop
-        : TextTokens.gui_editor_toolbar_playFull;
+        ? _l10n.gui_editor_toolbar_stop
+        : _l10n.gui_editor_toolbar_playFull;
     final btnIcon = Icon(
       widget.playingFull
           ? CupertinoIcons.stop_circle
@@ -206,7 +208,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
   Widget _buildCleanupButton() {
     return AppIconButton(
       key: const Key('editorCleanupButton'),
-      tooltip: TextTokens.gui_editor_toolbar_cleanupSegments,
+      tooltip: _l10n.gui_editor_toolbar_cleanupSegments,
       icon: const Icon(CupertinoIcons.trash),
       onPressed: widget.onCleanupSegments,
     );
@@ -215,13 +217,13 @@ class _EditorToolbarState extends State<EditorToolbar> {
   Widget _buildNarrateButton(AppTokens tokens) {
     return Tooltip(
       message:
-          '${TextTokens.gui_editor_toolbar_narrate} (${acceleratorLabel('N')})',
+          '${_l10n.gui_editor_toolbar_narrate} (${acceleratorLabel('N')})',
       child: AppButton(
         key: const Key('editorNarrateButton'),
         onPressed: () {
           final reason = controller.narrateBlockReason();
           if (reason != null) {
-            widget.onShowGuard?.call(reason);
+            widget.onShowGuard?.call(reason.message(_l10n));
             return;
           }
           controller.commands.onNarrate?.call();
@@ -230,7 +232,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
         icon: const Icon(CupertinoIcons.play_fill, size: 18),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: [const Text(TextTokens.gui_editor_toolbar_narrate)],
+          children: [Text(_l10n.gui_editor_toolbar_narrate)],
         ),
       ),
     );
@@ -257,7 +259,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
             children: [
               AppIconButton(
                 key: const Key('railToggleButton'),
-                tooltip: TextTokens.gui_editor_toolbar_showHideSettings,
+                tooltip: _l10n.gui_editor_toolbar_showHideSettings,
                 icon: const Icon(CupertinoIcons.sidebar_left),
                 onPressed: widget.onToggleRail,
               ),
@@ -267,7 +269,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
               AppIconButton(
                 key: const Key('editorOpenButton'),
                 tooltip:
-                    '${TextTokens.gui_editor_toolbar_openTextFile} (${acceleratorLabel('O')})',
+                    '${_l10n.gui_editor_toolbar_openTextFile} (${acceleratorLabel('O')})',
                 icon: const Icon(CupertinoIcons.folder),
                 onPressed: () => controller.commands.onOpen?.call(),
               ),

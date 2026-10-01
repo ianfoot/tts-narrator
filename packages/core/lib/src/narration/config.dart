@@ -1,5 +1,6 @@
 import 'cost.dart';
 import 'model_profiles.dart';
+import 'prompt_strings.dart';
 
 /// Configuration for a single narration run.
 class NarrationConfig {
@@ -9,10 +10,10 @@ class NarrationConfig {
     required this.profile,
     required this.voice,
     this.voiceLabel,
-    this.accent = 'southern British English, neutral and clear',
-    this.style = 'warm, composed, restrained, literary',
-    this.passagePrefix = 'Narrate this passage for an audiobook. You are a warm, composed female narrator.',
-    this.minWords = 30,
+    this.accent = PromptDefaults.accent,
+    this.style = PromptDefaults.style,
+    this.passagePrefix = PromptDefaults.passagePrefix,
+    this.minWords = PromptDefaults.minWords,
     this.sendWholeFile = false,
     this.sampleLen,
     this.speed = 1.0,

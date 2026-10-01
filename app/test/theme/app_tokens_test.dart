@@ -11,6 +11,7 @@ import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart';
 
+import '../support/l10n_test_support.dart';
 import '../support/spec_window.dart';
 
 void main() {
@@ -246,6 +247,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData(brightness: Brightness.dark),
+          localizationsDelegates: testLocalizationsDelegates,
+          supportedLocales: testSupportedLocales,
           home: EditorScreen(controller: makeController()),
         ),
       );
@@ -256,6 +259,8 @@ void main() {
       await tester.pumpWidget(
         CupertinoApp(
           theme: const CupertinoThemeData(brightness: Brightness.dark),
+          localizationsDelegates: testLocalizationsDelegates,
+          supportedLocales: testSupportedLocales,
           home: EditorScreen(controller: makeController()),
         ),
       );
