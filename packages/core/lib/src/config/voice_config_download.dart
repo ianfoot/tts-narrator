@@ -34,17 +34,23 @@ class ManifestVoiceConfig {
   factory ManifestVoiceConfig.fromJson(Map<String, dynamic> json) {
     final raw = json['platforms'];
     if (raw is! Map<String, dynamic>) {
-      throw const FormatException('manifest.json must be a {"platforms": ...} object');
+      throw const FormatException(
+        'manifest.json must be a {"platforms": ...} object',
+      );
     }
     final platforms = <String, List<String>>{};
     raw.forEach((tag, entries) {
       if (entries is! List) {
-        throw FormatException('manifest platform "$tag" must be a list of files');
+        throw FormatException(
+          'manifest platform "$tag" must be a list of files',
+        );
       }
       final files = <String>[];
       for (final e in entries) {
         if (e is! String || e.isEmpty) {
-          throw FormatException('manifest platform "$tag" has a non-string entry');
+          throw FormatException(
+            'manifest platform "$tag" has a non-string entry',
+          );
         }
         files.add(e);
       }

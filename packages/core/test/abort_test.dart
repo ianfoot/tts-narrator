@@ -98,8 +98,10 @@ void main() {
           profile: const TtsModelProfile(
             alias: 'test',
             id: 'test/model',
+            provider: testProvider,
           ),
           voice: 'v',
+          providerSettings: const {'base_url': testBaseUrl},
         );
 
         await expectLater(

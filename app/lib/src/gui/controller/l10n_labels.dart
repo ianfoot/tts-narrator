@@ -31,7 +31,8 @@ extension NarrationBlockReasonX on NarrationBlockReason {
   String message(AppLocalizations l10n) => switch (this) {
     NarrationBlockReason.noModelConfigured =>
       l10n.gui_controller_errors_noModelConfigured,
-    NarrationBlockReason.emptyText => l10n.gui_controller_blockReasons_emptyText,
+    NarrationBlockReason.emptyText =>
+      l10n.gui_controller_blockReasons_emptyText,
     NarrationBlockReason.alreadyRunning =>
       l10n.gui_controller_blockReasons_alreadyRunning,
   };

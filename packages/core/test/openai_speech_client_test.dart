@@ -8,7 +8,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 /// A loopback `/audio/speech` server that records what it received.
 class _Server {
   _Server(this._server)
-      : root = 'http://${_server.address.host}:${_server.port}';
+    : root = 'http://${_server.address.host}:${_server.port}';
 
   final HttpServer _server;
   final String root;
@@ -45,8 +45,10 @@ Future<_Server> _serve(
 
   unawaited(
     server.forEach((request) async {
-      final bytes =
-          await request.fold<List<int>>(<int>[], (a, s) => a..addAll(s));
+      final bytes = await request.fold<List<int>>(
+        <int>[],
+        (a, s) => a..addAll(s),
+      );
       recorder.requests.add(
         _Request(
           request.uri,
@@ -110,36 +112,41 @@ void main() {
           speed: 1.0,
         ),
         throwsA(
-          isA<StateError>().having((e) => e.message, 'message',
-              contains('base_url')),
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('base_url'),
+          ),
         ),
       );
     });
   });
 
   group('request shape', () {
-    test('carries model, input, format, voice and a non-default speed',
-        () async {
-      final server = await _serve(_audio);
-      addTearDown(server.close);
+    test(
+      'carries model, input, format, voice and a non-default speed',
+      () async {
+        final server = await _serve(_audio);
+        addTearDown(server.close);
 
-      await OpenAiSpeechClient().synthesize(
-        model: 'hexgrad/kokoro-82m',
-        voice: 'bf_emma',
-        input: 'The quick brown fox.',
-        responseFormat: 'mp3',
-        settings: server.block,
-        speed: 0.75,
-      );
+        await OpenAiSpeechClient().synthesize(
+          model: 'hexgrad/kokoro-82m',
+          voice: 'bf_emma',
+          input: 'The quick brown fox.',
+          responseFormat: 'mp3',
+          settings: server.block,
+          speed: 0.75,
+        );
 
-      expect(server.requests.single.body, {
-        'model': 'hexgrad/kokoro-82m',
-        'input': 'The quick brown fox.',
-        'response_format': 'mp3',
-        'voice': 'bf_emma',
-        'speed': 0.75,
-      });
-    });
+        expect(server.requests.single.body, {
+          'model': 'hexgrad/kokoro-82m',
+          'input': 'The quick brown fox.',
+          'response_format': 'mp3',
+          'voice': 'bf_emma',
+          'speed': 0.75,
+        });
+      },
+    );
 
     test('omits speed when the model does not take it', () async {
       final server = await _serve(_audio);
@@ -231,21 +238,19 @@ void main() {
       expect(server.requests.single.auth, 'Bearer sk-test');
     });
 
-    test('api_key_env reads the named variable from the environment',
-        () async {
+    test('api_key_env reads the named variable from the environment', () async {
       final server = await _serve(_audio);
       addTearDown(server.close);
 
-      await OpenAiSpeechClient(environment: const {
-        'MY_TTS_KEY': 'sk-env',
-      }).synthesize(
-        model: 'm',
-        voice: null,
-        input: 'hi',
-        responseFormat: 'mp3',
-        settings: {...server.block, 'api_key_env': 'MY_TTS_KEY'},
-        speed: 1.0,
-      );
+      await OpenAiSpeechClient(environment: const {'MY_TTS_KEY': 'sk-env'})
+          .synthesize(
+            model: 'm',
+            voice: null,
+            input: 'hi',
+            responseFormat: 'mp3',
+            settings: {...server.block, 'api_key_env': 'MY_TTS_KEY'},
+            speed: 1.0,
+          );
 
       expect(server.requests.single.auth, 'Bearer sk-env');
     });
@@ -315,8 +320,11 @@ void main() {
           speed: 1.0,
         ),
         throwsA(
-          isA<HttpException>().having((e) => e.message, 'message',
-              allOf(contains('401'), contains('bad key'))),
+          isA<HttpException>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('401'), contains('bad key')),
+          ),
         ),
       );
       expect(server.requests, hasLength(1));

@@ -12,10 +12,11 @@ void main() {
           'linux': ['fish.json', 'kokoro.json'],
         },
       });
-      expect(
-        manifest.filesFor('macos'),
-        ['fish.json', 'kokoro.json', 'mlx_kokoro.json'],
-      );
+      expect(manifest.filesFor('macos'), [
+        'fish.json',
+        'kokoro.json',
+        'mlx_kokoro.json',
+      ]);
       expect(manifest.filesFor('linux'), ['fish.json', 'kokoro.json']);
       expect(manifest.hasPlatform('macos'), isTrue);
       expect(manifest.hasPlatform('windows'), isFalse);
@@ -23,7 +24,9 @@ void main() {
 
     test('unknown platform yields an empty list', () {
       final manifest = ManifestVoiceConfig.fromJson({
-        'platforms': {'macos': ['fish.json']},
+        'platforms': {
+          'macos': ['fish.json'],
+        },
       });
       expect(manifest.filesFor('linux'), isEmpty);
       expect(manifest.hasPlatform('linux'), isFalse);
@@ -47,8 +50,8 @@ void main() {
   });
 
   group('fetchVoiceConfigManifest', () {
-    HttpClient Function() client(HttpServer server) => () =>
-        HttpClient()..connectionTimeout = const Duration(seconds: 5);
+    HttpClient Function() client(HttpServer server) =>
+        () => HttpClient()..connectionTimeout = const Duration(seconds: 5);
     String repoUrl(HttpServer server) =>
         'http://${server.address.address}:${server.port}';
 
@@ -123,14 +126,17 @@ void main() {
         await downloadVoiceConfigFiles(
           dir.path,
           files: ['fish.json', 'mlx_kokoro.json'],
-          clientFactory: () => HttpClient()
-            ..connectionTimeout = const Duration(seconds: 5),
+          clientFactory: () =>
+              HttpClient()..connectionTimeout = const Duration(seconds: 5),
           repoUrl: 'http://${server.address.address}:${server.port}',
         );
         expect(File('${dir.path}/config.json').existsSync(), isTrue);
         expect(File('${dir.path}/fish.json').existsSync(), isTrue);
         expect(File('${dir.path}/mlx_kokoro.json').existsSync(), isTrue);
-        expect(requested, containsAll(['config.json', 'fish.json', 'mlx_kokoro.json']));
+        expect(
+          requested,
+          containsAll(['config.json', 'fish.json', 'mlx_kokoro.json']),
+        );
       } finally {
         await serverDone.cancel();
         await server.close(force: true);
@@ -153,8 +159,8 @@ void main() {
         await downloadVoiceConfigFiles(
           dir.path,
           files: ['fish.json'],
-          clientFactory: () => HttpClient()
-            ..connectionTimeout = const Duration(seconds: 5),
+          clientFactory: () =>
+              HttpClient()..connectionTimeout = const Duration(seconds: 5),
         );
         expect(hits, 0);
       } finally {

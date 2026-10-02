@@ -6,7 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator/main.dart';
+
 import '../support/l10n_test_support.dart';
+
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 final _linuxManifest = ManifestVoiceConfig.fromJson({
@@ -156,10 +158,7 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        expect(
-          find.text(testL10n.gui_bootstrap_downloadTitle),
-          findsOneWidget,
-        );
+        expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsOneWidget);
         expect(find.textContaining('MLX Kokoro'), findsOneWidget);
       });
     });
@@ -172,10 +171,7 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        expect(
-          find.text(testL10n.gui_bootstrap_downloadTitle),
-          findsOneWidget,
-        );
+        expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsOneWidget);
         expect(find.textContaining('MLX Kokoro'), findsNothing);
       });
     });

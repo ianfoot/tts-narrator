@@ -10,7 +10,9 @@ import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
     show ApiKeySource;
 import 'package:tts_narrator/src/gui/settings/api_key_section.dart';
+
 import '../support/l10n_test_support.dart';
+
 import 'package:tts_narrator/src/gui/widgets/app_button.dart';
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 

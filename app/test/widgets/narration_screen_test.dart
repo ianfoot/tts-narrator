@@ -60,8 +60,12 @@ void main() {
           'providers': {
             // A real model is served by the real (key-requiring) OpenRouter
             // provider; give the fixture a dummy key so run-plan building
-            // succeeds regardless of the fake provider registered here.
-            'openrouter': {'api_key': 'sk-test'},
+            // succeeds regardless of the fake provider registered here, and a
+            // base_url so `narrate`'s up-front block check passes.
+            'openrouter': {
+              'base_url': 'https://openrouter.ai/api/v1',
+              'api_key': 'sk-test',
+            },
           },
         }),
       );

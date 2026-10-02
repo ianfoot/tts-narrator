@@ -27,7 +27,23 @@ void writeConfig(String configDir, Map<String, Object?> body) {
   };
   File('$configDir/config.json')
     ..parent.createSync(recursive: true)
-    ..writeAsStringSync(const JsonEncoder().convert(global));
+    ..writeAsStringSync(
+      const JsonEncoder().convert({
+        ...global,
+        // `narrate` validates the provider block before the first segment, so
+        // a fixture without one cannot start a run. Default to a block shaped
+        // like the shipped `config.json`; a test that cares about the key
+        // section can still pass its own `providers`.
+        'providers':
+            global['providers'] ??
+            {
+              'openrouter': {
+                'base_url': 'https://openrouter.ai/api/v1',
+                'api_key_env': 'OPENROUTER_API_KEY',
+              },
+            },
+      }),
+    );
 
   final models = (body['models'] as Map<String, Object?>?) ?? {};
   if (models.isEmpty) return;

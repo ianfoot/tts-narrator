@@ -19,7 +19,7 @@ class TtsModelProfile {
     this.sendsVoiceField = true,
     this.supportsSpeed = false,
     this.sampleRate,
-    this.provider = 'openrouter',
+    required this.provider,
     this.displayName,
   });
 
@@ -54,7 +54,9 @@ class TtsModelProfile {
   /// PCM sample rate used for the WAV header and duration; null for MP3.
   final int? sampleRate;
 
-  /// Provider id that serves this model. Required in the model config file.
+  /// Name of the `providers.<name>` block that serves this model. Required in
+  /// the model config file, and opaque to core: it is a lookup key into user
+  /// config, never a vendor the code knows about.
   final String provider;
 
   TtsModelProfile copyWith({String? id, String? provider}) => TtsModelProfile(

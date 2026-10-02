@@ -1,6 +1,8 @@
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
+import 'support/fake_provider.dart';
+
 void main() {
   group('ModelUiSpec', () {
     test('defaults to empty', () {
@@ -19,16 +21,22 @@ void main() {
   });
 
   group('ModelUiSpec.forProfile', () {
-    const plain = TtsModelProfile(alias: 'plain', id: 'provider/plain-tts');
+    const plain = TtsModelProfile(
+      alias: 'plain',
+      id: 'provider/plain-tts',
+      provider: testProvider,
+    );
     const styled = TtsModelProfile(
       alias: 'fancy',
       id: 'provider/styled-tts',
       promptStyle: true,
+      provider: testProvider,
     );
     const fast = TtsModelProfile(
       alias: 'fast',
       id: 'provider/fast-tts',
       supportsSpeed: true,
+      provider: testProvider,
     );
 
     test('a model declaring neither capability gets no controls', () {
@@ -38,10 +46,12 @@ void main() {
     test('promptStyle yields the style controls in order', () {
       final spec = ModelUiSpec.forProfile(styled);
       expect(spec.isEmpty, isFalse);
-      expect(
-        spec.options.map((o) => o.key),
-        ['gender', 'accent', 'style', 'passagePrefix'],
-      );
+      expect(spec.options.map((o) => o.key), [
+        'gender',
+        'accent',
+        'style',
+        'passagePrefix',
+      ]);
     });
 
     test('supportsSpeed yields the speed slider', () {
@@ -57,12 +67,16 @@ void main() {
           id: 'provider/fancy-fast-tts',
           promptStyle: true,
           supportsSpeed: true,
+          provider: testProvider,
         ),
       );
-      expect(
-        spec.options.map((o) => o.key),
-        ['gender', 'accent', 'style', 'passagePrefix', 'speed'],
-      );
+      expect(spec.options.map((o) => o.key), [
+        'gender',
+        'accent',
+        'style',
+        'passagePrefix',
+        'speed',
+      ]);
     });
   });
 }

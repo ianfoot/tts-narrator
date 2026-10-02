@@ -40,8 +40,7 @@ class DocumentController extends ChangeNotifier {
   /// must come from `AppLocalizations`, and this controller has no
   /// `BuildContext`. Use `documentNameX.display` to resolve it in the widget
   /// layer.
-  String? get documentName =>
-      _documentPath?.split(Platform.pathSeparator).last;
+  String? get documentName => _documentPath?.split(Platform.pathSeparator).last;
 
   /// Replaces the document text (typing/paste path). Marks the document dirty.
   void setText(String value) {

@@ -4,10 +4,12 @@ import 'package:tts_narrator_core/src/config/voice_config_queries.dart';
 import 'package:tts_narrator_core/src/narration/cost.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
+import 'support/fake_provider.dart';
+
 TtsModelProfile _model({
   required String alias,
   required String id,
-  String provider = 'openrouter',
+  String provider = testProvider,
   String format = 'mp3',
   bool promptStyle = false,
   bool sendsVoiceField = true,
@@ -68,7 +70,7 @@ void main() {
       );
       final profile = profileFor('gemini', cfg);
       expect(profile, isNotNull);
-      expect(profile!.provider, 'openrouter');
+      expect(profile!.provider, testProvider);
     });
 
     test('returns null for an unknown name on an empty config', () {

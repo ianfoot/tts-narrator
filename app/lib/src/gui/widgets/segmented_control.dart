@@ -36,9 +36,7 @@ class SegmentedControl<T extends Object> extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: tokens.typography.control.copyWith(
               fontWeight: item == value ? FontWeight.w600 : FontWeight.w400,
-              color: item == value
-                  ? colors.textPrimary
-                  : colors.textSecondary,
+              color: item == value ? colors.textPrimary : colors.textSecondary,
             ),
           ),
       },

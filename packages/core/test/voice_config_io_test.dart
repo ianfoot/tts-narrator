@@ -6,6 +6,8 @@ import 'package:tts_narrator_core/src/config/voice_config.dart';
 import 'package:tts_narrator_core/src/config/voice_config_io.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
+import 'support/fake_provider.dart';
+
 void main() {
   group('loadVoiceConfig', () {
     late Directory dir;
@@ -116,8 +118,13 @@ void main() {
               alias: 'fast',
               id: 'x/y',
               supportsSpeed: true,
+              provider: testProvider,
             ),
-            'plain': const TtsModelProfile(alias: 'plain', id: 'x/z'),
+            'plain': const TtsModelProfile(
+              alias: 'plain',
+              id: 'x/z',
+              provider: testProvider,
+            ),
           },
         ),
       );

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'abort.dart';
 import 'speech_client.dart';
+import '../config/provider_settings.dart';
 
 /// The client for every OpenAI-compatible `/audio/speech` service.
 ///
@@ -105,13 +106,13 @@ class OpenAiSpeechClient {
   ///
   /// `base_url` is a **root** — the vendor path is appended here, so a config
   /// block carries `https://openrouter.ai/api/v1`, not the full speech URL.
-  /// `endpoint` is accepted as a documented alias for the same value.
+  /// `endpoint` is accepted as a documented alias for the same value. The
+  /// lookup is shared with [narrate] via [providerBaseUrl].
   Uri _speechUri(Map<String, String> settings) {
-    final root = settings['base_url'] ?? settings['endpoint'];
-    final trimmed = root?.trim();
-    if (trimmed == null || trimmed.isEmpty) {
-      // Names the setting, not the block: the block name is not available on
-      // this call path.
+    final trimmed = providerBaseUrl(settings);
+    if (trimmed == null) {
+      // Backstop only: `narrate` validates before the first segment and names
+      // the block, so reaching here means the client was called directly.
       throw StateError(
         'TTS provider block is missing required setting "base_url" '
         '(the speech endpoint root, e.g. "https://openrouter.ai/api/v1").',

@@ -23,6 +23,20 @@ bool providerNeedsApiKey(Map<String, String> settings) =>
 /// Matches a `${ENV_NAME}` secret reference in a provider settings value.
 final _envRef = RegExp(r'^\$\{(\w+)\}$');
 
+/// The speech endpoint root declared by the provider block [settings], or null
+/// when the block names none.
+///
+/// `base_url` is a **root**, not a full URL: the client appends `/audio/speech`
+/// (see `OpenAiSpeechClient`). `endpoint` is a documented alias for it.
+///
+/// Shared so the HTTP client and [narrate]'s up-front validation read the same
+/// key with the same precedence and cannot drift apart.
+String? providerBaseUrl(Map<String, String> settings) {
+  final root = settings['base_url'] ?? settings['endpoint'];
+  if (root == null || root.trim().isEmpty) return null;
+  return root.trim();
+}
+
 /// Resolves a provider's raw settings map, applying the generic secret rule.
 ///
 /// A value matching `^\$\{(\w+)\}$` reads that environment variable (from [env],

@@ -11,7 +11,9 @@ import 'package:tts_narrator/src/gui/editor/editor_toolbar.dart';
 import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
     show acceleratorLabel;
 import 'package:tts_narrator_core/tts_narrator_core.dart';
+
 import '../support/l10n_test_support.dart';
+
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator/src/gui/widgets/app_icon_button.dart';
 
@@ -38,7 +40,10 @@ void main() {
         const JsonEncoder().convert({
           'default_model': 'fish',
           'providers': {
-            'openrouter': {'api_key': 'sk-test'},
+            'openrouter': {
+              'base_url': 'https://openrouter.ai/api/v1',
+              'api_key': 'sk-test',
+            },
           },
         }),
       );

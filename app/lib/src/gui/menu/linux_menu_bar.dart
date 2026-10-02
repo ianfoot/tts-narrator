@@ -88,28 +88,23 @@ class LinuxMenuBar extends StatelessWidget {
                         menuChildren: _fileItems(tokens, l10n),
                         menuStyle: _dropdownStyle(tokens),
                         style: _buttonStyle(tokens),
-                        child: Text(
-                          l10n.gui_menu_file,
-                          style: _label(tokens),
-                        ),
+                        child: Text(l10n.gui_menu_file, style: _label(tokens)),
                       ),
                       SubmenuButton(
                         menuChildren: _editItems(tokens, l10n),
                         menuStyle: _dropdownStyle(tokens),
                         style: _buttonStyle(tokens),
-                        child: Text(
-                          l10n.gui_menu_edit,
-                          style: _label(tokens),
-                        ),
+                        child: Text(l10n.gui_menu_edit, style: _label(tokens)),
                       ),
                       SubmenuButton(
-                        menuChildren: _viewItems(tokens, l10n, controller.themeMode),
+                        menuChildren: _viewItems(
+                          tokens,
+                          l10n,
+                          controller.themeMode,
+                        ),
                         menuStyle: _dropdownStyle(tokens),
                         style: _buttonStyle(tokens),
-                        child: Text(
-                          l10n.gui_menu_view,
-                          style: _label(tokens),
-                        ),
+                        child: Text(l10n.gui_menu_view, style: _label(tokens)),
                       ),
                     ],
                   ),
@@ -236,12 +231,7 @@ class LinuxMenuBar extends StatelessWidget {
             : null,
       ),
       const _Separator(),
-      _item(
-        tokens,
-        l10n.gui_menu_quit,
-        accelerator: 'Q',
-        onSelected: quitApp,
-      ),
+      _item(tokens, l10n.gui_menu_quit, accelerator: 'Q', onSelected: quitApp),
     ];
   }
 
@@ -340,9 +330,7 @@ class LinuxMenuBar extends StatelessWidget {
     return MenuItemButton(
       onPressed: () => controller.themeMode = mode,
       child: Text(
-        current == mode
-            ? '${l10n.gui_menu_checkmarkPrefix}$label'
-            : label,
+        current == mode ? '${l10n.gui_menu_checkmarkPrefix}$label' : label,
         style: _label(tokens),
       ),
     );

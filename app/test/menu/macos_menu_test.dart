@@ -159,7 +159,7 @@ void main() {
         final edit = buildMacMenu(
           controller: await makeController(),
           navigatorKey: GlobalKey<NavigatorState>(),
-        l10n: testL10n,
+          l10n: testL10n,
         )[2];
 
         expectMetaShortcut(leafItem(edit, 'Undo'), LogicalKeyboardKey.keyZ);
@@ -271,7 +271,7 @@ void main() {
         final file = buildMacMenu(
           controller: controller,
           navigatorKey: GlobalKey<NavigatorState>(),
-        l10n: testL10n,
+          l10n: testL10n,
         )[1];
 
         leafItem(file, 'Output Folder…').onSelected?.call();
@@ -337,7 +337,7 @@ void main() {
         final view = buildMacMenu(
           controller: await makeController(),
           navigatorKey: GlobalKey<NavigatorState>(),
-        l10n: testL10n,
+          l10n: testL10n,
         )[3];
 
         final appearance = view.menus

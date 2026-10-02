@@ -43,7 +43,21 @@ void main() {
     };
     File('$configDir/config.json')
       ..parent.createSync(recursive: true)
-      ..writeAsStringSync(const JsonEncoder().convert(global));
+      ..writeAsStringSync(
+        const JsonEncoder().convert({
+          ...global,
+          // `narrate` validates the block before the first segment, so a
+          // fixture without one cannot start a run.
+          'providers':
+              global['providers'] ??
+              {
+                'openrouter': {
+                  'base_url': 'https://openrouter.ai/api/v1',
+                  'api_key_env': 'OPENROUTER_API_KEY',
+                },
+              },
+        }),
+      );
 
     final models = (body['models'] as Map<String, Object?>?) ?? {};
     if (models.isEmpty) return;
@@ -77,7 +91,10 @@ void main() {
     writeConfig({
       'default_model': 'fish',
       'providers': {
-        'openrouter': {'api_key': 'sk-test'},
+        'openrouter': {
+          'base_url': 'https://openrouter.ai/api/v1',
+          'api_key': 'sk-test',
+        },
       },
       'models': {
         'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
@@ -95,7 +112,10 @@ void main() {
     writeConfig({
       'default_model': 'fish',
       'providers': {
-        'openrouter': {'api_key': 'sk-test'},
+        'openrouter': {
+          'base_url': 'https://openrouter.ai/api/v1',
+          'api_key': 'sk-test',
+        },
       },
       'models': {
         'fish': {
@@ -413,10 +433,7 @@ void main() {
           apiKeyStore: await storeLoadedWith('sk-stored'),
         )..setText('A sentence.');
         final cfg = c.buildConfig();
-        expect(
-          cfg.providerSettings['api_key'],
-          Platform.environment['HOME'],
-        );
+        expect(cfg.providerSettings['api_key'], Platform.environment['HOME']);
         expect(c.apiKeySource, ApiKeySource.environment);
       },
     );
@@ -444,10 +461,7 @@ void main() {
       await c.saveApiKey(' sk-stored ');
       expect(c.hasStoredApiKey, isTrue);
       expect(c.apiKeySource, ApiKeySource.keychain);
-      expect(
-        c.buildConfig().providerSettings['api_key'],
-        'sk-stored',
-      );
+      expect(c.buildConfig().providerSettings['api_key'], 'sk-stored');
       await c.removeApiKey();
       expect(c.hasStoredApiKey, isFalse);
       expect(c.apiKeyMissing, isTrue);
@@ -998,7 +1012,10 @@ void main() {
       writeConfig({
         'default_model': 'fast',
         'providers': {
-          'openrouter': {'api_key': 'sk-test'},
+          'openrouter': {
+            'base_url': 'https://openrouter.ai/api/v1',
+            'api_key': 'sk-test',
+          },
         },
         'models': {
           'fast': {
@@ -1017,7 +1034,10 @@ void main() {
       writeConfig({
         'default_model': 'plain',
         'providers': {
-          'openrouter': {'api_key': 'sk-test'},
+          'openrouter': {
+            'base_url': 'https://openrouter.ai/api/v1',
+            'api_key': 'sk-test',
+          },
         },
         'models': {
           'plain': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},

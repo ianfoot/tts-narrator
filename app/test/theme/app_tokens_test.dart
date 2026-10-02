@@ -112,10 +112,7 @@ void main() {
   group('AppTypography', () {
     test('resolves the sans + mono family per platform', () {
       expect(AppTypography(TargetPlatform.macOS).editorSansFamily, 'Helvetica');
-      expect(
-        AppTypography(TargetPlatform.windows).editorSansFamily,
-        'Arial',
-      );
+      expect(AppTypography(TargetPlatform.windows).editorSansFamily, 'Arial');
       expect(
         AppTypography(TargetPlatform.linux).editorSansFamily,
         'Nimbus Sans',
@@ -126,7 +123,10 @@ void main() {
       );
       expect(AppTypography(TargetPlatform.macOS).monoFamily, 'Menlo');
       expect(AppTypography(TargetPlatform.windows).monoFamily, 'Consolas');
-      expect(AppTypography(TargetPlatform.linux).monoFamily, 'DejaVu Sans Mono');
+      expect(
+        AppTypography(TargetPlatform.linux).monoFamily,
+        'DejaVu Sans Mono',
+      );
     });
 
     test('pairs every family with a metric-similar fallback chain', () {

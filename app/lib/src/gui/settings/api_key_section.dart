@@ -105,10 +105,7 @@ class _ApiKeySectionState extends State<ApiKeySection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            settingsFieldLabel(
-              _tokens,
-              _l10n.gui_settings_apiKeyStatusLabel,
-            ),
+            settingsFieldLabel(_tokens, _l10n.gui_settings_apiKeyStatusLabel),
             Text(
               _controller.apiKeySource.apiKeyStatusLabel(_l10n),
               style: _tokens.typography.body.copyWith(

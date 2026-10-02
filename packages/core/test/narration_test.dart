@@ -54,11 +54,14 @@ void main() {
         sendsVoiceField: sendsVoiceField,
         supportsSpeed: supportsSpeed,
         sampleRate: sampleRate,
+        provider: testProvider,
       ),
       voice: 'VoiceOne',
       voiceLabel: 'Voice One',
       speed: speed,
-      providerSettings: providerSettings,
+      // `narrate` validates the block before the first segment, so every test
+      // needs a base URL; a test may still override or extend the map.
+      providerSettings: {'base_url': testBaseUrl, ...providerSettings},
       outDir: '${dir.path}/out',
     );
   }
@@ -74,7 +77,7 @@ void main() {
       expect(call.model, 'test/model');
       expect(call.responseFormat, 'mp3');
       expect(call.voice, 'VoiceOne');
-      expect(call.settings, {'api_key': 'sk-test'});
+      expect(call.settings, {'base_url': testBaseUrl, 'api_key': 'sk-test'});
       expect(call.input, _inputText);
 
       final audioFile = File('${dir.path}/out/story/story_1.mp3');
@@ -133,7 +136,7 @@ void main() {
         provider: provider.id,
       ),
       voice: 'VoiceOne',
-      providerSettings: const {'api_key': 'sk-test'},
+      providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
       outDir: '${dir.path}/out',
       minWords: 1,
     );
@@ -198,8 +201,79 @@ void main() {
       client: provider.client,
     );
     expect(provider.calls.single.settings, {
+      'base_url': testBaseUrl,
       'api_key': 'sk-2',
       'model_id': 'x',
+    });
+  });
+
+  group('provider block validation', () {
+    // The shared factory always injects a base URL, so these build the config
+    // directly in order to exercise a block that has none.
+    NarrationConfig bareConfig(
+      String inputPath, {
+      required Map<String, String> providerSettings,
+    }) => NarrationConfig(
+      inputPath: inputPath,
+      profile: const TtsModelProfile(
+        alias: 'test',
+        id: 'test/model',
+        provider: testProvider,
+      ),
+      voice: 'VoiceOne',
+      providerSettings: providerSettings,
+      outDir: '${dir.path}/out',
+    );
+
+    test('names the block when base_url is missing', () async {
+      final input = writeInput();
+      await expectLater(
+        narrate(
+          bareConfig(input, providerSettings: const {}),
+          client: provider.client,
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('"$testProvider"'), contains('"base_url"')),
+          ),
+        ),
+      );
+      expect(provider.callCount, 0);
+    });
+
+    test('fails before creating the output directory', () async {
+      final input = writeInput();
+      await expectLater(
+        narrate(
+          bareConfig(input, providerSettings: const {}),
+          client: provider.client,
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(Directory('${dir.path}/out').existsSync(), isFalse);
+    });
+
+    test('accepts the endpoint alias for base_url', () async {
+      final input = writeInput();
+      await narrate(
+        bareConfig(input, providerSettings: const {'endpoint': testBaseUrl}),
+        client: provider.client,
+      );
+      expect(provider.callCount, 1);
+    });
+
+    test('treats a blank base_url as missing', () async {
+      final input = writeInput();
+      await expectLater(
+        narrate(
+          bareConfig(input, providerSettings: const {'base_url': '   '}),
+          client: provider.client,
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(provider.callCount, 0);
     });
   });
 
@@ -214,7 +288,7 @@ void main() {
         provider: provider.id,
       ),
       voice: 'VoiceOne',
-      providerSettings: const {'api_key': 'sk-test'},
+      providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
       outDir: '${dir.path}/out',
     );
 
@@ -343,7 +417,7 @@ void main() {
             provider: provider.id,
           ),
           voice: 'VoiceOne',
-          providerSettings: const {'api_key': 'sk-test'},
+          providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
           outDir: '${dir.path}/out',
           sendWholeFile: true,
         );
@@ -367,7 +441,7 @@ void main() {
           provider: provider.id,
         ),
         voice: 'VoiceOne',
-        providerSettings: const {'api_key': 'sk-test'},
+        providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
         outDir: '${dir.path}/out',
         sendWholeFile: true,
       );
@@ -410,7 +484,7 @@ void main() {
           provider: provider.id,
         ),
         voice: 'VoiceOne',
-        providerSettings: const {'api_key': 'sk-test'},
+        providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
         outDir: '${dir.path}/out',
         // minWords 1 keeps every paragraph its own segment = 4 segments.
         minWords: 1,

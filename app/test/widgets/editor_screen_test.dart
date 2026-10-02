@@ -39,7 +39,10 @@ void main() {
         const JsonEncoder().convert({
           'default_model': 'fish',
           'providers': {
-            'openrouter': {'api_key': 'sk-test'},
+            'openrouter': {
+              'base_url': 'https://openrouter.ai/api/v1',
+              'api_key': 'sk-test',
+            },
           },
         }),
       );
