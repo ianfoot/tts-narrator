@@ -59,7 +59,7 @@ void main() {
   /// provider; any other provider's entry is cleared by the mock reset too.
   Future<ApiKeyStore> storeLoadedWith(
     String? key, {
-    String provider = 'openrouter',
+    String provider = 'alpha',
   }) async {
     FlutterSecureStorage.setMockInitialValues(<String, String>{
       'tts-narrator.api_key.$provider': ?key,
@@ -75,8 +75,8 @@ void main() {
   void writeFishConfig() {
     writeConfig({
       'providers': {
-        'openrouter': {
-          'base_url': 'https://openrouter.ai/api/v1',
+        'alpha': {
+          'base_url': 'https://vendor.example/api/v1',
           'api_key': 'sk-test',
         },
       },
@@ -95,8 +95,8 @@ void main() {
   void writePromptStyleFishConfig() {
     writeConfig({
       'providers': {
-        'openrouter': {
-          'base_url': 'https://openrouter.ai/api/v1',
+        'alpha': {
+          'base_url': 'https://vendor.example/api/v1',
           'api_key': 'sk-test',
         },
       },
@@ -348,13 +348,13 @@ void main() {
       FlutterSecureStorage.setMockInitialValues(<String, String>{});
     });
 
-    /// Writes the fish config whose openrouter block references a `${ENV}`
+    /// Writes the fish config whose alpha block references a `${ENV}`
     /// that is guaranteed absent — the exact double-click scenario the
     /// secure-store fallback exists for.
     void writeEnvRefFishConfig(String ref) {
       writeConfig({
-          'providers': {
-          'openrouter': {'api_key': ref},
+        'providers': {
+          'alpha': {'api_key': ref},
         },
         'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
@@ -379,7 +379,7 @@ void main() {
           ),
           apiKeyStore: await storeLoadedWith('sk-stored'),
         )..setText('A sentence.');
-final cfg = c.buildConfig();
+        final cfg = c.buildConfig();
         expect(cfg.apiKey, 'sk-stored');
         expect(c.apiKeySource, ApiKeySource.keychain);
       },
@@ -460,8 +460,12 @@ final cfg = c.buildConfig();
         apiKeyStore: await storeLoadedWith('sk-stored'),
       )..setText('A sentence.');
       final settings = c.buildConfig().providerSettings;
-      expect(settings.containsKey('api_key'), isFalse,
-          reason: 'the secret travels as NarrationConfig.apiKey, not as a setting');
+      expect(
+        settings.containsKey('api_key'),
+        isFalse,
+        reason:
+            'the secret travels as NarrationConfig.apiKey, not as a setting',
+      );
     });
 
     test('a run is never blocked when no key exists anywhere', () {
@@ -511,10 +515,10 @@ final cfg = c.buildConfig();
     void writeTwoProviderConfig() {
       writeConfig({
         'providers': {
-          'openrouter': {
+          'alpha': {
             'models': ['fish'],
-            'base_url': 'https://openrouter.ai/api/v1',
-            'api_key': r'${OPENROUTER_API_KEY}',
+            'base_url': 'https://vendor.example/api/v1',
+            'api_key': r'${VENDOR_API_KEY}',
           },
           'groq': {
             'models': ['gemini'],
@@ -530,10 +534,7 @@ final cfg = c.buildConfig();
             'sample_rate': 24000,
           },
         },
-        'defaults': {
-          'fish': 'British Female Narrator',
-          'gemini': 'Charon',
-        },
+        'defaults': {'fish': 'British Female Narrator', 'gemini': 'Charon'},
         'voices': {
           'fish': {
             'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
@@ -551,16 +552,16 @@ final cfg = c.buildConfig();
         ),
         apiKeyStore: await storeLoadedWith(null),
       );
-      expect(c.profile?.provider, 'openrouter');
+      expect(c.profile?.provider, 'alpha');
 
-      await c.saveApiKey('sk-or');
+      await c.saveApiKey('sk-test');
       expect(c.hasStoredApiKey, isTrue);
 
-      // Read the store back independently: the secret must sit in openrouter's
+      // Read the store back independently: the secret must sit in alpha's
       // namespace and nowhere else.
       final reread = ApiKeyStore();
       await reread.load();
-      expect(reread.value('openrouter'), 'sk-or');
+      expect(reread.value('alpha'), 'sk-test');
       expect(reread.value('groq'), isNull);
     });
 
@@ -578,24 +579,24 @@ final cfg = c.buildConfig();
       expect(c.hasStoredApiKey, isFalse);
       expect(c.apiKeySource, ApiKeySource.missing);
 
-      await c.saveApiKey('sk-or');
+      await c.saveApiKey('sk-test');
       expect(c.hasStoredApiKey, isTrue);
       expect(c.apiKeySource, ApiKeySource.keychain);
-      expect(c.buildConfig().apiKey, 'sk-or');
+      expect(c.buildConfig().apiKey, 'sk-test');
 
-      // Switching to the other provider must not inherit openrouter's key.
+      // Switching to the other provider must not inherit alpha's key.
       c.changeModel('gemini');
       expect(c.profile?.provider, 'groq');
       expect(c.hasStoredApiKey, isFalse);
       expect(c.apiKeySource, ApiKeySource.missing);
       expect(c.buildConfig().apiKey, isNull);
 
-      // Saving under groq leaves openrouter's key intact.
+      // Saving under groq leaves alpha's key intact.
       await c.saveApiKey('gsk-groq');
       expect(c.buildConfig().apiKey, 'gsk-groq');
       c.changeModel('fish');
       expect(c.hasStoredApiKey, isTrue);
-      expect(c.buildConfig().apiKey, 'sk-or');
+      expect(c.buildConfig().apiKey, 'sk-test');
 
       // Removing under groq touches only groq's slot.
       c.changeModel('gemini');
@@ -627,7 +628,9 @@ final cfg = c.buildConfig();
       Map<String, String> settings,
     ) {
       writeConfig({
-        'providers': {providerName: {...settings}},
+        'providers': {
+          providerName: {...settings},
+        },
         'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
         },
@@ -643,46 +646,44 @@ final cfg = c.buildConfig();
     test(
       r'the shipped shape: a ${ENV} reference resolves from the environment',
       () async {
-        // The shipped provider block carries `"api_key": "${OPENROUTER_API_KEY}"`.
-        writeProviderConfig('openrouter', {
-          'base_url': 'https://openrouter.ai/api/v1',
-          'api_key': r'${OPENROUTER_API_KEY}',
+        // The shipped provider block carries `"api_key": "${VENDOR_API_KEY}"`.
+        writeProviderConfig('alpha', {
+          'base_url': 'https://vendor.example/api/v1',
+          'api_key': r'${VENDOR_API_KEY}',
         });
         final c = makeController(
-          environment: const {'OPENROUTER_API_KEY': 'sk-from-env'},
+          environment: const {'VENDOR_API_KEY': 'sk-from-env'},
         )..setText('A sentence.');
 
         final cfg = c.buildConfig();
         expect(
           cfg.providerSettings['base_url'],
-          'https://openrouter.ai/api/v1',
+          'https://vendor.example/api/v1',
         );
         expect(cfg.apiKey, 'sk-from-env');
         expect(c.apiKeySource, ApiKeySource.environment);
       },
     );
 
-    test(r'an unresolvable ${ENV} reference falls back to the stored key',
-        () async {
-      writeProviderConfig('openrouter', {
-        'api_key': r'${OPENROUTER_API_KEY}',
-      });
-      final c = AppController(
-        loader: UserVoiceConfigLoader(
-          configDir: configDir,
-          environment: const {},
-        ),
-        apiKeyStore: await storeLoadedWith('sk-stored'),
-      )..setText('A sentence.');
+    test(
+      r'an unresolvable ${ENV} reference falls back to the stored key',
+      () async {
+        writeProviderConfig('alpha', {'api_key': r'${VENDOR_API_KEY}'});
+        final c = AppController(
+          loader: UserVoiceConfigLoader(
+            configDir: configDir,
+            environment: const {},
+          ),
+          apiKeyStore: await storeLoadedWith('sk-stored'),
+        )..setText('A sentence.');
 
-      expect(c.buildConfig().apiKey, 'sk-stored');
-      expect(c.apiKeySource, ApiKeySource.keychain);
-    });
+        expect(c.buildConfig().apiKey, 'sk-stored');
+        expect(c.apiKeySource, ApiKeySource.keychain);
+      },
+    );
 
     test(r'an unresolvable ${ENV} reference does not block the run', () {
-      writeProviderConfig('openrouter', {
-        'api_key': r'${OPENROUTER_API_KEY}',
-      });
+      writeProviderConfig('alpha', {'api_key': r'${VENDOR_API_KEY}'});
       final c = makeController()..setText('A sentence.');
 
       expect(() => c.buildConfig(), returnsNormally);
@@ -691,26 +692,26 @@ final cfg = c.buildConfig();
       expect(c.apiKeySource, ApiKeySource.missing);
     });
 
-    test('a non-openrouter provider declaring api_key is recognised as keyed',
-        () async {
-      writeProviderConfig('groq', {
-        'base_url': 'https://api.groq.invalid',
-        'api_key': 'gsk-test',
-      });
-      final c = makeController(
-        apiKeyStore: await storeLoadedWith(null),
-      )..setText('A sentence.');
+    test(
+      'a non-alpha provider declaring api_key is recognised as keyed',
+      () async {
+        writeProviderConfig('groq', {
+          'base_url': 'https://api.groq.invalid',
+          'api_key': 'gsk-test',
+        });
+        final c = makeController(apiKeyStore: await storeLoadedWith(null))
+          ..setText('A sentence.');
 
-      expect(c.profile?.provider, 'groq');
-      expect(c.apiKeySource, ApiKeySource.config);
-      expect(c.buildConfig().apiKey, 'gsk-test');
-    });
+        expect(c.profile?.provider, 'groq');
+        expect(c.apiKeySource, ApiKeySource.config);
+        expect(c.buildConfig().apiKey, 'gsk-test');
+      },
+    );
 
-    test(r'a non-openrouter provider can use a ${ENV} reference', () {
+    test(r'a non-alpha provider can use a ${ENV} reference', () {
       writeProviderConfig('groq', {'api_key': r'${GROQ_API_KEY}'});
-      final c = makeController(
-        environment: const {'GROQ_API_KEY': 'gsk-env'},
-      )..setText('A sentence.');
+      final c = makeController(environment: const {'GROQ_API_KEY': 'gsk-env'})
+        ..setText('A sentence.');
 
       expect(c.apiKeySource, ApiKeySource.environment);
       expect(() => c.buildConfig(), returnsNormally);
@@ -718,12 +719,9 @@ final cfg = c.buildConfig();
 
     test('a keyless provider reports missing but still runs', () async {
       // The local starter: base_url only, no credential.
-      writeProviderConfig('mlx_audio', {
-        'base_url': 'http://localhost:8000/v1',
-      });
-      final c = makeController(
-        apiKeyStore: await storeLoadedWith(null),
-      )..setText('A sentence.');
+      writeProviderConfig('beta', {'base_url': 'http://localhost:8000/v1'});
+      final c = makeController(apiKeyStore: await storeLoadedWith(null))
+        ..setText('A sentence.');
 
       expect(c.apiKeySource, ApiKeySource.missing);
       final settings = c.buildConfig().providerSettings;
@@ -735,11 +733,9 @@ final cfg = c.buildConfig();
       // The point of always offering the section: the config says nothing about
       // a credential, but the user may hold one, and the server — not the app —
       // decides whether it is wanted.
-      writeProviderConfig('mlx_audio', {
-        'base_url': 'http://localhost:8000/v1',
-      });
+      writeProviderConfig('beta', {'base_url': 'http://localhost:8000/v1'});
       final c = makeController(
-        apiKeyStore: await storeLoadedWith('sk-stored', provider: 'mlx_audio'),
+        apiKeyStore: await storeLoadedWith('sk-stored', provider: 'beta'),
       )..setText('A sentence.');
 
       expect(c.apiKeySource, ApiKeySource.keychain);
@@ -799,7 +795,7 @@ final cfg = c.buildConfig();
 
     test('a preserved raw voice drops the previous model label on switch', () {
       writeConfig({
-      'models': {
+        'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
@@ -828,7 +824,7 @@ final cfg = c.buildConfig();
 
     test('resolveVoice wires a friendly alias to its raw id', () {
       writeConfig({
-      'models': {
+        'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
         },
         'voices': {
@@ -1311,8 +1307,8 @@ final cfg = c.buildConfig();
     test('speed adds only the speed control', () {
       writeConfig({
         'providers': {
-          'openrouter': {
-            'base_url': 'https://openrouter.ai/api/v1',
+          'alpha': {
+            'base_url': 'https://vendor.example/api/v1',
             'api_key': 'sk-test',
           },
         },
@@ -1332,8 +1328,8 @@ final cfg = c.buildConfig();
     test('follows the selected model when it switches', () {
       writeConfig({
         'providers': {
-          'openrouter': {
-            'base_url': 'https://openrouter.ai/api/v1',
+          'alpha': {
+            'base_url': 'https://vendor.example/api/v1',
             'api_key': 'sk-test',
           },
         },

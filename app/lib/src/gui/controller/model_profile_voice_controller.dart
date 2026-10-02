@@ -164,7 +164,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   /// Narrator-gender selection. Two uses, both flowing through this one field:
   /// narrowing the voice picker for models whose config tags voices with a
-  /// gender, and (via the openrouter plugin's `gender` model option) driving
+  /// gender, and (via a provider's `gender` model option) driving
   /// the narrator phrase in the passage prefix for prompt-style models. The
   /// passage-prefix side effect is applied by [AppController], which owns that
   /// setting. [VoiceGender.neutral] is "any / unselected".

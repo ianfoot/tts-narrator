@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/config/voice_config.dart';
-import 'package:tts_narrator_core/src/config/voice_config_queries.dart';
 import 'package:tts_narrator_core/src/config/voice_config_io.dart';
+import 'package:tts_narrator_core/src/config/voice_config_queries.dart';
 
 void main() {
   group('loadVoiceConfig', () {
@@ -45,8 +45,12 @@ void main() {
     /// Publishes the registry and a single provider claiming every model
     /// written so far, then loads. Model files only exist to a provider that
     /// names them, so the registry has to agree with the fixture.
-    (VoiceConfig, List<String>) load({String provider = 'openrouter'}) {
-      writeRegistry(jsonEncode({'providers': [provider]}));
+    (VoiceConfig, List<String>) load({String provider = 'alpha'}) {
+      writeRegistry(
+        jsonEncode({
+          'providers': [provider],
+        }),
+      );
       writeProvider(
         provider,
         jsonEncode({
@@ -290,30 +294,30 @@ void main() {
 
     group('the provider registry', () {
       test('parses the provider names in order', () {
-        writeRegistry('{"providers": ["openrouter", "mlx_audio"]}');
-        writeProvider('openrouter', '{"models": ["fish"], "settings": {}}');
-        writeProvider('mlx_audio', '{"models": [], "settings": {}}');
+        writeRegistry('{"providers": ["alpha", "beta"]}');
+        writeProvider('alpha', '{"models": ["fish"], "settings": {}}');
+        writeProvider('beta', '{"models": [], "settings": {}}');
         final (cfg, _) = rawLoad();
-        expect(cfg.providers.keys, ['openrouter', 'mlx_audio']);
-        expect(cfg.defaultProvider?.name, 'openrouter');
+        expect(cfg.providers.keys, ['alpha', 'beta']);
+        expect(cfg.defaultProvider?.name, 'alpha');
       });
 
       test(r'keeps a $VAR env reference as a literal', () {
-        writeRegistry('{"providers": ["openrouter"]}');
+        writeRegistry('{"providers": ["alpha"]}');
         writeProvider(
-          'openrouter',
+          'alpha',
           '{"models": [], "settings": '
-              '{"OPENROUTER_API_KEY": "\${OPENROUTER_API_KEY}"}}',
+              '{"VENDOR_API_KEY": "\${VENDOR_API_KEY}"}}',
         );
         final (cfg, _) = rawLoad();
         expect(
-          cfg.providers['openrouter']!.settings['OPENROUTER_API_KEY'],
-          r'${OPENROUTER_API_KEY}',
+          cfg.providers['alpha']!.settings['VENDOR_API_KEY'],
+          r'${VENDOR_API_KEY}',
         );
       });
 
       test('rejects a non-list providers entry', () {
-        writeRegistry('{"providers": {"openrouter": {}}}');
+        writeRegistry('{"providers": {"alpha": {}}}');
         expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
       });
 
@@ -349,47 +353,49 @@ void main() {
       test('stamps the claiming provider onto each profile', () {
         writeModel('gemini', '{"id": "a/b"}', claimedByProvider: false);
         writeModel('fish', '{"id": "c/d"}', claimedByProvider: false);
-        writeRegistry('{"providers": ["google", "openrouter"]}');
+        writeRegistry('{"providers": ["google", "alpha"]}');
         writeProvider('google', '{"models": ["gemini"], "settings": {}}');
-        writeProvider('openrouter', '{"models": ["fish"], "settings": {}}');
+        writeProvider('alpha', '{"models": ["fish"], "settings": {}}');
 
         final (cfg, warnings) = rawLoad();
         expect(warnings, isEmpty);
         expect(cfg.models['gemini']?.provider, 'google');
-        expect(cfg.models['fish']?.provider, 'openrouter');
+        expect(cfg.models['fish']?.provider, 'alpha');
       });
 
       test('a model no provider names is skipped without a warning', () {
         writeModel('x', '{"id": "a/b"}', claimedByProvider: false);
-        writeRegistry('{"providers": ["openrouter"]}');
-        writeProvider('openrouter', '{"models": [], "settings": {}}');
+        writeRegistry('{"providers": ["alpha"]}');
+        writeProvider('alpha', '{"models": [], "settings": {}}');
 
         final (cfg, warnings) = rawLoad();
         expect(cfg.models, isEmpty);
         expect(warnings, isEmpty);
       });
 
-      test('a provider file absent from the registry is ignored with a warning',
-          () {
-        writeRegistry('{"providers": ["openrouter"]}');
-        writeProvider('openrouter', '{"models": [], "settings": {}}');
-        writeProvider('stray', '{"models": [], "settings": {}}');
+      test(
+        'a provider file absent from the registry is ignored with a warning',
+        () {
+          writeRegistry('{"providers": ["alpha"]}');
+          writeProvider('alpha', '{"models": [], "settings": {}}');
+          writeProvider('stray', '{"models": [], "settings": {}}');
 
-        final (cfg, warnings) = rawLoad();
-        expect(cfg.providers.containsKey('stray'), isFalse);
-        expect(warnings.single, contains('stray.json'));
-      });
+          final (cfg, warnings) = rawLoad();
+          expect(cfg.providers.containsKey('stray'), isFalse);
+          expect(warnings.single, contains('stray.json'));
+        },
+      );
 
       test('a registered provider with no file on disk warns', () {
-        writeRegistry('{"providers": ["openrouter"]}');
+        writeRegistry('{"providers": ["alpha"]}');
         final (cfg, warnings) = rawLoad();
         expect(cfg.providers, isEmpty);
-        expect(warnings.first, contains('providers/openrouter.json is missing'));
+        expect(warnings.first, contains('providers/alpha.json is missing'));
       });
 
       test('a provider naming a model that never loaded warns', () {
-        writeRegistry('{"providers": ["openrouter"]}');
-        writeProvider('openrouter', '{"models": ["gone"], "settings": {}}');
+        writeRegistry('{"providers": ["alpha"]}');
+        writeProvider('alpha', '{"models": ["gone"], "settings": {}}');
 
         final (_, warnings) = rawLoad();
         expect(warnings.single, contains('gone'));
@@ -400,8 +406,8 @@ void main() {
       test('is the first model of the first registered provider', () {
         writeModel('kokoro', '{"id": "a/b"}', claimedByProvider: false);
         writeModel('fish', '{"id": "c/d"}', claimedByProvider: false);
-        writeRegistry('{"providers": ["openrouter", "google"]}');
-        writeProvider('openrouter', '{"models": ["kokoro"], "settings": {}}');
+        writeRegistry('{"providers": ["alpha", "google"]}');
+        writeProvider('alpha', '{"models": ["kokoro"], "settings": {}}');
         writeProvider('google', '{"models": ["fish"], "settings": {}}');
 
         final (cfg, _) = rawLoad();

@@ -414,7 +414,7 @@ abstract class AppLocalizations {
   /// No description provided for @gui_settings_apiKeySectionTooltip.
   ///
   /// In en, this message translates to:
-  /// **'API key for OpenRouter authentication'**
+  /// **'API key for the narration provider'**
   String get gui_settings_apiKeySectionTooltip;
 
   /// No description provided for @gui_settings_apiKeyStatusLabel.
@@ -456,7 +456,7 @@ abstract class AppLocalizations {
   /// No description provided for @gui_settings_apiKeyFieldTooltip.
   ///
   /// In en, this message translates to:
-  /// **'OpenRouter API key, saved to the system keychain'**
+  /// **'API key, saved to the system keychain'**
   String get gui_settings_apiKeyFieldTooltip;
 
   /// No description provided for @gui_settings_apiKeySave.

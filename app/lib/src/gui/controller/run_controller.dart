@@ -268,7 +268,8 @@ class RunController extends ChangeNotifier {
     // call, and the narrate tail's isCurrentRun guards keep a settled zombie
     // from clobbering a successor run's state. Until the provider's force-close
     // lands, a zombie may still write a late segment/manifest to the shared out
-    // dir — bounded today because OpenRouter force-closes on cancel.
+    // dir — bounded today because the shipped cloud provider force-closes on
+    // cancel.
     _abort = null;
     _narrating = false;
     // Mark the run as stopped immediately so the run view flips UI without

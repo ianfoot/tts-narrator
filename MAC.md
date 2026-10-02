@@ -34,9 +34,9 @@ xattr -cr /path/to/TTS\ Narrator.app
 
 ---
 
-## Set Up Your OpenRouter API Key
+## Set Up Your Provider API Key
 
-The app needs your OpenRouter API key to work. You can provide it in three ways:
+The app needs an API key for any provider that requires one. You can provide it in three ways. The examples below use `alpha` as the provider name and `VENDOR_API_KEY` as the variable name — substitute your own provider's values throughout.
 
 ### Method 1: GUI Settings (Recommended for Double-Click)
 
@@ -44,11 +44,12 @@ After launching the app for the first time:
 
 1. Click the **Settings** button (gear icon) or open the **View → Settings** menu
 2. Scroll down to the **"API key"** section
-3. Enter your OpenRouter API key (starts with `sk-or-`)
+3. Paste your provider's API key
 4. Click **Save**
 
 ✅ Securely stored in your Mac's Keychain
 ✅ Available for double-click launches (no shell environment)
+✅ Stored per provider — switching models never moves a key between providers
 
 ### Method 2: Config File (macOS Standard Location)
 
@@ -57,14 +58,14 @@ If you prefer a file-based approach:
 1. Open **Finder** → Go → **Home** (`Cmd+Shift+H`)
 2. Open the hidden `.config` folder (`Cmd+Shift+.` shows hidden files), then `tts-narrator`
 3. Create a file named `providers` inside `tts-narrator`
-4. Inside it, create a file named `openrouter.json` with this content:
+4. Inside it, create a file named `alpha.json` with this content:
 
 ```json
 {
   "models": ["fish", "gemini", "kokoro"],
   "settings": {
-    "base_url": "https://openrouter.ai/api/v1",
-    "api_key": "sk-or-your-api-key-here"
+    "base_url": "https://vendor.example/api/v1",
+    "api_key": "your-api-key-here"
   }
 }
 ```
@@ -72,35 +73,65 @@ If you prefer a file-based approach:
 The `models` list names the model files in `tts-narrator/models/` that this
 provider serves. The first provider listed in `config.json` is the default,
 and the first model in its list is the one preselected on launch — so to make
-OpenRouter the default, `config.json` should read
-`{"providers": ["openrouter"]}`.
+this provider the default, `config.json` should read
+`{"providers": ["alpha"]}`.
 
 ✅ Works for both double-click and CLI launches
-✅ Takes highest precedence over GUI setting
+✅ Read fresh on every launch, so editing the file is enough — no reinstall
 
 ### Method 3: Environment Variable (Terminal)
 
-If you launch the app from Terminal:
+The app never reads a key straight out of the environment. It reads the
+provider block's `api_key` setting and expands a `${VAR}` reference in that
+setting against the environment. An exported variable therefore only takes
+effect if the config file points at it.
+
+In `providers/alpha.json`:
+
+```json
+{
+  "settings": {
+    "base_url": "https://vendor.example/api/v1",
+    "api_key": "${VENDOR_API_KEY}"
+  }
+}
+```
+
+Then launch from Terminal:
 
 ```bash
-export OPENROUTER_API_KEY="sk-or-your-api-key"
+export VENDOR_API_KEY="your-api-key"
 ./tts-narrator
 ```
+
+⚠️ A bare `export` with no `${VENDOR_API_KEY}` reference in the config file does
+nothing — the variable is set, but nothing reads it.
 
 ---
 
 ## Where Are Your Settings Stored?
 
-- **GUI API key** → **Keychain Access**: `OpenRouter API Key`
-- **Config file** → `~/.config/tts-narrator/providers/openrouter.json`
-- **Environment Variable** → Active shell session only
+- **GUI API key** → **Keychain Access**, one entry per provider, named
+  `tts-narrator.api_key.<provider>` (e.g. `tts-narrator.api_key.alpha`)
+- **Config file** → `~/.config/tts-narrator/providers/<provider>.json`
+- **Environment Variable** → only when the config's `api_key` is a `${VAR}`
+  reference; active shell session only
 
-If you want to change the API key, you can edit either the GUI or the config file. The GUI stores it in Keychain, while
-the config file stores it as plain text (choose according to your security preferences).
+A key resolves in this order:
+
+1. **Keychain** — a key you saved in the GUI
+2. **Config file** — a literal `api_key` in the provider block
+3. **Environment** — an `api_key` written as `${VAR}`
+
+The keychain wins because the provider file arrives from a remote download,
+while a keychain entry is something you typed deliberately. Remove the
+keychain entry to fall back to the config file. A provider whose block declares
+no `api_key` needs no credential at all, and a run with no usable key sends no
+`Authorization` header rather than failing up front.
 
 ## Need Your API Key?
 
-Get a free OpenRouter API key at [openrouter.ai](https://openrouter.ai)
+Get one from whichever TTS provider you have configured.
 
 ---
 

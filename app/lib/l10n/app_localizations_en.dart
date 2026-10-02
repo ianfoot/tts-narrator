@@ -232,7 +232,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gui_settings_apiKeySectionTooltip =>
-      'API key for OpenRouter authentication';
+      'API key for the narration provider';
 
   @override
   String get gui_settings_apiKeyStatusLabel => 'Key source';
@@ -255,7 +255,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gui_settings_apiKeyFieldTooltip =>
-      'OpenRouter API key, saved to the system keychain';
+      'API key, saved to the system keychain';
 
   @override
   String get gui_settings_apiKeySave => 'Save';

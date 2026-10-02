@@ -83,7 +83,7 @@ class ManifestVoiceConfig {
 
   final Map<String, List<String>> _platforms;
 
-  /// Provider file names to fetch on every platform (e.g. `['openrouter.json']`).
+  /// Provider file names to fetch on every platform (e.g. `['alpha.json']`).
   final List<String> providers;
 
   /// The starter model file names (e.g. `['fish.json', 'kokoro.json']`) for

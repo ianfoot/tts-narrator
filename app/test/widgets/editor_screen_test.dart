@@ -35,8 +35,8 @@ void main() {
   void writeFishConfig() {
     fixtures.writeConfig(configDir, {
       'providers': {
-        'openrouter': {
-          'base_url': 'https://openrouter.ai/api/v1',
+        'alpha': {
+          'base_url': 'https://vendor.example/api/v1',
           'api_key': 'sk-test',
         },
       },
