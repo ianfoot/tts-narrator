@@ -8,10 +8,10 @@ import 'wav.dart';
 /// [outputPath]. Segments are joined in list order, so pass them in narration
 /// (index) order.
 ///
-/// - `format == 'pcm'`: each input must be a WAV; the PCM payload of its
-///   `data` chunk is extracted and all payloads are written as one fresh WAV.
-///   All segments share the profile sample rate, so the frame layout stays
-///   valid and [sampleRate] drives the combined header.
+/// - `format != 'mp3'` (`wav` or `pcm`): each input must be a WAV; the PCM
+///   payload of its `data` chunk is extracted and all payloads are written as
+///   one fresh WAV. All segments share the profile sample rate, so the frame
+///   layout stays valid and [sampleRate] drives the combined header.
 /// - otherwise (MP3): files are appended byte-for-byte. Same-codec, same-
 ///   encoder MP3s splice cleanly; a brief silence may be audible at each
 ///   boundary since there is no re-encoding step.
@@ -30,7 +30,7 @@ String concatSegments(
       outputPath,
     );
   }
-  if (format == 'pcm') {
+  if (format != 'mp3') {
     final merged = BytesBuilder(copy: false);
     for (final path in audioPaths) {
       merged.add(_pcmPayload(_readSegment(path)));

@@ -202,7 +202,7 @@ Future<void> narrate(
   final stem = inputStem(config.inputPath);
   final dir = outputDirPath(config);
   final outDir = Directory(dir)..createSync(recursive: true);
-  final extension = config.profile.format == 'pcm' ? 'wav' : 'mp3';
+  final extension = config.profile.format == 'mp3' ? 'mp3' : 'wav';
   final rate = config.profile.sampleRate;
   final records = <Map<String, Object?>>[];
 
