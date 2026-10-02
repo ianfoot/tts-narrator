@@ -2,14 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator/src/gui/controller/api_key_store.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/controller/controller_errors.dart'
-    show CannotOpenTextFile, NoApiKeyConfigured, NoVoiceSelected;
+    show CannotOpenTextFile, NoVoiceSelected;
 import 'package:tts_narrator/src/gui/controller/run_controller.dart'
     show NarrationBlockReason;
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
@@ -18,6 +18,7 @@ import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/fake_tts_provider.dart';
+import '../support/settings_fixtures.dart' as fixtures;
 
 void main() {
   late Directory dir;
@@ -32,53 +33,79 @@ void main() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
-  /// Writes the shared grouped config body onto the flat layout: global keys
-  /// (`default_model`, `providers`) to config.json, and each `models` entry
-  /// plus its `defaults`/`pricing`/`voices` to <alias>.json. Specs without a
-  /// `provider` default to `openrouter` so model files stay valid.
-  void writeConfig(Map<String, Object?> body) {
-    final global = <String, Object?>{
-      if (body['default_model'] != null) 'default_model': body['default_model'],
-      if (body['providers'] != null) 'providers': body['providers'],
-    };
-    File('$configDir/config.json')
-      ..parent.createSync(recursive: true)
-      ..writeAsStringSync(const JsonEncoder().convert(global));
+  /// Writes the shared grouped config body onto the registry layout, against
+  /// this group's config dir.
+  void writeConfig(Map<String, Object?> body) =>
+      fixtures.writeConfig(configDir, body);
 
-    final models = (body['models'] as Map<String, Object?>?) ?? {};
-    if (models.isEmpty) return;
-    final defaults = (body['defaults'] as Map<String, Object?>?) ?? {};
-    final pricing = (body['pricing'] as Map<String, Object?>?) ?? {};
-    final voices = (body['voices'] as Map<String, Object?>?) ?? {};
-    Directory(configDir).createSync(recursive: true);
-    models.forEach((alias, spec) {
-      final m = Map<String, Object?>.from(spec as Map<String, Object?>);
-      m.putIfAbsent('provider', () => 'openrouter');
-      final dv = defaults[alias];
-      final pr = pricing[alias];
-      final vo = voices[alias];
-      if (dv is String) m['default_voice'] = dv;
-      if (pr is Map) m['pricing'] = pr;
-      if (vo is Map) m['voices'] = vo;
-      File('$configDir/$alias.json')
-          .writeAsStringSync(const JsonEncoder().convert(m));
+  /// [environment] defaults to empty so no test depends on what the host shell
+  /// exports; pass a map to exercise `${ENV}` reference resolution.
+  AppController makeController({
+    SpeechClient? client,
+    ApiKeyStore? apiKeyStore,
+    Map<String, String>? environment,
+  }) => AppController(
+    loader: UserVoiceConfigLoader(
+      configDir: configDir,
+      environment: environment ?? const {},
+    ),
+    apiKeyStore: apiKeyStore,
+    client: client,
+  );
+
+  /// An [ApiKeyStore] that has already completed its startup [ApiKeyStore.load]
+  /// (against the in-memory mock) so the cached key for [provider] is
+  /// deterministically [key]. A null [key] means "nothing stored" for that
+  /// provider; any other provider's entry is cleared by the mock reset too.
+  Future<ApiKeyStore> storeLoadedWith(
+    String? key, {
+    String provider = 'openrouter',
+  }) async {
+    FlutterSecureStorage.setMockInitialValues(<String, String>{
+      'tts-narrator.api_key.$provider': ?key,
     });
+    final store = ApiKeyStore();
+    await store.load();
+    return store;
   }
 
-  AppController makeController() =>
-      AppController(loader: UserVoiceConfigLoader(configDir: configDir));
-
-  /// Writes the starter fish config (a `default_model` and a fish model file
+  /// Writes the starter fish config (a fish model file claimed by a provider)
   /// mirroring the shipped voice-config layout) so the controller preselects
   /// fish with its default voice, as it does after the first-run download.
   void writeFishConfig() {
     writeConfig({
-      'default_model': 'fish',
       'providers': {
-        'openrouter': {'api_key': 'sk-test'},
+        'openrouter': {
+          'base_url': 'https://openrouter.ai/api/v1',
+          'api_key': 'sk-test',
+        },
       },
       'models': {
         'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+      },
+      'defaults': {'fish': 'British Female Narrator'},
+      'voices': {
+        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+      },
+    });
+  }
+
+  /// As [writeFishConfig], but the model declares `prompt_style`, which is
+  /// what derives the prompt-controls portion of the model-options spec.
+  void writePromptStyleFishConfig() {
+    writeConfig({
+      'providers': {
+        'openrouter': {
+          'base_url': 'https://openrouter.ai/api/v1',
+          'api_key': 'sk-test',
+        },
+      },
+      'models': {
+        'fish': {
+          'id': 'fish-audio/s2.1-pro-free:free',
+          'format': 'mp3',
+          'prompt_style': true,
+        },
       },
       'defaults': {'fish': 'British Female Narrator'},
       'voices': {
@@ -98,7 +125,7 @@ void main() {
       expect(c.wordCount, 0);
       expect(c.charCount, 0);
       expect(c.plannedSegments, isEmpty);
-      // No config models and no default_model -> no model to select, so
+      // No config models -> no model to select, so
       // narration is unavailable until a config (or the starter download)
       // provides one.
       expect(c.profile, isNull);
@@ -131,7 +158,7 @@ void main() {
 
     test('setText with identical value is ignored', () {
       final c = makeController();
-c.setText('Hello');
+      c.setText('Hello');
       expect(c.dirty, isTrue);
       // Editing does not name the document; it stays null until first save.
       expect(c.documentName, isNull);
@@ -228,7 +255,7 @@ c.setText('Hello');
       expect(cfg.inputPath, 'untitled.txt');
       expect(cfg.profile.alias, 'fish');
       expect(cfg.voice, '89f41ea230034706881f85a8227d6ab9');
-      expect(cfg.providerSettings['api_key'], 'sk-test');
+      expect(cfg.apiKey, 'sk-test');
       expect(cfg.pricing, freePricing);
     });
 
@@ -326,9 +353,8 @@ c.setText('Hello');
     /// secure-store fallback exists for.
     void writeEnvRefFishConfig(String ref) {
       writeConfig({
-        'default_model': 'fish',
-        'providers': {
-          'openrouter': {'OPENROUTER_API_KEY': ref},
+          'providers': {
+          'openrouter': {'api_key': ref},
         },
         'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
@@ -342,91 +368,388 @@ c.setText('Hello');
       });
     }
 
-    /// An [ApiKeyStore] that has already completed its startup [ApiKeyStore.load]
-    /// (against the in-memory mock) so the cached [ApiKeyStore.value] is
-    /// deterministically [key].
-    Future<ApiKeyStore> storeLoadedWith(String? key) async {
-      FlutterSecureStorage.setMockInitialValues(<String, String>{
-        'openrouter_api_key': ?key,
-      });
-      final store = ApiKeyStore();
-      await store.load();
-      return store;
-    }
-
     test(
       'an unresolvable \${ENV} ref falls back to the securely stored key',
       () async {
         writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
         final c = AppController(
-          loader: UserVoiceConfigLoader(configDir: configDir),
+          loader: UserVoiceConfigLoader(
+            configDir: configDir,
+            environment: const {},
+          ),
           apiKeyStore: await storeLoadedWith('sk-stored'),
         )..setText('A sentence.');
-        final cfg = c.buildConfig();
-        expect(cfg.providerSettings['OPENROUTER_API_KEY'], 'sk-stored');
+final cfg = c.buildConfig();
+        expect(cfg.apiKey, 'sk-stored');
         expect(c.apiKeySource, ApiKeySource.keychain);
-        expect(c.apiKeyMissing, isFalse);
       },
     );
 
-    test('a config literal keeps precedence over the stored key', () async {
+    test('a config literal is the key when nothing is stored', () async {
       writeFishConfig(); // `api_key: sk-test` literal.
       final c = AppController(
-        loader: UserVoiceConfigLoader(configDir: configDir),
-        apiKeyStore: await storeLoadedWith('sk-stored'),
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
+        apiKeyStore: await storeLoadedWith(null),
       )..setText('A sentence.');
       final cfg = c.buildConfig();
-      expect(cfg.providerSettings['api_key'], 'sk-test');
+      expect(cfg.apiKey, 'sk-test');
       expect(c.apiKeySource, ApiKeySource.config);
     });
 
     test(
       'a resolvable \${ENV} ref flows through and reads as environment',
       () async {
-        writeEnvRefFishConfig(r'${HOME}'); // always set on the test host.
+        writeEnvRefFishConfig(r'${HOME}');
         final c = AppController(
-          loader: UserVoiceConfigLoader(configDir: configDir),
+          loader: UserVoiceConfigLoader(
+            configDir: configDir,
+            environment: const {'HOME': '/home/test'},
+          ),
           apiKeyStore: await storeLoadedWith('sk-stored'),
         )..setText('A sentence.');
         final cfg = c.buildConfig();
-        expect(
-          cfg.providerSettings['OPENROUTER_API_KEY'],
-          Platform.environment['HOME'],
-        );
+        expect(cfg.apiKey, 'sk-stored');
+        expect(c.apiKeySource, ApiKeySource.keychain);
+      },
+    );
+
+    test('a securely stored key overrides a config literal', () async {
+      // Deliberate: the provider file arrives from a remote download, so a key
+      // in it can be a pooled credential. A keychain entry was typed by this
+      // user, so it wins.
+      writeFishConfig(); // `api_key: sk-test` literal.
+      final c = AppController(
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
+        apiKeyStore: await storeLoadedWith('sk-stored'),
+      )..setText('A sentence.');
+      final cfg = c.buildConfig();
+      expect(cfg.apiKey, 'sk-stored');
+      expect(c.apiKeySource, ApiKeySource.keychain);
+    });
+
+    test(
+      'a resolvable \${ENV} ref flows through and reads as environment',
+      () async {
+        writeEnvRefFishConfig(r'${HOME}');
+        final c = AppController(
+          loader: UserVoiceConfigLoader(
+            configDir: configDir,
+            environment: const {'HOME': '/home/test'},
+          ),
+          apiKeyStore: ApiKeyStore(),
+        )..setText('A sentence.');
+        final cfg = c.buildConfig();
+        expect(cfg.apiKey, '/home/test');
         expect(c.apiKeySource, ApiKeySource.environment);
       },
     );
 
-    test(
-      'plan errors with the friendly message when no key exists anywhere',
-      () {
-        writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
-        final c = AppController(
-          loader: UserVoiceConfigLoader(configDir: configDir),
-          apiKeyStore: ApiKeyStore(),
-        )..setText('A sentence.');
-        expect(() => c.buildConfig(), throwsA(isA<NoApiKeyConfigured>()));
-        expect(c.apiKeyMissing, isTrue);
-      },
-    );
+    test('the key never lands in providerSettings', () async {
+      writeFishConfig(); // `api_key: sk-test` literal.
+      final c = AppController(
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
+        apiKeyStore: await storeLoadedWith('sk-stored'),
+      )..setText('A sentence.');
+      final settings = c.buildConfig().providerSettings;
+      expect(settings.containsKey('api_key'), isFalse,
+          reason: 'the secret travels as NarrationConfig.apiKey, not as a setting');
+    });
+
+    test('a run is never blocked when no key exists anywhere', () {
+      // The load-bearing guarantee: whether a provider *needs* a key is the
+      // server's judgement, so the app must not refuse to build a run. A null
+      // apiKey means "send no Authorization header", not "error".
+      writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
+      final c = AppController(
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
+        apiKeyStore: ApiKeyStore(),
+      )..setText('A sentence.');
+      expect(() => c.buildConfig(), returnsNormally);
+      expect(c.buildConfig().apiKey, isNull);
+      expect(c.apiKeySource, ApiKeySource.missing);
+    });
 
     test('saving/removing through the store flips the rail status', () async {
       writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
       final c = AppController(
-        loader: UserVoiceConfigLoader(configDir: configDir),
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
         apiKeyStore: await storeLoadedWith(null),
       );
-      expect(c.apiKeyMissing, isTrue);
+      expect(c.apiKeySource, ApiKeySource.missing);
       await c.saveApiKey(' sk-stored ');
       expect(c.hasStoredApiKey, isTrue);
       expect(c.apiKeySource, ApiKeySource.keychain);
-      expect(
-        c.buildConfig().providerSettings['OPENROUTER_API_KEY'],
-        'sk-stored',
-      );
+      expect(c.buildConfig().apiKey, 'sk-stored');
       await c.removeApiKey();
       expect(c.hasStoredApiKey, isFalse);
-      expect(c.apiKeyMissing, isTrue);
+      expect(c.apiKeySource, ApiKeySource.missing);
+    });
+  });
+
+  group('per-provider key store', () {
+    setUp(() {
+      FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    });
+
+    /// Two providers, each claiming its own model, so switching model switches
+    /// which provider the active model resolves to.
+    void writeTwoProviderConfig() {
+      writeConfig({
+        'providers': {
+          'openrouter': {
+            'models': ['fish'],
+            'base_url': 'https://openrouter.ai/api/v1',
+            'api_key': r'${OPENROUTER_API_KEY}',
+          },
+          'groq': {
+            'models': ['gemini'],
+            'base_url': 'https://api.groq.invalid',
+            'api_key': r'${GROQ_API_KEY}',
+          },
+        },
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'gemini': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'format': 'pcm',
+            'sample_rate': 24000,
+          },
+        },
+        'defaults': {
+          'fish': 'British Female Narrator',
+          'gemini': 'Charon',
+        },
+        'voices': {
+          'fish': {
+            'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          },
+        },
+      });
+    }
+
+    test('a saved key is filed under the active provider only', () async {
+      writeTwoProviderConfig();
+      final c = AppController(
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
+        apiKeyStore: await storeLoadedWith(null),
+      );
+      expect(c.profile?.provider, 'openrouter');
+
+      await c.saveApiKey('sk-or');
+      expect(c.hasStoredApiKey, isTrue);
+
+      // Read the store back independently: the secret must sit in openrouter's
+      // namespace and nowhere else.
+      final reread = ApiKeyStore();
+      await reread.load();
+      expect(reread.value('openrouter'), 'sk-or');
+      expect(reread.value('groq'), isNull);
+    });
+
+    test('switching model switches which stored key is visible', () async {
+      writeTwoProviderConfig();
+      final c = AppController(
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
+        apiKeyStore: await storeLoadedWith(null),
+      );
+
+      // Neither provider has a key yet, so the rail reports "Not set" for both.
+      expect(c.hasStoredApiKey, isFalse);
+      expect(c.apiKeySource, ApiKeySource.missing);
+
+      await c.saveApiKey('sk-or');
+      expect(c.hasStoredApiKey, isTrue);
+      expect(c.apiKeySource, ApiKeySource.keychain);
+      expect(c.buildConfig().apiKey, 'sk-or');
+
+      // Switching to the other provider must not inherit openrouter's key.
+      c.changeModel('gemini');
+      expect(c.profile?.provider, 'groq');
+      expect(c.hasStoredApiKey, isFalse);
+      expect(c.apiKeySource, ApiKeySource.missing);
+      expect(c.buildConfig().apiKey, isNull);
+
+      // Saving under groq leaves openrouter's key intact.
+      await c.saveApiKey('gsk-groq');
+      expect(c.buildConfig().apiKey, 'gsk-groq');
+      c.changeModel('fish');
+      expect(c.hasStoredApiKey, isTrue);
+      expect(c.buildConfig().apiKey, 'sk-or');
+
+      // Removing under groq touches only groq's slot.
+      c.changeModel('gemini');
+      await c.removeApiKey();
+      expect(c.hasStoredApiKey, isFalse);
+      c.changeModel('fish');
+      expect(c.hasStoredApiKey, isTrue);
+    });
+
+    test('saving with no model configured is a no-op', () async {
+      final c = makeController();
+      expect(c.profile, isNull);
+      await expectLater(c.saveApiKey('sk-orphan'), completes);
+      await expectLater(c.removeApiKey(), completes);
+      expect(c.hasStoredApiKey, isFalse);
+    });
+  });
+
+  group('api_key resolution', () {
+    setUp(() {
+      FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    });
+
+    /// Writes a fish config whose only provider is [providerName], declaring
+    /// exactly [settings]. The provider file's name is what the model resolves
+    /// its provider to, so this also proves the name is not special-cased.
+    void writeProviderConfig(
+      String providerName,
+      Map<String, String> settings,
+    ) {
+      writeConfig({
+        'providers': {providerName: {...settings}},
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+        },
+        'defaults': {'fish': 'British Female Narrator'},
+        'voices': {
+          'fish': {
+            'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          },
+        },
+      });
+    }
+
+    test(
+      r'the shipped shape: a ${ENV} reference resolves from the environment',
+      () async {
+        // The shipped provider block carries `"api_key": "${OPENROUTER_API_KEY}"`.
+        writeProviderConfig('openrouter', {
+          'base_url': 'https://openrouter.ai/api/v1',
+          'api_key': r'${OPENROUTER_API_KEY}',
+        });
+        final c = makeController(
+          environment: const {'OPENROUTER_API_KEY': 'sk-from-env'},
+        )..setText('A sentence.');
+
+        final cfg = c.buildConfig();
+        expect(
+          cfg.providerSettings['base_url'],
+          'https://openrouter.ai/api/v1',
+        );
+        expect(cfg.apiKey, 'sk-from-env');
+        expect(c.apiKeySource, ApiKeySource.environment);
+      },
+    );
+
+    test(r'an unresolvable ${ENV} reference falls back to the stored key',
+        () async {
+      writeProviderConfig('openrouter', {
+        'api_key': r'${OPENROUTER_API_KEY}',
+      });
+      final c = AppController(
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
+        apiKeyStore: await storeLoadedWith('sk-stored'),
+      )..setText('A sentence.');
+
+      expect(c.buildConfig().apiKey, 'sk-stored');
+      expect(c.apiKeySource, ApiKeySource.keychain);
+    });
+
+    test(r'an unresolvable ${ENV} reference does not block the run', () {
+      writeProviderConfig('openrouter', {
+        'api_key': r'${OPENROUTER_API_KEY}',
+      });
+      final c = makeController()..setText('A sentence.');
+
+      expect(() => c.buildConfig(), returnsNormally);
+      expect(c.buildConfig().apiKey, isNull);
+      // Not `environment`: nothing was actually sent from the environment.
+      expect(c.apiKeySource, ApiKeySource.missing);
+    });
+
+    test('a non-openrouter provider declaring api_key is recognised as keyed',
+        () async {
+      writeProviderConfig('groq', {
+        'base_url': 'https://api.groq.invalid',
+        'api_key': 'gsk-test',
+      });
+      final c = makeController(
+        apiKeyStore: await storeLoadedWith(null),
+      )..setText('A sentence.');
+
+      expect(c.profile?.provider, 'groq');
+      expect(c.apiKeySource, ApiKeySource.config);
+      expect(c.buildConfig().apiKey, 'gsk-test');
+    });
+
+    test(r'a non-openrouter provider can use a ${ENV} reference', () {
+      writeProviderConfig('groq', {'api_key': r'${GROQ_API_KEY}'});
+      final c = makeController(
+        environment: const {'GROQ_API_KEY': 'gsk-env'},
+      )..setText('A sentence.');
+
+      expect(c.apiKeySource, ApiKeySource.environment);
+      expect(() => c.buildConfig(), returnsNormally);
+    });
+
+    test('a keyless provider reports missing but still runs', () async {
+      // The local starter: base_url only, no credential.
+      writeProviderConfig('mlx_audio', {
+        'base_url': 'http://localhost:8000/v1',
+      });
+      final c = makeController(
+        apiKeyStore: await storeLoadedWith(null),
+      )..setText('A sentence.');
+
+      expect(c.apiKeySource, ApiKeySource.missing);
+      final settings = c.buildConfig().providerSettings;
+      expect(settings['base_url'], 'http://localhost:8000/v1');
+      expect(settings.containsKey('api_key'), isFalse);
+    });
+
+    test('a keyless provider still honours a key entered in the app', () async {
+      // The point of always offering the section: the config says nothing about
+      // a credential, but the user may hold one, and the server — not the app —
+      // decides whether it is wanted.
+      writeProviderConfig('mlx_audio', {
+        'base_url': 'http://localhost:8000/v1',
+      });
+      final c = makeController(
+        apiKeyStore: await storeLoadedWith('sk-stored', provider: 'mlx_audio'),
+      )..setText('A sentence.');
+
+      expect(c.apiKeySource, ApiKeySource.keychain);
+      expect(c.buildConfig().apiKey, 'sk-stored');
+    });
+
+    test('a no-model config reports missing and has no key', () {
+      final c = makeController();
+      expect(c.activeProvider, isNull);
+      expect(c.apiKeySource, ApiKeySource.missing);
     });
   });
 
@@ -476,8 +799,7 @@ c.setText('Hello');
 
     test('a preserved raw voice drops the previous model label on switch', () {
       writeConfig({
-        'default_model': 'fish',
-        'models': {
+      'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
@@ -506,8 +828,7 @@ c.setText('Hello');
 
     test('resolveVoice wires a friendly alias to its raw id', () {
       writeConfig({
-        'default_model': 'fish',
-        'models': {
+      'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
         },
         'voices': {
@@ -522,39 +843,57 @@ c.setText('Hello');
   });
 
   group('voice gender', () {
-    void writeKokoro() {
-      writeConfig({
-        'models': {
-          'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+    // A provider's `models` list is what claims a model file, so a body
+    // naming only one of the two would leave the other orphaned and unread.
+    // The combined writer is how a test that needs both declares them.
+    final kokoroBody = <String, Object?>{
+      'models': {
+        'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+      },
+      'defaults': {'kokoro': 'Emma'},
+      'voices': {
+        'kokoro': {
+          'Alice': {'id': 'bf_alice', 'gender': 'female'},
+          'Daniel': {'id': 'bm_daniel', 'gender': 'male'},
+          'Emma': {'id': 'bf_emma', 'gender': 'female'},
+          'Fable': {'id': 'bm_fable', 'gender': 'male'},
         },
-        'defaults': {'kokoro': 'Emma'},
-        'voices': {
-          'kokoro': {
-            'Alice': {'id': 'bf_alice', 'gender': 'female'},
-            'Daniel': {'id': 'bm_daniel', 'gender': 'male'},
-            'Emma': {'id': 'bf_emma', 'gender': 'female'},
-            'Fable': {'id': 'bm_fable', 'gender': 'male'},
-          },
-        },
-      });
-    }
+      },
+    };
 
-    void writeGemini() {
-      writeConfig({
-        'models': {
-          'gemini': {
-            'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
-            'sample_rate': 24000,
-            'prompt_style': true,
-          },
+    final geminiBody = <String, Object?>{
+      'models': {
+        'gemini': {
+          'id': 'google/gemini-3.1-flash-tts-preview',
+          'format': 'pcm',
+          'sample_rate': 24000,
+          'prompt_style': true,
         },
-        'defaults': {'gemini': 'Charon'},
-        'voices': {
-          'gemini': {'Charon': 'Charon'},
-        },
-      });
-    }
+      },
+      'defaults': {'gemini': 'Charon'},
+      'voices': {
+        'gemini': {'Charon': 'Charon'},
+      },
+    };
+
+    void writeKokoro() => writeConfig(kokoroBody);
+
+    void writeGemini() => writeConfig(geminiBody);
+
+    void writeKokoroAndGemini() => writeConfig({
+      'models': {
+        ...kokoroBody['models']! as Map<String, Object?>,
+        ...geminiBody['models']! as Map<String, Object?>,
+      },
+      'defaults': {
+        ...kokoroBody['defaults']! as Map<String, Object?>,
+        ...geminiBody['defaults']! as Map<String, Object?>,
+      },
+      'voices': {
+        ...kokoroBody['voices']! as Map<String, Object?>,
+        ...geminiBody['voices']! as Map<String, Object?>,
+      },
+    });
 
     test('hasGenderTags is true when a model tags voices', () {
       writeKokoro();
@@ -594,8 +933,7 @@ c.setText('Hello');
     });
 
     test('changeModel resets the gender filter', () {
-      writeKokoro();
-      writeGemini();
+      writeKokoroAndGemini();
       final c = makeController()..changeModel('kokoro');
       c.voiceGenderFilter = VoiceGender.male;
       expect(c.voiceGenderFilter, VoiceGender.male);
@@ -690,10 +1028,7 @@ c.setText('Hello');
 
     test('blocks when no model is configured', () {
       final c = makeController();
-      expect(
-        c.narrateBlockReason(),
-        NarrationBlockReason.noModelConfigured,
-      );
+      expect(c.narrateBlockReason(), NarrationBlockReason.noModelConfigured);
     });
 
     test('allows narration with text present and a configured model', () {
@@ -704,8 +1039,9 @@ c.setText('Hello');
 
     test('blocks re-entrancy once a run starts', () async {
       writeFishConfig();
-      final c = makeController()..setText('Hello world. Enough words.');
-      final fake = FakeTtsProvider()..register();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client)
+        ..setText('Hello world. Enough words.');
       c.sampleLen = 1;
       c.outDir = dir.path;
       c.startRun();
@@ -734,14 +1070,14 @@ c.setText('Hello');
     setUp(() => writeFishConfig());
 
     test('sampleLen sizes the segment plan so progress completes at 100%', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'First paragraph with enough words to become its own segment and then '
         'carry on a little longer to cross the minimum.\n\n'
         'Second paragraph with enough words to become its own segment as well '
         'and then carry on a little longer to cross the minimum.',
       );
-      final fake = FakeTtsProvider()..register();
       c.sampleLen = 1;
       c.outDir = dir.path;
       c.startRun();
@@ -754,14 +1090,14 @@ c.setText('Hello');
     });
 
     test('cancelling a run clears the in-flight segment spinner', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'First paragraph with enough words to become its own segment and then '
         'carry on a little longer to cross the minimum.\n\n'
         'Second paragraph with enough words to become its own segment as well '
         'and then carry on a little longer to cross the minimum.',
       );
-      FakeTtsProvider().register();
       c.outDir = dir.path;
       c.startRun();
       c.cancelRun();
@@ -772,13 +1108,13 @@ c.setText('Hello');
     });
 
     test('a successful run records the combined track path', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'A single paragraph long enough that it does not need any other '
         'company. It crosses the minimum word count comfortably and becomes '
         'one segment all on its own, plain and simple.',
       );
-      FakeTtsProvider().register();
       c.outDir = dir.path;
       expect(c.completedAudioPath, isNull);
       c.startRun();
@@ -791,14 +1127,14 @@ c.setText('Hello');
     });
 
     test('a cancelled run never records a combined track path', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'First paragraph with enough words to become its own segment and then '
         'carry on a little longer to cross the minimum.\n\n'
         'Second paragraph with enough words to become its own segment as well '
         'and then carry on a little longer to cross the minimum.',
       );
-      FakeTtsProvider().register();
       c.outDir = dir.path;
       c.startRun();
       c.cancelRun();
@@ -808,17 +1144,16 @@ c.setText('Hello');
     });
 
     test('cancelRun makes narration idle immediately', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'First paragraph with enough words to become its own segment and then '
         'carry on a little longer to cross the minimum.\n\n'
         'Second paragraph with enough words to become its own segment as well '
         'and then carry on a little longer to cross the minimum.',
       );
-      final fake = FakeTtsProvider();
       final gate = Completer<void>();
       fake.gate = gate;
-      fake.register();
       c.outDir = dir.path;
       c.startRun();
       expect(c.narrating, isTrue);
@@ -837,7 +1172,8 @@ c.setText('Hello');
     });
 
     test('a successor run is not clobbered by the cancelled predecessor', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'First paragraph with enough words to become its own segment on its '
         'own, carrying straight past the minimum without needing any company '
@@ -847,10 +1183,8 @@ c.setText('Hello');
         'also carrying well past the minimum so it does not fuse with anything '
         'around it either. It clears the bar all by itself just the same.',
       );
-      final fake = FakeTtsProvider();
       final gate = Completer<void>();
       fake.gate = gate;
-      fake.register();
       c.outDir = dir.path;
       c.sampleLen = null;
       // Run A: gated mid-flight, then cancelled.
@@ -875,13 +1209,13 @@ c.setText('Hello');
     });
 
     test('starting a new run clears a prior completed track path', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'A single paragraph long enough that it does not need any other '
         'company. It crosses the minimum word count comfortably and becomes '
         'one segment all on its own, plain and simple.',
       );
-      FakeTtsProvider().register();
       c.outDir = dir.path;
       c.startRun();
       await Future<void>.delayed(const Duration(milliseconds: 20));
@@ -904,13 +1238,13 @@ c.setText('Hello');
 
     test('canCleanupSegments enables and cleanupSegments removes per-segment '
         'files while keeping the combined track', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'A single paragraph long enough that it does not need any other '
         'company. It crosses the minimum word count comfortably and becomes '
         'one segment all on its own, plain and simple.',
       );
-      final fake = FakeTtsProvider()..register();
       c.outDir = dir.path;
       c.startRun();
       await Future<void>.delayed(const Duration(milliseconds: 20));
@@ -948,8 +1282,9 @@ c.setText('Hello');
     });
 
     test('cleanupSegments is a no-op while a run is in flight', () async {
-      final c = makeController()..setText('Hello world. Enough words.');
-      FakeTtsProvider().register();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client)
+        ..setText('Hello world. Enough words.');
       c.sampleLen = 1;
       c.outDir = dir.path;
       c.startRun();
@@ -960,22 +1295,63 @@ c.setText('Hello');
   });
 
   group('modelUiSpec', () {
-    test('empty when no provider registers a spec for the model', () {
+    test('empty when the active model declares no capabilities', () {
       final c = makeController();
       expect(c.modelUiSpec.isEmpty, isTrue);
     });
 
-    test('resolves the active model spec from the registered provider', () {
-      final fake = FakeTtsProvider()
-        ..specsByAlias['fish'] = const ModelUiSpec([
-          ModelUiControl(key: 'accent', label: 'Accent'),
-        ]);
-      fake.register();
-      writeFishConfig();
+    test('prompt_style derives the prompt controls for the active model', () {
+      writePromptStyleFishConfig();
       final c = makeController();
       expect(c.modelUiSpec.isEmpty, isFalse);
       final keys = c.modelUiSpec.options.map((o) => o.key).toList();
-      expect(keys, ['accent']);
+      expect(keys, ['gender', 'accent', 'style', 'passagePrefix']);
+    });
+
+    test('speed adds only the speed control', () {
+      writeConfig({
+        'providers': {
+          'openrouter': {
+            'base_url': 'https://openrouter.ai/api/v1',
+            'api_key': 'sk-test',
+          },
+        },
+        'models': {
+          'fast': {
+            'id': 'openai/gpt-4o-mini-tts',
+            'format': 'mp3',
+            'speed': true,
+          },
+        },
+      });
+      final c = makeController();
+      final keys = c.modelUiSpec.options.map((o) => o.key).toList();
+      expect(keys, ['speed']);
+    });
+
+    test('follows the selected model when it switches', () {
+      writeConfig({
+        'providers': {
+          'openrouter': {
+            'base_url': 'https://openrouter.ai/api/v1',
+            'api_key': 'sk-test',
+          },
+        },
+        'models': {
+          'plain': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'styled': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'format': 'pcm',
+            'sample_rate': 24000,
+            'prompt_style': true,
+          },
+        },
+      });
+      final c = makeController();
+      expect(c.modelUiSpec.isEmpty, isTrue);
+      c.changeModel('styled');
+      final keys = c.modelUiSpec.options.map((o) => o.key).toList();
+      expect(keys, ['gender', 'accent', 'style', 'passagePrefix']);
     });
   });
 

@@ -1,4 +1,5 @@
 {
+  "providers": ["openrouter.json", "mlx_audio.json"],
   "platforms": {
     "macos": [
       "fish.json",

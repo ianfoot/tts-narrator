@@ -93,6 +93,10 @@ class _ApiKeySectionState extends State<ApiKeySection> {
 
   @override
   Widget build(BuildContext context) {
+    // Offered for every selected model, keyed or not: the user may hold a key
+    // the config never mentions, and whether the endpoint requires one is the
+    // server's call. Hidden only when there is no provider to file a key under.
+    if (_controller.activeProvider == null) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Disclosure(
@@ -105,16 +109,14 @@ class _ApiKeySectionState extends State<ApiKeySection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            settingsFieldLabel(
-              _tokens,
-              _l10n.gui_settings_apiKeyStatusLabel,
-            ),
+            settingsFieldLabel(_tokens, _l10n.gui_settings_apiKeyStatusLabel),
             Text(
               _controller.apiKeySource.apiKeyStatusLabel(_l10n),
+              // Neutral whatever the state: "Not set" is a fact, not a fault.
+              // The app does not decide whether a provider needs a key, so
+              // styling it as an error would assert something it cannot know.
               style: _tokens.typography.body.copyWith(
-                color: _controller.apiKeyMissing
-                    ? _tokens.colors.accentError
-                    : _tokens.colors.textSecondary,
+                color: _tokens.colors.textSecondary,
               ),
             ),
             const SizedBox(height: 12),

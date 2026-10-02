@@ -24,7 +24,10 @@ class RunController extends ChangeNotifier {
     required this._document,
     required this._settings,
     required this._model,
-  });
+    SpeechClient? client,
+  }) : _client = client ?? _defaultClient();
+
+  static SpeechClient _defaultClient() => OpenAiSpeechClient().synthesize;
 
   /// The open document (read only to block run start on empty text).
   final DocumentController _document;
@@ -34,6 +37,12 @@ class RunController extends ChangeNotifier {
 
   /// The active model (read only for the pricing fallback in estimates).
   final ModelProfileVoiceController _model;
+
+  /// The speech seam handed to `narrate` for every segment.
+  ///
+  /// Defaults to the OpenAI-protocol client, which every configured provider
+  /// speaks; injectable so tests can drive a run without an HTTP server.
+  final SpeechClient _client;
 
   // --- Run state + command slots -------------------------------------
 
@@ -200,6 +209,7 @@ class RunController extends ChangeNotifier {
       try {
         await narrate(
           config,
+          client: _client,
           abort: token,
           onProgress: (i, total, paragraph, {resumed = false}) {
             segments[i].running = true;
@@ -228,8 +238,8 @@ class RunController extends ChangeNotifier {
       } on AbortException {
         if (isCurrentRun()) _runStopped = true;
       } catch (e) {
-        // Includes non-Exception failures (e.g. a StateError from an
-        // unregistered provider) — surface them instead of crashing the view.
+        // Includes non-Exception failures (e.g. a StateError for a missing
+        // base_url) — surface them instead of crashing the view.
         if (isCurrentRun()) runError = e.toString();
       }
     } finally {

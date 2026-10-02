@@ -10,7 +10,9 @@ import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
     show ApiKeySource;
 import 'package:tts_narrator/src/gui/settings/api_key_section.dart';
+
 import '../support/l10n_test_support.dart';
+
 import 'package:tts_narrator/src/gui/widgets/app_button.dart';
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 
@@ -20,12 +22,12 @@ import '../support/settings_fixtures.dart';
 /// keychain / Secret Service.
 class _FailingApiKeyStore extends ApiKeyStore {
   @override
-  Future<void> save(String key) async {
+  Future<void> save(String provider, String key) async {
     throw StateError('key store unreachable');
   }
 
   @override
-  Future<void> remove() async {
+  Future<void> remove(String provider) async {
     throw StateError('key store unreachable');
   }
 }
@@ -54,7 +56,7 @@ void main() {
   testWidgets('shows "Not set" and a disabled Remove when no key exists', (
     tester,
   ) async {
-    writeFishConfig(configDir); // no providers block -> no config/env key.
+    writeFishConfig(configDir);
     final c = makeController(configDir);
     await pumpSection(tester, c);
 
@@ -79,6 +81,40 @@ void main() {
     expect(find.text('Not set'), findsOneWidget);
     expect(buttonWith(tester, 'apiKeySaveButton').onPressed, isNotNull);
     expect(buttonWith(tester, 'apiKeyRemoveButton').onPressed, isNull);
+  });
+
+  testWidgets('is offered for a keyless provider', (tester) async {
+    // The whole point: the config declares no credential, but the user may
+    // still hold one, and whether the endpoint wants it is the server's call.
+    writeConfig(configDir, {
+      'providers': {
+        'mlx_audio': {'base_url': 'http://localhost:8000/v1'},
+      },
+      'models': {
+        'mlx_kokoro': {'id': 'mlx-community/Kokoro-82M-bf16', 'format': 'wav'},
+      },
+      'defaults': {'mlx_kokoro': 'George'},
+      'voices': {
+        'mlx_kokoro': {'George': {'id': 'bm_george', 'gender': 'male'}},
+      },
+    });
+    final c = makeController(configDir);
+    expect(c.activeProvider, 'mlx_audio');
+    await pumpSection(tester, c);
+
+    expect(find.byKey(const Key('apiKeyDisclosure')), findsOneWidget);
+    await expandApiKey(tester);
+    expect(find.byKey(const Key('apiKeyField')), findsOneWidget);
+  });
+
+  testWidgets('is hidden when no model is selected', (tester) async {
+    // No model means no provider to file a key under, so `saveApiKey` would be
+    // a no-op and the box could not do anything.
+    final c = makeController(configDir);
+    expect(c.activeProvider, isNull);
+    await pumpSection(tester, c);
+
+    expect(find.byKey(const Key('apiKeyDisclosure')), findsNothing);
   });
 
   testWidgets('saving a key flips the status to keychain and enables Remove', (
@@ -113,7 +149,7 @@ void main() {
     await tester.tap(find.byKey(const Key('apiKeyRemoveButton')));
     await tester.pumpAndSettle();
     expect(c.hasStoredApiKey, isFalse);
-    expect(c.apiKeyMissing, isTrue);
+    expect(c.apiKeySource, ApiKeySource.missing);
     expect(find.text('Not set'), findsOneWidget);
   });
 
@@ -153,9 +189,8 @@ void main() {
     tester,
   ) async {
     writeConfig(configDir, {
-      'default_model': 'fish',
       'providers': {
-        'openrouter': {'OPENROUTER_API_KEY': r'${TTS_NARRATOR_NOT_SET}'},
+        'openrouter': {'api_key': r'${TTS_NARRATOR_NOT_SET}'},
       },
       'models': {
         'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
@@ -166,7 +201,7 @@ void main() {
       },
     });
     FlutterSecureStorage.setMockInitialValues({
-      'openrouter_api_key': 'sk-stored',
+      'tts-narrator.api_key.openrouter': 'sk-stored',
     });
     final store = ApiKeyStore();
     await store.load();
@@ -178,6 +213,6 @@ void main() {
 
     // "Stored in keychain" shows as the collapsed caption.
     expect(find.text('Stored in keychain'), findsOneWidget);
-    expect(c.buildConfig().providerSettings['OPENROUTER_API_KEY'], 'sk-stored');
+    expect(c.buildConfig().apiKey, 'sk-stored');
   });
 }

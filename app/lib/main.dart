@@ -5,16 +5,26 @@ import 'package:flutter/cupertino.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
-import 'package:tts_narrator_openrouter/openrouter_tts_provider.dart';
-import 'package:tts_narrator_mlx_audio/mlx_audio_tts_provider.dart';
 
+import 'l10n/app_localizations.dart';
 import 'src/gui/controller/app_controller.dart';
 import 'src/gui/controller/config_loader.dart';
 import 'src/gui/platform/app_root.dart';
 import 'src/gui/platform/platform_detection.dart';
-import 'l10n/app_localizations.dart';
 
-/// Root app that provides a Navigator so ConfigBootstrap can show dialogs.
+/// Injectable config downloader (defaults to [downloadVoiceConfigFiles]);
+/// tests inject a controllable fake so the spinner is observable.
+///
+/// [providers] is the manifest's provider file list: a model file is
+/// meaningless without the block that names it, so provider files travel with
+/// the models rather than in a separate download.
+typedef VoiceConfigDownloader =
+    Future<void> Function(
+      String configDir,
+      List<String> files, {
+      List<String> providers,
+    });
+
 class BootstrapApp extends StatelessWidget {
   const BootstrapApp({
     super.key,
@@ -28,7 +38,7 @@ class BootstrapApp extends StatelessWidget {
 
   /// Injectable config downloader (defaults to [downloadVoiceConfigFiles]);
   /// tests inject a controllable fake so the spinner is observable.
-  final Future<void> Function(String configDir, List<String> files)? downloader;
+  final VoiceConfigDownloader? downloader;
 
   /// Injectable starter-manifest loader (defaults to a cached-fetch from
   /// GitHub); tests inject a fake so the bootstrap is hermetic.
@@ -75,7 +85,7 @@ class ConfigBootstrap extends StatefulWidget {
   final SharedPreferences prefs;
 
   /// Injectable config downloader (defaults to [downloadVoiceConfigFiles]).
-  final Future<void> Function(String configDir, List<String> files)? downloader;
+  final VoiceConfigDownloader? downloader;
 
   /// Injectable starter-manifest loader (defaults to a cached-fetch from
   /// GitHub); tests inject a fake so the bootstrap is hermetic.
@@ -92,6 +102,11 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   /// The starter model files expected on this platform (from the manifest).
   /// Populated before the download prompt; reused by the downloader.
   List<String> _starterFiles = const [];
+
+  /// The provider files every platform needs (from the manifest). Kept apart
+  /// from [_starterFiles] because they are fetched alongside the models but are
+  /// not models, so naming them in the download prompt would be wrong.
+  List<String> _starterProviders = const [];
 
   /// Created once and reused across rebuilds (including hot reload), so the
   /// controller identity stays stable and widget listeners stay attached.
@@ -145,25 +160,42 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   /// The starter model files for this platform: from the manifest when
   /// available, else a platform-neutral fallback without macOS-only models
   /// (offline first run still offers the cloud starters).
+  ///
+  /// Also records the manifest's provider files, which every platform needs
+  /// regardless of which models it starts with.
   Future<List<String>> _loadStarterFiles() async {
     final manifest = await _loadManifest();
+    _starterProviders = manifest?.providers ?? const [];
     return manifest?.filesFor(platformTag) ?? _fallbackStarterFiles;
   }
 
   /// Platform-neutral starter set used when the manifest is unreachable
   /// (mlx_kokoro.json is macOS-only data, so it is never in this fallback).
+  ///
+  /// With no manifest there are no provider files to fetch, so the fallback
+  /// ships models only; the loader ignores models no provider claims anyway.
   static const _fallbackStarterFiles = [
     'fish.json',
     'gemini.json',
     'kokoro.json',
   ];
 
+  /// Whether [file] exists under [subdir] of the config directory.
+  bool _existsIn(String subdir, String file) =>
+      File('${widget.configDir}/$subdir/$file').existsSync();
+
   void _checkConfig() async {
     _starterFiles = await _loadStarterFiles();
-    final configFile = File('${widget.configDir}/config.json');
+    final registry = File(
+      '${widget.configDir}/$kVoiceConfigRegistryName',
+    ).existsSync();
+    // A config is complete only when the registry, every provider it needs, and
+    // every starter model are on disk: the loader reaches models through
+    // providers, so a missing provider file makes a downloaded model unusable.
     final missing =
-        !configFile.existsSync() ||
-        _starterFiles.any((f) => !File('${widget.configDir}/$f').existsSync());
+        !registry ||
+        _starterProviders.any((f) => !_existsIn(kVoiceConfigProvidersDir, f)) ||
+        _starterFiles.any((f) => !_existsIn(kVoiceConfigModelsDir, f));
 
     if (missing) {
       await _promptDownload();
@@ -207,11 +239,19 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   Future<void> _downloadWithSpinner() async {
     final downloader =
         widget.downloader ??
-        (String configDir, List<String> files) =>
-            downloadVoiceConfigFiles(configDir, files: files);
+        (String configDir, List<String> files, {List<String> providers = const []}) =>
+            downloadVoiceConfigFiles(
+              configDir,
+              files: files,
+              providers: providers,
+            );
     if (mounted) setState(() => _downloading = true);
     try {
-      await downloader(widget.configDir, _starterFiles);
+      await downloader(
+        widget.configDir,
+        _starterFiles,
+        providers: _starterProviders,
+      );
     } finally {
       if (mounted) setState(() => _downloading = false);
       if (mounted) setState(() => _ready = true);
@@ -269,12 +309,6 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  // Providers are registered on every platform: the local OpenAI-compatible
-  // provider (id `mlx_audio`) is a plain HTTP client and works anywhere a
-  // compatible server answers; per-platform differences live in data (which
-  // starter voice-config files ship, via voice-config/manifest.json).
-  ttsProviderRegistry.register('openrouter', OpenRouterTtsProvider.new);
-  ttsProviderRegistry.register('mlx_audio', MlxAudioTtsProvider.new);
 
   final appSupportDir = await getApplicationSupportDirectory();
   final configDir = appSupportDir.path;

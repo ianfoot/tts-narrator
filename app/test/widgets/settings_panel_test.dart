@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
@@ -12,13 +11,13 @@ import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
     show ApiKeySource;
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
-import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
-import '../support/l10n_test_support.dart';
 import 'package:tts_narrator/src/gui/widgets/app_button.dart';
+import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 import 'package:tts_narrator/src/gui/widgets/segmented_control.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
-import '../support/fake_tts_provider.dart';
+import '../support/l10n_test_support.dart';
+import '../support/settings_fixtures.dart' as fixtures;
 
 void main() {
   late Directory dir;
@@ -33,49 +32,51 @@ void main() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
-  /// Writes the shared grouped config body onto the flat layout: global keys
-  /// (`default_model`, `providers`) to config.json, and each `models` entry
-  /// plus its `defaults`/`pricing`/`voices` to <alias>.json. Specs without a
-  /// `provider` default to `openrouter` so model files stay valid.
-  void writeConfig(Map<String, Object?> body) {
-    final global = <String, Object?>{
-      if (body['default_model'] != null) 'default_model': body['default_model'],
-      if (body['providers'] != null) 'providers': body['providers'],
-    };
-    File('$configDir/config.json')
-      ..parent.createSync(recursive: true)
-      ..writeAsStringSync(const JsonEncoder().convert(global));
+  /// Writes the shared grouped config body onto the registry layout, against
+  /// this group's config dir.
+  void writeConfig(Map<String, Object?> body) =>
+      fixtures.writeConfig(configDir, body);
 
-    final models = (body['models'] as Map<String, Object?>?) ?? {};
-    if (models.isEmpty) return;
-    final defaults = (body['defaults'] as Map<String, Object?>?) ?? {};
-    final pricing = (body['pricing'] as Map<String, Object?>?) ?? {};
-    final voices = (body['voices'] as Map<String, Object?>?) ?? {};
-    Directory(configDir).createSync(recursive: true);
-    models.forEach((alias, spec) {
-      final m = Map<String, Object?>.from(spec as Map<String, Object?>);
-      m.putIfAbsent('provider', () => 'openrouter');
-      final dv = defaults[alias];
-      final pr = pricing[alias];
-      final vo = voices[alias];
-      if (dv is String) m['default_voice'] = dv;
-      if (pr is Map) m['pricing'] = pr;
-      if (vo is Map) m['voices'] = vo;
-      File('$configDir/$alias.json')
-          .writeAsStringSync(const JsonEncoder().convert(m));
-    });
-  }
-
-  AppController makeController() =>
-      AppController(loader: UserVoiceConfigLoader(configDir: configDir));
+  /// Pass [client] to drive narration with a fake instead of the network;
+  /// omitting it keeps the real client, which is correct for tests that never
+  /// start a run. [environment] defaults to empty so no test depends on what
+  /// the host shell exports.
+  AppController makeController({
+    SpeechClient? client,
+    Map<String, String>? environment,
+  }) => AppController(
+    loader: UserVoiceConfigLoader(
+      configDir: configDir,
+      environment: environment ?? const {},
+    ),
+    client: client,
+  );
 
   /// Writes the starter fish config so the controller preselects fish with its
   /// default voice (as after the first-run download).
   void writeFishConfig() {
     writeConfig({
-      'default_model': 'fish',
       'models': {
         'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+      },
+      'defaults': {'fish': 'British Female Narrator'},
+      'voices': {
+        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+      },
+    });
+  }
+
+  /// As [writeFishConfig], but the model declares `prompt_style` and/or
+  /// `speed`, which is what derives the model-options controls now that the
+  /// section is config-driven instead of provider-declared.
+  void writeFishConfigWith(Map<String, Object?> modelFlags) {
+    writeConfig({
+      'models': {
+        'fish': {
+          'id': 'fish-audio/s2.1-pro-free:free',
+          'format': 'mp3',
+          ...modelFlags,
+        },
       },
       'defaults': {'fish': 'British Female Narrator'},
       'voices': {
@@ -206,8 +207,7 @@ void main() {
 
     testWidgets('picking a voice alias resolves to its raw id', (tester) async {
       writeConfig({
-        'default_model': 'fish',
-        'models': {
+          'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
         },
         'voices': {
@@ -332,13 +332,13 @@ void main() {
       tester,
     ) async {
       writeConfig({
-        'default_model': 'fish',
-        'models': {
+          'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
           'kokoro': {
             'id': 'hexgrad/kokoro-82m',
             'format': 'mp3',
             'display_name': 'Kokoro 82M',
+            'speed': true,
           },
         },
         'defaults': {'kokoro': 'Emma'},
@@ -355,21 +355,11 @@ void main() {
           },
         },
       });
-      // The real openrouter plugin declares a speed option for the
-      // kokoro-family model; emulate that spec per-alias via the fake.
-      final fake = FakeTtsProvider()
-        ..specsByAlias['kokoro'] = const ModelUiSpec([
-          ModelUiControl(
-            key: 'speed',
-            label: 'Speed',
-            type: ModelUiOptionType.speed,
-          ),
-        ]);
-      fake.register();
+      // Kokoro declares "speed": true in its model file, so the rail offers
+      // the slider for it; fish declares nothing and gets none.
       final c = makeController();
       await pumpRail(tester, c);
 
-      // Fish's plugin declares no model options -> no speed slider.
       expect(c.modelAlias, 'fish');
       expect(find.text('MODEL OPTIONS'), findsNothing);
       expect(find.byKey(const Key('speedSlider')), findsNothing);
@@ -404,17 +394,6 @@ void main() {
           'gemini': {'Charon': 'Charon'},
         },
       });
-      // The real openrouter plugin surfaces gender as a Model option for
-      // prompt-styled models; emulate that spec via the fake provider.
-      final fake = FakeTtsProvider()
-        ..modelUiSpec = const ModelUiSpec([
-          ModelUiControl(
-            key: 'gender',
-            label: 'Narrator gender',
-            type: ModelUiOptionType.gender,
-          ),
-        ]);
-      fake.register();
       final c = makeController();
       c.changeModel('gemini');
       await pumpRail(tester, c);
@@ -434,27 +413,15 @@ void main() {
     });
   });
 
-  group('model options (from the plugin spec)', () {
-    const geminiSpec = ModelUiSpec([
-      ModelUiControl(key: 'accent', label: 'Accent'),
-      ModelUiControl(key: 'style', label: 'Style / register'),
-      ModelUiControl(
-        key: 'passagePrefix',
-        label: 'Passage prefix',
-        type: ModelUiOptionType.multiline,
-      ),
-    ]);
-
+  group('model options (derived from the model profile)', () {
     testWidgets('declared fields render and write through to the controller', (
       tester,
     ) async {
-      writeFishConfig();
-      final fake = FakeTtsProvider()..modelUiSpec = geminiSpec;
-      fake.register();
+      writeFishConfigWith({'prompt_style': true});
       final c = makeController();
       await pumpRail(tester, c);
 
-      // The plugin declared the section, so the controls exist.
+      // prompt_style derives the section, so the controls exist.
       expect(find.text('MODEL OPTIONS'), findsOneWidget);
       expect(find.byKey(const Key('accentField')), findsOneWidget);
       expect(find.byKey(const Key('styleField')), findsOneWidget);
@@ -487,11 +454,10 @@ void main() {
       expect(c.passagePrefix, 'Read this passage.');
     });
 
-    testWidgets('an empty spec renders no model options section', (
+    testWidgets('a model with no declared options renders no section', (
       tester,
     ) async {
       writeFishConfig();
-      FakeTtsProvider().register();
       final c = makeController();
       await pumpRail(tester, c);
 
@@ -500,39 +466,10 @@ void main() {
       expect(find.byKey(const Key('useCalmTagSwitch')), findsNothing);
     });
 
-    testWidgets('unbindable keys are ignored rather than crashing the rail', (
+    testWidgets('a speed-capable model renders a slider defaulting to 1.0', (
       tester,
     ) async {
-      writeFishConfig();
-      // A future plugin may declare a key this app version cannot bind; it must
-      // not render and must not throw during build.
-      final fake = FakeTtsProvider()
-        ..modelUiSpec = const ModelUiSpec([
-          ModelUiControl(key: 'tone', label: 'Tone'),
-          ModelUiControl(key: 'accent', label: 'Accent'),
-        ]);
-      fake.register();
-      final c = makeController();
-      await pumpRail(tester, c);
-
-      expect(tester.takeException(), isNull);
-      expect(find.byKey(const Key('toneField')), findsNothing);
-      expect(find.byKey(const Key('accentField')), findsOneWidget);
-    });
-
-    testWidgets('a declared speed option renders a slider and writes through', (
-      tester,
-    ) async {
-      writeFishConfig();
-      final fake = FakeTtsProvider()
-        ..modelUiSpec = const ModelUiSpec([
-          ModelUiControl(
-            key: 'speed',
-            label: 'Speed',
-            type: ModelUiOptionType.speed,
-          ),
-        ]);
-      fake.register();
+      writeFishConfigWith({'speed': true});
       final c = makeController();
       await pumpRail(tester, c);
 
@@ -545,16 +482,7 @@ void main() {
     testWidgets('a declared hint shows as the field placeholder', (
       tester,
     ) async {
-      writeFishConfig();
-      final fake = FakeTtsProvider()
-        ..modelUiSpec = const ModelUiSpec([
-          ModelUiControl(
-            key: 'style',
-            label: 'Style / register',
-            hint: 'e.g. warm, restrained',
-          ),
-        ]);
-      fake.register();
+      writeFishConfigWith({'prompt_style': true});
       final c = makeController();
       await pumpRail(tester, c);
 
@@ -564,7 +492,7 @@ void main() {
           matching: find.byType(CupertinoTextField),
         ),
       );
-      expect(field.placeholder, 'e.g. warm, restrained');
+      expect(field.placeholder, 'e.g., Warm, composed, literary');
     });
   });
 
@@ -787,7 +715,7 @@ void main() {
         await tester.tap(find.byKey(const Key('apiKeyRemoveButton')));
         await tester.pumpAndSettle();
         expect(c.hasStoredApiKey, isFalse);
-        expect(c.apiKeyMissing, isTrue);
+        expect(c.apiKeySource, ApiKeySource.missing);
         expect(find.text('Not set'), findsOneWidget);
       },
     );
@@ -796,9 +724,8 @@ void main() {
       tester,
     ) async {
       writeConfig({
-        'default_model': 'fish',
-        'providers': {
-          'openrouter': {'OPENROUTER_API_KEY': r'${TTS_NARRATOR_NOT_SET}'},
+          'providers': {
+          'openrouter': {'api_key': r'${TTS_NARRATOR_NOT_SET}'},
         },
         'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
@@ -811,7 +738,7 @@ void main() {
         },
       });
       FlutterSecureStorage.setMockInitialValues({
-        'openrouter_api_key': 'sk-stored',
+        'tts-narrator.api_key.openrouter': 'sk-stored',
       });
       final store = ApiKeyStore();
       await store.load();
@@ -823,10 +750,7 @@ void main() {
 
       // "Stored in keychain" shows as the collapsed caption.
       expect(find.text('Stored in keychain'), findsOneWidget);
-      expect(
-        c.buildConfig().providerSettings['OPENROUTER_API_KEY'],
-        'sk-stored',
-      );
+      expect(c.buildConfig().apiKey, 'sk-stored');
     });
   });
 
@@ -850,19 +774,7 @@ void main() {
           'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
         },
       });
-      // The fake stands in for the openrouter plugin: gemini declares its
-      // styling options; the default fish model declares none.
-      final fake = FakeTtsProvider()
-        ..specsByAlias['gemini'] = const ModelUiSpec([
-          ModelUiControl(key: 'accent', label: 'Accent'),
-          ModelUiControl(key: 'style', label: 'Style / register'),
-          ModelUiControl(
-            key: 'passagePrefix',
-            label: 'Passage prefix',
-            type: ModelUiOptionType.multiline,
-          ),
-        ]);
-      fake.register();
+      // gemini declares prompt_style, so switching to it derives its options.
       final c = makeController();
       await tester.binding.setSurfaceSize(const Size(1200, 1800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -882,7 +794,6 @@ void main() {
 
       expect(c.modelAlias, 'gemini');
       expect(c.voice, 'CN2pVME9cDEeMRXJzcMPYj0p');
-      // Switching to gemini brings its plugin-declared options.
       expect(find.byKey(const Key('accentField')), findsOneWidget);
       expect(tester.takeException(), isNull);
 

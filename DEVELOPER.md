@@ -7,8 +7,8 @@ For end-user documentation (install, usage, voice configuration), see
 
 - Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.5`, Dart 3.13.4).
 - An OpenRouter API key for cloud narration (see the README and
-  **[MAC.md](MAC.md)** for setup options). The local OpenAI-compatible
-  provider (`mlx_audio`) needs no key.
+  **[MAC.md](MAC.md)** for setup options). A local OpenAI-compatible audio
+  server needs no key.
 
 ## Repository structure
 
@@ -16,86 +16,114 @@ A Dart **pub workspace** — `pubspec.yaml` at the repo root lists the members
 and holds the single shared lockfile:
 
 - `packages/core` — `tts_narrator_core`, the pure-Dart narration core: voice
-  config load/save, segmentation, provider-agnostic TTS dispatch, cost
+  config load/save, segmentation, the OpenAI-protocol speech client, cost
   estimates. No Flutter or GUI dependencies.
-- `packages/providers/openrouter` — the OpenRouter `TtsProvider`
-  implementation.
-- `packages/providers/mlx_audio` — the local OpenAI-compatible audio
-  `TtsProvider` (id `mlx_audio`; registered on every platform). Talks to any
-  `/v1/audio/speech` endpoint — defaulting to the Apple-Silicon-only
-  [mlx-audio](https://github.com/Blaizzy/mlx-audio) server at
-  `http://localhost:8000` — so endpoint and model are data, not code.
 - `app` — `tts_narrator`, the Flutter GUI (macOS, with a scaffolded Linux
-  runner). Registers both providers at startup (`lib/main.dart`).
-- `voice_config.example/` — sample config: `config.json` (providers / `${ENV}`
-  references, no secrets) plus one `<alias>.json` per model.
+  runner). Constructs the speech client and hands it to the run controller
+  (`lib/main.dart`).
+- `voice-config/` — the shipped voice config, and the **only** copy of it:
+  `config.json` (the ordered provider registry), `providers/<name>.json` (one
+  per provider, with `${ENV}` references and no secrets),
+  `models/<alias>.json` (one per model), and `manifest.json` (bootstrap
+  machinery listing provider files and per-platform starter models). The app
+  downloads these from this repo into the platform config directory at first
+  run — nothing reads them in place. This tree used to have a
+  `voice_config.example/` twin for documentation, but the two drifted (the copy
+  was missing the `:free` model id and declared the wrong output format for
+  MLX), so there is now just the one.
 
-The core is provider-agnostic, so the same core can be driven from the GUI or
-new providers without rework.
+Core speaks one wire protocol — OpenAI's `/v1/audio/speech` — so every vendor is
+reached by configuring a `base_url` and a model id, not by writing code. The
+same core can be driven from the GUI or from another front end without rework.
 
 ## Voice configuration internals
 
 The config **directory** is shared by the CLI and the GUI (macOS/Linux default
 to `~/.config/tts-narrator`, Windows to `%APPDATA%`):
 
-- `config.json` — `default_model` plus the per-provider settings block
-  (secrets).
-- `<alias>.json` — one file per model: `id`, `provider`, `format`,
-  `sample_rate`, `prompt_style`, `default_voice`, `pricing`, and `voices`
-  (friendly aliases). The `voices` values may be plain strings or objects with
-  `id` and an optional `gender` (`male`/`female`/`neutral`).
+- `config.json` — the registry: an ordered list of provider names, nothing
+  else. The first entry is the default provider.
+- `providers/<name>.json` — one file per provider: a `models` list naming the
+  models that provider serves, and a `settings` block (secrets).
+- `models/<alias>.json` — one file per model: `id`, `format`, `sample_rate`,
+  `prompt_style`, `speed`, `default_voice`, `pricing`, and `voices` (friendly
+  aliases). The `voices` values may be plain strings or objects with `id` and
+  an optional `gender` (`male`/`female`/`neutral`).
 
-Secrets: `providers.<id>` is an opaque string→string map. A value of the form
-`${ENV_NAME}` reads that environment variable once at run-config build time (a
-missing or empty variable is an error naming it); any other value is used
+The relation is inverted: a provider names its models, not the other way
+round, so a model file carries no `provider` key. The loader builds the
+alias→provider index from the providers and stamps it onto each profile; a
+model file no provider names is ignored silently. Because ordering is
+meaningful, the default model is the first model in the first provider's list
+rather than a `default_model` key — a filename sort cannot be trusted to
+express "preferred".
+
+Secrets: a provider's `settings` is an opaque string→string map. A value of the
+form `${ENV_NAME}` reads that environment variable once at run-config build time
+(a missing or empty variable is an error naming it); any other value is used
 literally. The rule is generic — core never interprets the keys, and each
-provider keeps its own key names.
+vendor keeps its own setting names.
 
 The GUI reads the `path_provider` `getApplicationSupportDirectory()` config
-(`tts-narrator/` subfolder) for voice aliases and the per-provider settings
-block, but never writes it — edit those files directly. It has no secret-key
-field; each provider's key comes from the `providers.<id>` block in
-`config.json`. Note: a GUI app launched from the Finder doesn't inherit a
-shell's environment, so for double-click use write a literal key in
-`providers.openrouter` instead of a `${OPENROUTER_API_KEY}` reference.
+(`tts-narrator/` subfolder) for voice aliases and the per-provider `settings`
+block, but never writes it — edit those files directly. A key can come from
+three places, in this order: the OS keychain (what the user typed into the
+Settings rail), an `api_key` literal in the provider block, then an `api_key`
+`${VAR}` reference. Keychain first on purpose — the provider file is
+downloaded from a remote, so a key in it may belong to someone else, while a
+keychain entry was typed deliberately by this user. Note a GUI app launched from
+the Finder doesn't inherit a shell's environment, so for double-click use either
+enter the key in Settings or set `api_key` literally.
 
-## Providers
+The app never blocks a run on a missing key. `api_key` is stripped out of
+`NarrationConfig.providerSettings` and delivered as `NarrationConfig.apiKey`
+alongside it, so a secret is never in the settings map; a null `apiKey` just
+means the request carries no `Authorization` header and the server decides. A
+401/403 from the vendor is the only place the user is told to add a key.
 
-The narration layer is provider-agnostic: **core** (`packages/core`) defines a
-`TtsProvider` interface — `synthesize(model, voice, input, responseFormat,
-settings)` → `ProviderAudio` — and a `TtsProviderRegistry` that maps a provider
-id to a factory function. Core ships **no** provider; concrete providers live
-in their own workspace packages and are registered by the GUI at startup.
+## Voice vendors
 
-- **The built-in provider**: `packages/providers/openrouter` implements the
-  interface for OpenRouter's `/audio/speech` endpoint — Bearer auth from the
-  resolved settings, retry/backoff on transient failures, and
-  `X-Generation-Id` mapped onto `ProviderAudio.generationId`.
-- **The local OpenAI-compatible provider**: `packages/providers/mlx_audio`
-  synthesizes via any OpenAI-compatible `/v1/audio/speech` server (default
-  `http://localhost:8000`, no API key needed, optional Bearer token from an
-  `api_key`/`apiKey` provider setting). The endpoint is resolved from the
-  provider settings (`endpoint`) before the constructor default, and the
-  requested model is the model file's `id` — so other local runtimes (MLX or
-  otherwise) work with no code, just a model file + settings. Its default
-  preset ships as `voice-config/mlx_kokoro.json`.
-- **Adding a provider** = a workspace package implementing `TtsProvider`,
-  registered at startup, plus a `providers.<id>` block in `config.json`
-  for its secrets. Route models to it with `"provider": "<id>"` in their model
-  file.
+Every vendor speaks the same wire protocol, so there is exactly one client in
+**core**: `OpenAiSpeechClient`. `SpeechClient` is the function type the
+narration layer takes — `narrate` requires one, and `RunController` owns the
+concrete instance (`OpenAiSpeechClient` by default, overridable through
+`AppController(client:)` so tests never touch the network). Everything that
+varies between vendors is data:
+
+- **Cloud narration** (OpenRouter) is just a `base_url` plus a bearer token
+  from `api_key` (literal or `${ENV}` reference) or the OS keychain.
+  `X-Generation-Id` maps onto
+  `GeneratedAudio.generationId`.
+- **A local OpenAI-compatible server** (e.g. the Apple-Silicon-only
+  [mlx-audio](https://github.com/Blaizzy/mlx-audio) server at
+  `http://localhost:8000`) needs no key — a keyless block simply sends no
+  `Authorization` header. Its default preset ships as
+  `voice-config/models/mlx_kokoro.json`.
+- **Adding a vendor** = a `providers/<name>.json` file (its `settings`, plus
+  the `models` it serves) and the name added to the `config.json` registry. No
+  code. A model file on its own is inert: nothing reaches it until a provider
+  claims it.
+
+Transport concerns are handled once, in the client, for every vendor: retry on
+`500`/`502`/`503`/`529` and on an empty 2xx stream (`_retries = 3` allowed
+*after* the first, so 4 requests in the worst case, with `2 * attempt` seconds
+of backoff), and abort support.
 
 ## Per-platform starter configs
 
 Which starter model files the first-run bootstrap downloads is decided by data,
-not code: `voice-config/manifest.json` maps a platform tag (`macos`/`linux`/
-`windows`) to the `<alias>.json` files shipped there by default (e.g. Linux and
-Windows omit `mlx_kokoro.json`). `packages/core` fetches/parses the manifest
+not code: `voice-config/manifest.json` carries a top-level `providers` list
+fetched on every platform, and maps a platform tag (`macos`/`linux`/`windows`)
+to the model files shipped there by default (e.g. Linux and Windows omit
+`mlx_kokoro.json`). `packages/core` fetches/parses the manifest
 (`ManifestVoiceConfig`, `fetchVoiceConfigManifest`) and the GUI caches a copy
 in its config dir, then only requires/downloads the current platform's list —
-`config.json` is always fetched. Providers are registered on **every**
-platform; platform affinity lives in the manifest, and a model file that
-references an unregistered provider fails with the core's `'Unknown provider'`
-error (the hard gate).
+provider files travel with them, and `config.json` is always fetched. The
+manifest holds bare file names; the downloader owns which subdirectory each
+lands in, so a path never has to be spelled with either separator. Every
+vendor is reachable on every platform — platform affinity lives entirely in
+the manifest, and a model whose provider has no `base_url` fails before the
+first segment.
 
 ## GUI internals
 
@@ -195,9 +223,10 @@ enums, nullable fields, and typed exceptions — and the widget layer renders it
 - `NarrationBlockReason?` → `NarrationBlockReasonX.message(l10n)`
 - `String? documentName` → `documentNameX.display(l10n)`
 - `ApiKeySource` → `ApiKeySourceX.apiKeyStatusLabel(l10n)`
-- `NoApiKeyConfigured` / `NoVoiceSelected` / `CannotOpenTextFile` /
-  `NoModelConfigured` (in `controller_errors.dart`) →
-  `ControllerErrorMessage.localizedMessage(l10n)`
+- `NoVoiceSelected` / `CannotOpenTextFile` / `NoModelConfigured` (in
+  `controller_errors.dart`) → `ControllerErrorMessage.localizedMessage(l10n)`.
+  A missing API key is deliberately *not* in this list: it is never an error
+  the app raises.
 
 Those extensions all live in
 `app/lib/src/gui/controller/l10n_labels.dart`. **If you find yourself wanting a
@@ -263,7 +292,7 @@ title.
 ## Notes / current behaviour
 
 - OpenRouter's Gemini model page lists `response_format: mp3` as supported, but
-  the provider rejects `mp3` (HTTP 400: *"Gemini TTS only supports
+  the vendor rejects `mp3` (HTTP 400: *"Gemini TTS only supports
   response_format=pcm"*). This tool always requests `pcm` for Gemini and wraps
   it in a WAV container. Kokoro and Fish are requested as `mp3` directly.
   There is no MP3 encoding or concatenation step — the model emits these formats.
@@ -271,9 +300,14 @@ title.
   matching a documented Gemini TTS quirk. (Fish failures are not billed.)
 - The fish bootstrap is compiled in
   (`packages/core/lib/src/narration/model_profiles.dart`); every other model
-  comes from its own `<alias>.json` file in the voice config. Model
-  differences drive how requests are built: prompt-styled models (gemini)
-  expose a "Narrator gender" control in the settings rail's Model options.
+  comes from its own `models/<alias>.json` file in the voice config.
+- Per-model capabilities are declared in the model file, never sniffed from the
+  model id. `prompt_style: true` derives the "Narrator gender" / accent / style /
+  passage-prefix controls in the settings rail's Model options; `speed: true`
+  derives the speed slider and is what puts `speed` in the request body. A
+  model declaring neither shows no model-options section at all. Both are
+  computed by `ModelUiSpec.forProfile`, so adding a vendor can never strand the
+  settings rail.
 - The run view displays an estimated cost + duration. Estimates
   are approximate: pricing comes from each model's OpenRouter page (gemini
   `$1/$20` per 1M text/audio tokens, kokoro `$0.62/M` chars, fish free);

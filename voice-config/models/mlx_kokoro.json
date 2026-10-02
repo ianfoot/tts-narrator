@@ -1,8 +1,8 @@
 {
   "id": "mlx-community/Kokoro-82M-bf16",
-  "provider": "mlx_audio",
   "format": "wav",
   "display_name": "MLX Kokoro 82M",
+  "speed": true,
   "default_voice": "bm_george",
   "voices": {
     "George": {

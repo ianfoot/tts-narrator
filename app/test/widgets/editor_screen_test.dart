@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
@@ -11,12 +10,14 @@ import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
 import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
     show acceleratorLabel;
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
-import '../support/l10n_test_support.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
+import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
+import '../support/l10n_test_support.dart';
+import '../support/settings_fixtures.dart' as fixtures;
 
 void main() {
   late Directory dir;
@@ -32,32 +33,29 @@ void main() {
   });
 
   void writeFishConfig() {
-    File('$configDir/config.json')
-      ..parent.createSync(recursive: true)
-      ..writeAsStringSync(
-        const JsonEncoder().convert({
-          'default_model': 'fish',
-          'providers': {
-            'openrouter': {'api_key': 'sk-test'},
-          },
-        }),
-      );
-    File('$configDir/fish.json').writeAsStringSync(
-      const JsonEncoder().convert({
-        'id': 'fish-audio/s2.1-pro-free:free',
-        'provider': 'openrouter',
-        'format': 'mp3',
-        'default_voice': 'British Female Narrator',
-        'voices': {
-          'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+    fixtures.writeConfig(configDir, {
+      'providers': {
+        'openrouter': {
+          'base_url': 'https://openrouter.ai/api/v1',
+          'api_key': 'sk-test',
         },
-      }),
-    );
+      },
+      'models': {
+        'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+      },
+      'defaults': {'fish': 'British Female Narrator'},
+      'voices': {
+        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+      },
+    });
   }
 
-  Future<AppController> makeController() async {
+  Future<AppController> makeController({SpeechClient? client}) async {
     writeFishConfig();
-    return AppController(loader: UserVoiceConfigLoader(configDir: configDir));
+    return AppController(
+      loader: UserVoiceConfigLoader(configDir: configDir),
+      client: client,
+    );
   }
 
   Future<void> pumpEditor(
@@ -82,7 +80,7 @@ void main() {
   testWidgets('boots to an empty editor with a zeroed status bar', (
     tester,
   ) async {
-    final controller = await makeController();
+    final controller = await makeController(client: FakeTtsProvider().client);
     await pumpEditor(tester, controller);
 
     expect(find.byType(EditorScreen), findsOneWidget);
@@ -282,13 +280,12 @@ void main() {
   });
 
   testWidgets('a completed run shows the full-play button', (tester) async {
-    final controller = await makeController();
+    final controller = await makeController(client: FakeTtsProvider().client);
     controller.setText(
       'A single paragraph long enough that it does not need any other '
       'company. It crosses the minimum word count comfortably and becomes '
       'one segment all on its own, plain and simple.',
     );
-    FakeTtsProvider().register();
     controller.outDir = dir.path;
     controller.startRun();
     await tester.runAsync(() async {
@@ -306,13 +303,12 @@ void main() {
     tester,
   ) async {
     final audio = installFakeAudioPlatform();
-    final controller = await makeController();
+    final controller = await makeController(client: FakeTtsProvider().client);
     controller.setText(
       'A single paragraph long enough that it does not need any other '
       'company. It crosses the minimum word count comfortably and becomes '
       'one segment all on its own, plain and simple.',
     );
-    FakeTtsProvider().register();
     controller.outDir = dir.path;
     controller.startRun();
     await tester.runAsync(() async {
@@ -334,14 +330,13 @@ void main() {
   testWidgets('a stopped run does not show the full-play button', (
     tester,
   ) async {
-    final controller = await makeController();
+    final controller = await makeController(client: FakeTtsProvider().client);
     controller.setText(
       'First paragraph with enough words to become its own segment and then '
       'carry on a little longer to cross the minimum.\n\n'
       'Second paragraph with enough words to become its own segment as well '
       'and then carry on a little longer to cross the minimum.',
     );
-    FakeTtsProvider().register();
     controller.outDir = dir.path;
     controller.startRun();
     controller.cancelRun();
@@ -359,13 +354,12 @@ void main() {
     tester,
   ) async {
     installFakeAudioPlatform();
-    final controller = await makeController();
+    final controller = await makeController(client: FakeTtsProvider().client);
     controller.setText(
       'A single paragraph long enough that it does not need any other '
       'company. It crosses the minimum word count comfortably and becomes '
       'one segment all on its own, plain and simple.',
     );
-    FakeTtsProvider().register();
     controller.outDir = dir.path;
 
     // First run completes and starts playing.

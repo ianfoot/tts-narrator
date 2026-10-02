@@ -7,7 +7,6 @@ import 'package:tts_narrator/src/gui/settings/model_options_section.dart';
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
-import '../support/fake_tts_provider.dart';
 import '../support/settings_fixtures.dart';
 
 void main() {
@@ -26,25 +25,33 @@ void main() {
   Future<void> pumpSection(WidgetTester tester, AppController c) =>
       pumpSettingsSection(tester, ModelOptionsSection(controller: c));
 
+  /// Writes a single `fish` model with the given extra model-file keys, so a
+  /// test can opt a model into the prompt-style and/or speed capabilities
+  /// that `ModelUiSpec.forProfile` derives its controls from.
+  void writeCapableFish(Map<String, Object?> extra) {
+    writeConfig(configDir, {
+      'models': {
+        'fish': {
+          'id': 'fish-audio/s2.1-pro-free:free',
+          'format': 'mp3',
+          ...extra,
+        },
+      },
+      'defaults': {'fish': 'British Female Narrator'},
+      'voices': {
+        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+      },
+    });
+  }
+
   testWidgets('declared fields render and write through to the controller', (
     tester,
   ) async {
-    writeFishConfig(configDir);
-    final fake = FakeTtsProvider()
-      ..modelUiSpec = const ModelUiSpec([
-        ModelUiControl(key: 'accent', label: 'Accent'),
-        ModelUiControl(key: 'style', label: 'Style / register'),
-        ModelUiControl(
-          key: 'passagePrefix',
-          label: 'Passage prefix',
-          type: ModelUiOptionType.multiline,
-        ),
-      ]);
-    fake.register();
+    writeCapableFish({'prompt_style': true});
     final c = makeController(configDir);
     await pumpSection(tester, c);
 
-    // The plugin declared the section, so the controls exist.
+    // A prompt-styled model declares the section, so the controls exist.
     expect(find.text('MODEL OPTIONS'), findsOneWidget);
     expect(find.byKey(const Key('accentField')), findsOneWidget);
     expect(find.byKey(const Key('styleField')), findsOneWidget);
@@ -77,9 +84,8 @@ void main() {
     expect(c.passagePrefix, 'Read this passage.');
   });
 
-  testWidgets('an empty spec renders no model options section', (tester) async {
-    writeFishConfig(configDir);
-    FakeTtsProvider().register();
+  testWidgets('a plain model renders no model options section', (tester) async {
+    writeCapableFish(const {});
     final c = makeController(configDir);
     await pumpSection(tester, c);
 
@@ -88,39 +94,22 @@ void main() {
     expect(find.byKey(const Key('useCalmTagSwitch')), findsNothing);
   });
 
-  testWidgets('unbindable keys are ignored rather than crashing the rail', (
+  testWidgets('a speed-only model renders the slider but no prompt fields', (
     tester,
   ) async {
-    writeFishConfig(configDir);
-    // A future plugin may declare a key this app version cannot bind; it must
-    // not render and must not throw during build.
-    final fake = FakeTtsProvider()
-      ..modelUiSpec = const ModelUiSpec([
-        ModelUiControl(key: 'tone', label: 'Tone'),
-        ModelUiControl(key: 'accent', label: 'Accent'),
-      ]);
-    fake.register();
+    writeCapableFish({'speed': true});
     final c = makeController(configDir);
     await pumpSection(tester, c);
 
-    expect(tester.takeException(), isNull);
-    expect(find.byKey(const Key('toneField')), findsNothing);
-    expect(find.byKey(const Key('accentField')), findsOneWidget);
+    expect(find.byKey(const Key('speedSlider')), findsOneWidget);
+    expect(find.byKey(const Key('accentField')), findsNothing);
+    expect(find.byKey(const Key('genderOptionSegmented')), findsNothing);
   });
 
-  testWidgets('a declared speed option renders a slider and writes through', (
+  testWidgets('a speed-capable model renders a slider defaulting to 1.0', (
     tester,
   ) async {
-    writeFishConfig(configDir);
-    final fake = FakeTtsProvider()
-      ..modelUiSpec = const ModelUiSpec([
-        ModelUiControl(
-          key: 'speed',
-          label: 'Speed',
-          type: ModelUiOptionType.speed,
-        ),
-      ]);
-    fake.register();
+    writeCapableFish({'speed': true});
     final c = makeController(configDir);
     await pumpSection(tester, c);
 
@@ -130,24 +119,15 @@ void main() {
     expect(c.speed, 1.0);
   });
 
-  testWidgets('a declared hint shows as the field placeholder', (tester) async {
-    writeFishConfig(configDir);
-    final fake = FakeTtsProvider()
-      ..modelUiSpec = const ModelUiSpec([
-        ModelUiControl(
-          key: 'style',
-          label: 'Style / register',
-          hint: 'e.g. warm, restrained',
-        ),
-      ]);
-    fake.register();
+  testWidgets('a style hint shows as the field placeholder', (tester) async {
+    writeCapableFish({'prompt_style': true});
     final c = makeController(configDir);
     await pumpSection(tester, c);
 
     final field = tester.widget<AppTextField>(
       find.byKey(const Key('styleField')),
     );
-    expect(field.hintText, 'e.g. warm, restrained');
+    expect(field.hintText, 'e.g., Warm, composed, literary');
   });
 
   testWidgets('a gender model option drives the narrator gender filter', (
@@ -168,17 +148,6 @@ void main() {
         'gemini': {'Charon': 'Charon'},
       },
     });
-    // The real openrouter plugin surfaces gender as a Model option for
-    // prompt-styled models; emulate that spec via the fake provider.
-    final fake = FakeTtsProvider()
-      ..modelUiSpec = const ModelUiSpec([
-        ModelUiControl(
-          key: 'gender',
-          label: 'Narrator gender',
-          type: ModelUiOptionType.gender,
-        ),
-      ]);
-    fake.register();
     final c = makeController(configDir);
     c.changeModel('gemini');
     await pumpSection(tester, c);

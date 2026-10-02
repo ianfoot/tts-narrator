@@ -13,9 +13,10 @@ import 'config_loader.dart';
 /// a single change stream.
 ///
 /// There is no compiled default model: when the config directory has no models
-/// (or no `default_model` that resolves to one), [profile] and [modelAlias] are
-/// null and there is nothing to select or narrate with. Narration is blocked
-/// until the user supplies a config (the first-run download prompt guides this).
+/// (or no first provider whose first model resolves to one), [profile] and
+/// [modelAlias] are null and there is nothing to select or narrate with.
+/// Narration is blocked until the user supplies a config (the first-run
+/// download prompt guides this).
 ///
 /// The narration-settings side effects of the gender filter (rewriting the
 /// narrator phrase in the passage prefix) live in [AppController], which owns
@@ -33,8 +34,8 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   final UserVoiceConfigLoader _loader;
 
-  /// The preset default model (the resolved `default_model`), or null when the
-  /// config has none; [changeModel] moves to other configured models.
+  /// The preset default model (the first model of the first provider), or null
+  /// when the config has none; [changeModel] moves to other configured models.
   late String? _modelAlias;
   late VoiceConfig _voiceConfig;
 
@@ -81,22 +82,26 @@ class ModelProfileVoiceController extends ChangeNotifier {
     Map<String, String>? overrides,
   }) => _loader.resolveProviderSettings(profile, overrides: overrides);
 
-  /// The raw (unexpanded) `providers.<id>` block for [profile] straight from
-  /// the config, or an empty map when the provider has no block. The settings
-  /// rail uses this to tell whether a key came from config.json (literal or
-  /// `${ENV}` reference) vs the secure store.
+  /// The raw (unexpanded) `settings` block for [profile] straight from
+  /// `providers/<name>.json`, or an empty map when the provider has no block.
+  /// The settings rail uses this to tell whether a key came from config (literal
+  /// or `${ENV}` reference) vs the secure store.
   Map<String, String> rawProviderSettings(TtsModelProfile profile) =>
-      _voiceConfig.providers[profile.provider] ?? const {};
+      _voiceConfig.providers[profile.provider]?.settings ?? const {};
 
-  /// The editable GUI options for the active model, declared by its model's
-  /// plugin (the provider package). Empty when no model is configured or no
-  /// plugin declares a spec — the app has no per-model UI knowledge.
+  /// The environment the loader expands `${ENV}` references against. Exposed so
+  /// the settings rail resolves an `api_key` reference against the same map the
+  /// run config is built from, rather than a second copy of the process
+  /// environment.
+  Map<String, String> get environment => _loader.environment;
+
+  /// The editable GUI options for the active model, derived from the
+  /// capabilities it declares in its config file. Empty when no model is
+  /// configured or the model declares none — the app has no per-model UI
+  /// knowledge of its own.
   ModelUiSpec get modelUiSpec {
     final p = profile;
-    return p == null
-        ? const ModelUiSpec.empty()
-        : ttsProviderRegistry.resolveOrNull(p.provider)?.modelUiSpecFor(p) ??
-              const ModelUiSpec.empty();
+    return p == null ? const ModelUiSpec.empty() : ModelUiSpec.forProfile(p);
   }
 
   /// Default voice for the active [profile] from the config, or null when the

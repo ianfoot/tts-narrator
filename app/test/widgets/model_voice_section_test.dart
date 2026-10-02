@@ -103,7 +103,6 @@ void main() {
 
     testWidgets('picking a voice alias resolves to its raw id', (tester) async {
       writeConfig(configDir, {
-        'default_model': 'fish',
         'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
         },

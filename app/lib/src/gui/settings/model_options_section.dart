@@ -95,7 +95,9 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
       title: l10n.gui_settings_modelOptionsSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [for (final option in options) _buildModelOption(l10n, option)],
+        children: [
+          for (final option in options) _buildModelOption(l10n, option),
+        ],
       ),
     );
   }

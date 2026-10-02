@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'voice_config_io.dart';
+
 const _repoUrl = 'https://github.com/ianfoot/tts-narrator';
 const _branch = 'main';
 const _voiceConfigDir = 'voice-config';
@@ -18,44 +20,73 @@ const kPlatformTagMacos = 'macos';
 const kPlatformTagLinux = 'linux';
 const kPlatformTagWindows = 'windows';
 
-/// Per-platform starter model file lists, parsed from the repo's
-/// `voice-config/manifest.json`.
+/// Starter file lists, parsed from the repo's `voice-config/manifest.json`.
 ///
-/// Maps a platform tag (`macos` / `linux` / `windows`) to the list of starter
-/// model `<alias>.json` file names that ship by default on that platform.
-/// `config.json` is always downloaded and is not listed here.
+/// Two kinds of file ship by default:
+///   * `providers` — provider files, fetched for every platform, because a
+///     model file is meaningless without the block that names it.
+///   * `platforms` — a platform tag (`macos` / `linux` / `windows`) mapped to
+///     the starter model `<alias>.json` file names to fetch on that platform.
 ///
-/// A platform with no starter files is expressed by omitting its key entirely
-/// (filesFor then returns an empty list).
+/// Entries are bare file names, never paths: the subdirectory each kind lives
+/// in is the downloader's business, which keeps a manifest free of platform
+/// path separators.
+///
+/// `config.json` is always downloaded and is listed in neither. A platform with
+/// no starter files is expressed by omitting its key entirely (filesFor then
+/// returns an empty list), and `platforms` may be omitted altogether.
 class ManifestVoiceConfig {
-  ManifestVoiceConfig._(Map<String, List<String>> platforms)
+  ManifestVoiceConfig._(Map<String, List<String>> platforms, this.providers)
     : _platforms = platforms;
 
   factory ManifestVoiceConfig.fromJson(Map<String, dynamic> json) {
-    final raw = json['platforms'];
-    if (raw is! Map<String, dynamic>) {
-      throw const FormatException('manifest.json must be a {"platforms": ...} object');
-    }
     final platforms = <String, List<String>>{};
-    raw.forEach((tag, entries) {
-      if (entries is! List) {
-        throw FormatException('manifest platform "$tag" must be a list of files');
+    final raw = json['platforms'];
+    if (raw != null) {
+      if (raw is! Map<String, dynamic>) {
+        throw const FormatException(
+          'manifest.json "platforms" must be an object',
+        );
       }
-      final files = <String>[];
-      for (final e in entries) {
-        if (e is! String || e.isEmpty) {
-          throw FormatException('manifest platform "$tag" has a non-string entry');
+      raw.forEach((tag, entries) {
+        if (entries is! List) {
+          throw FormatException(
+            'manifest platform "$tag" must be a list of files',
+          );
         }
-        files.add(e);
+        platforms[tag] = [
+          for (final e in entries)
+            if (e is! String || e.isEmpty)
+              throw FormatException(
+                'manifest platform "$tag" has a non-string entry',
+              )
+            else
+              e,
+        ];
+      });
+    }
+    final rawProviders = json['providers'];
+    if (rawProviders != null && rawProviders is! List) {
+      throw const FormatException('manifest.json "providers" must be a list');
+    }
+    final providers = <String>[];
+    for (final e in (rawProviders ?? const [])) {
+      if (e is! String || e.isEmpty) {
+        throw const FormatException(
+          'manifest.json "providers" has a non-string entry',
+        );
       }
-      platforms[tag] = files;
-    });
-    return ManifestVoiceConfig._(platforms);
+      providers.add(e);
+    }
+    return ManifestVoiceConfig._(platforms, providers);
   }
 
   final Map<String, List<String>> _platforms;
 
-  /// The starter file names (e.g. `['fish.json', 'kokoro.json']`) for
+  /// Provider file names to fetch on every platform (e.g. `['openrouter.json']`).
+  final List<String> providers;
+
+  /// The starter model file names (e.g. `['fish.json', 'kokoro.json']`) for
   /// [platformTag], or an empty list when the platform has no manifest entry.
   List<String> filesFor(String platformTag) =>
       _platforms[platformTag] ?? const [];
@@ -65,6 +96,7 @@ class ManifestVoiceConfig {
 
   /// Round-trips back to the canonical manifest shape for local caching.
   Map<String, dynamic> toJson() => {
+    'providers': providers,
     'platforms': {
       for (final entry in _platforms.entries) entry.key: entry.value,
     },
@@ -108,20 +140,33 @@ Future<ManifestVoiceConfig> fetchVoiceConfigManifest({
 /// when they don't exist locally.
 ///
 /// [files] names the model files to fetch (e.g. `['fish.json']`, typically the
-/// platform's starter list from a [ManifestVoiceConfig]); `config.json` is
-/// always fetched first. Downloads are best-effort: a failure for one file
-/// continues with the rest, matching legacy behavior.
+/// platform's starter list from a [ManifestVoiceConfig]); [providers] names the
+/// provider files to fetch alongside them. `config.json` is always fetched.
+///
+/// Files land in the subdirectory their kind belongs to: providers in
+/// `providers/`, models in `models/`. The manifest carries bare file names and
+/// the split happens here, so nothing has to reason about path separators.
+///
+/// Downloads are best-effort: a failure for one file continues with the rest,
+/// matching legacy behavior.
 Future<void> downloadVoiceConfigFiles(
   String configDir, {
   List<String>? files,
+  List<String>? providers,
   HttpClient Function()? clientFactory,
   String? repoUrl,
   String? branch,
 }) async {
-  final requested = files ?? const <String>[];
-  final all = <String>{'config.json', ...requested};
-
   final separator = Platform.pathSeparator;
+  // config.json first, then each kind into its own subdirectory. A set keyed by
+  // destination path, so a name appearing in both lists is fetched once.
+  final all = <String>{
+    '$configDir$separator$kVoiceConfigRegistryName',
+    for (final f in providers ?? const <String>[])
+      '$configDir$separator$kVoiceConfigProvidersDir$separator$f',
+    for (final f in files ?? const <String>[])
+      '$configDir$separator$kVoiceConfigModelsDir$separator$f',
+  };
 
   final dir = Directory(configDir);
   if (!dir.existsSync()) {
@@ -132,17 +177,22 @@ Future<void> downloadVoiceConfigFiles(
       (clientFactory ??
       () => HttpClient()..connectionTimeout = const Duration(seconds: 5))();
   try {
-    for (final file in all) {
-      final localFile = File('$configDir$separator$file');
+    for (final localPath in all) {
+      final localFile = File(localPath);
       if (!localFile.existsSync()) {
         final base = repoUrl ?? _repoUrl;
         final br = branch ?? _branch;
-        final url = '$base/raw/$br/$_voiceConfigDir/$file';
+        final remote = localPath
+            .substring(configDir.length + 1)
+            .split(separator)
+            .join('/');
+        final url = '$base/raw/$br/$_voiceConfigDir/$remote';
         try {
           final request = await httpClient.getUrl(Uri.parse(url));
           final response = await request.close();
           if (response.statusCode == 200) {
             final content = await response.transform(utf8.decoder).join();
+            await localFile.parent.create(recursive: true);
             await localFile.writeAsString(content);
           }
         } catch (e) {

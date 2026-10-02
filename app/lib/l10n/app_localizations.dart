@@ -154,12 +154,6 @@ abstract class AppLocalizations {
   /// **'No voice selected for \"{modelAlias}\" — pick an alias or set a default in the voice config.'**
   String gui_controller_errors_noVoiceSelected(String modelAlias);
 
-  /// No description provided for @gui_controller_errors_noApiKey.
-  ///
-  /// In en, this message translates to:
-  /// **'No OpenRouter API key set. Add one to the \"providers.openrouter\" block in config.json, set the OPENROUTER_API_KEY environment variable, or enter it in the Settings rail (stored in the system keychain).'**
-  String get gui_controller_errors_noApiKey;
-
   /// No description provided for @gui_controller_errors_cannotOpenTextFile.
   ///
   /// In en, this message translates to:
@@ -438,7 +432,7 @@ abstract class AppLocalizations {
   /// No description provided for @gui_settings_apiKeyStatusConfig.
   ///
   /// In en, this message translates to:
-  /// **'Set in config.json'**
+  /// **'Set in provider config'**
   String get gui_settings_apiKeyStatusConfig;
 
   /// No description provided for @gui_settings_apiKeyStatusEnvironment.

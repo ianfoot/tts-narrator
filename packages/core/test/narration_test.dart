@@ -7,7 +7,6 @@ import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/narration.dart';
 import 'package:tts_narrator_core/src/narration/prompt.dart';
-import 'package:tts_narrator_core/src/narration/tts_provider.dart';
 
 import 'support/fake_provider.dart';
 
@@ -23,7 +22,6 @@ void main() {
   setUp(() {
     dir = Directory.systemTemp.createTempSync('tts_narrate_test_');
     provider = FakeTtsProvider();
-    ttsProviderRegistry.register(provider.id, () => provider);
   });
 
   tearDown(() {
@@ -42,6 +40,8 @@ void main() {
     int? sampleRate,
     bool promptStyle = false,
     bool sendsVoiceField = true,
+    bool supportsSpeed = false,
+    double speed = 1.0,
     Map<String, String> providerSettings = const {'api_key': 'sk-test'},
   }) {
     return NarrationConfig(
@@ -52,12 +52,16 @@ void main() {
         format: format ?? 'mp3',
         promptStyle: promptStyle,
         sendsVoiceField: sendsVoiceField,
+        supportsSpeed: supportsSpeed,
         sampleRate: sampleRate,
-        provider: provider.id,
+        provider: testProvider,
       ),
       voice: 'VoiceOne',
       voiceLabel: 'Voice One',
-      providerSettings: providerSettings,
+      speed: speed,
+      // `narrate` validates the block before the first segment, so every test
+      // needs a base URL; a test may still override or extend the map.
+      providerSettings: {'base_url': testBaseUrl, ...providerSettings},
       outDir: '${dir.path}/out',
     );
   }
@@ -66,14 +70,14 @@ void main() {
     'dispatches through the registered provider and writes mp3 bytes',
     () async {
       final input = writeInput();
-      await narrate(config(input));
+      await narrate(config(input), client: provider.client);
 
       expect(provider.callCount, 1);
       final call = provider.calls.single;
       expect(call.model, 'test/model');
       expect(call.responseFormat, 'mp3');
       expect(call.voice, 'VoiceOne');
-      expect(call.settings, {'api_key': 'sk-test'});
+      expect(call.settings, {'base_url': testBaseUrl, 'api_key': 'sk-test'});
       expect(call.input, _inputText);
 
       final audioFile = File('${dir.path}/out/story/story_1.mp3');
@@ -86,7 +90,10 @@ void main() {
     'wraps pcm output in a WAV header using the profile sample rate',
     () async {
       final input = writeInput();
-      await narrate(config(input, format: 'pcm', sampleRate: 24000));
+      await narrate(
+        config(input, format: 'pcm', sampleRate: 24000),
+        client: provider.client,
+      );
 
       final audioFile = File('${dir.path}/out/story/story_1.wav');
       expect(audioFile.existsSync(), isTrue);
@@ -99,7 +106,7 @@ void main() {
 
   test('writes a combined track and records it in the manifest', () async {
     final input = writeInput();
-    await narrate(config(input, format: 'mp3'));
+    await narrate(config(input, format: 'mp3'), client: provider.client);
 
     final combined = File('${dir.path}/out/story/story_full.mp3');
     expect(combined.existsSync(), isTrue);
@@ -129,11 +136,11 @@ void main() {
         provider: provider.id,
       ),
       voice: 'VoiceOne',
-      providerSettings: const {'api_key': 'sk-test'},
+      providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
       outDir: '${dir.path}/out',
       minWords: 1,
     );
-    await narrate(cfg);
+    await narrate(cfg, client: provider.client);
 
     final pcm1 = _pcmPayload(
       File('${dir.path}/out/story/story_1.wav').readAsBytesSync(),
@@ -149,25 +156,124 @@ void main() {
 
   test('omits the voice field when sendsVoiceField is false', () async {
     final input = writeInput();
-    await narrate(config(input, sendsVoiceField: false));
+    await narrate(
+      config(input, sendsVoiceField: false),
+      client: provider.client,
+    );
     expect(provider.calls.single.voice, isNull);
   });
 
   test('prompt-styled models pass buildPrompt output as the input', () async {
     final input = writeInput();
     final cfg = config(input, promptStyle: true);
-    await narrate(cfg);
+    await narrate(cfg, client: provider.client);
     expect(provider.calls.single.input, buildPrompt(cfg, _inputText));
+  });
+
+  test('omits speed for a model that does not support it', () async {
+    final input = writeInput();
+    await narrate(
+      config(input, supportsSpeed: false, speed: 1.4),
+      client: provider.client,
+    );
+    expect(provider.calls.single.speed, isNull);
+  });
+
+  test('forwards speed for a model that supports it, even at 1.0', () async {
+    final input = writeInput();
+    await narrate(
+      config(input, supportsSpeed: true, speed: 1.4),
+      client: provider.client,
+    );
+    expect(provider.calls.single.speed, 1.4);
+  });
+
+  test('a capable model still gets its speed at the 1.0 default', () async {
+    final input = writeInput();
+    await narrate(config(input, supportsSpeed: true), client: provider.client);
+    expect(provider.calls.single.speed, 1.0);
   });
 
   test('passes the resolved provider settings through untouched', () async {
     final input = writeInput();
     await narrate(
       config(input, providerSettings: {'api_key': 'sk-2', 'model_id': 'x'}),
+      client: provider.client,
     );
     expect(provider.calls.single.settings, {
+      'base_url': testBaseUrl,
       'api_key': 'sk-2',
       'model_id': 'x',
+    });
+  });
+
+  group('provider block validation', () {
+    // The shared factory always injects a base URL, so these build the config
+    // directly in order to exercise a block that has none.
+    NarrationConfig bareConfig(
+      String inputPath, {
+      required Map<String, String> providerSettings,
+    }) => NarrationConfig(
+      inputPath: inputPath,
+      profile: const TtsModelProfile(
+        alias: 'test',
+        id: 'test/model',
+        provider: testProvider,
+      ),
+      voice: 'VoiceOne',
+      providerSettings: providerSettings,
+      outDir: '${dir.path}/out',
+    );
+
+    test('names the block when base_url is missing', () async {
+      final input = writeInput();
+      await expectLater(
+        narrate(
+          bareConfig(input, providerSettings: const {}),
+          client: provider.client,
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('"$testProvider"'), contains('"base_url"')),
+          ),
+        ),
+      );
+      expect(provider.callCount, 0);
+    });
+
+    test('fails before creating the output directory', () async {
+      final input = writeInput();
+      await expectLater(
+        narrate(
+          bareConfig(input, providerSettings: const {}),
+          client: provider.client,
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(Directory('${dir.path}/out').existsSync(), isFalse);
+    });
+
+    test('accepts the endpoint alias for base_url', () async {
+      final input = writeInput();
+      await narrate(
+        bareConfig(input, providerSettings: const {'endpoint': testBaseUrl}),
+        client: provider.client,
+      );
+      expect(provider.callCount, 1);
+    });
+
+    test('treats a blank base_url as missing', () async {
+      final input = writeInput();
+      await expectLater(
+        narrate(
+          bareConfig(input, providerSettings: const {'base_url': '   '}),
+          client: provider.client,
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(provider.callCount, 0);
     });
   });
 
@@ -182,7 +288,7 @@ void main() {
         provider: provider.id,
       ),
       voice: 'VoiceOne',
-      providerSettings: const {'api_key': 'sk-test'},
+      providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
       outDir: '${dir.path}/out',
     );
 
@@ -311,11 +417,11 @@ void main() {
             provider: provider.id,
           ),
           voice: 'VoiceOne',
-          providerSettings: const {'api_key': 'sk-test'},
+          providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
           outDir: '${dir.path}/out',
           sendWholeFile: true,
         );
-        await narrate(cfg);
+        await narrate(cfg, client: provider.client);
 
         final manifest = jsonDecode(
           File('${dir.path}/out/story/manifest.json').readAsStringSync(),
@@ -335,11 +441,11 @@ void main() {
           provider: provider.id,
         ),
         voice: 'VoiceOne',
-        providerSettings: const {'api_key': 'sk-test'},
+        providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
         outDir: '${dir.path}/out',
         sendWholeFile: true,
       );
-      await narrate(cfg);
+      await narrate(cfg, client: provider.client);
 
       expect(provider.callCount, 1);
       expect(provider.calls.single.input, '$_inputText\n\n$_inputText');
@@ -354,7 +460,7 @@ void main() {
       'narrates from text via the provider without reading inputPath',
       () async {
         final cfg = typedConfig();
-        await narrate(cfg);
+        await narrate(cfg, client: provider.client);
 
         expect(provider.callCount, 1);
         expect(provider.calls.single.input, _inputText);
@@ -378,14 +484,14 @@ void main() {
           provider: provider.id,
         ),
         voice: 'VoiceOne',
-        providerSettings: const {'api_key': 'sk-test'},
+        providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
         outDir: '${dir.path}/out',
         // minWords 1 keeps every paragraph its own segment = 4 segments.
         minWords: 1,
         sampleLen: 1,
       );
       expect(planSegments(cfg), hasLength(4));
-      await narrate(cfg);
+      await narrate(cfg, client: provider.client);
       expect(provider.callCount, 1);
     });
   });

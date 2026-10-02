@@ -2,10 +2,10 @@
 
 **tts-narrator** converts text into spoken audio. It splits your text into
 segments, calls a text-to-speech engine for each one, and saves the results as
-audio files. It ships with two providers: OpenRouter (cloud) and a generic
-OpenAI-compatible local audio server (the `mlx_audio` provider, defaulting to a
-fully local [mlx-audio](https://github.com/Blaizzy/mlx-audio) endpoint on Apple
-Silicon).
+audio files. Every engine is reached over the same OpenAI-compatible
+`/audio/speech` protocol, so cloud and local narration differ only by
+configuration: OpenRouter (cloud) and a local audio server such as
+[mlx-audio](https://github.com/Blaizzy/mlx-audio) (Apple Silicon).
 
 ## Getting started
 
@@ -23,20 +23,27 @@ For pre-built releases and full installation instructions, see
 
 Pre-built macOS releases (`TTS Narrator.app`) and Gatekeeper security bypass
 instructions are documented in **[MAC.md](MAC.md)**. The same file covers
-setting up the local OpenAI-compatible audio server (`mlx_audio`, a.k.a. the
-MLX Audio server, Apple Silicon only) so the app can narrate fully offline.
+setting up the local OpenAI-compatible audio server (a.k.a. the MLX Audio server,
+Apple Silicon only) so the app can narrate fully offline.
 
 ## Voice configuration
 
-Everything user-facing — the default model, per-provider settings, models,
-per-model providers and default voices, prices, and friendly voice aliases —
-lives in a config **directory** shared by the CLI and the GUI. Two kinds of
-files:
+Everything user-facing — which providers exist, per-provider settings, models,
+per-model default voices, prices, and friendly voice aliases — lives in a config
+**directory** shared by the CLI and the GUI. Three kinds of file:
 
-- `config.json` — the global bits: `default_model` (the preselected model on
-  cold start) and the per-provider settings block (secrets).
-- `<alias>.json` — one file per model: its id, the provider that serves it,
-  the request wiring, default voice, pricing, and friendly voice aliases.
+- `config.json` — the provider registry: the names of the providers in use, in
+  order.
+- `providers/<name>.json` — one file per provider: the settings block
+  (secrets, endpoint) and the list of models it serves.
+- `models/<alias>.json` — one file per model: its id, the request wiring,
+  default voice, pricing, and friendly voice aliases.
+
+Providers name the models they serve, not the other way round, so adding a
+model is a matter of dropping a file in `models/` and adding its alias to a
+provider's `models` list. Order matters: the first provider in the registry is
+the default, and the first model in that provider's list is the model
+preselected on cold start.
 
 Cross-platform paths:
 - macOS: `~/.config/tts-narrator/`
@@ -47,19 +54,47 @@ Cross-platform paths:
 
 ```json
 {
-  "default_model": "fish",
-  "providers": {
-    "openrouter": { "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}" }
+  "providers": ["openrouter", "mlx_audio"]
+}
+```
+
+`<path_provider_dir>/tts-narrator/providers/openrouter.json`:
+
+```json
+{
+  "models": ["fish", "gemini", "kokoro"],
+  "settings": {
+    "base_url": "https://openrouter.ai/api/v1",
+    "api_key": "${OPENROUTER_API_KEY}"
   }
 }
 ```
 
-`<path_provider_dir>/tts-narrator/fish.json`:
+`<path_provider_dir>/tts-narrator/providers/mlx_audio.json`:
+
+```json
+{
+  "models": ["mlx_kokoro"],
+  "settings": { "base_url": "http://localhost:8000/v1" }
+}
+```
+
+`settings` is a block for one service. `base_url` is required — it is the
+endpoint **root**, and the app appends `/audio/speech` to it. `api_key` is
+optional and takes either a literal key or a `${VAR}` reference to an
+environment variable. Omit it for a local server that needs no credential.
+
+You can also enter a key in the Settings rail instead, and it is stored in the
+OS keychain. That wins over the config block, because the provider file is
+downloaded from a remote and may carry someone else's key. The app never
+requires a key: if none is configured, the request carries no `Authorization`
+header and the server decides whether it needed one.
+
+`<path_provider_dir>/tts-narrator/models/fish.json`:
 
 ```json
 {
   "id": "fish-audio/s2.1-pro-free",
-  "provider": "openrouter",
   "format": "mp3",
   "default_voice": "British Female Narrator",
   "voices": {
@@ -69,12 +104,11 @@ Cross-platform paths:
 }
 ```
 
-`<path_provider_dir>/tts-narrator/gemini.json`:
+`<path_provider_dir>/tts-narrator/models/gemini.json`:
 
 ```json
 {
   "id": "google/gemini-3.1-flash-tts-preview",
-  "provider": "openrouter",
   "format": "pcm",
   "sample_rate": 24000,
   "prompt_style": true,
@@ -87,12 +121,11 @@ Cross-platform paths:
 }
 ```
 
-`<path_provider_dir>/tts-narrator/kokoro.json`:
+`<path_provider_dir>/tts-narrator/models/kokoro.json`:
 
 ```json
 {
   "id": "hexgrad/kokoro-82m",
-  "provider": "openrouter",
   "format": "mp3",
   "default_voice": "Emma",
   "pricing": { "usd_per_m_chars": 0.62 },
@@ -124,35 +157,36 @@ is repeated across blocks (`"Alice": {"id": "bf_alice", "gender": "female"}`).
 The plain string shorthand from older configs (`"Alice": "bf_alice"`) still
 loads. Configs ship with fish and kokoro tagged (fish from the curated list,
 kokoro from its `bf_*`/`bm_*` id convention); gemini's named voices carry no
-published gender signal, so its voices stay untagged — instead the openrouter
-plugin exposes a "Narrator gender" control in the rail's Model options for
-gemini (and any other prompt-styled model).
+published gender signal, so its voices stay untagged — instead a model that sets
+`"prompt_style": true` gets a "Narrator gender" control in the rail's Model
+options, which gemini does.
 
-Add or swap a model by adding/editing its `<alias>.json` file; it then
-becomes selectable via the model dropdown in the UI.
+Add or swap a model by editing its `models/<alias>.json` file, and adding a new
+one by dropping it in `models/` and listing its alias in some provider's
+`models`. It then becomes selectable via the model dropdown in the UI.
 
 ### Gemini voices
 
 Voices are the named ones on the OpenRouter page (e.g. `Charon`, `Zephyr`,
 `Puck`). Add friendly aliases for the ones you use under `voices` in
-`gemini.json` — the drop-down shows whatever you configure. Any unlisted id
+`models/gemini.json` — the drop-down shows whatever you configure. Any unlisted id
 still works via the raw-id field in the settings rail.
 
 ### Kokoro voices
 
 The Kokoro model has two flavors: the cloud `kokoro` above, and `mlx_kokoro`
-for the local OpenAI-compatible audio server (the `mlx_audio` provider, Apple
-Silicon's MLX Audio runtimes). British voices (prefix `b`): female `bf_alice`,
-`bf_emma`, `bf_isabella`, `bf_lily`; male `bm_daniel`, `bm_fable`, `bm_george`,
-`bm_lewis`. Any `bf_*`/`bm_*` (or other accent prefixes) id is accepted.
-Friendly aliases live under `voices` in `kokoro.json`.
+for the local OpenAI-compatible audio server (`mlx_audio`, Apple Silicon's MLX
+Audio runtimes — it needs no API key). British voices (prefix `b`): female
+`bf_alice`, `bf_emma`, `bf_isabella`, `bf_lily`; male `bm_daniel`, `bm_fable`,
+`bm_george`, `bm_lewis`. Any `bf_*`/`bm_*` (or other accent prefixes) id is
+accepted. Friendly aliases live under `voices` in `models/kokoro.json`.
 
 ### Fish voices
 
 Voices are free-form 32-hex fish.audio ids (the default is
 `89f41ea230034706881f85a8227d6ab9`, "British Female Narrator"). Any id is
 accepted; a curated British voice list lives on the "Text to Speech" Logseq
-page and in `voice_config.example/fish.json`.
+page and in `voice-config/models/fish.json`.
 
 ## Output
 

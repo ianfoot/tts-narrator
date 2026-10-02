@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart' show Locale;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
+import '../theme/app_tokens.dart' show AppThemeMode;
 import 'api_key_store.dart';
 import 'config_loader.dart';
 import 'document_controller.dart';
@@ -13,7 +14,6 @@ import 'platform_commands.dart';
 import 'run_controller.dart';
 import 'settings_controller.dart';
 import 'theme_controller.dart';
-import '../theme/app_tokens.dart' show AppThemeMode;
 
 export 'run_controller.dart' show NarrationSegment;
 
@@ -35,6 +35,7 @@ class AppController extends ChangeNotifier {
     UserVoiceConfigLoader? loader,
     SharedPreferences? prefs,
     ApiKeyStore? apiKeyStore,
+    SpeechClient? client,
   }) : _model = ModelProfileVoiceController(loader: loader),
        _apiKeyStore = apiKeyStore ?? ApiKeyStore() {
     // Preload the OS-secure key so run-config building (synchronous) can read
@@ -51,6 +52,7 @@ class AppController extends ChangeNotifier {
       document: _document,
       settings: _settings,
       model: _model,
+      client: client,
     );
     _document.addListener(_onDocumentChanged);
     _theme.addListener(_onThemeChanged);
@@ -62,10 +64,21 @@ class AppController extends ChangeNotifier {
   /// The model & voice state (active profile, selected voice, gender filter).
   final ModelProfileVoiceController _model;
 
-  /// The OS-secure OpenRouter API-key store (Keychain / Credential Manager /
-  /// libsecret). The run-config fallback reads the cached [ApiKeyStore.value]
-  /// synchronously; the settings rail manages the key through this.
+  /// The OS-secure per-provider API-key store (Keychain / Credential Manager /
+  /// libsecret). The run-config fallback reads the cached
+  /// [ApiKeyStore.value] synchronously; the settings rail manages the active
+  /// provider's key through this.
   final ApiKeyStore _apiKeyStore;
+
+  /// The provider owning the active model, or null when no model is configured.
+  ///
+  /// This is the name an API key is filed under, and the only thing gating the
+  /// settings rail's API-key section: with no model there is no provider to hold
+  /// a key, so the section has nothing to act on. Whether the provider *needs* a
+  /// key is not consulted — the section is offered for every provider, because
+  /// the user may hold a key the config does not mention, and the server, not
+  /// the app, decides whether one is required.
+  String? get activeProvider => _model.profile?.provider;
 
   /// The in-memory document (text, path, dirty flag, save/load surface).
   final DocumentController _document = DocumentController();
@@ -204,23 +217,31 @@ class AppController extends ChangeNotifier {
   /// none), mirroring the run-config precedence.
   ApiKeySource get apiKeySource => _settings.apiKeySource;
 
-  /// Whether no API key is configured anywhere for the active model.
-  bool get apiKeyMissing => _settings.apiKeyMissing;
+  /// Whether the active provider currently has a key in the OS secure store
+  /// (enables the rail's Remove button). False when no model is configured.
+  bool get hasStoredApiKey {
+    final provider = activeProvider;
+    return provider != null && _apiKeyStore.value(provider) != null;
+  }
 
-  /// Whether a key currently sits in the OS secure store (enables the rail's
-  /// Remove button).
-  bool get hasStoredApiKey => _apiKeyStore.value != null;
-
-  /// Saves [key] to the OS secure store and re-broadcasts so the rail's status
-  /// line updates. Throws an [ArgumentError] for an empty key.
+  /// Saves [key] for the active provider and re-broadcasts so the rail's
+  /// status line updates. Throws an [ArgumentError] for an empty key.
+  ///
+  /// A no-op when no model is configured: there is no provider to file the key
+  /// under, and the rail hides the section in that case.
   Future<void> saveApiKey(String key) async {
-    await _apiKeyStore.save(key);
+    final provider = activeProvider;
+    if (provider == null) return;
+    await _apiKeyStore.save(provider, key);
     notifyListeners();
   }
 
-  /// Removes the stored key (if any) and re-broadcasts.
+  /// Removes the active provider's stored key (if any) and re-broadcasts. A
+  /// no-op when no model is configured.
   Future<void> removeApiKey() async {
-    await _apiKeyStore.remove();
+    final provider = activeProvider;
+    if (provider == null) return;
+    await _apiKeyStore.remove(provider);
     notifyListeners();
   }
 
@@ -302,9 +323,9 @@ class AppController extends ChangeNotifier {
   /// Cost data for the active model (free until the config sets pricing).
   AudioPricing get pricing => _model.pricing;
 
-  /// The editable GUI options for the active model, declared by its model's
-  /// plugin (the provider package). Empty when no plugin declares a spec — the
-  /// app has no per-model UI knowledge.
+  /// The editable GUI options for the active model, derived from the
+  /// capabilities it declares in its config file. Empty when it declares none —
+  /// the app has no per-model UI knowledge of its own.
   ModelUiSpec get modelUiSpec => _model.modelUiSpec;
 
   /// Assembles the run config for the current document + settings, narrating

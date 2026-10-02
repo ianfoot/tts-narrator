@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
@@ -8,26 +9,59 @@ import 'package:tts_narrator_core/src/config/voice_config_io.dart';
 void main() {
   group('loadVoiceConfig', () {
     late Directory dir;
+    final claimed = <String>[];
 
-    setUp(() => dir = Directory.systemTemp.createTempSync('tts_config_test_'));
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('tts_config_test_');
+      claimed.clear();
+    });
     tearDown(() => dir.deleteSync(recursive: true));
 
-    void writeGlobal(String contents) {
-      File('${dir.path}${Platform.pathSeparator}config.json')
-          .writeAsStringSync(contents);
+    String at(String subdir, String file) =>
+        '${dir.path}${Platform.pathSeparator}$subdir'
+        '${Platform.pathSeparator}$file';
+
+    void writeRegistry(String contents) =>
+        File('${dir.path}${Platform.pathSeparator}$kVoiceConfigRegistryName')
+            .writeAsStringSync(contents);
+
+    void writeProvider(String name, String contents) {
+      final file = File(at(kVoiceConfigProvidersDir, '$name.json'));
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync(contents);
     }
 
-    void writeModel(String alias, String contents) {
-      File('${dir.path}${Platform.pathSeparator}$alias.json')
-          .writeAsStringSync(contents);
+    void writeModel(
+      String alias,
+      String contents, {
+      bool claimedByProvider = true,
+    }) {
+      final file = File(at(kVoiceConfigModelsDir, '$alias.json'));
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync(contents);
+      if (claimedByProvider) claimed.add(alias);
     }
 
-    (VoiceConfig, List<String>) load() => loadVoiceConfig(dir.path);
+    /// Publishes the registry and a single provider claiming every model
+    /// written so far, then loads. Model files only exist to a provider that
+    /// names them, so the registry has to agree with the fixture.
+    (VoiceConfig, List<String>) load({String provider = 'openrouter'}) {
+      writeRegistry(jsonEncode({'providers': [provider]}));
+      writeProvider(
+        provider,
+        jsonEncode({
+          'models': claimed,
+          'settings': {'base_url': 'https://example.invalid/v1'},
+        }),
+      );
+      return loadVoiceConfig(dir.path);
+    }
+
+    (VoiceConfig, List<String>) rawLoad() => loadVoiceConfig(dir.path);
 
     test('missing directory yields an empty config and no warnings', () {
-      final (cfg, warnings) = load();
+      final (cfg, warnings) = loadVoiceConfig('${dir.path}/nope');
       expect(cfg.isEmpty, isTrue);
-      expect(cfg.defaultModel, isNull);
       expect(cfg.providers, isEmpty);
       expect(cfg.voices, isEmpty);
       expect(warnings, isEmpty);
@@ -36,19 +70,12 @@ void main() {
     test('parses per-model files into request profiles', () {
       writeModel('gemini', '''{
   "id": "google/gemini-3.1-flash-tts-preview",
-  "provider": "openrouter",
   "format": "pcm",
   "sample_rate": 24000,
   "prompt_style": true
 }''');
-      writeModel(
-        'kokoro',
-        '{"id": "hexgrad/kokoro-82m", "provider": "openrouter", "format": "mp3"}',
-      );
-      writeModel(
-        'fish',
-        '{"id": "fish-audio/s2.1-pro-free", "provider": "openrouter", "format": "mp3"}',
-      );
+      writeModel('kokoro', '{"id": "hexgrad/kokoro-82m", "format": "mp3"}');
+      writeModel('fish', '{"id": "fish-audio/s2.1-pro-free", "format": "mp3"}');
       final (cfg, _) = load();
       expect(cfg.models, hasLength(3));
       expect(cfg.models['gemini']?.id, 'google/gemini-3.1-flash-tts-preview');
@@ -61,7 +88,7 @@ void main() {
     });
 
     test('defaults model fields apply when omitted', () {
-      writeModel('x', '{"id": "a/b", "provider": "openrouter"}');
+      writeModel('x', '{"id": "a/b"}');
       final (cfg, _) = load();
       final m = cfg.models['x']!;
       expect(m.format, 'mp3');
@@ -73,7 +100,7 @@ void main() {
     test('parses an optional display_name into the profile', () {
       writeModel(
         'gemini',
-        '{"id": "google/gemini-3.1-flash-tts-preview", "provider": "openrouter", "display_name": "Gemini 3.1 Flash TTS"}',
+        '{"id": "google/gemini-3.1-flash-tts-preview", "display_name": "Gemini 3.1 Flash TTS"}',
       );
       final (cfg, _) = load();
       final m = cfg.models['gemini']!;
@@ -81,16 +108,13 @@ void main() {
     });
 
     test('display_name defaults to null when omitted', () {
-      writeModel('x', '{"id": "a/b", "provider": "openrouter"}');
+      writeModel('x', '{"id": "a/b"}');
       final (cfg, _) = load();
       expect(cfg.models['x']!.displayName, isNull);
     });
 
     test('a non-string display_name skips the model with a warning', () {
-      writeModel(
-        'x',
-        '{"id": "a/b", "provider": "openrouter", "display_name": 7}',
-      );
+      writeModel('x', '{"id": "a/b", "display_name": 7}');
       final (cfg, warnings) = load();
       expect(cfg.models.containsKey('x'), isFalse);
       expect(warnings.join('\n'), contains('display_name'));
@@ -100,14 +124,13 @@ void main() {
       writeModel('fish', '''
 {
   "id": "fish-audio/s2.1-pro-free",
-  "provider": "openrouter",
   "default_voice": "Narrator",
   "pricing": {"usd_per_m_chars": 0.62},
   "voices": {"Narrator": "hex1", "Emma": "bf_emma"}
 }''');
       writeModel(
         'kokoro',
-        '{"id": "hexgrad/kokoro-82m", "provider": "openrouter", "voices": {"Emma": "bf_emma"}}',
+        '{"id": "hexgrad/kokoro-82m", "voices": {"Emma": "bf_emma"}}',
       );
       final (cfg, _) = load();
       expect(cfg.defaults['fish'], 'Narrator');
@@ -121,7 +144,6 @@ void main() {
       writeModel('kokoro', '''
 {
   "id": "a/b",
-  "provider": "openrouter",
   "voices": {
     "Emma": {"id": "bf_emma", "gender": "female"},
     "Daniel": {"id": "bm_daniel", "gender": "male"},
@@ -129,7 +151,7 @@ void main() {
   }
 }
 ''');
-      writeModel('gemini', '{"id": "a/b", "provider": "openrouter"}');
+      writeModel('gemini', '{"id": "a/b"}');
       final (cfg, _) = load();
       expect(cfg.voices['kokoro']?['Emma']?.id, 'bf_emma');
       expect(cfg.voices['kokoro']?['Emma']?.gender, VoiceGender.female);
@@ -144,7 +166,6 @@ void main() {
       writeModel('x', '''
 {
   "id": "a/b",
-  "provider": "openrouter",
   "voices": {"A": "id1", "B": 42, "C": ""}
 }
 ''');
@@ -160,7 +181,6 @@ void main() {
       writeModel('x', '''
 {
   "id": "a/b",
-  "provider": "openrouter",
   "voices": {
     "A": {"id": "ok1", "gender": "female"},
     "B": {"id": ""},
@@ -185,77 +205,76 @@ void main() {
     });
 
     test('rejects a non-object voices block', () {
-      writeModel(
-        'x',
-        '{"id": "a/b", "provider": "openrouter", "voices": ["female"]}',
-      );
+      writeModel('x', '{"id": "a/b", "voices": ["female"]}');
       final (cfg, warnings) = load();
       expect(cfg.models, isEmpty);
-      expect(warnings.single, contains('"voices"'));
+      expect(warnings.first, contains('"voices"'));
     });
 
     test('skips a model file with no id and reports a warning', () {
       writeModel('x', '{"format": "mp3"}');
       final (cfg, warnings) = load();
       expect(cfg.models, isEmpty);
-      expect(warnings.single, contains('Skipped model "x"'));
+      expect(warnings.first, contains('Skipped model "x"'));
     });
 
     test('skips a malformed model file and keeps the rest loading', () {
-      writeModel('good', '{"id": "a/b", "provider": "openrouter"}');
+      writeModel('good', '{"id": "a/b"}');
       writeModel('bad', '{not json');
       final (cfg, warnings) = load();
       expect(cfg.models.keys, ['good']);
-      expect(warnings.single, contains('Skipped model "bad"'));
+      expect(warnings.first, contains('Skipped model "bad"'));
     });
 
-    test('an unrelated json file in the config dir is ignored silently', () {
+    test('an unrelated json file beside the models is ignored silently', () {
       // The GUI config dir is also its application-support dir, so on Linux
-      // `shared_preferences.json` lands beside the model files. It is not a
-      // model config, so it must not raise a warning.
-      writeModel('fish', '{"id": "a/b", "provider": "openrouter"}');
-      writeModel('shared_preferences', '{"flutter.appearance": "system"}');
+      // `shared_preferences.json` lands beside the config. No provider names
+      // it, so it must not raise a warning.
+      writeModel('fish', '{"id": "a/b"}');
+      writeModel(
+        'shared_preferences',
+        '{"flutter.appearance": "system"}',
+        claimedByProvider: false,
+      );
       final (cfg, warnings) = load();
       expect(cfg.models.keys, ['fish']);
       expect(warnings, isEmpty);
     });
 
-    test('a non-object json file in the config dir is ignored silently', () {
-      writeModel('whatever', '[1, 2, 3]');
+    test('a non-object json file beside the models is ignored silently', () {
+      writeModel('whatever', '[1, 2, 3]', claimedByProvider: false);
+      final (cfg, warnings) = load();
+      expect(cfg.models, isEmpty);
+      expect(warnings, isEmpty);
+    });
+
+    test('a json file sharing no key with the model schema is ignored', () {
+      // Being named by a provider is the only candidacy test now, so this one
+      // is judged on that rather than on which keys it happens to carry.
+      writeModel('x', '{"totally": "unrelated"}', claimedByProvider: false);
       final (cfg, warnings) = load();
       expect(cfg.models, isEmpty);
       expect(warnings, isEmpty);
     });
 
     test('a model file missing only its id still warns', () {
-      // Loses diagnosability only if every model key vanished at once; a
-      // hand-edited file keeps at least one, so the warning survives.
-      writeModel('x', '{"provider": "openrouter"}');
+      writeModel('x', '{"format": "mp3"}');
       final (cfg, warnings) = load();
       expect(cfg.models, isEmpty);
-      expect(warnings.single, contains('Skipped model "x"'));
-      expect(warnings.single, contains('"id"'));
-    });
-
-    test('a json file with no model keys at all is treated as unrelated', () {
-      // The deliberate cost of classification: a file sharing no key with the
-      // model schema cannot be reported on without re-nagging stray JSON.
-      writeModel('x', '{"totally": "unrelated"}');
-      final (cfg, warnings) = load();
-      expect(cfg.models, isEmpty);
-      expect(warnings, isEmpty);
+      expect(warnings.first, contains('Skipped model "x"'));
+      expect(warnings.first, contains('"id"'));
     });
 
     test('a wrong-typed model field is skipped with a warning', () {
       writeModel('x', '{"id": "a/b", "sample_rate": "lots"}');
       final (cfg, warnings) = load();
       expect(cfg.models, isEmpty);
-      expect(warnings.single, contains('Skipped model "x"'));
+      expect(warnings.first, contains('Skipped model "x"'));
     });
 
     test('model files are read in sorted filename order', () {
-      writeModel('zebra', '{"id": "z/a", "provider": "openrouter"}');
-      writeModel('alph', '{"id": "a/b", "provider": "openrouter"}');
+      writeModel('zebra', '{"id": "z/a"}');
+      writeModel('alph', '{"id": "a/b"}');
       final (cfg, _) = load();
       expect(cfg.models.keys.toList(), ['alph', 'zebra']);
     });
@@ -263,78 +282,131 @@ void main() {
     test(
       'accepts a directory with only an empty config.json and no models',
       () {
-        writeGlobal('{}');
-        final (cfg, _) = load();
+        writeRegistry('{}');
+        final (cfg, _) = rawLoad();
         expect(cfg.isEmpty, isTrue);
       },
     );
 
-    test(r'parses default_model and the providers block verbatim', () {
-      writeGlobal('''{
-  "default_model": "fish",
-  "providers": {
-    "openrouter": { "OPENROUTER_API_KEY": "\${OPENROUTER_API_KEY}" }
-  }
-}''');
-      final (cfg, _) = load();
-      expect(cfg.defaultModel, 'fish');
-      // The `${...}` env reference is preserved as a literal, not resolved.
-      expect(cfg.providers, {
-        'openrouter': {'OPENROUTER_API_KEY': r'${OPENROUTER_API_KEY}'},
+    group('the provider registry', () {
+      test('parses the provider names in order', () {
+        writeRegistry('{"providers": ["openrouter", "mlx_audio"]}');
+        writeProvider('openrouter', '{"models": ["fish"], "settings": {}}');
+        writeProvider('mlx_audio', '{"models": [], "settings": {}}');
+        final (cfg, _) = rawLoad();
+        expect(cfg.providers.keys, ['openrouter', 'mlx_audio']);
+        expect(cfg.defaultProvider?.name, 'openrouter');
+      });
+
+      test(r'keeps a $VAR env reference as a literal', () {
+        writeRegistry('{"providers": ["openrouter"]}');
+        writeProvider(
+          'openrouter',
+          '{"models": [], "settings": '
+              '{"OPENROUTER_API_KEY": "\${OPENROUTER_API_KEY}"}}',
+        );
+        final (cfg, _) = rawLoad();
+        expect(
+          cfg.providers['openrouter']!.settings['OPENROUTER_API_KEY'],
+          r'${OPENROUTER_API_KEY}',
+        );
+      });
+
+      test('rejects a non-list providers entry', () {
+        writeRegistry('{"providers": {"openrouter": {}}}');
+        expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
+      });
+
+      test('rejects a non-string provider name', () {
+        writeRegistry('{"providers": [42]}');
+        expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
+      });
+
+      test('rejects a blank provider name', () {
+        writeRegistry('{"providers": ["  "]}');
+        expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
+      });
+
+      test('rejects malformed config.json loudly', () {
+        writeRegistry('{not json');
+        expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
+      });
+
+      test('rejects a non-object top level in config.json', () {
+        writeRegistry('[1,2,3]');
+        expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
+      });
+
+      test('an empty registry leaves the config empty', () {
+        writeRegistry('{"providers": []}');
+        final (cfg, warnings) = rawLoad();
+        expect(cfg.isEmpty, isTrue);
+        expect(warnings, isEmpty);
       });
     });
 
-    test('rejects a non-string default_model (global config)', () {
-      writeGlobal('{"default_model": 42}');
-      expect(load, throwsA(isA<VoiceConfigurationError>()));
-    });
+    group('the model to provider relation', () {
+      test('stamps the claiming provider onto each profile', () {
+        writeModel('gemini', '{"id": "a/b"}', claimedByProvider: false);
+        writeModel('fish', '{"id": "c/d"}', claimedByProvider: false);
+        writeRegistry('{"providers": ["google", "openrouter"]}');
+        writeProvider('google', '{"models": ["gemini"], "settings": {}}');
+        writeProvider('openrouter', '{"models": ["fish"], "settings": {}}');
 
-    test('rejects malformed global config.json loudly', () {
-      writeGlobal('{not json');
-      expect(load, throwsA(isA<VoiceConfigurationError>()));
-    });
+        final (cfg, warnings) = rawLoad();
+        expect(warnings, isEmpty);
+        expect(cfg.models['gemini']?.provider, 'google');
+        expect(cfg.models['fish']?.provider, 'openrouter');
+      });
 
-    test('rejects a non-object top level in config.json', () {
-      writeGlobal('[1,2,3]');
-      expect(load, throwsA(isA<VoiceConfigurationError>()));
-    });
+      test('a model no provider names is skipped without a warning', () {
+        writeModel('x', '{"id": "a/b"}', claimedByProvider: false);
+        writeRegistry('{"providers": ["openrouter"]}');
+        writeProvider('openrouter', '{"models": [], "settings": {}}');
 
-    test('rejects a non-object providers entry', () {
-      writeGlobal('{"providers": {"openrouter": "sk-or"}}');
-      expect(load, throwsA(isA<VoiceConfigurationError>()));
-    });
-
-    test('rejects a non-string value inside a providers entry', () {
-      writeGlobal('{"providers": {"openrouter": {"KEY": 42}}}');
-      expect(load, throwsA(isA<VoiceConfigurationError>()));
-    });
-
-    test('parses the required model-file provider', () {
-      writeModel('gemini', '{"id": "a/b", "provider": "google"}');
-      writeModel('fish', '{"id": "a/b", "provider": "openrouter"}');
-      final (cfg, _) = load();
-      expect(cfg.models['gemini']?.provider, 'google');
-      expect(cfg.models['fish']?.provider, 'openrouter');
-    });
-
-    test(
-      'skips a model file with a missing provider and reports a warning',
-      () {
-        writeModel('x', '{"id": "a/b"}');
-        final (cfg, warnings) = load();
+        final (cfg, warnings) = rawLoad();
         expect(cfg.models, isEmpty);
-        expect(warnings.single, contains('Skipped model "x"'));
-        expect(warnings.single, contains('"provider"'));
-      },
-    );
+        expect(warnings, isEmpty);
+      });
 
-    test('an unknown default_model warns and yields no default', () {
-      writeGlobal('{"default_model": "bogus"}');
-      writeModel('fish', '{"id": "a/b", "provider": "openrouter"}');
-      final (cfg, warnings) = load();
-      expect(cfg.defaultModel, 'bogus');
-      expect(defaultModelFor(cfg), isNull);
-      expect(warnings.single, contains('default_model "bogus"'));
+      test('a provider file absent from the registry is ignored with a warning',
+          () {
+        writeRegistry('{"providers": ["openrouter"]}');
+        writeProvider('openrouter', '{"models": [], "settings": {}}');
+        writeProvider('stray', '{"models": [], "settings": {}}');
+
+        final (cfg, warnings) = rawLoad();
+        expect(cfg.providers.containsKey('stray'), isFalse);
+        expect(warnings.single, contains('stray.json'));
+      });
+
+      test('a registered provider with no file on disk warns', () {
+        writeRegistry('{"providers": ["openrouter"]}');
+        final (cfg, warnings) = rawLoad();
+        expect(cfg.providers, isEmpty);
+        expect(warnings.first, contains('providers/openrouter.json is missing'));
+      });
+
+      test('a provider naming a model that never loaded warns', () {
+        writeRegistry('{"providers": ["openrouter"]}');
+        writeProvider('openrouter', '{"models": ["gone"], "settings": {}}');
+
+        final (_, warnings) = rawLoad();
+        expect(warnings.single, contains('gone'));
+      });
+    });
+
+    group('the default model', () {
+      test('is the first model of the first registered provider', () {
+        writeModel('kokoro', '{"id": "a/b"}', claimedByProvider: false);
+        writeModel('fish', '{"id": "c/d"}', claimedByProvider: false);
+        writeRegistry('{"providers": ["openrouter", "google"]}');
+        writeProvider('openrouter', '{"models": ["kokoro"], "settings": {}}');
+        writeProvider('google', '{"models": ["fish"], "settings": {}}');
+
+        final (cfg, _) = rawLoad();
+        expect(defaultModelFor(cfg)?.alias, 'kokoro');
+      });
     });
   });
 }

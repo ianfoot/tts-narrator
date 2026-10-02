@@ -17,8 +17,9 @@ class TtsModelProfile {
     this.format = 'mp3',
     this.promptStyle = false,
     this.sendsVoiceField = true,
+    this.supportsSpeed = false,
     this.sampleRate,
-    this.provider = 'openrouter',
+    required this.provider,
     this.displayName,
   });
 
@@ -42,10 +43,20 @@ class TtsModelProfile {
   /// Whether to include a `voice` field in the request body.
   final bool sendsVoiceField;
 
+  /// Whether the model accepts a `speed` multiplier in the request body.
+  ///
+  /// The OpenAI speech protocol defines the field but not every vendor honours
+  /// it, so it is opt-in per model (`"speed": true` in the model file). When
+  /// false the field is omitted from the request entirely rather than sent at a
+  /// default, and the GUI hides the speed slider.
+  final bool supportsSpeed;
+
   /// PCM sample rate used for the WAV header and duration; null for MP3.
   final int? sampleRate;
 
-  /// Provider id that serves this model. Required in the model config file.
+  /// Name of the `providers.<name>` block that serves this model. Required in
+  /// the model config file, and opaque to core: it is a lookup key into user
+  /// config, never a vendor the code knows about.
   final String provider;
 
   TtsModelProfile copyWith({String? id, String? provider}) => TtsModelProfile(
@@ -54,6 +65,7 @@ class TtsModelProfile {
     format: format,
     promptStyle: promptStyle,
     sendsVoiceField: sendsVoiceField,
+    supportsSpeed: supportsSpeed,
     sampleRate: sampleRate,
     provider: provider ?? this.provider,
     displayName: displayName,

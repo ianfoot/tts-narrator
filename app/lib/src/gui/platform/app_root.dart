@@ -79,8 +79,7 @@ class _AppRootState extends State<AppRoot> {
     );
     final location = await getSaveLocation(
       acceptedTypeGroups: [group],
-      suggestedName:
-          widget.controller.documentName ?? untitledDocumentName,
+      suggestedName: widget.controller.documentName ?? untitledDocumentName,
     );
     return location?.path;
   }

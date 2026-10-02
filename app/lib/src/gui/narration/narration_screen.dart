@@ -451,9 +451,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
         color: colors.textPrimary,
       ),
       // Reused clips explain themselves; the rest just restate the label.
-      tooltip: segment.resumed
-          ? _l10n.gui_narration_resumedTooltip
-          : label,
+      tooltip: segment.resumed ? _l10n.gui_narration_resumedTooltip : label,
       child: Text(label, style: _tokens.typography.body),
     );
   }

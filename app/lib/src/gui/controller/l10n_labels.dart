@@ -31,7 +31,8 @@ extension NarrationBlockReasonX on NarrationBlockReason {
   String message(AppLocalizations l10n) => switch (this) {
     NarrationBlockReason.noModelConfigured =>
       l10n.gui_controller_errors_noModelConfigured,
-    NarrationBlockReason.emptyText => l10n.gui_controller_blockReasons_emptyText,
+    NarrationBlockReason.emptyText =>
+      l10n.gui_controller_blockReasons_emptyText,
     NarrationBlockReason.alreadyRunning =>
       l10n.gui_controller_blockReasons_alreadyRunning,
   };
@@ -52,7 +53,6 @@ extension DocumentNameX on String? {
 /// unexpected value still shows something useful rather than nothing.
 extension ControllerErrorMessage on Object {
   String localizedMessage(AppLocalizations l10n) => switch (this) {
-    NoApiKeyConfigured() => l10n.gui_controller_errors_noApiKey,
     NoModelConfigured() => l10n.gui_controller_errors_noModelConfigured,
     NoVoiceSelected(:final modelAlias) =>
       l10n.gui_controller_errors_noVoiceSelected(modelAlias),

@@ -72,7 +72,10 @@ void main() {
     expect(controller.outDir, SettingsController.defaultOutDir());
     expect(controller.outDir, startsWith(Directory.systemTemp.path));
     final shown = statusOutDirText(tester);
-    expect(controller.outDir.endsWith(shown.replaceFirst('\u2026', '')), isTrue);
+    expect(
+      controller.outDir.endsWith(shown.replaceFirst('\u2026', '')),
+      isTrue,
+    );
   });
 
   testWidgets('shows the full output folder path when it fits the slot', (

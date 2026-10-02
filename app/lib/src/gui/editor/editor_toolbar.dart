@@ -121,8 +121,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
   Widget _buildSaveButton() {
     return AppIconButton(
       key: const Key('editorSaveButton'),
-      tooltip:
-          '${_l10n.gui_editor_toolbar_save} (${acceleratorLabel('S')})',
+      tooltip: '${_l10n.gui_editor_toolbar_save} (${acceleratorLabel('S')})',
       icon: const Icon(CupertinoIcons.square_arrow_down),
       onPressed: controller.dirty ? () => controller.save() : null,
     );
@@ -216,8 +215,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
 
   Widget _buildNarrateButton(AppTokens tokens) {
     return Tooltip(
-      message:
-          '${_l10n.gui_editor_toolbar_narrate} (${acceleratorLabel('N')})',
+      message: '${_l10n.gui_editor_toolbar_narrate} (${acceleratorLabel('N')})',
       child: AppButton(
         key: const Key('editorNarrateButton'),
         onPressed: () {

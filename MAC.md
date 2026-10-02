@@ -56,18 +56,24 @@ If you prefer a file-based approach:
 
 1. Open **Finder** → Go → **Home** (`Cmd+Shift+H`)
 2. Open the hidden `.config` folder (`Cmd+Shift+.` shows hidden files), then `tts-narrator`
-3. Create a file named `config.json` with this content:
+3. Create a file named `providers` inside `tts-narrator`
+4. Inside it, create a file named `openrouter.json` with this content:
 
 ```json
 {
-  "default_model": "fish",
-  "providers": {
-    "openrouter": {
-      "OPENROUTER_API_KEY": "sk-or-your-api-key-here"
-    }
+  "models": ["fish", "gemini", "kokoro"],
+  "settings": {
+    "base_url": "https://openrouter.ai/api/v1",
+    "api_key": "sk-or-your-api-key-here"
   }
 }
 ```
+
+The `models` list names the model files in `tts-narrator/models/` that this
+provider serves. The first provider listed in `config.json` is the default,
+and the first model in its list is the one preselected on launch — so to make
+OpenRouter the default, `config.json` should read
+`{"providers": ["openrouter"]}`.
 
 ✅ Works for both double-click and CLI launches
 ✅ Takes highest precedence over GUI setting
@@ -86,7 +92,7 @@ export OPENROUTER_API_KEY="sk-or-your-api-key"
 ## Where Are Your Settings Stored?
 
 - **GUI API key** → **Keychain Access**: `OpenRouter API Key`
-- **config.json** → `~/.config/tts-narrator/config.json`
+- **Config file** → `~/.config/tts-narrator/providers/openrouter.json`
 - **Environment Variable** → Active shell session only
 
 If you want to change the API key, you can edit either the GUI or the config file. The GUI stores it in Keychain, while
@@ -166,3 +172,22 @@ curl http://localhost:8000/v1/audio/speech \
   }' \
   --output output.wav
 ```
+
+### 4. Point the App at It
+
+The `mlx_kokoro` model is included with the app, but the app also needs to know
+the server's address. Its settings live in `providers/mlx_audio.json` in the
+config directory (`~/.config/tts-narrator/`):
+
+```json
+{
+  "models": ["mlx_kokoro"],
+  "settings": { "base_url": "http://localhost:8000/v1" }
+}
+```
+
+`base_url` is the endpoint **root** — the app appends `/audio/speech` to it, so
+do not include that part. No API key is needed for the local server. The starter
+config already ships this block, so if
+`~/.config/tts-narrator/providers/mlx_audio.json` contains it you can skip this
+step.

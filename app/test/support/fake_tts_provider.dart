@@ -2,10 +2,9 @@ import 'dart:async';
 
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
-/// Simplest fake provider: registers under the `openrouter` id so narration
-/// runs without the real network dependency. Returns each [synthesize] result
-/// with the configured bytes and records every call.
-class FakeTtsProvider implements TtsProvider {
+/// Simplest fake speech client: returns the configured bytes and records every
+/// call, so narration runs without a real network dependency.
+class FakeTtsProvider {
   FakeTtsProvider({List<int>? bytes}) : bytes = bytes ?? 'fake-audio'.codeUnits;
 
   /// Bytes returned by [synthesize].
@@ -17,37 +16,25 @@ class FakeTtsProvider implements TtsProvider {
       String? voice,
       String input,
       String responseFormat,
-      double speed,
+      double? speed,
+      String? apiKey,
     })
   >
   calls = [];
 
   int get callCount => calls.length;
 
-  @override
-  String get id => 'openrouter';
+  /// Hand this to `AppController(client: ...)` to drive narration in a test.
+  SpeechClient get client => synthesize;
 
-  @override
-  String get name => 'Fake TTS';
-
-  /// Model UI spec to surface for the given model (declarable per test).
-  ModelUiSpec modelUiSpec = const ModelUiSpec.empty();
-
-  /// Optional per-alias specs overriding [modelUiSpec]; keyed by model alias.
-  final Map<String, ModelUiSpec> specsByAlias = {};
-
-  @override
-  ModelUiSpec modelUiSpecFor(TtsModelProfile model) =>
-      specsByAlias[model.alias] ?? modelUiSpec;
-
-  @override
   Future<GeneratedAudio> synthesize({
     required String model,
     required String? voice,
     required String input,
     required String responseFormat,
     required Map<String, String> settings,
-    double speed = 1.0,
+    required double? speed,
+    String? apiKey,
     AbortToken? abort,
   }) async {
     abort?.throwIfCancelled();
@@ -65,6 +52,7 @@ class FakeTtsProvider implements TtsProvider {
       input: input,
       responseFormat: responseFormat,
       speed: speed,
+      apiKey: apiKey,
     ));
     return GeneratedAudio(bytes: bytes);
   }
@@ -73,8 +61,4 @@ class FakeTtsProvider implements TtsProvider {
   /// cleared after the gate consumes it). Lets tests suspend a run mid-flight,
   /// cancel it, start a successor, then release the gate.
   Completer<void>? gate;
-
-  /// Registers this instance with the shared registry under `openrouter`
-  /// (like `main.dart` does), so `narrate` finds it without real credentials.
-  void register() => ttsProviderRegistry.register('openrouter', () => this);
 }

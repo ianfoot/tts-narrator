@@ -6,6 +6,8 @@ import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/narration.dart';
 
+import 'support/fake_provider.dart';
+
 void main() {
   group('segmentText', () {
     test('splits paragraphs on blank lines and trims (minWords 1)', () {
@@ -122,6 +124,7 @@ void main() {
       id: 'google/gemini-3.1-flash-tts-preview',
       format: 'pcm',
       sampleRate: 24000,
+      provider: testProvider,
     );
     NarrationConfig cfg(String input, String out) => NarrationConfig(
       inputPath: input,

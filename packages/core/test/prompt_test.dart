@@ -3,12 +3,15 @@ import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/prompt.dart';
 
+import 'support/fake_provider.dart';
+
 const _gemini = TtsModelProfile(
   alias: 'gemini',
   id: 'google/gemini-3.1-flash-tts-preview',
   format: 'pcm',
   sampleRate: 24000,
   promptStyle: true,
+  provider: testProvider,
 );
 
 void main() {
