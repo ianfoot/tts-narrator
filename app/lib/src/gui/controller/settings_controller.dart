@@ -314,83 +314,99 @@ class SettingsController extends ChangeNotifier {
 
   // --- API key (provider secrets) -----------------------------------
 
-  /// Settings whose value is the API key itself, in the client's lookup order.
+  /// The environment `api_key_env` names resolve against, shared with the
+  /// loader that expands `${ENV}` references so plan-time validation and the
+  /// run config can never disagree about what a value means.
+  Map<String, String> get _environment => _model.environment;
+
+  /// Setting names a secure-store key may be **written into**.
+  ///
   /// Deliberately excludes `api_key_env`: that setting holds the *name* of an
-  /// environment variable, not key material, so treating it as a key would
-  /// report the literal string as a usable credential.
-  static const _apiKeySettingNames = ['api_key'];
+  /// environment variable, so injecting the secret there would make the client
+  /// read the secret as a variable name. Detection uses the core's wider
+  /// [apiKeySettingNames] (which includes `api_key_env`); only injection is
+  /// restricted to here. The `apiKey` alias is included because the client
+  /// reads it too, so a block carrying only that alias must not be left out.
+  static const _injectedKeySettingNames = ['api_key', 'apiKey'];
 
-  /// Provider ids the app requires an API key for. Only the vendors that
-  /// actually gate on a key belong here; keyless vendors are omitted.
-  static const _keyedProviders = {'openrouter'};
+  /// The credential [settings] yields, or null when none is usable. Delegates
+  /// to the core resolver so this check and the HTTP client's are the same code.
+  String? _resolvedApiKey(Map<String, String> settings) =>
+      resolveProviderApiKey(settings, env: _environment);
 
-  /// Whether [settings] carries a usable (non-empty) API key under any known
-  /// key-setting name.
-  bool _hasUsableApiKey(Map<String, String> settings) => settings.entries.any(
-    (e) => _apiKeySettingNames.contains(e.key) && e.value.trim().isNotEmpty,
-  );
-
-  /// Mirrors the core `resolveSettings` env-reference pattern so the status
-  /// line and the run config can never disagree about what a value means.
-  static final _envRef = RegExp(r'^\$\{(\w+)\}$');
-
-  /// Resolves a raw config [value] to a usable key, or null when it's absent,
-  /// empty, or a `${ENV}` reference the runtime environment cannot fulfil.
-  /// Literals are returned (trimmed); env references are expanded from
-  /// [Platform.environment] exactly as the core does.
-  String? _usableApiKeyValue(String raw) {
-    final match = _envRef.firstMatch(raw);
-    if (match != null) {
-      final resolved = Platform.environment[match.group(1)];
-      return (resolved == null || resolved.trim().isEmpty) ? null : resolved;
-    }
-    final literal = raw.trim();
-    return literal.isEmpty ? null : literal;
+  /// Whether a `${NAME}` secret reference in [value] resolves to a non-empty
+  /// value. A ref the runtime cannot fulfil leaves the app needing the
+  /// secure-store key, so it must not be reported as coming from the environment.
+  bool _envRefResolves(String value) {
+    final name = envRefName(value);
+    return name != null && (_environment[name]?.trim().isNotEmpty ?? false);
   }
 
-  /// Resolves the provider settings for [profile]: config.json literals and
+  /// Whether the active model's provider declares a credential, inferred from
+  /// its config rather than from a list of vendor names in this file.
+  ///
+  /// Exposed for the settings rail, which hides the API-key section entirely
+  /// for a keyless provider (a local server needs no key).
+  bool get activeProviderNeedsApiKey {
+    final p = _model.profile;
+    return p != null && providerNeedsApiKey(_model.rawProviderSettings(p));
+  }
+
+  /// Resolves the provider settings for [profile]: config literals and
   /// `${ENV}` references first (via the core), then the OS-secure store, and
   /// fails early with a descriptive message when no key exists anywhere.
+  ///
+  /// A provider that declares no credential is keyless and resolves straight
+  /// through — it never throws, because a local server legitimately needs no
+  /// `Authorization` header.
   ///
   /// Failing here — inside [buildConfig], which [RunController.startRun]
   /// guards — turns a missing key into a plan error before the run starts
   /// instead of a mid-run narration `StateError` from the provider.
   Map<String, String> _resolveProviderSettings(TtsModelProfile p) {
-    if (!_keyedProviders.contains(p.provider)) {
+    final raw = _model.rawProviderSettings(p);
+    if (!providerNeedsApiKey(raw)) {
       return _model.resolveProviderSettings(p);
     }
-    Map<String, String>? resolved;
+    Map<String, String> resolved;
     try {
       resolved = _model.resolveProviderSettings(p);
     } on StateError {
-      // A `${ENV}` reference the runtime cannot fulfil (the shipped starter
-      // config's `${OPENROUTER_API_KEY}` env reference under a double-click
-      // instance) is treated as "no config/env key"; the secure store can
-      // still provide one, so fall through and re-resolve with it injected.
-      resolved = null;
+      // A `${ENV}` reference the runtime cannot fulfil (an unresolvable ref
+      // under a double-click instance that inherits no shell environment) is
+      // treated as "no config/env key"; the secure store can still provide one,
+      // so fall through and re-resolve with it injected.
+      resolved = const {};
     }
-    if (resolved != null && _hasUsableApiKey(resolved)) return resolved;
+    // Returned untouched on a hit: an `api_key_env` that resolves must keep its
+    // *name*, because that is what the client reads the variable by.
+    if (_resolvedApiKey(resolved) != null) return resolved;
     final stored = apiKeyStore?.value;
     if (stored == null || stored.isEmpty) {
       throw const NoApiKeyConfigured();
     }
     final retried = _model.resolveProviderSettings(
       p,
-      overrides: _apiKeyOverridesWith(p, stored),
+      overrides: _apiKeyOverridesWith(raw, stored),
     );
-    if (_hasUsableApiKey(retried)) return retried;
+    if (_resolvedApiKey(retried) != null) return retried;
     throw const NoApiKeyConfigured();
   }
 
-  /// Overrides injecting the stored [key] into [profile]'s provider block:
-  /// overrides whichever key-setting names are already present, else supplies
-  /// `api_key` for a block that carries none — the name the speech client reads
-  /// first, so a block holding only `api_key_env` (a variable name) still gets
-  /// the keychain value under a name the client will honour.
-  Map<String, String> _apiKeyOverridesWith(TtsModelProfile p, String key) {
-    final raw = _model.rawProviderSettings(p);
+  /// Overrides injecting the stored [key] into the provider's raw [raw] block:
+  /// overrides whichever injectable key-setting names are already present,
+  /// else supplies `api_key` for a block that carries none — the name the
+  /// speech client reads first, so a block holding only `api_key_env` (a
+  /// variable name) still gets the keychain value under a name the client will
+  /// honour.
+  ///
+  /// Never writes `api_key_env`: see [_injectedKeySettingNames].
+  Map<String, String> _apiKeyOverridesWith(
+    Map<String, String> raw,
+    String key,
+  ) {
     final overrides = <String, String>{};
-    for (final name in _apiKeySettingNames) {
+    for (final name in _injectedKeySettingNames) {
       if (raw.containsKey(name)) overrides[name] = key;
     }
     if (overrides.isEmpty) overrides['api_key'] = key;
@@ -400,23 +416,33 @@ class SettingsController extends ChangeNotifier {
   /// Where the active model's API key comes from, mirroring the precedence
   /// applied in [_resolveProviderSettings] (config/env first, then the secure
   /// store). Drives the settings rail's status line. [ApiKeySource.missing]
-  /// when no model is active or its provider needs no key.
+  /// when no model is active or its provider declares no credential.
   ///
-  /// A `${ENV}` reference that cannot resolve does NOT count as "set via the
-  /// environment": the app would still fail without the secure-store key, so
+  /// An `api_key_env` the runtime cannot resolve does NOT count as "set via
+  /// the environment": the app would still fail without the secure-store key, so
   /// the status agrees with what a run would actually consume.
   ApiKeySource get apiKeySource {
     final p = _model.profile;
-    if (p == null || !_keyedProviders.contains(p.provider)) {
-      return ApiKeySource.missing;
-    }
+    if (p == null) return ApiKeySource.missing;
     final raw = _model.rawProviderSettings(p);
-    for (final key in _apiKeySettingNames) {
-      final value = raw[key];
-      if (value == null || _usableApiKeyValue(value) == null) continue;
-      return _envRef.hasMatch(value)
-          ? ApiKeySource.environment
-          : ApiKeySource.config;
+    if (!providerNeedsApiKey(raw)) return ApiKeySource.missing;
+    for (final name in _injectedKeySettingNames) {
+      final value = raw[name]?.trim();
+      if (value == null || value.isEmpty) continue;
+      // A literal is `config`; a `${ENV}` ref counts as `environment` only once
+      // the runtime actually fulfils it.
+      if (isEnvReference(value)) {
+        if (_envRefResolves(value)) return ApiKeySource.environment;
+        continue;
+      }
+      return ApiKeySource.config;
+    }
+    // `api_key_env` holds a variable *name*; its presence in the raw block is
+    // never itself a credential.
+    final envName = raw['api_key_env']?.trim();
+    if (envName != null && envName.isNotEmpty) {
+      final value = _environment[envName]?.trim();
+      if (value != null && value.isNotEmpty) return ApiKeySource.environment;
     }
     final stored = apiKeyStore?.value;
     return (stored != null && stored.isNotEmpty)

@@ -130,18 +130,8 @@ class OpenAiSpeechClient {
   /// value) then `api_key_env`, whose value is the *name* of an environment
   /// variable to read from [environment]. A block with neither sends no
   /// `Authorization` header at all, which is the norm for local servers.
-  String? _apiKey(Map<String, String> settings) {
-    for (final name in const ['api_key', 'apiKey']) {
-      final value = settings[name];
-      if (value != null && value.trim().isNotEmpty) return value.trim();
-    }
-    final envName = settings['api_key_env']?.trim();
-    if (envName != null && envName.isNotEmpty) {
-      final value = (environment ?? Platform.environment)[envName];
-      if (value != null && value.trim().isNotEmpty) return value.trim();
-    }
-    return null;
-  }
+  String? _apiKey(Map<String, String> settings) =>
+      resolveProviderApiKey(settings, env: environment ?? Platform.environment);
 
   /// The block's `default_voice`, used when the request carries no [voice].
   String? _defaultVoice(Map<String, String> settings) =>

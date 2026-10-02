@@ -89,6 +89,12 @@ class ModelProfileVoiceController extends ChangeNotifier {
   Map<String, String> rawProviderSettings(TtsModelProfile profile) =>
       _voiceConfig.providers[profile.provider]?.settings ?? const {};
 
+  /// The environment the loader expands `${ENV}` references against. Exposed so
+  /// the settings rail resolves `api_key_env` names against the same map the
+  /// run config is built from, rather than a second copy of the process
+  /// environment.
+  Map<String, String> get environment => _loader.environment;
+
   /// The editable GUI options for the active model, derived from the
   /// capabilities it declares in its config file. Empty when no model is
   /// configured or the model declares none — the app has no per-model UI

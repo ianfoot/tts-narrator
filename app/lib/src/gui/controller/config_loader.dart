@@ -7,11 +7,19 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 /// the default voice, pricing, and the provider settings block with `${ENV}`
 /// references expanded from the runtime environment.
 class UserVoiceConfigLoader {
-  UserVoiceConfigLoader({String? configDir})
-    : configDir = configDir ?? defaultConfigDir();
+  UserVoiceConfigLoader({
+    String? configDir,
+    Map<String, String>? environment,
+  }) : configDir = configDir ?? defaultConfigDir(),
+       environment = environment ?? Platform.environment;
 
   /// Absolute path of the config directory (defaults to the platform path).
   final String configDir;
+
+  /// The environment `${ENV}` references and `api_key_env` names resolve
+  /// against. Defaults to the process environment; injectable so tests never
+  /// depend on what the host shell happens to export.
+  final Map<String, String> environment;
 
   /// Warnings from the last [load] (e.g. a skipped malformed model file).
   List<String> warnings = const [];
@@ -36,5 +44,5 @@ class UserVoiceConfigLoader {
   }) => resolveSettings({
     ...load().providers[profile.provider]?.settings ?? const {},
     ...?overrides,
-  }, env: Platform.environment);
+  }, env: environment);
 }

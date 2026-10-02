@@ -209,6 +209,11 @@ class AppController extends ChangeNotifier {
   /// Whether no API key is configured anywhere for the active model.
   bool get apiKeyMissing => _settings.apiKeyMissing;
 
+  /// Whether the active model's provider declares a credential at all,
+  /// inferred from its config. The settings rail hides the API-key section when
+  /// it is false (a local server needs no key).
+  bool get activeProviderNeedsApiKey => _settings.activeProviderNeedsApiKey;
+
   /// Whether a key currently sits in the OS secure store (enables the rail's
   /// Remove button).
   bool get hasStoredApiKey => _apiKeyStore.value != null;

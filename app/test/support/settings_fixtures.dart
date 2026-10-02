@@ -36,6 +36,10 @@ void writeConfig(String configDir, Map<String, Object?> body) {
   // `narrate` validates the provider block before the first segment, so a
   // fixture without one cannot start a run. Default to a block shaped like the
   // shipped one; a test that cares about the key section passes its own.
+  //
+  // The shipped bare `api_key_env` is the case Task 6 fixed, so it is the
+  // default here — but it only *resolves* for a controller built with an
+  // environment that holds the variable (see [makeController]).
   final blocks = (body['providers'] as Map<String, Object?>?) ??
       {
         'openrouter': {
@@ -89,11 +93,22 @@ void writeConfig(String configDir, Map<String, Object?> body) {
 /// Builds a controller over [configDir]. Pass [client] to drive narration
 /// with a fake instead of the network; omitting it keeps the real client,
 /// which is correct for tests that never start a run.
-AppController makeController(String configDir, {SpeechClient? client}) =>
-    AppController(
-      loader: UserVoiceConfigLoader(configDir: configDir),
-      client: client,
-    );
+///
+/// [environment] defaults to an empty map rather than the process environment,
+/// so a test never depends on what the host shell happens to export — the
+/// shared fixture's `api_key_env: 'OPENROUTER_API_KEY'` resolves to nothing
+/// unless a test opts in.
+AppController makeController(
+  String configDir, {
+  SpeechClient? client,
+  Map<String, String>? environment,
+}) => AppController(
+  loader: UserVoiceConfigLoader(
+    configDir: configDir,
+    environment: environment ?? const {},
+  ),
+  client: client,
+);
 
 /// Writes the starter fish config so the controller preselects fish with its
 /// default voice (as after the first-run download).

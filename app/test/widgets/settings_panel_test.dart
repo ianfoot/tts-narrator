@@ -39,9 +39,16 @@ void main() {
 
   /// Pass [client] to drive narration with a fake instead of the network;
   /// omitting it keeps the real client, which is correct for tests that never
-  /// start a run.
-  AppController makeController({SpeechClient? client}) => AppController(
-    loader: UserVoiceConfigLoader(configDir: configDir),
+  /// start a run. [environment] defaults to empty so no test depends on what
+  /// the host shell exports.
+  AppController makeController({
+    SpeechClient? client,
+    Map<String, String>? environment,
+  }) => AppController(
+    loader: UserVoiceConfigLoader(
+      configDir: configDir,
+      environment: environment ?? const {},
+    ),
     client: client,
   );
 

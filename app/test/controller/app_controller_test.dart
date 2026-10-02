@@ -38,8 +38,18 @@ void main() {
   void writeConfig(Map<String, Object?> body) =>
       fixtures.writeConfig(configDir, body);
 
-  AppController makeController({SpeechClient? client}) => AppController(
-    loader: UserVoiceConfigLoader(configDir: configDir),
+  /// [environment] defaults to empty so no test depends on what the host shell
+  /// exports; pass a map to exercise `${ENV}` / `api_key_env` resolution.
+  AppController makeController({
+    SpeechClient? client,
+    ApiKeyStore? apiKeyStore,
+    Map<String, String>? environment,
+  }) => AppController(
+    loader: UserVoiceConfigLoader(
+      configDir: configDir,
+      environment: environment ?? const {},
+    ),
+    apiKeyStore: apiKeyStore,
     client: client,
   );
 
@@ -359,7 +369,10 @@ void main() {
       () async {
         writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
         final c = AppController(
-          loader: UserVoiceConfigLoader(configDir: configDir),
+          loader: UserVoiceConfigLoader(
+            configDir: configDir,
+            environment: const {},
+          ),
           apiKeyStore: await storeLoadedWith('sk-stored'),
         )..setText('A sentence.');
         final cfg = c.buildConfig();
@@ -372,7 +385,10 @@ void main() {
     test('a config literal keeps precedence over the stored key', () async {
       writeFishConfig(); // `api_key: sk-test` literal.
       final c = AppController(
-        loader: UserVoiceConfigLoader(configDir: configDir),
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
         apiKeyStore: await storeLoadedWith('sk-stored'),
       )..setText('A sentence.');
       final cfg = c.buildConfig();
@@ -383,13 +399,16 @@ void main() {
     test(
       'a resolvable \${ENV} ref flows through and reads as environment',
       () async {
-        writeEnvRefFishConfig(r'${HOME}'); // always set on the test host.
+        writeEnvRefFishConfig(r'${HOME}');
         final c = AppController(
-          loader: UserVoiceConfigLoader(configDir: configDir),
+          loader: UserVoiceConfigLoader(
+            configDir: configDir,
+            environment: const {'HOME': '/home/test'},
+          ),
           apiKeyStore: await storeLoadedWith('sk-stored'),
         )..setText('A sentence.');
         final cfg = c.buildConfig();
-        expect(cfg.providerSettings['api_key'], Platform.environment['HOME']);
+        expect(cfg.providerSettings['api_key'], '/home/test');
         expect(c.apiKeySource, ApiKeySource.environment);
       },
     );
@@ -399,7 +418,10 @@ void main() {
       () {
         writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
         final c = AppController(
-          loader: UserVoiceConfigLoader(configDir: configDir),
+          loader: UserVoiceConfigLoader(
+            configDir: configDir,
+            environment: const {},
+          ),
           apiKeyStore: ApiKeyStore(),
         )..setText('A sentence.');
         expect(() => c.buildConfig(), throwsA(isA<NoApiKeyConfigured>()));
@@ -410,7 +432,10 @@ void main() {
     test('saving/removing through the store flips the rail status', () async {
       writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
       final c = AppController(
-        loader: UserVoiceConfigLoader(configDir: configDir),
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
         apiKeyStore: await storeLoadedWith(null),
       );
       expect(c.apiKeyMissing, isTrue);
@@ -420,6 +445,167 @@ void main() {
       expect(c.buildConfig().providerSettings['api_key'], 'sk-stored');
       await c.removeApiKey();
       expect(c.hasStoredApiKey, isFalse);
+      expect(c.apiKeyMissing, isTrue);
+    });
+  });
+
+  group('api_key_env inference', () {
+    setUp(() {
+      FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    });
+
+    /// Writes a fish config whose only provider is [providerName], declaring
+    /// exactly [settings]. The provider file's name is what the model resolves
+    /// its provider to, so this also proves the name is not special-cased.
+    void writeProviderConfig(
+      String providerName,
+      Map<String, String> settings,
+    ) {
+      writeConfig({
+        'providers': {providerName: {...settings}},
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+        },
+        'defaults': {'fish': 'British Female Narrator'},
+        'voices': {
+          'fish': {
+            'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          },
+        },
+      });
+    }
+
+    Future<ApiKeyStore> storeLoadedWith(String? key) async {
+      FlutterSecureStorage.setMockInitialValues(<String, String>{
+        'openrouter_api_key': ?key,
+      });
+      final store = ApiKeyStore();
+      await store.load();
+      return store;
+    }
+
+    test(
+      'the shipped shape: a bare api_key_env resolves and never throws',
+      () async {
+        // The reported symptom: `voice-config/providers/openrouter.json` ships
+        // `"api_key_env": "OPENROUTER_API_KEY"` (a bare name, not `${NAME}`).
+        // The GUI used to throw NoApiKeyConfigured with the variable exported.
+        writeProviderConfig('openrouter', {
+          'base_url': 'https://openrouter.ai/api/v1',
+          'api_key_env': 'OPENROUTER_API_KEY',
+        });
+        final c = makeController(
+          environment: const {'OPENROUTER_API_KEY': 'sk-from-env'},
+        )..setText('A sentence.');
+
+        final cfg = c.buildConfig();
+        expect(
+          cfg.providerSettings['base_url'],
+          'https://openrouter.ai/api/v1',
+        );
+        expect(c.apiKeySource, ApiKeySource.environment);
+        expect(c.apiKeyMissing, isFalse);
+        expect(c.activeProviderNeedsApiKey, isTrue);
+      },
+    );
+
+    test('a resolved api_key_env keeps its *name* in the run settings', () {
+      writeProviderConfig('openrouter', {'api_key_env': 'OPENROUTER_API_KEY'});
+      final c = makeController(
+        environment: const {'OPENROUTER_API_KEY': 'sk-from-env'},
+      )..setText('A sentence.');
+
+      // Untouched: the secret is never written into `providerSettings`, and the
+      // name the client reads the variable by survives.
+      final settings = c.buildConfig().providerSettings;
+      expect(settings['api_key_env'], 'OPENROUTER_API_KEY');
+      expect(settings.containsKey('api_key'), isFalse);
+      expect(settings.containsKey('apiKey'), isFalse);
+    });
+
+    test('an unresolvable api_key_env falls through to the stored key', () async {
+      writeProviderConfig('openrouter', {'api_key_env': 'OPENROUTER_API_KEY'});
+      final c = AppController(
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
+        apiKeyStore: await storeLoadedWith('sk-stored'),
+      )..setText('A sentence.');
+
+      final settings = c.buildConfig().providerSettings;
+      expect(settings['api_key'], 'sk-stored');
+      // The regression guard for the injection split: the secret must never
+      // land in `api_key_env`, or the client reads it as a variable *name*.
+      expect(settings['api_key_env'], 'OPENROUTER_API_KEY');
+      expect(c.apiKeySource, ApiKeySource.keychain);
+    });
+
+    test('an unresolvable api_key_env throws when nothing else has a key', () {
+      writeProviderConfig('openrouter', {'api_key_env': 'OPENROUTER_API_KEY'});
+      final c = makeController()..setText('A sentence.');
+
+      expect(() => c.buildConfig(), throwsA(isA<NoApiKeyConfigured>()));
+      // Not `environment`: the app would still fail without a stored key.
+      expect(c.apiKeySource, ApiKeySource.missing);
+    });
+
+    test('a non-openrouter provider declaring api_key is recognised as keyed',
+        () async {
+      writeProviderConfig('groq', {
+        'base_url': 'https://api.groq.invalid',
+        'api_key': 'gsk-test',
+      });
+      final c = makeController(
+        apiKeyStore: await storeLoadedWith('sk-stored'),
+      )..setText('A sentence.');
+
+      expect(c.profile?.provider, 'groq');
+      expect(c.activeProviderNeedsApiKey, isTrue);
+      expect(c.apiKeySource, ApiKeySource.config);
+      expect(c.buildConfig().providerSettings['api_key'], 'gsk-test');
+    });
+
+    test('a non-openrouter provider declaring api_key_env is recognised', () {
+      writeProviderConfig('groq', {'api_key_env': 'GROQ_API_KEY'});
+      final c = makeController(
+        environment: const {'GROQ_API_KEY': 'gsk-env'},
+      )..setText('A sentence.');
+
+      expect(c.activeProviderNeedsApiKey, isTrue);
+      expect(c.apiKeySource, ApiKeySource.environment);
+      expect(() => c.buildConfig(), returnsNormally);
+    });
+
+    test('the apiKey alias counts as a declared credential', () {
+      writeProviderConfig('groq', {'apiKey': 'gsk-alias'});
+      final c = makeController()..setText('A sentence.');
+
+      expect(c.activeProviderNeedsApiKey, isTrue);
+      expect(c.apiKeySource, ApiKeySource.config);
+      expect(c.buildConfig().providerSettings['apiKey'], 'gsk-alias');
+    });
+
+    test('a keyless provider never throws and reports missing', () async {
+      // The local starter: base_url only, no credential.
+      writeProviderConfig('mlx_audio', {
+        'base_url': 'http://localhost:8000/v1',
+      });
+      final c = makeController(
+        apiKeyStore: await storeLoadedWith('sk-stored'),
+      )..setText('A sentence.');
+
+      expect(c.activeProviderNeedsApiKey, isFalse);
+      expect(c.apiKeySource, ApiKeySource.missing);
+      // A stored key for another provider must not turn a keyless block keyed.
+      final settings = c.buildConfig().providerSettings;
+      expect(settings['base_url'], 'http://localhost:8000/v1');
+      expect(settings.containsKey('api_key'), isFalse);
+    });
+
+    test('a no-model config reports missing and needs no key', () {
+      final c = makeController();
+      expect(c.activeProviderNeedsApiKey, isFalse);
       expect(c.apiKeyMissing, isTrue);
     });
   });
