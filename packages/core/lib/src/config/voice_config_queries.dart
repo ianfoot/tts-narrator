@@ -43,15 +43,19 @@ TtsModelProfile? profileFor(String aliasOrId, VoiceConfig config) {
   return null;
 }
 
-/// The model the CLI and GUI preselect, or null when no `default_model` is
-/// configured (or it does not resolve to a configured model).
+/// The model the CLI and GUI preselect: the first model of the first
+/// configured provider, or null when there is none.
 ///
-/// No compiled default exists: without a resolvable `default_model` there is
-/// nothing to preselect.
+/// No compiled default exists. The default is whatever the config lists
+/// first -- `config.json` orders the providers, and a provider file orders its
+/// models -- so a user changes it by reordering, not by editing a key. An
+/// unresolvable first entry (a model file that failed to load, say) yields
+/// null rather than silently falling through to the next one, because "the
+/// config says this is first" is not a licence to substitute something else.
 TtsModelProfile? defaultModelFor(VoiceConfig config) {
-  final dm = config.defaultModel;
-  if (dm == null || dm.trim().isEmpty) return null;
-  return profileFor(dm.trim(), config);
+  final provider = config.defaultProvider;
+  if (provider == null || provider.models.isEmpty) return null;
+  return profileFor(provider.models.first, config);
 }
 
 String? _resolveAlias(VoiceConfig config, String modelAlias, String value) {

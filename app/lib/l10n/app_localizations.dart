@@ -438,7 +438,7 @@ abstract class AppLocalizations {
   /// No description provided for @gui_settings_apiKeyStatusConfig.
   ///
   /// In en, this message translates to:
-  /// **'Set in config.json'**
+  /// **'Set in provider config'**
   String get gui_settings_apiKeyStatusConfig;
 
   /// No description provided for @gui_settings_apiKeyStatusEnvironment.

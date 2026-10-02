@@ -1,6 +1,5 @@
 {
   "id": "mlx-community/Kokoro-82M-bf16",
-  "provider": "mlx_audio",
   "format": "mp3",
   "display_name": "MLX Kokoro 82M",
   "speed": true,

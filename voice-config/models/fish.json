@@ -1,6 +1,5 @@
 {
-  "id": "fish-audio/s2.1-pro-free",
-  "provider": "openrouter",
+  "id": "fish-audio/s2.1-pro-free:free",
   "format": "mp3",
   "display_name": "Fish Audio S2.1 (Free)",
   "default_voice": "British Female Narrator",

@@ -155,7 +155,6 @@ void main() {
     tester,
   ) async {
     writeConfig(configDir, {
-      'default_model': 'fish',
       'providers': {
         'openrouter': {'api_key': r'${TTS_NARRATOR_NOT_SET}'},
       },

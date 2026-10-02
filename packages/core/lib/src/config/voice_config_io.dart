@@ -5,7 +5,6 @@ import '../narration/cost.dart';
 import '../narration/model_profiles.dart';
 import 'voice_config.dart';
 import 'voice_config_download.dart';
-import 'voice_config_queries.dart';
 
 /// Default config directory, shared by the CLI and GUI.
 String defaultConfigDir() {
@@ -17,18 +16,33 @@ String defaultConfigDir() {
   return home != null ? '$home/.config/tts-narrator' : '.';
 }
 
+/// File name of the provider registry, in the config directory root.
+const String kVoiceConfigRegistryName = 'config.json';
+
+/// Subdirectory of the config directory holding one `<name>.json` per provider.
+const String kVoiceConfigProvidersDir = 'providers';
+
+/// Subdirectory of the config directory holding one `<alias>.json` per model.
+const String kVoiceConfigModelsDir = 'models';
+
 /// Loads a [VoiceConfig] from a config *directory* ([configDir]).
 ///
-/// Reads `config.json` for the global `default_model` + `providers` block,
-/// then one ``<alias>.json`` file per model directly in the directory. A
-/// missing `config.json` yields empty global data; a directory with no model
-/// files yields no configured models.
+/// Reads `config.json` for the ordered provider registry, then one
+/// `providers/<name>.json` per registered provider, then one
+/// `models/<alias>.json` per model those providers serve. A provider file
+/// lists the models it provides, so which block a model belongs to is stated
+/// once, in the provider file, and the loader inverts that into the `provider`
+/// on each model profile.
+///
+/// A missing `config.json` yields no providers, and therefore no models: the
+/// registry is the entry point. A model file no provider claims is ignored
+/// silently -- it is not configuration this config uses. A provider listed in
+/// `config.json` whose file or whose models are missing, and a provider file
+/// that `config.json` does not register, are each reported as warnings.
 ///
 /// If files don't exist, [downloadVoiceConfigFiles] fetches them from GitHub.
 ///
-/// Returns the loaded config plus warnings for skipped models. A `*.json` file
-/// in the directory that is not a model config at all is ignored silently;
-/// see [_isModelFileCandidate].
+/// Returns the loaded config plus warnings for anything skipped or broken.
 (VoiceConfig, List<String>) loadVoiceConfig(String configDir) {
   // Note: download is no longer triggered automatically here so
   // loadVoiceConfig stays pure synchronous disk I/O. Callers that
@@ -37,108 +51,188 @@ String defaultConfigDir() {
 
   final warnings = <String>[];
   final separator = Platform.pathSeparator;
-  final global = File('$configDir${separator}config.json');
-  final globalConfig = global.existsSync()
-      ? _loadGlobalConfig(global.path)
-      : const VoiceConfig();
+  final providersDir = Directory(configDir);
+  if (!providersDir.existsSync()) {
+    return (const VoiceConfig(), warnings);
+  }
 
-  final configDirEntry = Directory(configDir);
-  if (!configDirEntry.existsSync()) return (globalConfig, warnings);
+  final registered = _loadRegistry(
+    '$configDir$separator$kVoiceConfigRegistryName',
+  );
+  final providers = <String, ProviderConfig>{};
+  // Alias -> provider name, inverted from the provider files' model lists.
+  final claimedBy = <String, String>{};
 
-  final files =
-      configDirEntry
-          .listSync()
-          .whereType<File>()
-          .where((f) => f.path.toLowerCase().endsWith('.json'))
-          .where((f) => !f.path.toLowerCase().endsWith('config.json'))
-          .where((f) => !f.path.toLowerCase().endsWith('manifest.json'))
-          .toList()
-        ..sort((a, b) => a.path.compareTo(b.path));
+  for (final name in registered) {
+    final path =
+        '$configDir$separator$kVoiceConfigProvidersDir$separator$name.json';
+    if (!File(path).existsSync()) {
+      warnings.add(
+        'Provider "$name" is listed in config.json but '
+        '$kVoiceConfigProvidersDir/$name.json is missing.',
+      );
+      continue;
+    }
+    try {
+      final provider = _parseProviderFile(path, name);
+      providers[name] = provider;
+      for (final alias in provider.models) {
+        claimedBy.putIfAbsent(alias, () => name);
+      }
+    } on VoiceConfigurationError catch (e) {
+      warnings.add('Skipped provider "$name": ${e.message}');
+    }
+  }
+
+  warnings.addAll(_warnUnregisteredProviderFiles(configDir, providers));
 
   final models = <String, TtsModelProfile>{};
   final defaults = <String, String>{};
   final pricing = <String, AudioPricing>{};
   final voices = <String, Map<String, Voice>>{};
-  for (final f in files) {
-    final alias = _stemOf(f.path);
+
+  final modelsDir = '$configDir$separator$kVoiceConfigModelsDir';
+  for (final file in _jsonFilesIn(modelsDir)) {
+    final alias = _stemOf(file.path);
+    // No provider claims this alias, so the file is not part of this config.
+    // Skipping quietly is deliberate: the models directory may hold packs the
+    // user has not switched on.
+    final providerName = claimedBy[alias];
+    if (providerName == null) continue;
     try {
-      final m = _parseModelFile(f.path, alias);
+      final m = _parseModelFile(file.path, alias, providerName);
       models[alias] = m.profile;
       if (m.defaultVoice != null) defaults[alias] = m.defaultVoice!;
       if (m.pricing != null) pricing[alias] = m.pricing!;
       if (m.voices.isNotEmpty) voices[alias] = m.voices;
     } on VoiceConfigurationError catch (e) {
-      // The config directory doubles as the GUI's application-support
-      // directory, so on Linux it also holds JSON this package never wrote
-      // (e.g. `shared_preferences.json`). Report only files that actually
-      // claim to be a model config; ignore unrelated JSON silently.
-      if (_isModelFileCandidate(f.path)) {
-        warnings.add('Skipped model "$alias": ${e.message}');
-      }
+      warnings.add('Skipped model "$alias": ${e.message}');
     }
   }
 
-  final config = VoiceConfig(
-    defaultModel: globalConfig.defaultModel,
-    providers: globalConfig.providers,
-    models: models,
-    defaults: defaults,
-    pricing: pricing,
-    voices: voices,
-  );
-
-  final configuredDefault = config.defaultModel;
-  if (configuredDefault != null &&
-      configuredDefault.trim().isNotEmpty &&
-      profileFor(configuredDefault.trim(), config) == null) {
-    warnings.add(
-      'default_model "$configuredDefault" is not a configured model; '
-      'no default model is selected.',
-    );
+  for (final entry in providers.entries) {
+    for (final alias in entry.value.models) {
+      if (models.containsKey(alias)) continue;
+      warnings.add(
+        'Provider "${entry.key}" lists model "$alias" but '
+        '$kVoiceConfigModelsDir/$alias.json is missing or unusable.',
+      );
+    }
   }
 
-  return (config, warnings);
+  return (
+    VoiceConfig(
+      providers: providers,
+      models: models,
+      defaults: defaults,
+      pricing: pricing,
+      voices: voices,
+    ),
+    warnings,
+  );
 }
 
-VoiceConfig _loadGlobalConfig(String path) {
+/// Reads the ordered provider names out of `config.json`.
+///
+/// Order is the whole point of this file: the first registered provider is
+/// the default, and its first model is the default model. The list is
+/// preserved exactly, so a user controls the default by ordering rather than
+/// by a separate key or by how filenames happen to sort.
+List<String> _loadRegistry(String path) {
+  if (!File(path).existsSync()) return const [];
   final raw = _readJson(path);
   if (raw is! Map<String, dynamic>) {
     throw VoiceConfigurationError(
       'Invalid voice config "$path": top-level value must be a JSON object',
     );
   }
-  final defaultModelRaw = raw['default_model'];
-  if (defaultModelRaw != null && defaultModelRaw is! String) {
+  final providersRaw = raw['providers'];
+  if (providersRaw == null) return const [];
+  if (providersRaw is! List) {
     throw VoiceConfigurationError(
-      'Invalid voice config "$path": "default_model" must be a string',
+      'Invalid voice config "$path": "providers" must be a list of names',
     );
   }
-  final providersOut = <String, Map<String, String>>{};
-  final providersRaw = raw['providers'];
-  if (providersRaw is Map<String, dynamic>) {
-    providersRaw.forEach((id, settings) {
-      if (settings is! Map<String, dynamic>) {
-        throw VoiceConfigurationError(
-          'Invalid voice config "$path": "providers.$id" must be an object',
-        );
+  final names = <String>[];
+  for (final entry in providersRaw) {
+    if (entry is! String || entry.trim().isEmpty) {
+      throw VoiceConfigurationError(
+        'Invalid voice config "$path": "providers" must hold non-empty '
+        'provider names',
+      );
+    }
+    final name = entry.trim();
+    if (!names.contains(name)) names.add(name);
+  }
+  return names;
+}
+
+/// Reports provider files present on disk that `config.json` never registers.
+///
+/// Dropping a file into `providers/` is not enough to switch a provider on,
+/// and failing silently there would look like the file was ignored by mistake.
+Iterable<String> _warnUnregisteredProviderFiles(
+  String configDir,
+  Map<String, ProviderConfig> providers,
+) sync* {
+  final dir = '$configDir${Platform.pathSeparator}$kVoiceConfigProvidersDir';
+  for (final file in _jsonFilesIn(dir)) {
+    final stem = _stemOf(file.path);
+    if (providers.containsKey(stem)) continue;
+    yield 'Provider file "$stem.json" is not listed in config.json and is '
+        'ignored; add it to "providers" to use it.';
+  }
+}
+
+/// `*.json` files directly in [dir], sorted by path so loads are deterministic.
+List<File> _jsonFilesIn(String dir) {
+  final entry = Directory(dir);
+  if (!entry.existsSync()) return const [];
+  final files =
+      entry
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.toLowerCase().endsWith('.json'))
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
+  return files;
+}
+
+ProviderConfig _parseProviderFile(String path, String name) {
+  final raw = _readJson(path);
+  if (raw is! Map<String, dynamic>) {
+    throw VoiceConfigurationError('must be a JSON object');
+  }
+
+  final modelsRaw = raw['models'];
+  final models = <String>[];
+  if (modelsRaw is List) {
+    for (final entry in modelsRaw) {
+      if (entry is! String || entry.trim().isEmpty) {
+        throw VoiceConfigurationError('"models" must hold non-empty aliases');
       }
-      final out = <String, String>{};
-      settings.forEach((key, value) {
-        if (value is! String) {
-          throw VoiceConfigurationError(
-            'Invalid voice config "$path": "providers.$id.$key" must be a '
-            'string',
-          );
-        }
-        out[key] = value;
-      });
-      providersOut[id] = out;
+      final alias = entry.trim();
+      if (!models.contains(alias)) models.add(alias);
+    }
+  } else if (modelsRaw != null) {
+    throw VoiceConfigurationError('"models" must be a list of model aliases');
+  }
+
+  final settingsOut = <String, String>{};
+  final settingsRaw = raw['settings'];
+  if (settingsRaw != null) {
+    if (settingsRaw is! Map<String, dynamic>) {
+      throw VoiceConfigurationError('"settings" must be an object');
+    }
+    settingsRaw.forEach((key, value) {
+      if (value is! String) {
+        throw VoiceConfigurationError('"settings.$key" must be a string');
+      }
+      settingsOut[key] = value;
     });
   }
-  return VoiceConfig(
-    defaultModel: defaultModelRaw as String?,
-    providers: providersOut,
-  );
+
+  return ProviderConfig(name: name, settings: settingsOut, models: models);
 }
 
 ({
@@ -147,7 +241,7 @@ VoiceConfig _loadGlobalConfig(String path) {
   AudioPricing? pricing,
   Map<String, Voice> voices,
 })
-_parseModelFile(String path, String alias) {
+_parseModelFile(String path, String alias, String provider) {
   final raw = _readJson(path);
   if (raw is! Map<String, dynamic>) {
     throw VoiceConfigurationError('must be a JSON object');
@@ -175,10 +269,6 @@ _parseModelFile(String path, String alias) {
   final supportsSpeed = raw['speed'];
   if (supportsSpeed != null && supportsSpeed is! bool) {
     throw VoiceConfigurationError('"speed" must be a bool');
-  }
-  final provider = raw['provider'];
-  if (provider is! String || provider.trim().isEmpty) {
-    throw VoiceConfigurationError('needs a non-empty "provider"');
   }
   final displayName = raw['display_name'];
   if (displayName != null && displayName is! String) {
@@ -241,51 +331,13 @@ _parseModelFile(String path, String alias) {
       sendsVoiceField: sendsVoice ?? true,
       supportsSpeed: supportsSpeed ?? false,
       sampleRate: sampleRate?.toInt(),
-      provider: provider.trim(),
+      provider: provider,
       displayName: displayName,
     ),
     defaultVoice: defaultVoice,
     pricing: pricing,
     voices: voices,
   );
-}
-
-/// Top-level keys that mark a JSON object as a voice-config model file: the
-/// union of what [_modelJson] writes and [_parseModelFile] reads.
-const _modelFileKeys = {
-  'id',
-  'provider',
-  'display_name',
-  'format',
-  'sample_rate',
-  'prompt_style',
-  'sends_voice',
-  'speed',
-  'default_voice',
-  'pricing',
-  'voices',
-};
-
-/// Whether [path] holds something meant to be a model config, and so deserves
-/// a warning when it fails to parse.
-///
-/// True when the file is unreadable or is not valid JSON -- a model file
-/// truncated mid-write must still be reported -- and when it is a JSON object
-/// carrying at least one [_modelFileKeys] entry. False for an object with no
-/// voice-config keys at all, and for a non-object top level: neither can be a
-/// mis-typed model file, so they are unrelated neighbours in a shared
-/// directory rather than broken configuration.
-bool _isModelFileCandidate(String path) {
-  Object? raw;
-  try {
-    raw = jsonDecode(File(path).readAsStringSync());
-  } on FormatException {
-    return true;
-  } on IOException {
-    return true;
-  }
-  if (raw is! Map<String, dynamic>) return false;
-  return raw.keys.any(_modelFileKeys.contains);
 }
 
 Object? _readJson(String path) {
@@ -306,7 +358,6 @@ String _stemOf(String path) {
 
 Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
   'id': p.id,
-  'provider': p.provider,
   if (p.displayName != null) 'display_name': p.displayName,
   if (p.format != 'mp3') 'format': p.format,
   if (p.sampleRate != null) 'sample_rate': p.sampleRate,
@@ -334,37 +385,56 @@ Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
     },
 };
 
+/// Writes [config] to [configDir] in the layout [loadVoiceConfig] reads.
+///
+/// The provider order in [VoiceConfig.providers] is preserved, since it decides
+/// the default. Each provider file carries the aliases it serves, taken from
+/// [config.models] -- so a config assembled without an explicit `models` list
+/// per provider still round-trips, because every model profile knows its own
+/// `provider`.
 void writeVoiceConfig(String configDir, VoiceConfig config) {
-  final globalJson = <String, Object?>{
-    if (config.defaultModel != null) 'default_model': config.defaultModel,
-    if (config.providers.isNotEmpty) 'providers': config.providers,
-  };
-  try {
-    File('$configDir${Platform.pathSeparator}config.json')
-      ..parent.createSync(recursive: true)
-      ..writeAsStringSync(
-        const JsonEncoder.withIndent('  ').convert(globalJson),
-        flush: true,
-      );
-  } on FileSystemException catch (e) {
-    throw VoiceConfigurationError('Cannot write voice config "$configDir": $e');
+  final separator = Platform.pathSeparator;
+  final providersDir =
+      '$configDir$separator$kVoiceConfigProvidersDir$separator';
+  final modelsDir = '$configDir$separator$kVoiceConfigModelsDir$separator';
+
+  final byProvider = <String, List<String>>{};
+  for (final entry in config.models.entries) {
+    byProvider
+        .putIfAbsent(entry.value.provider, () => <String>[])
+        .add(entry.key);
   }
 
-  if (config.models.isEmpty) return;
-  Directory(configDir).createSync(recursive: true);
-  for (final entry in config.models.entries) {
-    final modelJson = _modelJson(entry.value, config);
+  void write(String path, Object? json) {
     try {
-      File('$configDir${Platform.pathSeparator}${entry.key}.json')
-          .writeAsStringSync(
-            const JsonEncoder.withIndent('  ').convert(modelJson),
-            flush: true,
-          );
+      File(path)
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync(
+          const JsonEncoder.withIndent('  ').convert(json),
+          flush: true,
+        );
     } on FileSystemException catch (e) {
-      throw VoiceConfigurationError(
-        'Cannot write voice config "$configDir": $e',
-      );
+      throw VoiceConfigurationError('Cannot write voice config "$configDir": $e');
     }
+  }
+
+  write('$configDir$separator$kVoiceConfigRegistryName', {
+    'providers': config.providers.keys.toList(),
+  });
+
+  for (final entry in config.providers.entries) {
+    final declared = entry.value.models;
+    final extra = (byProvider[entry.key] ?? const <String>[]).where(
+      (a) => !declared.contains(a),
+    );
+    write('$providersDir${entry.key}.json', {
+      'models': [...declared, ...extra],
+      'settings': entry.value.settings,
+    });
+  }
+
+  for (final entry in config.models.entries) {
+    write('$modelsDir${entry.key}.json', _modelJson(entry.value, config));
   }
 }
 

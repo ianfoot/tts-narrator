@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
@@ -18,6 +17,7 @@ import 'package:tts_narrator/src/gui/widgets/segmented_control.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/l10n_test_support.dart';
+import '../support/settings_fixtures.dart' as fixtures;
 
 void main() {
   late Directory dir;
@@ -32,52 +32,10 @@ void main() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
-  /// Writes the shared grouped config body onto the flat layout: global keys
-  /// (`default_model`, `providers`) to config.json, and each `models` entry
-  /// plus its `defaults`/`pricing`/`voices` to <alias>.json. Specs without a
-  /// `provider` default to `openrouter` so model files stay valid.
-  void writeConfig(Map<String, Object?> body) {
-    final global = <String, Object?>{
-      if (body['default_model'] != null) 'default_model': body['default_model'],
-      if (body['providers'] != null) 'providers': body['providers'],
-    };
-    File('$configDir/config.json')
-      ..parent.createSync(recursive: true)
-      ..writeAsStringSync(
-        const JsonEncoder().convert({
-          ...global,
-          // `narrate` validates the block before the first segment, so a
-          // fixture without one cannot start a run.
-          'providers':
-              global['providers'] ??
-              {
-                'openrouter': {
-                  'base_url': 'https://openrouter.ai/api/v1',
-                  'api_key_env': 'OPENROUTER_API_KEY',
-                },
-              },
-        }),
-      );
-
-    final models = (body['models'] as Map<String, Object?>?) ?? {};
-    if (models.isEmpty) return;
-    final defaults = (body['defaults'] as Map<String, Object?>?) ?? {};
-    final pricing = (body['pricing'] as Map<String, Object?>?) ?? {};
-    final voices = (body['voices'] as Map<String, Object?>?) ?? {};
-    Directory(configDir).createSync(recursive: true);
-    models.forEach((alias, spec) {
-      final m = Map<String, Object?>.from(spec as Map<String, Object?>);
-      m.putIfAbsent('provider', () => 'openrouter');
-      final dv = defaults[alias];
-      final pr = pricing[alias];
-      final vo = voices[alias];
-      if (dv is String) m['default_voice'] = dv;
-      if (pr is Map) m['pricing'] = pr;
-      if (vo is Map) m['voices'] = vo;
-      File('$configDir/$alias.json')
-          .writeAsStringSync(const JsonEncoder().convert(m));
-    });
-  }
+  /// Writes the shared grouped config body onto the registry layout, against
+  /// this group's config dir.
+  void writeConfig(Map<String, Object?> body) =>
+      fixtures.writeConfig(configDir, body);
 
   /// Pass [client] to drive narration with a fake instead of the network;
   /// omitting it keeps the real client, which is correct for tests that never
@@ -91,7 +49,6 @@ void main() {
   /// default voice (as after the first-run download).
   void writeFishConfig() {
     writeConfig({
-      'default_model': 'fish',
       'models': {
         'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
       },
@@ -107,7 +64,6 @@ void main() {
   /// section is config-driven instead of provider-declared.
   void writeFishConfigWith(Map<String, Object?> modelFlags) {
     writeConfig({
-      'default_model': 'fish',
       'models': {
         'fish': {
           'id': 'fish-audio/s2.1-pro-free:free',
@@ -244,8 +200,7 @@ void main() {
 
     testWidgets('picking a voice alias resolves to its raw id', (tester) async {
       writeConfig({
-        'default_model': 'fish',
-        'models': {
+          'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
         },
         'voices': {
@@ -370,8 +325,7 @@ void main() {
       tester,
     ) async {
       writeConfig({
-        'default_model': 'fish',
-        'models': {
+          'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
           'kokoro': {
             'id': 'hexgrad/kokoro-82m',
@@ -763,8 +717,7 @@ void main() {
       tester,
     ) async {
       writeConfig({
-        'default_model': 'fish',
-        'providers': {
+          'providers': {
           'openrouter': {'api_key': r'${TTS_NARRATOR_NOT_SET}'},
         },
         'models': {

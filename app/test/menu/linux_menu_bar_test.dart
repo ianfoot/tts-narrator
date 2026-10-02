@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
@@ -11,6 +10,7 @@ import 'package:tts_narrator/src/gui/platform/platform_detection.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 
 import '../support/l10n_test_support.dart';
+import '../support/settings_fixtures.dart' as fixtures;
 
 /// A throwaway controller over a temp config dir, mirroring the macOS menu
 /// test so the bar is exercised against a real loaded model.
@@ -18,18 +18,15 @@ Future<AppController> makeController() async {
   final dir = Directory.systemTemp.createTempSync('tts_linux_menu_test_');
   addTearDown(() => dir.deleteSync(recursive: true));
   final configDir = '${dir.path}/cfg';
-  File('$configDir/config.json')
-    ..parent.createSync(recursive: true)
-    ..writeAsStringSync(const JsonEncoder().convert({'default_model': 'fish'}));
-  File('$configDir/fish.json').writeAsStringSync(
-    const JsonEncoder().convert({
-      'id': 'fish-audio/s2.1-pro-free:free',
-      'provider': 'openrouter',
-      'format': 'mp3',
-      'default_voice': 'British Female Narrator',
-      'voices': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
-    }),
-  );
+  fixtures.writeConfig(configDir, {
+    'models': {
+      'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+    },
+    'defaults': {'fish': 'British Female Narrator'},
+    'voices': {
+      'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+    },
+  });
   return AppController(loader: UserVoiceConfigLoader(configDir: configDir));
 }
 

@@ -18,6 +18,7 @@ import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/fake_tts_provider.dart';
+import '../support/settings_fixtures.dart' as fixtures;
 
 void main() {
   late Directory dir;
@@ -32,64 +33,21 @@ void main() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
-  /// Writes the shared grouped config body onto the flat layout: global keys
-  /// (`default_model`, `providers`) to config.json, and each `models` entry
-  /// plus its `defaults`/`pricing`/`voices` to <alias>.json. Specs without a
-  /// `provider` default to `openrouter` so model files stay valid.
-  void writeConfig(Map<String, Object?> body) {
-    final global = <String, Object?>{
-      if (body['default_model'] != null) 'default_model': body['default_model'],
-      if (body['providers'] != null) 'providers': body['providers'],
-    };
-    File('$configDir/config.json')
-      ..parent.createSync(recursive: true)
-      ..writeAsStringSync(
-        const JsonEncoder().convert({
-          ...global,
-          // `narrate` validates the block before the first segment, so a
-          // fixture without one cannot start a run.
-          'providers':
-              global['providers'] ??
-              {
-                'openrouter': {
-                  'base_url': 'https://openrouter.ai/api/v1',
-                  'api_key_env': 'OPENROUTER_API_KEY',
-                },
-              },
-        }),
-      );
-
-    final models = (body['models'] as Map<String, Object?>?) ?? {};
-    if (models.isEmpty) return;
-    final defaults = (body['defaults'] as Map<String, Object?>?) ?? {};
-    final pricing = (body['pricing'] as Map<String, Object?>?) ?? {};
-    final voices = (body['voices'] as Map<String, Object?>?) ?? {};
-    Directory(configDir).createSync(recursive: true);
-    models.forEach((alias, spec) {
-      final m = Map<String, Object?>.from(spec as Map<String, Object?>);
-      m.putIfAbsent('provider', () => 'openrouter');
-      final dv = defaults[alias];
-      final pr = pricing[alias];
-      final vo = voices[alias];
-      if (dv is String) m['default_voice'] = dv;
-      if (pr is Map) m['pricing'] = pr;
-      if (vo is Map) m['voices'] = vo;
-      File('$configDir/$alias.json')
-          .writeAsStringSync(const JsonEncoder().convert(m));
-    });
-  }
+  /// Writes the shared grouped config body onto the registry layout, against
+  /// this group's config dir.
+  void writeConfig(Map<String, Object?> body) =>
+      fixtures.writeConfig(configDir, body);
 
   AppController makeController({SpeechClient? client}) => AppController(
     loader: UserVoiceConfigLoader(configDir: configDir),
     client: client,
   );
 
-  /// Writes the starter fish config (a `default_model` and a fish model file
+  /// Writes the starter fish config (a fish model file claimed by a provider)
   /// mirroring the shipped voice-config layout) so the controller preselects
   /// fish with its default voice, as it does after the first-run download.
   void writeFishConfig() {
     writeConfig({
-      'default_model': 'fish',
       'providers': {
         'openrouter': {
           'base_url': 'https://openrouter.ai/api/v1',
@@ -110,7 +68,6 @@ void main() {
   /// what derives the prompt-controls portion of the model-options spec.
   void writePromptStyleFishConfig() {
     writeConfig({
-      'default_model': 'fish',
       'providers': {
         'openrouter': {
           'base_url': 'https://openrouter.ai/api/v1',
@@ -142,7 +99,7 @@ void main() {
       expect(c.wordCount, 0);
       expect(c.charCount, 0);
       expect(c.plannedSegments, isEmpty);
-      // No config models and no default_model -> no model to select, so
+      // No config models -> no model to select, so
       // narration is unavailable until a config (or the starter download)
       // provides one.
       expect(c.profile, isNull);
@@ -370,8 +327,7 @@ void main() {
     /// secure-store fallback exists for.
     void writeEnvRefFishConfig(String ref) {
       writeConfig({
-        'default_model': 'fish',
-        'providers': {
+          'providers': {
           'openrouter': {'api_key': ref},
         },
         'models': {
@@ -514,8 +470,7 @@ void main() {
 
     test('a preserved raw voice drops the previous model label on switch', () {
       writeConfig({
-        'default_model': 'fish',
-        'models': {
+      'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
@@ -544,8 +499,7 @@ void main() {
 
     test('resolveVoice wires a friendly alias to its raw id', () {
       writeConfig({
-        'default_model': 'fish',
-        'models': {
+      'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
         },
         'voices': {
@@ -560,39 +514,57 @@ void main() {
   });
 
   group('voice gender', () {
-    void writeKokoro() {
-      writeConfig({
-        'models': {
-          'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+    // A provider's `models` list is what claims a model file, so a body
+    // naming only one of the two would leave the other orphaned and unread.
+    // The combined writer is how a test that needs both declares them.
+    final kokoroBody = <String, Object?>{
+      'models': {
+        'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+      },
+      'defaults': {'kokoro': 'Emma'},
+      'voices': {
+        'kokoro': {
+          'Alice': {'id': 'bf_alice', 'gender': 'female'},
+          'Daniel': {'id': 'bm_daniel', 'gender': 'male'},
+          'Emma': {'id': 'bf_emma', 'gender': 'female'},
+          'Fable': {'id': 'bm_fable', 'gender': 'male'},
         },
-        'defaults': {'kokoro': 'Emma'},
-        'voices': {
-          'kokoro': {
-            'Alice': {'id': 'bf_alice', 'gender': 'female'},
-            'Daniel': {'id': 'bm_daniel', 'gender': 'male'},
-            'Emma': {'id': 'bf_emma', 'gender': 'female'},
-            'Fable': {'id': 'bm_fable', 'gender': 'male'},
-          },
-        },
-      });
-    }
+      },
+    };
 
-    void writeGemini() {
-      writeConfig({
-        'models': {
-          'gemini': {
-            'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
-            'sample_rate': 24000,
-            'prompt_style': true,
-          },
+    final geminiBody = <String, Object?>{
+      'models': {
+        'gemini': {
+          'id': 'google/gemini-3.1-flash-tts-preview',
+          'format': 'pcm',
+          'sample_rate': 24000,
+          'prompt_style': true,
         },
-        'defaults': {'gemini': 'Charon'},
-        'voices': {
-          'gemini': {'Charon': 'Charon'},
-        },
-      });
-    }
+      },
+      'defaults': {'gemini': 'Charon'},
+      'voices': {
+        'gemini': {'Charon': 'Charon'},
+      },
+    };
+
+    void writeKokoro() => writeConfig(kokoroBody);
+
+    void writeGemini() => writeConfig(geminiBody);
+
+    void writeKokoroAndGemini() => writeConfig({
+      'models': {
+        ...kokoroBody['models']! as Map<String, Object?>,
+        ...geminiBody['models']! as Map<String, Object?>,
+      },
+      'defaults': {
+        ...kokoroBody['defaults']! as Map<String, Object?>,
+        ...geminiBody['defaults']! as Map<String, Object?>,
+      },
+      'voices': {
+        ...kokoroBody['voices']! as Map<String, Object?>,
+        ...geminiBody['voices']! as Map<String, Object?>,
+      },
+    });
 
     test('hasGenderTags is true when a model tags voices', () {
       writeKokoro();
@@ -632,8 +604,7 @@ void main() {
     });
 
     test('changeModel resets the gender filter', () {
-      writeKokoro();
-      writeGemini();
+      writeKokoroAndGemini();
       final c = makeController()..changeModel('kokoro');
       c.voiceGenderFilter = VoiceGender.male;
       expect(c.voiceGenderFilter, VoiceGender.male);
@@ -1010,7 +981,6 @@ void main() {
 
     test('speed adds only the speed control', () {
       writeConfig({
-        'default_model': 'fast',
         'providers': {
           'openrouter': {
             'base_url': 'https://openrouter.ai/api/v1',
@@ -1032,7 +1002,6 @@ void main() {
 
     test('follows the selected model when it switches', () {
       writeConfig({
-        'default_model': 'plain',
         'providers': {
           'openrouter': {
             'base_url': 'https://openrouter.ai/api/v1',

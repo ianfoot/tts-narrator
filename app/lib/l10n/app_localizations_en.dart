@@ -245,7 +245,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_settings_apiKeyStatusKeychain => 'Stored in keychain';
 
   @override
-  String get gui_settings_apiKeyStatusConfig => 'Set in config.json';
+  String get gui_settings_apiKeyStatusConfig => 'Set in provider config';
 
   @override
   String get gui_settings_apiKeyStatusEnvironment =>

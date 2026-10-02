@@ -122,7 +122,7 @@
   "gui_settings_apiKeySectionTooltip": "API key for OpenRouter authentication",
   "gui_settings_apiKeyStatusLabel": "Key source",
   "gui_settings_apiKeyStatusKeychain": "Stored in keychain",
-  "gui_settings_apiKeyStatusConfig": "Set in config.json",
+  "gui_settings_apiKeyStatusConfig": "Set in provider config",
   "gui_settings_apiKeyStatusEnvironment": "Set via environment variable",
   "gui_settings_apiKeyStatusMissing": "Not set",
   "gui_settings_apiKeyFieldPlaceholder": "Paste your API key here",

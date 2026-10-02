@@ -21,8 +21,10 @@ and holds the single shared lockfile:
 - `app` — `tts_narrator`, the Flutter GUI (macOS, with a scaffolded Linux
   runner). Constructs the speech client and hands it to the run controller
   (`lib/main.dart`).
-- `voice_config.example/` — sample config: `config.json` (providers / `${ENV}`
-  references, no secrets) plus one `<alias>.json` per model.
+- `voice_config.example/` — sample config mirroring the shipped layout:
+  `config.json` (the ordered provider registry), `providers/<name>.json` (one
+  per provider, with `${ENV}` references and no secrets) and
+  `models/<alias>.json` (one per model).
 
 Core speaks one wire protocol — OpenAI's `/v1/audio/speech` — so every vendor is
 reached by configuring a `base_url` and a model id, not by writing code. The
@@ -33,26 +35,36 @@ same core can be driven from the GUI or from another front end without rework.
 The config **directory** is shared by the CLI and the GUI (macOS/Linux default
 to `~/.config/tts-narrator`, Windows to `%APPDATA%`):
 
-- `config.json` — `default_model` plus the per-provider settings block
-  (secrets).
-- `<alias>.json` — one file per model: `id`, `provider`, `format`,
-  `sample_rate`, `prompt_style`, `speed`, `default_voice`, `pricing`, and
-  `voices` (friendly aliases). The `voices` values may be plain strings or
-  objects with `id` and an optional `gender` (`male`/`female`/`neutral`).
+- `config.json` — the registry: an ordered list of provider names, nothing
+  else. The first entry is the default provider.
+- `providers/<name>.json` — one file per provider: a `models` list naming the
+  models that provider serves, and a `settings` block (secrets).
+- `models/<alias>.json` — one file per model: `id`, `format`, `sample_rate`,
+  `prompt_style`, `speed`, `default_voice`, `pricing`, and `voices` (friendly
+  aliases). The `voices` values may be plain strings or objects with `id` and
+  an optional `gender` (`male`/`female`/`neutral`).
 
-Secrets: `providers.<id>` is an opaque string→string map. A value of the form
-`${ENV_NAME}` reads that environment variable once at run-config build time (a
-missing or empty variable is an error naming it); any other value is used
+The relation is inverted: a provider names its models, not the other way
+round, so a model file carries no `provider` key. The loader builds the
+alias→provider index from the providers and stamps it onto each profile; a
+model file no provider names is ignored silently. Because ordering is
+meaningful, the default model is the first model in the first provider's list
+rather than a `default_model` key — a filename sort cannot be trusted to
+express "preferred".
+
+Secrets: a provider's `settings` is an opaque string→string map. A value of the
+form `${ENV_NAME}` reads that environment variable once at run-config build time
+(a missing or empty variable is an error naming it); any other value is used
 literally. The rule is generic — core never interprets the keys, and each
 vendor keeps its own setting names.
 
 The GUI reads the `path_provider` `getApplicationSupportDirectory()` config
-(`tts-narrator/` subfolder) for voice aliases and the per-provider settings
+(`tts-narrator/` subfolder) for voice aliases and the per-provider `settings`
 block, but never writes it — edit those files directly. It has no secret-key
-field; each vendor's key comes from the `providers.<id>` block in
-`config.json`. Note: a GUI app launched from the Finder doesn't inherit a
-shell's environment, so for double-click use set `api_key` literally instead of
-pointing `api_key_env` at an environment variable.
+field; each vendor's key comes from its `providers/<name>.json` block. Note: a
+GUI app launched from the Finder doesn't inherit a shell's environment, so for
+double-click use set `api_key` literally instead of pointing `api_key_env` at
+an environment variable.
 
 ## Voice vendors
 
@@ -70,9 +82,11 @@ varies between vendors is data:
   [mlx-audio](https://github.com/Blaizzy/mlx-audio) server at
   `http://localhost:8000`) needs no key — a keyless block simply sends no
   `Authorization` header. Its default preset ships as
-  `voice-config/mlx_kokoro.json`.
-- **Adding a vendor** = a model file (`id` + `provider`) and a
-  `providers.<id>` block in `config.json`. No code.
+  `voice-config/models/mlx_kokoro.json`.
+- **Adding a vendor** = a `providers/<name>.json` file (its `settings`, plus
+  the `models` it serves) and the name added to the `config.json` registry. No
+  code. A model file on its own is inert: nothing reaches it until a provider
+  claims it.
 
 Transport concerns are handled once, in the client, for every vendor: retry on
 `500`/`502`/`503`/`529` and on an empty 2xx stream (`_retries = 3` allowed
@@ -82,14 +96,18 @@ of backoff), and abort support.
 ## Per-platform starter configs
 
 Which starter model files the first-run bootstrap downloads is decided by data,
-not code: `voice-config/manifest.json` maps a platform tag (`macos`/`linux`/
-`windows`) to the `<alias>.json` files shipped there by default (e.g. Linux and
-Windows omit `mlx_kokoro.json`). `packages/core` fetches/parses the manifest
+not code: `voice-config/manifest.json` carries a top-level `providers` list
+fetched on every platform, and maps a platform tag (`macos`/`linux`/`windows`)
+to the model files shipped there by default (e.g. Linux and Windows omit
+`mlx_kokoro.json`). `packages/core` fetches/parses the manifest
 (`ManifestVoiceConfig`, `fetchVoiceConfigManifest`) and the GUI caches a copy
 in its config dir, then only requires/downloads the current platform's list —
-`config.json` is always fetched. Every vendor is reachable on every platform —
-platform affinity lives entirely in the manifest, and a model file with no
-matching `providers.<id>` block fails on the missing `base_url`.
+provider files travel with them, and `config.json` is always fetched. The
+manifest holds bare file names; the downloader owns which subdirectory each
+lands in, so a path never has to be spelled with either separator. Every
+vendor is reachable on every platform — platform affinity lives entirely in
+the manifest, and a model whose provider has no `base_url` fails before the
+first segment.
 
 ## GUI internals
 
@@ -265,7 +283,7 @@ title.
   matching a documented Gemini TTS quirk. (Fish failures are not billed.)
 - The fish bootstrap is compiled in
   (`packages/core/lib/src/narration/model_profiles.dart`); every other model
-  comes from its own `<alias>.json` file in the voice config.
+  comes from its own `models/<alias>.json` file in the voice config.
 - Per-model capabilities are declared in the model file, never sniffed from the
   model id. `prompt_style: true` derives the "Narrator gender" / accent / style /
   passage-prefix controls in the settings rail's Model options; `speed: true`

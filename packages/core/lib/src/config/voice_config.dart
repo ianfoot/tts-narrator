@@ -73,22 +73,56 @@ class VoiceOption {
   final VoiceGender? gender;
 }
 
-/// Voice data, model wiring, default model, and per-provider settings,
-/// loaded from a config *directory*.
+/// One configured provider: the settings it is reached with, and the models
+/// it serves.
+///
+/// A provider file owns the relationship to its models rather than each model
+/// naming its provider, so a block is described once no matter how many models
+/// sit behind it. [models] is ordered, and the first entry is the provider's
+/// default model.
+class ProviderConfig {
+  const ProviderConfig({
+    required this.name,
+    this.settings = const {},
+    this.models = const [],
+  });
+
+  /// Provider name — the `providers/<name>.json` stem, and the key a model
+  /// profile's `provider` must match.
+  final String name;
+
+  /// Opaque settings block: `base_url`, `api_key`, `api_key_env`, ... The
+  /// meaning of each key belongs to the provider, not to core.
+  final Map<String, String> settings;
+
+  /// Model aliases this provider serves, in order; first is the default.
+  final List<String> models;
+}
+
+/// Voice data, model wiring, and per-provider settings, loaded from a config
+/// *directory*.
 ///
 /// Layout:
-///   config.json              global data — `default_model` + `providers`
-///   `<alias>.json`           per-model — id, format, sample_rate, prompt_style,
-///                            sends_voice, provider, default_voice, pricing,
-///                            voices (each entry: id + optional gender)
+///   config.json                ordered provider registry — `providers`
+///   providers/`name`.json      per-provider — `models` (aliases, in order) +
+///                              `settings` (opaque string map)
+///   models/`alias`.json        per-model — id, format, sample_rate,
+///                              prompt_style, sends_voice, default_voice,
+///                              pricing, voices (each entry: id + optional
+///                              gender)
 ///
-/// Splitting per-model into one file each keeps the user's voice library
-/// modular: edit a single model without touching the others, drop in a new
-/// model, or copy a curated voice pack between machines. Providers (secrets)
-/// stay global so a key shared across models is written once.
+/// A provider lists the models it serves, and a model file does not name a
+/// provider, so which block a model belongs to is stated in exactly one place.
+/// Splitting into one file per provider and per model keeps the user's voice
+/// library modular: edit a single model without touching the others, drop in a
+/// new model, or copy a curated voice pack between machines.
+///
+/// `config.json` lists providers in order, and the first is the default
+/// provider; the default model is the first model it lists. That ordering is
+/// the config's, not the filesystem's, so it does not depend on which name
+/// happens to sort first.
 class VoiceConfig {
   const VoiceConfig({
-    this.defaultModel,
     this.providers = const {},
     this.models = const {},
     this.defaults = const {},
@@ -96,11 +130,13 @@ class VoiceConfig {
     this.voices = const {},
   });
 
-  /// Global default model alias (e.g. 'fish', 'gemini').
-  final String? defaultModel;
+  /// Configured providers, in `config.json` order (name → ProviderConfig).
+  final Map<String, ProviderConfig> providers;
 
-  /// Per-provider settings blocks (`provider`: settings object).
-  final Map<String, Map<String, String>> providers;
+  /// The default provider: the first in [providers], or null when none are
+  /// configured.
+  ProviderConfig? get defaultProvider =>
+      providers.isEmpty ? null : providers.values.first;
 
   /// Effective model profiles (alias → TtsModelProfile).
   final Map<String, TtsModelProfile> models;
@@ -133,7 +169,6 @@ class VoiceConfig {
       voices[modelAlias]?[voiceLabel]?.gender;
 
   bool get isEmpty =>
-      defaultModel == null &&
       providers.isEmpty &&
       models.isEmpty &&
       defaults.isEmpty &&

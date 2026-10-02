@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
@@ -14,6 +13,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
 import '../support/l10n_test_support.dart';
+import '../support/settings_fixtures.dart' as fixtures;
 
 /// Speech client whose [synthesize] never returns: keeps a run in-flight so
 /// Cancel and the active-run Back confirm modal are meaningful.
@@ -48,38 +48,29 @@ void main() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
-  /// Writes the starter fish config (config.json + fish.json) so the
-  /// controller has a resolvable default model, as after the first-run
-  /// download; without it no model is configured and runs cannot start.
+  /// Writes the starter fish config so the controller has a resolvable default
+  /// model, as after the first-run download; without it no model is configured
+  /// and runs cannot start.
   void writeFishConfig() {
-    File('$configDir/config.json')
-      ..parent.createSync(recursive: true)
-      ..writeAsStringSync(
-        const JsonEncoder().convert({
-          'default_model': 'fish',
-          'providers': {
-            // A real model is served by the real (key-requiring) OpenRouter
-            // provider; give the fixture a dummy key so run-plan building
-            // succeeds regardless of the fake provider registered here, and a
-            // base_url so `narrate`'s up-front block check passes.
-            'openrouter': {
-              'base_url': 'https://openrouter.ai/api/v1',
-              'api_key': 'sk-test',
-            },
-          },
-        }),
-      );
-    File('$configDir/fish.json').writeAsStringSync(
-      const JsonEncoder().convert({
-        'id': 'fish-audio/s2.1-pro-free:free',
-        'provider': 'openrouter',
-        'format': 'mp3',
-        'default_voice': 'British Female Narrator',
-        'voices': {
-          'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+    fixtures.writeConfig(configDir, {
+      'providers': {
+        // A real model is served by the real (key-requiring) OpenRouter
+        // provider; give the fixture a dummy key so run-plan building
+        // succeeds regardless of the fake provider registered here, and a
+        // base_url so `narrate`'s up-front block check passes.
+        'openrouter': {
+          'base_url': 'https://openrouter.ai/api/v1',
+          'api_key': 'sk-test',
         },
-      }),
-    );
+      },
+      'models': {
+        'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+      },
+      'defaults': {'fish': 'British Female Narrator'},
+      'voices': {
+        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+      },
+    });
   }
 
   AppController makeController({SpeechClient? client}) {

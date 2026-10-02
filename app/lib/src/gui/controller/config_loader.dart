@@ -25,15 +25,16 @@ class UserVoiceConfigLoader {
 
   /// The resolved provider settings block for [profile] (see `resolveSettings`).
   ///
-  /// [overrides] are merged over the raw `providers.<id>` block before `${ENV}`
-  /// expansion, so a caller can substitute a value (e.g. a key from the OS
-  /// secure store) for a setting the environment could not provide. An
-  /// unresolved `${ENV}` reference still throws the core `StateError`.
+  /// [overrides] are merged over the raw `settings` block from the model's
+  /// `providers/<name>.json` before `${ENV}` expansion, so a caller can
+  /// substitute a value (e.g. a key from the OS secure store) for a setting the
+  /// environment could not provide. An unresolved `${ENV}` reference still
+  /// throws the core `StateError`.
   Map<String, String> resolveProviderSettings(
     TtsModelProfile profile, {
     Map<String, String>? overrides,
   }) => resolveSettings({
-    ...load().providers[profile.provider] ?? const {},
+    ...load().providers[profile.provider]?.settings ?? const {},
     ...?overrides,
   }, env: Platform.environment);
 }

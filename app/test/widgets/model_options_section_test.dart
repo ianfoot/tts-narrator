@@ -30,7 +30,6 @@ void main() {
   /// that `ModelUiSpec.forProfile` derives its controls from.
   void writeCapableFish(Map<String, Object?> extra) {
     writeConfig(configDir, {
-      'default_model': 'fish',
       'models': {
         'fish': {
           'id': 'fish-audio/s2.1-pro-free:free',

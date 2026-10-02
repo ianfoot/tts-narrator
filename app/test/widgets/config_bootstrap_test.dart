@@ -12,12 +12,14 @@ import '../support/l10n_test_support.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 final _linuxManifest = ManifestVoiceConfig.fromJson({
+  'providers': ['openrouter.json'],
   'platforms': {
     'linux': ['fish.json', 'gemini.json', 'kokoro.json'],
   },
 });
 
 final _macosManifest = ManifestVoiceConfig.fromJson({
+  'providers': ['openrouter.json', 'mlx_audio.json'],
   'platforms': {
     'macos': ['fish.json', 'gemini.json', 'kokoro.json', 'mlx_kokoro.json'],
   },
@@ -40,7 +42,7 @@ void main() {
 
     Future<void> pumpBootstrap(
       WidgetTester tester, {
-      Future<void> Function(String configDir, List<String> files)? downloader,
+      VoiceConfigDownloader? downloader,
       Future<ManifestVoiceConfig?> Function()? manifestLoader,
     }) async {
       await tester.pumpWidget(
@@ -81,9 +83,13 @@ void main() {
 
     testWidgets('shows AppRoot when config files exist', (tester) async {
       File('$tempDir/config.json').writeAsStringSync('{}');
-      File('$tempDir/fish.json').writeAsStringSync('{}');
-      File('$tempDir/gemini.json').writeAsStringSync('{}');
-      File('$tempDir/kokoro.json').writeAsStringSync('{}');
+      File('$tempDir/providers/openrouter.json')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('{}');
+      Directory('$tempDir/models').createSync(recursive: true);
+      File('$tempDir/models/fish.json').writeAsStringSync('{}');
+      File('$tempDir/models/gemini.json').writeAsStringSync('{}');
+      File('$tempDir/models/kokoro.json').writeAsStringSync('{}');
 
       await pumpBootstrap(tester, manifestLoader: () async => _linuxManifest);
       await tester.pumpAndSettle();
@@ -95,9 +101,13 @@ void main() {
 
     testWidgets('shows a spinner during a confirmed download', (tester) async {
       final gate = Completer<void>();
-      final calls = <(String, List<String>)>[];
-      Future<void> downloader(String configDir, List<String> files) async {
-        calls.add((configDir, files));
+      final calls = <(String, List<String>, List<String>)>[];
+      Future<void> downloader(
+        String configDir,
+        List<String> files, {
+        List<String> providers = const [],
+      }) async {
+        calls.add((configDir, files, providers));
         await gate.future;
       }
 
@@ -127,11 +137,18 @@ void main() {
       expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsNothing);
       expect(calls.single.$1, tempDir);
       expect(calls.single.$2, ['fish.json', 'gemini.json', 'kokoro.json']);
+      // Provider files travel with the models but are not models, so they
+      // must not have leaked into the list the dialog offers.
+      expect(calls.single.$3, ['openrouter.json']);
     });
 
     testWidgets('skipping the download proceeds to the app', (tester) async {
       var downloaded = false;
-      Future<void> downloader(String configDir, List<String> files) async {
+      Future<void> downloader(
+        String configDir,
+        List<String> files, {
+        List<String> providers = const [],
+      }) async {
         downloaded = true;
       }
 
@@ -178,17 +195,30 @@ void main() {
 
     testWidgets('entire flow: manifest drives dialog, download lands on disk, '
         'relaunch skips straight to the app', (tester) async {
-      // Partial state: two starters present, config.json + fish.json missing
+      // Partial state: two starters present, registry + fish.json missing
       // -> the dialog must appear listing the manifest starters.
-      File('$tempDir/gemini.json').writeAsStringSync('{}');
-      File('$tempDir/kokoro.json').writeAsStringSync('{}');
+      File('$tempDir/models/gemini.json')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('{}');
+      File('$tempDir/models/kokoro.json').writeAsStringSync('{}');
 
-      // Downloader mirrors downloadVoiceConfigFiles semantics: config.json
-      // always, plus each manifest starter.
-      Future<void> downloader(String configDir, List<String> files) async {
+      // Downloader mirrors downloadVoiceConfigFiles semantics: the registry
+      // always, plus each provider and model file in its own subdirectory.
+      Future<void> downloader(
+        String configDir,
+        List<String> files, {
+        List<String> providers = const [],
+      }) async {
         File('$configDir/config.json').writeAsStringSync('{}');
+        for (final file in providers) {
+          File('$configDir/providers/$file')
+            ..parent.createSync(recursive: true)
+            ..writeAsStringSync('{}');
+        }
         for (final file in files) {
-          File('$configDir/$file').writeAsStringSync('{}');
+          File('$configDir/models/$file')
+            ..parent.createSync(recursive: true)
+            ..writeAsStringSync('{}');
         }
       }
 
@@ -208,7 +238,8 @@ void main() {
 
       // The GUI download actually wrote the files.
       expect(File('$tempDir/config.json').existsSync(), isTrue);
-      expect(File('$tempDir/fish.json').existsSync(), isTrue);
+      expect(File('$tempDir/providers/openrouter.json').existsSync(), isTrue);
+      expect(File('$tempDir/models/fish.json').existsSync(), isTrue);
 
       // A fresh bootstrap sees a complete config dir and skips the dialog.
       await pumpBootstrap(
