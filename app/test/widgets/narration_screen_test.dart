@@ -27,6 +27,7 @@ class _BlockingClient {
     required String responseFormat,
     required Map<String, String> settings,
     required double? speed,
+    String? apiKey,
     AbortToken? abort,
   }) async {
     await Completer<void>().future;

@@ -222,7 +222,12 @@ void main() {
   });
 
   group('credentials', () {
-    test('api_key becomes a Bearer token', () async {
+    // The client no longer reads `api_key` from the settings block: the
+    // credential arrives as the `apiKey` argument, resolved by the caller. That
+    // split is what keeps it out of `providerSettings`, and it means these tests
+    // are about transport only — literal-vs-`${ENV}` resolution is
+    // `resolveProviderApiKey`'s job, tested in provider_settings_test.dart.
+    test('apiKey becomes a Bearer token', () async {
       final server = await _serve(_audio);
       addTearDown(server.close);
 
@@ -231,31 +236,15 @@ void main() {
         voice: null,
         input: 'hi',
         responseFormat: 'mp3',
-        settings: {...server.block, 'api_key': 'sk-test'},
+        settings: server.block,
         speed: 1.0,
+        apiKey: 'sk-test',
       );
 
       expect(server.requests.single.auth, 'Bearer sk-test');
     });
 
-    test('api_key_env reads the named variable from the environment', () async {
-      final server = await _serve(_audio);
-      addTearDown(server.close);
-
-      await OpenAiSpeechClient(environment: const {'MY_TTS_KEY': 'sk-env'})
-          .synthesize(
-            model: 'm',
-            voice: null,
-            input: 'hi',
-            responseFormat: 'mp3',
-            settings: {...server.block, 'api_key_env': 'MY_TTS_KEY'},
-            speed: 1.0,
-          );
-
-      expect(server.requests.single.auth, 'Bearer sk-env');
-    });
-
-    test('a keyless block sends no Authorization header', () async {
+    test('a null apiKey sends no Authorization header', () async {
       final server = await _serve(_audio);
       addTearDown(server.close);
 
@@ -271,10 +260,89 @@ void main() {
       expect(server.requests.single.auth, isNull);
     });
 
-    test('providerNeedsApiKey is inferred from the block', () {
-      expect(providerNeedsApiKey(const {'base_url': 'x'}), isFalse);
-      expect(providerNeedsApiKey(const {'api_key': 'sk'}), isTrue);
-      expect(providerNeedsApiKey(const {'api_key_env': 'MY_KEY'}), isTrue);
+    test('an api_key left in the settings block is never sent', () async {
+      // Guards the split: a secret smuggled through `providerSettings` would
+      // be silently dropped, which is the point — but it must not also be sent.
+      final server = await _serve(_audio);
+      addTearDown(server.close);
+
+      await OpenAiSpeechClient().synthesize(
+        model: 'm',
+        voice: null,
+        input: 'hi',
+        responseFormat: 'mp3',
+        settings: {...server.block, 'api_key': 'sk-leaked'},
+        speed: 1.0,
+      );
+
+      expect(server.requests.single.auth, isNull);
+    });
+  });
+
+  group('auth failures', () {
+    Future<HttpException> rejectWith(
+      int status, {
+      required bool withKey,
+    }) async {
+      final server = await _serve((request) {
+        request.response.statusCode = status;
+        return '{"error":"unauthorized"}';
+      });
+      addTearDown(server.close);
+      try {
+        await OpenAiSpeechClient.immediateBackoff().synthesize(
+          model: 'm',
+          voice: null,
+          input: 'hi',
+          responseFormat: 'mp3',
+          settings: server.block,
+          speed: 1.0,
+          apiKey: withKey ? 'sk-rejected' : null,
+        );
+        fail('expected an HttpException');
+      } on HttpException catch (e) {
+        return e;
+      }
+    }
+
+    for (final status in const [401, 403]) {
+      test('HTTP $status with no key tells the user to add one', () async {
+        final e = await rejectWith(status, withKey: false);
+        expect(e.message, contains('No API key was configured'));
+        expect(e.message, contains('add one in Settings'));
+      });
+
+      test('HTTP $status with a key says the key was rejected', () async {
+        final e = await rejectWith(status, withKey: true);
+        expect(e.message, contains('rejected the API key that was sent'));
+        // Crucially *not* the "you have no key" advice, which would send a
+        // user with a stale key in circles.
+        expect(e.message, isNot(contains('No API key was configured')));
+      });
+    }
+
+    test('a non-auth failure keeps the vendor message verbatim', () async {
+      final server = await _serve((request) {
+        request.response.statusCode = 429;
+        return '{"error":"quota exceeded"}';
+      });
+      addTearDown(server.close);
+
+      try {
+        await OpenAiSpeechClient.immediateBackoff().synthesize(
+          model: 'm',
+          voice: null,
+          input: 'hi',
+          responseFormat: 'mp3',
+          settings: server.block,
+          speed: 1.0,
+          apiKey: 'sk-test',
+        );
+        fail('expected an HttpException');
+      } on HttpException catch (e) {
+        expect(e.message, contains('quota exceeded'));
+        expect(e.message, isNot(contains('API key')));
+      }
     });
   });
 
@@ -305,8 +373,8 @@ void main() {
 
     test('a non-retryable status throws without retrying', () async {
       final server = await _serve((request) {
-        request.response.statusCode = 401;
-        return 'bad key';
+        request.response.statusCode = 400;
+        return 'bad request';
       });
       addTearDown(server.close);
 
@@ -323,7 +391,7 @@ void main() {
           isA<HttpException>().having(
             (e) => e.message,
             'message',
-            allOf(contains('401'), contains('bad key')),
+            allOf(contains('400'), contains('bad request')),
           ),
         ),
       );

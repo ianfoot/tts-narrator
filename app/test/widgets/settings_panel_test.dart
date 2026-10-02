@@ -715,7 +715,7 @@ void main() {
         await tester.tap(find.byKey(const Key('apiKeyRemoveButton')));
         await tester.pumpAndSettle();
         expect(c.hasStoredApiKey, isFalse);
-        expect(c.apiKeyMissing, isTrue);
+        expect(c.apiKeySource, ApiKeySource.missing);
         expect(find.text('Not set'), findsOneWidget);
       },
     );
@@ -750,7 +750,7 @@ void main() {
 
       // "Stored in keychain" shows as the collapsed caption.
       expect(find.text('Stored in keychain'), findsOneWidget);
-      expect(c.buildConfig().providerSettings['api_key'], 'sk-stored');
+      expect(c.buildConfig().apiKey, 'sk-stored');
     });
   });
 

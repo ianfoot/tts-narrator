@@ -65,7 +65,7 @@ Cross-platform paths:
   "models": ["fish", "gemini", "kokoro"],
   "settings": {
     "base_url": "https://openrouter.ai/api/v1",
-    "api_key_env": "OPENROUTER_API_KEY"
+    "api_key": "${OPENROUTER_API_KEY}"
   }
 }
 ```
@@ -80,9 +80,15 @@ Cross-platform paths:
 ```
 
 `settings` is a block for one service. `base_url` is required — it is the
-endpoint **root**, and the app appends `/audio/speech` to it. `api_key_env`
-names an environment variable to read the key from; `api_key` sets it
-literally instead. Omit both for a keyless local server.
+endpoint **root**, and the app appends `/audio/speech` to it. `api_key` is
+optional and takes either a literal key or a `${VAR}` reference to an
+environment variable. Omit it for a local server that needs no credential.
+
+You can also enter a key in the Settings rail instead, and it is stored in the
+OS keychain. That wins over the config block, because the provider file is
+downloaded from a remote and may carry someone else's key. The app never
+requires a key: if none is configured, the request carries no `Authorization`
+header and the server decides whether it needed one.
 
 `<path_provider_dir>/tts-narrator/models/fish.json`:
 
@@ -180,7 +186,7 @@ accepted. Friendly aliases live under `voices` in `models/kokoro.json`.
 Voices are free-form 32-hex fish.audio ids (the default is
 `89f41ea230034706881f85a8227d6ab9`, "British Female Narrator"). Any id is
 accepted; a curated British voice list lives on the "Text to Speech" Logseq
-page and in `voice_config.example/models/fish.json`.
+page and in `voice-config/models/fish.json`.
 
 ## Output
 

@@ -83,10 +83,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get gui_controller_errors_noApiKey =>
-      'No OpenRouter API key set. Add \"api_key\" to the \"providers.openrouter\" block in config.json, point \"api_key_env\" at the OPENROUTER_API_KEY environment variable, or enter it in the Settings rail (stored in the system keychain).';
-
-  @override
   String get gui_controller_errors_cannotOpenTextFile =>
       'Cannot open text file';
 

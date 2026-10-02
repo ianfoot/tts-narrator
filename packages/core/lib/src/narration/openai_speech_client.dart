@@ -21,25 +21,28 @@ class OpenAiSpeechClient {
   /// Attempts allowed *after* the first, i.e. 4 requests in the worst case.
   static const _retries = 3;
 
-  /// Injectable env map (defaults to [Platform.environment]) so tests can run
-  /// hermetic without real credentials.
-  final Map<String, String>? environment;
-
   /// Delay before retry [attempt] (1-based). Injected so tests exercising the
   /// retry path don't pay real wall-clock; production uses [defaultBackoff].
   final Duration Function(int attempt) backoff;
 
-  /// Creates a client, optionally with a hermetic environment map and a custom
-  /// [backoff].
-  OpenAiSpeechClient({
-    this.environment,
-    Duration Function(int attempt)? backoff,
-  }) : backoff = backoff ?? defaultBackoff;
+  /// Creates a client with a custom [backoff].
+  ///
+  /// The credential is per-call, not per-client: [synthesize] takes [apiKey] so
+  /// a long-lived client cannot serve a stale secret after the user edits it.
+  OpenAiSpeechClient({Duration Function(int attempt)? backoff})
+    : backoff = backoff ?? defaultBackoff;
 
   /// Linear backoff: 2s, 4s, 6s. Deliberately real time — a narration run can
   /// afford to wait out a flaky vendor.
   static Duration defaultBackoff(int attempt) => Duration(seconds: 2 * attempt);
 
+  /// Bearer token for this call, or null to send no `Authorization` header.
+  ///
+  /// Null is a legitimate outcome: whether a key is *required* is the server's
+  /// call, so the client never blocks a run over a missing credential. It only
+  /// reports the omission if the server then rejects the request.
+  ///
+  /// [settings] is the run's resolved provider block.
   Future<GeneratedAudio> synthesize({
     required String model,
     required String? voice,
@@ -47,10 +50,10 @@ class OpenAiSpeechClient {
     required String responseFormat,
     required Map<String, String> settings,
     required double? speed,
+    String? apiKey,
     AbortToken? abort,
   }) async {
     final uri = _speechUri(settings);
-    final key = _apiKey(settings);
     // An explicit voice always wins; `default_voice` only fills the gap.
     final requestedVoice = (voice == null || voice.isEmpty) ? null : voice;
     final resolvedVoice = requestedVoice ?? _defaultVoice(settings);
@@ -77,7 +80,7 @@ class OpenAiSpeechClient {
       final (statusCode, bytes, generationId) = await _runAttempt(
         jsonEncode(body),
         uri,
-        key,
+        apiKey,
         abort: abort,
       );
       abort?.throwIfCancelled();
@@ -98,8 +101,30 @@ class OpenAiSpeechClient {
         continue;
       }
       final message = utf8.decode(bytes, allowMalformed: true);
-      throw HttpException('TTS request failed (HTTP $statusCode): $message');
+      throw HttpException(
+        'TTS request failed (HTTP $statusCode): '
+        '${_authGuidance(statusCode, apiKey) ?? message}',
+      );
     }
+  }
+
+  /// Extra guidance for a 401/403, or null when the status is not an auth
+  /// rejection.
+  ///
+  /// The vendor's own error text is *replaced* rather than appended: it is
+  /// usually a terse "No auth credentials found", and the actionable half is
+  /// which of the two situations the user is in. A key that was sent and
+  /// rejected (expired, revoked, wrong account) needs a different fix from no
+  /// key at all, and telling someone with a stale key to "add a key" sends them
+  /// in circles.
+  String? _authGuidance(int statusCode, String? apiKey) {
+    if (statusCode != 401 && statusCode != 403) return null;
+    return apiKey == null || apiKey.isEmpty
+        ? 'The provider rejected the request as unauthenticated. No API key '
+              'was configured, so none was sent — add one in Settings, or set '
+              'api_key in the provider config block.'
+        : 'The provider rejected the API key that was sent. Check that the '
+              'key is current and belongs to this account.';
   }
 
   /// Builds the speech URL from the block's `base_url` (alias `endpoint`).
@@ -123,15 +148,6 @@ class OpenAiSpeechClient {
         : trimmed;
     return Uri.parse('$withoutSlash/audio/speech');
   }
-
-  /// Resolves the Bearer token, or null when the block is keyless.
-  ///
-  /// Precedence: `api_key`/`apiKey` (a literal or an already-resolved `${ENV}`
-  /// value) then `api_key_env`, whose value is the *name* of an environment
-  /// variable to read from [environment]. A block with neither sends no
-  /// `Authorization` header at all, which is the norm for local servers.
-  String? _apiKey(Map<String, String> settings) =>
-      resolveProviderApiKey(settings, env: environment ?? Platform.environment);
 
   /// The block's `default_voice`, used when the request carries no [voice].
   String? _defaultVoice(Map<String, String> settings) =>
@@ -201,10 +217,6 @@ class OpenAiSpeechClient {
   }
 
   /// A client whose retries do not wait, for tests.
-  factory OpenAiSpeechClient.immediateBackoff({
-    Map<String, String>? environment,
-  }) => OpenAiSpeechClient(
-    environment: environment,
-    backoff: (_) => Duration.zero,
-  );
+  factory OpenAiSpeechClient.immediateBackoff() =>
+      OpenAiSpeechClient(backoff: (_) => Duration.zero);
 }

@@ -16,8 +16,8 @@ class UserVoiceConfigLoader {
   /// Absolute path of the config directory (defaults to the platform path).
   final String configDir;
 
-  /// The environment `${ENV}` references and `api_key_env` names resolve
-  /// against. Defaults to the process environment; injectable so tests never
+  /// The environment `${ENV}` references in the provider block resolve against.
+  /// Defaults to the process environment; injectable so tests never
   /// depend on what the host shell happens to export.
   final Map<String, String> environment;
 

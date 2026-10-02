@@ -22,6 +22,7 @@ class NarrationConfig {
     this.resume = false,
     this.pricing = freePricing,
     this.providerSettings = const {},
+    this.apiKey,
   });
 
   /// Path to the source text to narrate (required, no default).
@@ -90,9 +91,21 @@ class NarrationConfig {
   final AudioPricing pricing;
 
   /// Resolved provider settings for the run's provider (see `resolveSettings`).
-  /// Built once when the config is assembled; providers read their secrets
-  /// from here, never from the environment per segment.
+  /// Built once when the config is assembled; providers read their non-secret
+  /// settings from here.
+  ///
+  /// Deliberately carries **no credential**: `api_key` is stripped out before
+  /// expansion and delivered as [apiKey], so a secret never sits in this map
+  /// where it could be logged, serialised, or shown in a diagnostics dump.
   final Map<String, String> providerSettings;
+
+  /// Bearer token for this run, or null when none is configured.
+  ///
+  /// Null is normal and is never an error: it means the request carries no
+  /// `Authorization` header, and whether the server requires one is the
+  /// server's decision. The GUI resolves this from the secure store, the config
+  /// block, or the environment; core just forwards it.
+  final String? apiKey;
 
   /// Copy of this config with [inputPath] replaced (used to narrate each file
   /// in a batch directory through the same single-file pipeline).
@@ -114,5 +127,6 @@ class NarrationConfig {
     resume: resume,
     pricing: pricing,
     providerSettings: providerSettings,
+    apiKey: apiKey,
   );
 }

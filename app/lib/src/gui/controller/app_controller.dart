@@ -70,10 +70,15 @@ class AppController extends ChangeNotifier {
   /// provider's key through this.
   final ApiKeyStore _apiKeyStore;
 
-  /// The provider whose key the API-key surface reads and writes, or null when
-  /// no model is configured. Keyless providers still resolve to a name here;
-  /// it is the settings rail (not the store) that hides the section for them.
-  String? get _activeProvider => _model.profile?.provider;
+  /// The provider owning the active model, or null when no model is configured.
+  ///
+  /// This is the name an API key is filed under, and the only thing gating the
+  /// settings rail's API-key section: with no model there is no provider to hold
+  /// a key, so the section has nothing to act on. Whether the provider *needs* a
+  /// key is not consulted — the section is offered for every provider, because
+  /// the user may hold a key the config does not mention, and the server, not
+  /// the app, decides whether one is required.
+  String? get activeProvider => _model.profile?.provider;
 
   /// The in-memory document (text, path, dirty flag, save/load surface).
   final DocumentController _document = DocumentController();
@@ -212,18 +217,10 @@ class AppController extends ChangeNotifier {
   /// none), mirroring the run-config precedence.
   ApiKeySource get apiKeySource => _settings.apiKeySource;
 
-  /// Whether no API key is configured anywhere for the active model.
-  bool get apiKeyMissing => _settings.apiKeyMissing;
-
-  /// Whether the active model's provider declares a credential at all,
-  /// inferred from its config. The settings rail hides the API-key section when
-  /// it is false (a local server needs no key).
-  bool get activeProviderNeedsApiKey => _settings.activeProviderNeedsApiKey;
-
   /// Whether the active provider currently has a key in the OS secure store
   /// (enables the rail's Remove button). False when no model is configured.
   bool get hasStoredApiKey {
-    final provider = _activeProvider;
+    final provider = activeProvider;
     return provider != null && _apiKeyStore.value(provider) != null;
   }
 
@@ -231,9 +228,9 @@ class AppController extends ChangeNotifier {
   /// status line updates. Throws an [ArgumentError] for an empty key.
   ///
   /// A no-op when no model is configured: there is no provider to file the key
-  /// under, and the rail renders the section before Task 8 hides it.
+  /// under, and the rail hides the section in that case.
   Future<void> saveApiKey(String key) async {
-    final provider = _activeProvider;
+    final provider = activeProvider;
     if (provider == null) return;
     await _apiKeyStore.save(provider, key);
     notifyListeners();
@@ -242,7 +239,7 @@ class AppController extends ChangeNotifier {
   /// Removes the active provider's stored key (if any) and re-broadcasts. A
   /// no-op when no model is configured.
   Future<void> removeApiKey() async {
-    final provider = _activeProvider;
+    final provider = activeProvider;
     if (provider == null) return;
     await _apiKeyStore.remove(provider);
     notifyListeners();

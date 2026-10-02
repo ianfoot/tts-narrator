@@ -21,10 +21,16 @@ and holds the single shared lockfile:
 - `app` — `tts_narrator`, the Flutter GUI (macOS, with a scaffolded Linux
   runner). Constructs the speech client and hands it to the run controller
   (`lib/main.dart`).
-- `voice_config.example/` — sample config mirroring the shipped layout:
+- `voice-config/` — the shipped voice config, and the **only** copy of it:
   `config.json` (the ordered provider registry), `providers/<name>.json` (one
-  per provider, with `${ENV}` references and no secrets) and
-  `models/<alias>.json` (one per model).
+  per provider, with `${ENV}` references and no secrets),
+  `models/<alias>.json` (one per model), and `manifest.json` (bootstrap
+  machinery listing provider files and per-platform starter models). The app
+  downloads these from this repo into the platform config directory at first
+  run — nothing reads them in place. This tree used to have a
+  `voice_config.example/` twin for documentation, but the two drifted (the copy
+  was missing the `:free` model id and declared the wrong output format for
+  MLX), so there is now just the one.
 
 Core speaks one wire protocol — OpenAI's `/v1/audio/speech` — so every vendor is
 reached by configuring a `base_url` and a model id, not by writing code. The
@@ -60,11 +66,20 @@ vendor keeps its own setting names.
 
 The GUI reads the `path_provider` `getApplicationSupportDirectory()` config
 (`tts-narrator/` subfolder) for voice aliases and the per-provider `settings`
-block, but never writes it — edit those files directly. It has no secret-key
-field; each vendor's key comes from its `providers/<name>.json` block. Note: a
-GUI app launched from the Finder doesn't inherit a shell's environment, so for
-double-click use set `api_key` literally instead of pointing `api_key_env` at
-an environment variable.
+block, but never writes it — edit those files directly. A key can come from
+three places, in this order: the OS keychain (what the user typed into the
+Settings rail), an `api_key` literal in the provider block, then an `api_key`
+`${VAR}` reference. Keychain first on purpose — the provider file is
+downloaded from a remote, so a key in it may belong to someone else, while a
+keychain entry was typed deliberately by this user. Note a GUI app launched from
+the Finder doesn't inherit a shell's environment, so for double-click use either
+enter the key in Settings or set `api_key` literally.
+
+The app never blocks a run on a missing key. `api_key` is stripped out of
+`NarrationConfig.providerSettings` and delivered as `NarrationConfig.apiKey`
+alongside it, so a secret is never in the settings map; a null `apiKey` just
+means the request carries no `Authorization` header and the server decides. A
+401/403 from the vendor is the only place the user is told to add a key.
 
 ## Voice vendors
 
@@ -76,7 +91,8 @@ concrete instance (`OpenAiSpeechClient` by default, overridable through
 varies between vendors is data:
 
 - **Cloud narration** (OpenRouter) is just a `base_url` plus a bearer token
-  from `api_key` / `apiKey` / `api_key_env`. `X-Generation-Id` maps onto
+  from `api_key` (literal or `${ENV}` reference) or the OS keychain.
+  `X-Generation-Id` maps onto
   `GeneratedAudio.generationId`.
 - **A local OpenAI-compatible server** (e.g. the Apple-Silicon-only
   [mlx-audio](https://github.com/Blaizzy/mlx-audio) server at
@@ -207,9 +223,10 @@ enums, nullable fields, and typed exceptions — and the widget layer renders it
 - `NarrationBlockReason?` → `NarrationBlockReasonX.message(l10n)`
 - `String? documentName` → `documentNameX.display(l10n)`
 - `ApiKeySource` → `ApiKeySourceX.apiKeyStatusLabel(l10n)`
-- `NoApiKeyConfigured` / `NoVoiceSelected` / `CannotOpenTextFile` /
-  `NoModelConfigured` (in `controller_errors.dart`) →
-  `ControllerErrorMessage.localizedMessage(l10n)`
+- `NoVoiceSelected` / `CannotOpenTextFile` / `NoModelConfigured` (in
+  `controller_errors.dart`) → `ControllerErrorMessage.localizedMessage(l10n)`.
+  A missing API key is deliberately *not* in this list: it is never an error
+  the app raises.
 
 Those extensions all live in
 `app/lib/src/gui/controller/l10n_labels.dart`. **If you find yourself wanting a

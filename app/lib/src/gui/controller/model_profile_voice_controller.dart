@@ -90,7 +90,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
       _voiceConfig.providers[profile.provider]?.settings ?? const {};
 
   /// The environment the loader expands `${ENV}` references against. Exposed so
-  /// the settings rail resolves `api_key_env` names against the same map the
+  /// the settings rail resolves an `api_key` reference against the same map the
   /// run config is built from, rather than a second copy of the process
   /// environment.
   Map<String, String> get environment => _loader.environment;

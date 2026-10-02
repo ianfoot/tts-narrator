@@ -7,14 +7,13 @@
 /// the text through `l10n`. See `settings_l10n.dart` for the translations.
 ///
 /// Distinct types (rather than pre-baked `StateError`/`FormatException`
-/// messages) so a catch site can tell "the user needs to add a key" apart from
-/// an unexpected fault without string-matching a message.
+/// messages) so a catch site can tell "the user needs to pick a model" apart
+/// from an unexpected fault without string-matching a message.
+///
+/// A missing API key is deliberately absent: whether a run needs one is the
+/// server's judgement, so the app never blocks on one. See
+/// `SettingsController._resolveApiKey`.
 library;
-
-/// No API key is configured in config, the environment, or the OS keychain.
-class NoApiKeyConfigured implements Exception {
-  const NoApiKeyConfigured();
-}
 
 /// The voice config has no usable model profile.
 class NoModelConfigured implements Exception {

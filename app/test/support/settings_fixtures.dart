@@ -37,14 +37,14 @@ void writeConfig(String configDir, Map<String, Object?> body) {
   // fixture without one cannot start a run. Default to a block shaped like the
   // shipped one; a test that cares about the key section passes its own.
   //
-  // The shipped bare `api_key_env` is the case Task 6 fixed, so it is the
-  // default here — but it only *resolves* for a controller built with an
-  // environment that holds the variable (see [makeController]).
+  // The shipped `${ENV}` reference is the default here, but it only *resolves*
+  // for a controller built with an environment that holds the variable (see
+  // [makeController]) — which is why it defaults to an empty map.
   final blocks = (body['providers'] as Map<String, Object?>?) ??
       {
         'openrouter': {
           'base_url': 'https://openrouter.ai/api/v1',
-          'api_key_env': 'OPENROUTER_API_KEY',
+          'api_key': r'${OPENROUTER_API_KEY}',
         },
       };
 
@@ -96,7 +96,7 @@ void writeConfig(String configDir, Map<String, Object?> body) {
 ///
 /// [environment] defaults to an empty map rather than the process environment,
 /// so a test never depends on what the host shell happens to export — the
-/// shared fixture's `api_key_env: 'OPENROUTER_API_KEY'` resolves to nothing
+/// shared fixture's `api_key: "${OPENROUTER_API_KEY}"` resolves to nothing
 /// unless a test opts in.
 AppController makeController(
   String configDir, {

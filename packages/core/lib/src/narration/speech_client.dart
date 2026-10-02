@@ -29,12 +29,18 @@ class GeneratedAudio {
 /// forever. A function keeps the seam that lets tests hand `narrate` a closure
 /// instead of standing up an HTTP server, without an empty hierarchy.
 ///
-/// [settings] is the run's resolved provider block. [voice] and [speed] are
-/// capability-gated by the model profile and are null when the model does not
-/// take them: [speed] is a speech-rate multiplier (1.0 = normal), sent only for
-/// a model that declares `"speed": true`. [abort] is checked before the first
-/// attempt and between retries — an already-cancelled token throws
-/// [AbortException] without calling the API.
+/// [settings] is the run's resolved provider block, and deliberately never
+/// carries a secret: the credential travels beside it as [apiKey], resolved by
+/// the caller, which is the only layer that can reach the OS keychain. [voice]
+/// and [speed] are capability-gated by the model profile and are null when the
+/// model does not take them: [speed] is a speech-rate multiplier (1.0 = normal),
+/// sent only for a model that declares `"speed": true`. [abort] is checked
+/// before the first attempt and between retries — an already-cancelled token
+/// throws [AbortException] without calling the API.
+///
+/// [apiKey] is null when no key is configured; the request then carries no
+/// `Authorization` header. Whether one was *needed* is the server's judgement,
+/// not the client's, so a null key is not an error here.
 typedef SpeechClient = Future<GeneratedAudio> Function({
   required String model,
   required String? voice,
@@ -42,5 +48,6 @@ typedef SpeechClient = Future<GeneratedAudio> Function({
   required String responseFormat,
   required Map<String, String> settings,
   required double? speed,
+  String? apiKey,
   AbortToken? abort,
 });

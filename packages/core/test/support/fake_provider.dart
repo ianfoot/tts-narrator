@@ -36,6 +36,7 @@ class FakeTtsProvider {
       String responseFormat,
       Map<String, String> settings,
       double? speed,
+      String? apiKey,
     })
   >
   calls = [];
@@ -52,6 +53,7 @@ class FakeTtsProvider {
     required String responseFormat,
     required Map<String, String> settings,
     required double? speed,
+    String? apiKey,
     AbortToken? abort,
   }) async {
     abort?.throwIfCancelled();
@@ -62,6 +64,7 @@ class FakeTtsProvider {
       responseFormat: responseFormat,
       settings: Map.unmodifiable(settings),
       speed: speed,
+      apiKey: apiKey,
     ));
     return GeneratedAudio(bytes: bytes);
   }

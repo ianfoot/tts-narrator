@@ -91,7 +91,7 @@ class ProviderConfig {
   /// profile's `provider` must match.
   final String name;
 
-  /// Opaque settings block: `base_url`, `api_key`, `api_key_env`, ... The
+  /// Opaque settings block: `base_url`, `api_key`, ... The
   /// meaning of each key belongs to the provider, not to core.
   final Map<String, String> settings;
 

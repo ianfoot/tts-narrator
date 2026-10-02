@@ -56,7 +56,7 @@ void main() {
   testWidgets('shows "Not set" and a disabled Remove when no key exists', (
     tester,
   ) async {
-    writeFishConfig(configDir); // no providers block -> no config/env key.
+    writeFishConfig(configDir);
     final c = makeController(configDir);
     await pumpSection(tester, c);
 
@@ -81,6 +81,40 @@ void main() {
     expect(find.text('Not set'), findsOneWidget);
     expect(buttonWith(tester, 'apiKeySaveButton').onPressed, isNotNull);
     expect(buttonWith(tester, 'apiKeyRemoveButton').onPressed, isNull);
+  });
+
+  testWidgets('is offered for a keyless provider', (tester) async {
+    // The whole point: the config declares no credential, but the user may
+    // still hold one, and whether the endpoint wants it is the server's call.
+    writeConfig(configDir, {
+      'providers': {
+        'mlx_audio': {'base_url': 'http://localhost:8000/v1'},
+      },
+      'models': {
+        'mlx_kokoro': {'id': 'mlx-community/Kokoro-82M-bf16', 'format': 'wav'},
+      },
+      'defaults': {'mlx_kokoro': 'George'},
+      'voices': {
+        'mlx_kokoro': {'George': {'id': 'bm_george', 'gender': 'male'}},
+      },
+    });
+    final c = makeController(configDir);
+    expect(c.activeProvider, 'mlx_audio');
+    await pumpSection(tester, c);
+
+    expect(find.byKey(const Key('apiKeyDisclosure')), findsOneWidget);
+    await expandApiKey(tester);
+    expect(find.byKey(const Key('apiKeyField')), findsOneWidget);
+  });
+
+  testWidgets('is hidden when no model is selected', (tester) async {
+    // No model means no provider to file a key under, so `saveApiKey` would be
+    // a no-op and the box could not do anything.
+    final c = makeController(configDir);
+    expect(c.activeProvider, isNull);
+    await pumpSection(tester, c);
+
+    expect(find.byKey(const Key('apiKeyDisclosure')), findsNothing);
   });
 
   testWidgets('saving a key flips the status to keychain and enables Remove', (
@@ -115,7 +149,7 @@ void main() {
     await tester.tap(find.byKey(const Key('apiKeyRemoveButton')));
     await tester.pumpAndSettle();
     expect(c.hasStoredApiKey, isFalse);
-    expect(c.apiKeyMissing, isTrue);
+    expect(c.apiKeySource, ApiKeySource.missing);
     expect(find.text('Not set'), findsOneWidget);
   });
 
@@ -179,6 +213,6 @@ void main() {
 
     // "Stored in keychain" shows as the collapsed caption.
     expect(find.text('Stored in keychain'), findsOneWidget);
-    expect(c.buildConfig().providerSettings['api_key'], 'sk-stored');
+    expect(c.buildConfig().apiKey, 'sk-stored');
   });
 }

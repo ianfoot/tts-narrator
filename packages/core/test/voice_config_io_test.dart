@@ -118,7 +118,7 @@ void main() {
         writeProvider(
           'alpha',
           '{"models":["one","two"],"settings":{"base_url":"https://a/v1",'
-              '"api_key_env":"A_KEY"}}',
+              r'"api_key":"${A_KEY}"}}',
         );
         writeProvider('beta', '{"models":[],"settings":{}}');
         writeModel('one', '{"id":"x/one"}');
@@ -130,7 +130,7 @@ void main() {
         final alpha = cfg.providers['alpha']!;
         expect(alpha.name, 'alpha');
         expect(alpha.models, ['one', 'two']);
-        expect(alpha.settings['api_key_env'], 'A_KEY');
+        expect(alpha.settings['api_key'], r'${A_KEY}');
         expect(alpha.settings['base_url'], 'https://a/v1');
       });
 

@@ -99,32 +99,22 @@ void main() {
       );
     });
 
-    test('the apiKey alias is read too', () {
+    test(r'a ${ENV} reference names the variable to read', () {
+      // The shipped provider block shape.
       expect(
         resolveProviderApiKey(
-          const {'apiKey': 'sk-alias'},
-          env: const {},
-        ),
-        'sk-alias',
-      );
-    });
-
-    test('api_key_env holds a variable *name*, resolved from env', () {
-      // The shipped provider block shape: a bare name, not `${NAME}`.
-      expect(
-        resolveProviderApiKey(
-          const {'api_key_env': 'OPENROUTER_API_KEY'},
+          const {'api_key': r'${OPENROUTER_API_KEY}'},
           env: const {'OPENROUTER_API_KEY': 'sk-from-env'},
         ),
         'sk-from-env',
       );
     });
 
-    test('api_key wins over api_key_env', () {
+    test('a literal needs no environment', () {
       expect(
         resolveProviderApiKey(
-          const {'api_key': 'sk-literal', 'api_key_env': 'OTHER'},
-          env: const {'OTHER': 'sk-env'},
+          const {'api_key': 'sk-literal'},
+          env: const {},
         ),
         'sk-literal',
       );
@@ -150,10 +140,10 @@ void main() {
       );
     });
 
-    test('an unset env name resolves to null, not to the name itself', () {
+    test(r'an unset ${ENV} variable resolves to null, not to the reference', () {
       expect(
         resolveProviderApiKey(
-          const {'api_key_env': 'OPENROUTER_API_KEY'},
+          const {'api_key': r'${OPENROUTER_API_KEY}'},
           env: const {},
         ),
         isNull,
@@ -164,8 +154,6 @@ void main() {
       for (final settings in const [
         {'api_key': ''},
         {'api_key': '   '},
-        {'api_key_env': ''},
-        {'api_key_env': '  '},
       ]) {
         expect(
           resolveProviderApiKey(
@@ -173,7 +161,7 @@ void main() {
             env: const {'EMPTY_NAME': ''},
           ),
           isNull,
-          reason: '$settings must be keyless',
+          reason: '$settings must yield no key',
         );
       }
     });
@@ -186,12 +174,27 @@ void main() {
         ),
         'sk-padded',
       );
+      // Outer padding is trimmed before the reference is matched.
       expect(
         resolveProviderApiKey(
-          const {'api_key_env': '  VARNAME  '},
+          const {'api_key': r'  ${VARNAME}  '},
           env: const {'VARNAME': ' sk-env  '},
         ),
         'sk-env',
+      );
+    });
+
+    test('padding *inside* the braces is not a reference', () {
+      // `\w+` admits no spaces, so this is a literal and would be sent verbatim
+      // as the token. Pinned because it is a typo that fails at the server
+      // rather than here, and the user should not expect a silent fix.
+      expect(isEnvReference(r'${ VAR }'), isFalse);
+      expect(
+        resolveProviderApiKey(
+          const {'api_key': r'${ VAR }'},
+          env: const {'VAR': 'sk-env'},
+        ),
+        r'${ VAR }',
       );
     });
   });
@@ -201,9 +204,10 @@ void main() {
       expect(isEnvReference(r'${OPENROUTER_API_KEY}'), isTrue);
     });
 
-    test('a literal, a bare name, and near-misses are not', () {
+    test('a literal, an unwrapped name, and near-misses are not', () {
       expect(isEnvReference('sk-literal'), isFalse);
-      // The shipped `api_key_env` value: a bare name, never `${}`-wrapped.
+      // A variable name without the `${}` braces would be sent as a literal
+      // token, so this must NOT count as a reference.
       expect(isEnvReference('OPENROUTER_API_KEY'), isFalse);
       expect(isEnvReference(r'$OPENROUTER_API_KEY'), isFalse);
       expect(isEnvReference(r'${}'), isFalse);
@@ -217,36 +221,10 @@ void main() {
       expect(envRefName(r'${OPENROUTER_API_KEY}'), 'OPENROUTER_API_KEY');
     });
 
-    test('is null for a literal or a bare name', () {
+    test('is null for a literal or a malformed reference', () {
       expect(envRefName('sk-literal'), isNull);
       expect(envRefName('OPENROUTER_API_KEY'), isNull);
       expect(envRefName(r'${}'), isNull);
-    });
-  });
-
-  group('providerNeedsApiKey', () {
-    test('is inferred from the block, not from a list of vendor names', () {
-      expect(providerNeedsApiKey(const {'base_url': 'https://x'}), isFalse);
-      expect(providerNeedsApiKey(const {'api_key': 'sk'}), isTrue);
-      expect(providerNeedsApiKey(const {'apiKey': 'sk'}), isTrue);
-      expect(providerNeedsApiKey(const {'api_key_env': 'MY_KEY'}), isTrue);
-    });
-
-    test('an empty declaration is not a credential', () {
-      expect(providerNeedsApiKey(const {'api_key': ''}), isFalse);
-      expect(providerNeedsApiKey(const {'api_key_env': ''}), isFalse);
-    });
-
-    test('a whitespace-only value still *declares* a credential', () {
-      // Deliberate: the block asks for a key, so the GUI demands one (letting
-      // the secure store fill it) instead of silently sending no header and
-      // failing later at request time.
-      expect(providerNeedsApiKey(const {'api_key': '   '}), isTrue);
-      expect(
-        resolveProviderApiKey(const {'api_key': '   '}, env: const {}),
-        isNull,
-        reason: 'but it is not usable',
-      );
     });
   });
 }

@@ -190,7 +190,8 @@ String outputDirPath(NarrationConfig config) {
 ///
 /// [client] is the speech seam, injected by the entrypoint rather than resolved
 /// from a registry: core never constructs one. [OpenAiSpeechClient] is the one
-/// the app supplies, configured entirely from [NarrationConfig.providerSettings].
+/// the app supplies, configured from [NarrationConfig.providerSettings] plus the
+/// [NarrationConfig.apiKey] the caller resolved.
 ///
 /// [abort], when given, is checked before each segment and thread through to the
 /// HTTP client; cancelling it throws [AbortException] and stops the run.
@@ -264,6 +265,7 @@ Future<void> narrate(
       voice: config.profile.sendsVoiceField ? config.voice : null,
       responseFormat: config.profile.format,
       settings: config.providerSettings,
+      apiKey: config.apiKey,
       input: input,
       speed: config.profile.supportsSpeed ? config.speed : null,
       abort: abort,

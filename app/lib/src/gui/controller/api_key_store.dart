@@ -9,12 +9,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Keys are held per provider under [_keyPrefix], so two providers never share
 /// a credential and no vendor name is baked into the code.
 ///
-/// The stored key is a fallback only — config literals, `${ENV}` references and
-/// `api_key_env` variables resolve first ([resolveProviderSettings in the
-/// loader]). The GUI reads keys through the synchronous [_values] cache so
-/// run-config building stays synchronous and a model switch needs no reload;
-/// [load] is called once at startup, and [save] / [remove] keep the cache
-/// current.
+/// The stored key is a fallback in name only — precedence is keychain, config
+/// literal, then `${ENV}` reference (see `SettingsController._resolveApiKey`),
+/// because the provider file arrives from a remote download and a keychain
+/// entry is one this user typed deliberately. The GUI reads keys through the
+/// synchronous [_values] cache so run-config building stays synchronous and a
+/// model switch needs no reload; [load] is called once at startup, and [save] /
+/// [remove] keep the cache current.
 class ApiKeyStore extends ChangeNotifier {
   ApiKeyStore({FlutterSecureStorage? storage})
     : _storage = storage ?? const FlutterSecureStorage();
