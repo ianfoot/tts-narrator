@@ -1,20 +1,7 @@
 import 'abort.dart';
 import 'model_profiles.dart';
 import 'model_ui.dart';
-
-/// A synthesized audio sample from a TTS provider.
-class GeneratedAudio {
-  GeneratedAudio({required this.bytes, this.generationId});
-
-  /// Raw audio bytes in the provider's requested [format].
-  final List<int> bytes;
-
-  /// Optional provider-specific generation/correlation metadata. The OpenRouter
-  /// provider maps its `X-Generation-Id` response header onto this inside its
-  /// own package; it is generic, optional metadata here and is not yet wired
-  /// into the manifest.
-  final String? generationId;
-}
+import 'speech_client.dart';
 
 /// A provider-agnostic text-to-speech backend.
 ///
@@ -46,7 +33,7 @@ abstract class TtsProvider {
   ///
   /// [speed] is a speech-rate multiplier (1.0 = normal); providers that have
   /// no speed concept should ignore it. [settings] is the run's resolved
-  /// provider settings map (see [resolveSettings]); [abort] is checked between
+  /// provider settings map (see `resolveSettings`); [abort] is checked between
   /// retries (and before the first attempt) — an already-cancelled token
   /// throws [AbortException] without calling the API.
   Future<GeneratedAudio> synthesize({
@@ -97,42 +84,3 @@ class TtsProviderRegistry {
 
 /// The registry shared by the CLI, GUI, and core narration dispatch.
 final TtsProviderRegistry ttsProviderRegistry = TtsProviderRegistry();
-
-/// Matches a `${ENV_NAME}` secret reference in a provider settings value.
-final _envRef = RegExp(r'^\$\{(\w+)\}$');
-
-/// Resolves a provider's raw settings map, applying the generic secret rule.
-///
-/// A value matching `^\$\{(\w+)\}$` reads that environment variable (from [env],
-/// defaulting to an empty map) at resolution time — once when the run config is
-/// built, never per segment. Any other value passes through literal (so `api_key`
-/// literals and already-resolved values survive untouched).
-///
-/// Throws a [StateError] naming the variable when the referenced env var is
-/// missing or empty (an empty value counts as missing, matching the legacy
-/// `resolvedApiKey` behaviour); remaining environment access is the caller's
-/// job, so core stays provider-agnostic.
-Map<String, String> resolveSettings(
-  Map<String, String> raw, {
-  Map<String, String>? env,
-}) {
-  final envMap = env ?? const <String, String>{};
-  final out = <String, String>{};
-  for (final MapEntry(:key, :value) in raw.entries) {
-    final match = _envRef.firstMatch(value);
-    if (match == null) {
-      out[key] = value;
-      continue;
-    }
-    final name = match.group(1)!;
-    final resolved = envMap[name];
-    if (resolved == null || resolved.trim().isEmpty) {
-      throw StateError(
-        'Missing environment variable "$name" referenced by provider '
-        'setting "$key".',
-      );
-    }
-    out[key] = resolved;
-  }
-  return out;
-}

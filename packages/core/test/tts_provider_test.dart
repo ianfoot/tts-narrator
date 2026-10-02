@@ -1,7 +1,9 @@
 import 'package:test/test.dart';
+import 'package:tts_narrator_core/src/config/provider_settings.dart';
 import 'package:tts_narrator_core/src/narration/abort.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/model_ui.dart';
+import 'package:tts_narrator_core/src/narration/speech_client.dart';
 import 'package:tts_narrator_core/src/narration/tts_provider.dart';
 
 class _FakeProvider implements TtsProvider {
