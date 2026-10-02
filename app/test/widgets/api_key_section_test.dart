@@ -1,21 +1,18 @@
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
+import 'package:flutter_test/flutter_test.dart';
 import 'package:tts_narrator/src/gui/controller/api_key_store.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
     show ApiKeySource;
 import 'package:tts_narrator/src/gui/settings/api_key_section.dart';
-
-import '../support/l10n_test_support.dart';
-
 import 'package:tts_narrator/src/gui/widgets/app_button.dart';
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 
+import '../support/l10n_test_support.dart';
 import '../support/settings_fixtures.dart';
 
 /// A key store whose writes always fail, standing in for an unreachable
@@ -88,18 +85,20 @@ void main() {
     // still hold one, and whether the endpoint wants it is the server's call.
     writeConfig(configDir, {
       'providers': {
-        'mlx_audio': {'base_url': 'http://localhost:8000/v1'},
+        'beta': {'base_url': 'http://localhost:8000/v1'},
       },
       'models': {
         'mlx_kokoro': {'id': 'mlx-community/Kokoro-82M-bf16', 'format': 'wav'},
       },
       'defaults': {'mlx_kokoro': 'George'},
       'voices': {
-        'mlx_kokoro': {'George': {'id': 'bm_george', 'gender': 'male'}},
+        'mlx_kokoro': {
+          'George': {'id': 'bm_george', 'gender': 'male'},
+        },
       },
     });
     final c = makeController(configDir);
-    expect(c.activeProvider, 'mlx_audio');
+    expect(c.activeProvider, 'beta');
     await pumpSection(tester, c);
 
     expect(find.byKey(const Key('apiKeyDisclosure')), findsOneWidget);
@@ -190,7 +189,7 @@ void main() {
   ) async {
     writeConfig(configDir, {
       'providers': {
-        'openrouter': {'api_key': r'${TTS_NARRATOR_NOT_SET}'},
+        'alpha': {'api_key': r'${TTS_NARRATOR_NOT_SET}'},
       },
       'models': {
         'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
@@ -201,7 +200,7 @@ void main() {
       },
     });
     FlutterSecureStorage.setMockInitialValues({
-      'tts-narrator.api_key.openrouter': 'sk-stored',
+      'tts-narrator.api_key.alpha': 'sk-stored',
     });
     final store = ApiKeyStore();
     await store.load();

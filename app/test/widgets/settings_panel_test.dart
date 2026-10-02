@@ -207,7 +207,7 @@ void main() {
 
     testWidgets('picking a voice alias resolves to its raw id', (tester) async {
       writeConfig({
-          'models': {
+        'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
         },
         'voices': {
@@ -332,7 +332,7 @@ void main() {
       tester,
     ) async {
       writeConfig({
-          'models': {
+        'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
           'kokoro': {
             'id': 'hexgrad/kokoro-82m',
@@ -724,8 +724,8 @@ void main() {
       tester,
     ) async {
       writeConfig({
-          'providers': {
-          'openrouter': {'api_key': r'${TTS_NARRATOR_NOT_SET}'},
+        'providers': {
+          'alpha': {'api_key': r'${TTS_NARRATOR_NOT_SET}'},
         },
         'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
@@ -738,7 +738,7 @@ void main() {
         },
       });
       FlutterSecureStorage.setMockInitialValues({
-        'tts-narrator.api_key.openrouter': 'sk-stored',
+        'tts-narrator.api_key.alpha': 'sk-stored',
       });
       final store = ApiKeyStore();
       await store.load();

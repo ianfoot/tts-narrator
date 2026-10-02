@@ -6,20 +6,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator/main.dart';
+import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/l10n_test_support.dart';
 
-import 'package:tts_narrator_core/tts_narrator_core.dart';
-
 final _linuxManifest = ManifestVoiceConfig.fromJson({
-  'providers': ['openrouter.json'],
+  'providers': ['alpha.json'],
   'platforms': {
     'linux': ['fish.json', 'gemini.json', 'kokoro.json'],
   },
 });
 
 final _macosManifest = ManifestVoiceConfig.fromJson({
-  'providers': ['openrouter.json', 'mlx_audio.json'],
+  'providers': ['alpha.json', 'beta.json'],
   'platforms': {
     'macos': ['fish.json', 'gemini.json', 'kokoro.json', 'mlx_kokoro.json'],
   },
@@ -83,7 +82,7 @@ void main() {
 
     testWidgets('shows AppRoot when config files exist', (tester) async {
       File('$tempDir/config.json').writeAsStringSync('{}');
-      File('$tempDir/providers/openrouter.json')
+      File('$tempDir/providers/alpha.json')
         ..parent.createSync(recursive: true)
         ..writeAsStringSync('{}');
       Directory('$tempDir/models').createSync(recursive: true);
@@ -139,7 +138,7 @@ void main() {
       expect(calls.single.$2, ['fish.json', 'gemini.json', 'kokoro.json']);
       // Provider files travel with the models but are not models, so they
       // must not have leaked into the list the dialog offers.
-      expect(calls.single.$3, ['openrouter.json']);
+      expect(calls.single.$3, ['alpha.json']);
     });
 
     testWidgets('skipping the download proceeds to the app', (tester) async {
@@ -238,7 +237,7 @@ void main() {
 
       // The GUI download actually wrote the files.
       expect(File('$tempDir/config.json').existsSync(), isTrue);
-      expect(File('$tempDir/providers/openrouter.json').existsSync(), isTrue);
+      expect(File('$tempDir/providers/alpha.json').existsSync(), isTrue);
       expect(File('$tempDir/models/fish.json').existsSync(), isTrue);
 
       // A fresh bootstrap sees a complete config dir and skips the dialog.

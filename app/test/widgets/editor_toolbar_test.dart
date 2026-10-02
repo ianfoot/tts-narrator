@@ -3,20 +3,17 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_toolbar.dart';
 import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
     show acceleratorLabel;
-import 'package:tts_narrator_core/tts_narrator_core.dart';
-
-import '../support/l10n_test_support.dart';
-
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator/src/gui/widgets/app_icon_button.dart';
+import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/fake_tts_provider.dart';
+import '../support/l10n_test_support.dart';
 import '../support/recording_cleanup_controller.dart';
 import '../support/settings_fixtures.dart' as fixtures;
 
@@ -36,8 +33,8 @@ void main() {
   AppController makeController({SpeechClient? client}) {
     fixtures.writeConfig(configDir, {
       'providers': {
-        'openrouter': {
-          'base_url': 'https://openrouter.ai/api/v1',
+        'alpha': {
+          'base_url': 'https://vendor.example/api/v1',
           'api_key': 'sk-test',
         },
       },

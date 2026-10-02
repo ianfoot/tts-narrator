@@ -5,10 +5,10 @@ void main() {
   group('resolveSettings', () {
     test(r'${ENV} references resolve from the env map', () {
       final out = resolveSettings(
-        {'OPENROUTER_API_KEY': r'${OPENROUTER_API_KEY}'},
-        env: {'OPENROUTER_API_KEY': 'sk-secret'},
+        {'VENDOR_API_KEY': r'${VENDOR_API_KEY}'},
+        env: {'VENDOR_API_KEY': 'sk-secret'},
       );
-      expect(out['OPENROUTER_API_KEY'], 'sk-secret');
+      expect(out['VENDOR_API_KEY'], 'sk-secret');
     });
 
     test('literal values pass through untouched', () {
@@ -91,10 +91,10 @@ void main() {
   group('resolveProviderApiKey', () {
     test('an api_key literal is the credential', () {
       expect(
-        resolveProviderApiKey(
-          {'api_key': 'sk-literal', 'base_url': 'https://x'},
-          env: const {},
-        ),
+        resolveProviderApiKey({
+          'api_key': 'sk-literal',
+          'base_url': 'https://x',
+        }, env: const {}),
         'sk-literal',
       );
     });
@@ -103,8 +103,8 @@ void main() {
       // The shipped provider block shape.
       expect(
         resolveProviderApiKey(
-          const {'api_key': r'${OPENROUTER_API_KEY}'},
-          env: const {'OPENROUTER_API_KEY': 'sk-from-env'},
+          const {'api_key': r'${VENDOR_API_KEY}'},
+          env: const {'VENDOR_API_KEY': 'sk-from-env'},
         ),
         'sk-from-env',
       );
@@ -112,20 +112,14 @@ void main() {
 
     test('a literal needs no environment', () {
       expect(
-        resolveProviderApiKey(
-          const {'api_key': 'sk-literal'},
-          env: const {},
-        ),
+        resolveProviderApiKey(const {'api_key': 'sk-literal'}, env: const {}),
         'sk-literal',
       );
     });
 
     test('an already-expanded \${ENV} value in api_key is passed through', () {
       expect(
-        resolveProviderApiKey(
-          {'api_key': 'sk-expanded'},
-          env: const {},
-        ),
+        resolveProviderApiKey({'api_key': 'sk-expanded'}, env: const {}),
         'sk-expanded',
       );
     });
@@ -134,21 +128,23 @@ void main() {
       expect(
         resolveProviderApiKey(
           const {'base_url': 'http://localhost:8000/v1', 'default_voice': 'a'},
-          env: const {'OPENROUTER_API_KEY': 'sk-from-env'},
+          env: const {'VENDOR_API_KEY': 'sk-from-env'},
         ),
         isNull,
       );
     });
 
-    test(r'an unset ${ENV} variable resolves to null, not to the reference', () {
-      expect(
-        resolveProviderApiKey(
-          const {'api_key': r'${OPENROUTER_API_KEY}'},
-          env: const {},
-        ),
-        isNull,
-      );
-    });
+    test(
+      r'an unset ${ENV} variable resolves to null, not to the reference',
+      () {
+        expect(
+          resolveProviderApiKey(const {
+            'api_key': r'${VENDOR_API_KEY}',
+          }, env: const {}),
+          isNull,
+        );
+      },
+    );
 
     test('empty and whitespace-only values count as missing', () {
       for (final settings in const [
@@ -156,10 +152,7 @@ void main() {
         {'api_key': '   '},
       ]) {
         expect(
-          resolveProviderApiKey(
-            settings,
-            env: const {'EMPTY_NAME': ''},
-          ),
+          resolveProviderApiKey(settings, env: const {'EMPTY_NAME': ''}),
           isNull,
           reason: '$settings must yield no key',
         );
@@ -168,10 +161,9 @@ void main() {
 
     test('values are trimmed', () {
       expect(
-        resolveProviderApiKey(
-          const {'api_key': '  sk-padded  '},
-          env: const {},
-        ),
+        resolveProviderApiKey(const {
+          'api_key': '  sk-padded  ',
+        }, env: const {}),
         'sk-padded',
       );
       // Outer padding is trimmed before the reference is matched.
@@ -201,15 +193,15 @@ void main() {
 
   group('isEnvReference', () {
     test(r'a ${NAME} ref is recognised', () {
-      expect(isEnvReference(r'${OPENROUTER_API_KEY}'), isTrue);
+      expect(isEnvReference(r'${VENDOR_API_KEY}'), isTrue);
     });
 
     test('a literal, an unwrapped name, and near-misses are not', () {
       expect(isEnvReference('sk-literal'), isFalse);
       // A variable name without the `${}` braces would be sent as a literal
       // token, so this must NOT count as a reference.
-      expect(isEnvReference('OPENROUTER_API_KEY'), isFalse);
-      expect(isEnvReference(r'$OPENROUTER_API_KEY'), isFalse);
+      expect(isEnvReference('VENDOR_API_KEY'), isFalse);
+      expect(isEnvReference(r'$VENDOR_API_KEY'), isFalse);
       expect(isEnvReference(r'${}'), isFalse);
       expect(isEnvReference(r'sk-${x}'), isFalse);
       expect(isEnvReference(r'prefix ${NAME}'), isFalse);
@@ -218,12 +210,12 @@ void main() {
 
   group('envRefName', () {
     test('names the variable a ref points at', () {
-      expect(envRefName(r'${OPENROUTER_API_KEY}'), 'OPENROUTER_API_KEY');
+      expect(envRefName(r'${VENDOR_API_KEY}'), 'VENDOR_API_KEY');
     });
 
     test('is null for a literal or a malformed reference', () {
       expect(envRefName('sk-literal'), isNull);
-      expect(envRefName('OPENROUTER_API_KEY'), isNull);
+      expect(envRefName('VENDOR_API_KEY'), isNull);
       expect(envRefName(r'${}'), isNull);
     });
   });

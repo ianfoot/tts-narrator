@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
@@ -40,11 +39,12 @@ void writeConfig(String configDir, Map<String, Object?> body) {
   // The shipped `${ENV}` reference is the default here, but it only *resolves*
   // for a controller built with an environment that holds the variable (see
   // [makeController]) — which is why it defaults to an empty map.
-  final blocks = (body['providers'] as Map<String, Object?>?) ??
+  final blocks =
+      (body['providers'] as Map<String, Object?>?) ??
       {
-        'openrouter': {
-          'base_url': 'https://openrouter.ai/api/v1',
-          'api_key': r'${OPENROUTER_API_KEY}',
+        'alpha': {
+          'base_url': 'https://vendor.example/api/v1',
+          'api_key': r'${VENDOR_API_KEY}',
         },
       };
 
@@ -54,9 +54,7 @@ void writeConfig(String configDir, Map<String, Object?> body) {
     final block = Map<String, Object?>.from(value as Map);
     final own = block.remove('models');
     settingsFor[name] = block;
-    claims[name] = [
-      if (own is List) ...own.whereType<String>(),
-    ];
+    claims[name] = [if (own is List) ...own.whereType<String>()];
   });
 
   final order = settingsFor.keys.toList();
@@ -96,7 +94,7 @@ void writeConfig(String configDir, Map<String, Object?> body) {
 ///
 /// [environment] defaults to an empty map rather than the process environment,
 /// so a test never depends on what the host shell happens to export — the
-/// shared fixture's `api_key: "${OPENROUTER_API_KEY}"` resolves to nothing
+/// shared fixture's `api_key: "${VENDOR_API_KEY}"` resolves to nothing
 /// unless a test opts in.
 AppController makeController(
   String configDir, {

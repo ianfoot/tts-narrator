@@ -5,7 +5,7 @@ import 'package:tts_narrator/src/gui/controller/api_key_store.dart';
 void main() {
   /// The provider most tests exercise. Arbitrary — the store must not know or
   /// care which vendor it is; that is the point of the per-provider key.
-  const provider = 'openrouter';
+  const provider = 'alpha';
 
   setUp(() {
     // A mutable map: the in-memory "keychain" also has to accept writes.
@@ -104,17 +104,17 @@ void main() {
     group('per provider', () {
       test('two providers hold independent keys', () async {
         FlutterSecureStorage.setMockInitialValues({
-          'tts-narrator.api_key.openrouter': 'sk-or',
+          'tts-narrator.api_key.alpha': 'sk-test',
           'tts-narrator.api_key.groq': 'gsk-groq',
         });
         final store = await loadedStore();
-        expect(store.value('openrouter'), 'sk-or');
+        expect(store.value('alpha'), 'sk-test');
         expect(store.value('groq'), 'gsk-groq');
       });
 
       test('an unknown provider reads as no key', () async {
         FlutterSecureStorage.setMockInitialValues({
-          'tts-narrator.api_key.openrouter': 'sk-or',
+          'tts-narrator.api_key.alpha': 'sk-test',
         });
         final store = await loadedStore();
         expect(store.value('groq'), isNull);
@@ -124,35 +124,35 @@ void main() {
         // The platform backends hand back every entry belonging to the app, so
         // the prefix filter is what keeps an unrelated value out of the cache.
         FlutterSecureStorage.setMockInitialValues({
-          'tts-narrator.api_key.openrouter': 'sk-or',
+          'tts-narrator.api_key.alpha': 'sk-test',
           'some.other.setting': 'not-a-key',
           'tts-narrator.api_key.': 'no-provider-segment',
         });
         final store = await loadedStore();
-        expect(store.value(provider), 'sk-or');
+        expect(store.value(provider), 'sk-test');
         expect(store.value(''), isNull);
         expect(store.value('some.other.setting'), isNull);
       });
 
       test('save for one provider leaves the other alone', () async {
         FlutterSecureStorage.setMockInitialValues({
-          'tts-narrator.api_key.openrouter': 'sk-or',
+          'tts-narrator.api_key.alpha': 'sk-test',
         });
         final store = await loadedStore();
         await store.save('groq', 'gsk-groq');
         expect(store.value('groq'), 'gsk-groq');
-        expect(store.value('openrouter'), 'sk-or');
+        expect(store.value('alpha'), 'sk-test');
       });
 
       test('remove takes only the named provider with it', () async {
         FlutterSecureStorage.setMockInitialValues({
-          'tts-narrator.api_key.openrouter': 'sk-or',
+          'tts-narrator.api_key.alpha': 'sk-test',
           'tts-narrator.api_key.groq': 'gsk-groq',
         });
         final store = await loadedStore();
         await store.remove('groq');
         expect(store.value('groq'), isNull);
-        expect(store.value('openrouter'), 'sk-or');
+        expect(store.value('alpha'), 'sk-test');
       });
     });
   });
