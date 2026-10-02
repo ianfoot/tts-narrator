@@ -22,12 +22,12 @@ import '../support/settings_fixtures.dart';
 /// keychain / Secret Service.
 class _FailingApiKeyStore extends ApiKeyStore {
   @override
-  Future<void> save(String key) async {
+  Future<void> save(String provider, String key) async {
     throw StateError('key store unreachable');
   }
 
   @override
-  Future<void> remove() async {
+  Future<void> remove(String provider) async {
     throw StateError('key store unreachable');
   }
 }
@@ -167,7 +167,7 @@ void main() {
       },
     });
     FlutterSecureStorage.setMockInitialValues({
-      'openrouter_api_key': 'sk-stored',
+      'tts-narrator.api_key.openrouter': 'sk-stored',
     });
     final store = ApiKeyStore();
     await store.load();

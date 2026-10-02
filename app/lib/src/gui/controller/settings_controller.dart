@@ -381,7 +381,7 @@ class SettingsController extends ChangeNotifier {
     // Returned untouched on a hit: an `api_key_env` that resolves must keep its
     // *name*, because that is what the client reads the variable by.
     if (_resolvedApiKey(resolved) != null) return resolved;
-    final stored = apiKeyStore?.value;
+    final stored = apiKeyStore?.value(p.provider);
     if (stored == null || stored.isEmpty) {
       throw const NoApiKeyConfigured();
     }
@@ -444,7 +444,7 @@ class SettingsController extends ChangeNotifier {
       final value = _environment[envName]?.trim();
       if (value != null && value.isNotEmpty) return ApiKeySource.environment;
     }
-    final stored = apiKeyStore?.value;
+    final stored = apiKeyStore?.value(p.provider);
     return (stored != null && stored.isNotEmpty)
         ? ApiKeySource.keychain
         : ApiKeySource.missing;

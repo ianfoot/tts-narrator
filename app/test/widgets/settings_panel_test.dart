@@ -738,7 +738,7 @@ void main() {
         },
       });
       FlutterSecureStorage.setMockInitialValues({
-        'openrouter_api_key': 'sk-stored',
+        'tts-narrator.api_key.openrouter': 'sk-stored',
       });
       final store = ApiKeyStore();
       await store.load();

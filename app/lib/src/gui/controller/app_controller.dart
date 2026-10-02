@@ -64,10 +64,16 @@ class AppController extends ChangeNotifier {
   /// The model & voice state (active profile, selected voice, gender filter).
   final ModelProfileVoiceController _model;
 
-  /// The OS-secure OpenRouter API-key store (Keychain / Credential Manager /
-  /// libsecret). The run-config fallback reads the cached [ApiKeyStore.value]
-  /// synchronously; the settings rail manages the key through this.
+  /// The OS-secure per-provider API-key store (Keychain / Credential Manager /
+  /// libsecret). The run-config fallback reads the cached
+  /// [ApiKeyStore.value] synchronously; the settings rail manages the active
+  /// provider's key through this.
   final ApiKeyStore _apiKeyStore;
+
+  /// The provider whose key the API-key surface reads and writes, or null when
+  /// no model is configured. Keyless providers still resolve to a name here;
+  /// it is the settings rail (not the store) that hides the section for them.
+  String? get _activeProvider => _model.profile?.provider;
 
   /// The in-memory document (text, path, dirty flag, save/load surface).
   final DocumentController _document = DocumentController();
@@ -214,20 +220,31 @@ class AppController extends ChangeNotifier {
   /// it is false (a local server needs no key).
   bool get activeProviderNeedsApiKey => _settings.activeProviderNeedsApiKey;
 
-  /// Whether a key currently sits in the OS secure store (enables the rail's
-  /// Remove button).
-  bool get hasStoredApiKey => _apiKeyStore.value != null;
+  /// Whether the active provider currently has a key in the OS secure store
+  /// (enables the rail's Remove button). False when no model is configured.
+  bool get hasStoredApiKey {
+    final provider = _activeProvider;
+    return provider != null && _apiKeyStore.value(provider) != null;
+  }
 
-  /// Saves [key] to the OS secure store and re-broadcasts so the rail's status
-  /// line updates. Throws an [ArgumentError] for an empty key.
+  /// Saves [key] for the active provider and re-broadcasts so the rail's
+  /// status line updates. Throws an [ArgumentError] for an empty key.
+  ///
+  /// A no-op when no model is configured: there is no provider to file the key
+  /// under, and the rail renders the section before Task 8 hides it.
   Future<void> saveApiKey(String key) async {
-    await _apiKeyStore.save(key);
+    final provider = _activeProvider;
+    if (provider == null) return;
+    await _apiKeyStore.save(provider, key);
     notifyListeners();
   }
 
-  /// Removes the stored key (if any) and re-broadcasts.
+  /// Removes the active provider's stored key (if any) and re-broadcasts. A
+  /// no-op when no model is configured.
   Future<void> removeApiKey() async {
-    await _apiKeyStore.remove();
+    final provider = _activeProvider;
+    if (provider == null) return;
+    await _apiKeyStore.remove(provider);
     notifyListeners();
   }
 

@@ -53,6 +53,22 @@ void main() {
     client: client,
   );
 
+  /// An [ApiKeyStore] that has already completed its startup [ApiKeyStore.load]
+  /// (against the in-memory mock) so the cached key for [provider] is
+  /// deterministically [key]. A null [key] means "nothing stored" for that
+  /// provider; any other provider's entry is cleared by the mock reset too.
+  Future<ApiKeyStore> storeLoadedWith(
+    String? key, {
+    String provider = 'openrouter',
+  }) async {
+    FlutterSecureStorage.setMockInitialValues(<String, String>{
+      'tts-narrator.api_key.$provider': ?key,
+    });
+    final store = ApiKeyStore();
+    await store.load();
+    return store;
+  }
+
   /// Writes the starter fish config (a fish model file claimed by a provider)
   /// mirroring the shipped voice-config layout) so the controller preselects
   /// fish with its default voice, as it does after the first-run download.
@@ -352,18 +368,6 @@ void main() {
       });
     }
 
-    /// An [ApiKeyStore] that has already completed its startup [ApiKeyStore.load]
-    /// (against the in-memory mock) so the cached [ApiKeyStore.value] is
-    /// deterministically [key].
-    Future<ApiKeyStore> storeLoadedWith(String? key) async {
-      FlutterSecureStorage.setMockInitialValues(<String, String>{
-        'openrouter_api_key': ?key,
-      });
-      final store = ApiKeyStore();
-      await store.load();
-      return store;
-    }
-
     test(
       'an unresolvable \${ENV} ref falls back to the securely stored key',
       () async {
@@ -449,6 +453,120 @@ void main() {
     });
   });
 
+  group('per-provider key store', () {
+    setUp(() {
+      FlutterSecureStorage.setMockInitialValues(<String, String>{});
+    });
+
+    /// Two providers, each claiming its own model, so switching model switches
+    /// which provider the active model resolves to.
+    void writeTwoProviderConfig() {
+      writeConfig({
+        'providers': {
+          'openrouter': {
+            'models': ['fish'],
+            'base_url': 'https://openrouter.ai/api/v1',
+            'api_key_env': 'OPENROUTER_API_KEY',
+          },
+          'groq': {
+            'models': ['gemini'],
+            'base_url': 'https://api.groq.invalid',
+            'api_key_env': 'GROQ_API_KEY',
+          },
+        },
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'gemini': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'format': 'pcm',
+            'sample_rate': 24000,
+          },
+        },
+        'defaults': {
+          'fish': 'British Female Narrator',
+          'gemini': 'Charon',
+        },
+        'voices': {
+          'fish': {
+            'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          },
+        },
+      });
+    }
+
+    test('a saved key is filed under the active provider only', () async {
+      writeTwoProviderConfig();
+      final c = AppController(
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
+        apiKeyStore: await storeLoadedWith(null),
+      );
+      expect(c.profile?.provider, 'openrouter');
+
+      await c.saveApiKey('sk-or');
+      expect(c.hasStoredApiKey, isTrue);
+
+      // Read the store back independently: the secret must sit in openrouter's
+      // namespace and nowhere else.
+      final reread = ApiKeyStore();
+      await reread.load();
+      expect(reread.value('openrouter'), 'sk-or');
+      expect(reread.value('groq'), isNull);
+    });
+
+    test('switching model switches which stored key is visible', () async {
+      writeTwoProviderConfig();
+      final c = AppController(
+        loader: UserVoiceConfigLoader(
+          configDir: configDir,
+          environment: const {},
+        ),
+        apiKeyStore: await storeLoadedWith(null),
+      );
+
+      // Neither provider resolves from the environment yet, so both report
+      // missing regardless of the store.
+      expect(c.hasStoredApiKey, isFalse);
+      expect(c.apiKeyMissing, isTrue);
+
+      await c.saveApiKey('sk-or');
+      expect(c.hasStoredApiKey, isTrue);
+      expect(c.apiKeySource, ApiKeySource.keychain);
+      expect(c.buildConfig().providerSettings['api_key'], 'sk-or');
+
+      // Switching to the other provider must not inherit openrouter's key.
+      c.changeModel('gemini');
+      expect(c.profile?.provider, 'groq');
+      expect(c.hasStoredApiKey, isFalse);
+      expect(c.apiKeyMissing, isTrue);
+      expect(() => c.buildConfig(), throwsA(isA<NoApiKeyConfigured>()));
+
+      // Saving under groq leaves openrouter's key intact.
+      await c.saveApiKey('gsk-groq');
+      expect(c.buildConfig().providerSettings['api_key'], 'gsk-groq');
+      c.changeModel('fish');
+      expect(c.hasStoredApiKey, isTrue);
+      expect(c.buildConfig().providerSettings['api_key'], 'sk-or');
+
+      // Removing under groq touches only groq's slot.
+      c.changeModel('gemini');
+      await c.removeApiKey();
+      expect(c.hasStoredApiKey, isFalse);
+      c.changeModel('fish');
+      expect(c.hasStoredApiKey, isTrue);
+    });
+
+    test('saving with no model configured is a no-op', () async {
+      final c = makeController();
+      expect(c.profile, isNull);
+      await expectLater(c.saveApiKey('sk-orphan'), completes);
+      await expectLater(c.removeApiKey(), completes);
+      expect(c.hasStoredApiKey, isFalse);
+    });
+  });
+
   group('api_key_env inference', () {
     setUp(() {
       FlutterSecureStorage.setMockInitialValues(<String, String>{});
@@ -473,15 +591,6 @@ void main() {
           },
         },
       });
-    }
-
-    Future<ApiKeyStore> storeLoadedWith(String? key) async {
-      FlutterSecureStorage.setMockInitialValues(<String, String>{
-        'openrouter_api_key': ?key,
-      });
-      final store = ApiKeyStore();
-      await store.load();
-      return store;
     }
 
     test(
