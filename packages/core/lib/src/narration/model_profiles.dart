@@ -1,9 +1,9 @@
 /// Per-model request profiles.
 ///
-/// Every TTS model served by OpenRouter exposes the same `/audio/speech`
-/// endpoint and auth, but they differ in the request body, the output format,
-/// and how voices work. A [TtsModelProfile] captures the *wiring* needed to
-/// build a request for a given model.
+/// Every TTS model served by an OpenAI-compatible provider exposes the same
+/// `/audio/speech` endpoint and auth, but they differ in the request body, the
+/// output format, and how voices work. A [TtsModelProfile] captures the *wiring*
+/// needed to build a request for a given model.
 ///
 /// Models are never compiled here: they come only from the user's config
 /// directory (`<alias>.json`), so the user can point at a different or newer

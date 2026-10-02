@@ -3,13 +3,13 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import '../config/provider_settings.dart';
 import 'abort.dart';
 import 'concat.dart';
 import 'config.dart';
 import 'prompt.dart';
 import 'speech_client.dart';
 import 'wav.dart';
-import '../config/provider_settings.dart';
 
 /// Max characters per narration segment. Scenes (blank-line-separated
 /// paragraphs) are kept whole; only a scene longer than this cap is split at
@@ -210,7 +210,7 @@ Future<void> narrate(
     throw StateError(
       'TTS provider "${config.profile.provider}" is missing required setting '
       '"base_url" (the speech endpoint root, e.g. '
-      '"https://openrouter.ai/api/v1").',
+      '"https://vendor.example/api/v1").',
     );
   }
 

@@ -1,5 +1,5 @@
 name: tts_narrator_workspace
-description: "Pub workspace for the OpenRouter TTS narration GUI (macOS)."
+description: "Pub workspace for the config-driven TTS narration GUI (macOS)."
 publish_to: 'none'
 version: 0.1.0+1
 
