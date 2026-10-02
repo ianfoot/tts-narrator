@@ -20,5 +20,4 @@ export 'src/narration/openai_speech_client.dart';
 export 'src/narration/prompt.dart';
 export 'src/narration/prompt_strings.dart';
 export 'src/narration/speech_client.dart';
-export 'src/narration/tts_provider.dart';
 export 'src/narration/wav.dart';

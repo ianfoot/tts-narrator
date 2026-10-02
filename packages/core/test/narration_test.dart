@@ -7,7 +7,6 @@ import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/narration.dart';
 import 'package:tts_narrator_core/src/narration/prompt.dart';
-import 'package:tts_narrator_core/src/narration/tts_provider.dart';
 
 import 'support/fake_provider.dart';
 
@@ -23,7 +22,6 @@ void main() {
   setUp(() {
     dir = Directory.systemTemp.createTempSync('tts_narrate_test_');
     provider = FakeTtsProvider();
-    ttsProviderRegistry.register(provider.id, () => provider);
   });
 
   tearDown(() {
@@ -42,6 +40,8 @@ void main() {
     int? sampleRate,
     bool promptStyle = false,
     bool sendsVoiceField = true,
+    bool supportsSpeed = false,
+    double speed = 1.0,
     Map<String, String> providerSettings = const {'api_key': 'sk-test'},
   }) {
     return NarrationConfig(
@@ -52,11 +52,12 @@ void main() {
         format: format ?? 'mp3',
         promptStyle: promptStyle,
         sendsVoiceField: sendsVoiceField,
+        supportsSpeed: supportsSpeed,
         sampleRate: sampleRate,
-        provider: provider.id,
       ),
       voice: 'VoiceOne',
       voiceLabel: 'Voice One',
+      speed: speed,
       providerSettings: providerSettings,
       outDir: '${dir.path}/out',
     );
@@ -66,7 +67,7 @@ void main() {
     'dispatches through the registered provider and writes mp3 bytes',
     () async {
       final input = writeInput();
-      await narrate(config(input));
+      await narrate(config(input), client: provider.client);
 
       expect(provider.callCount, 1);
       final call = provider.calls.single;
@@ -86,7 +87,10 @@ void main() {
     'wraps pcm output in a WAV header using the profile sample rate',
     () async {
       final input = writeInput();
-      await narrate(config(input, format: 'pcm', sampleRate: 24000));
+      await narrate(
+        config(input, format: 'pcm', sampleRate: 24000),
+        client: provider.client,
+      );
 
       final audioFile = File('${dir.path}/out/story/story_1.wav');
       expect(audioFile.existsSync(), isTrue);
@@ -99,7 +103,7 @@ void main() {
 
   test('writes a combined track and records it in the manifest', () async {
     final input = writeInput();
-    await narrate(config(input, format: 'mp3'));
+    await narrate(config(input, format: 'mp3'), client: provider.client);
 
     final combined = File('${dir.path}/out/story/story_full.mp3');
     expect(combined.existsSync(), isTrue);
@@ -133,7 +137,7 @@ void main() {
       outDir: '${dir.path}/out',
       minWords: 1,
     );
-    await narrate(cfg);
+    await narrate(cfg, client: provider.client);
 
     final pcm1 = _pcmPayload(
       File('${dir.path}/out/story/story_1.wav').readAsBytesSync(),
@@ -149,21 +153,49 @@ void main() {
 
   test('omits the voice field when sendsVoiceField is false', () async {
     final input = writeInput();
-    await narrate(config(input, sendsVoiceField: false));
+    await narrate(
+      config(input, sendsVoiceField: false),
+      client: provider.client,
+    );
     expect(provider.calls.single.voice, isNull);
   });
 
   test('prompt-styled models pass buildPrompt output as the input', () async {
     final input = writeInput();
     final cfg = config(input, promptStyle: true);
-    await narrate(cfg);
+    await narrate(cfg, client: provider.client);
     expect(provider.calls.single.input, buildPrompt(cfg, _inputText));
+  });
+
+  test('omits speed for a model that does not support it', () async {
+    final input = writeInput();
+    await narrate(
+      config(input, supportsSpeed: false, speed: 1.4),
+      client: provider.client,
+    );
+    expect(provider.calls.single.speed, isNull);
+  });
+
+  test('forwards speed for a model that supports it, even at 1.0', () async {
+    final input = writeInput();
+    await narrate(
+      config(input, supportsSpeed: true, speed: 1.4),
+      client: provider.client,
+    );
+    expect(provider.calls.single.speed, 1.4);
+  });
+
+  test('a capable model still gets its speed at the 1.0 default', () async {
+    final input = writeInput();
+    await narrate(config(input, supportsSpeed: true), client: provider.client);
+    expect(provider.calls.single.speed, 1.0);
   });
 
   test('passes the resolved provider settings through untouched', () async {
     final input = writeInput();
     await narrate(
       config(input, providerSettings: {'api_key': 'sk-2', 'model_id': 'x'}),
+      client: provider.client,
     );
     expect(provider.calls.single.settings, {
       'api_key': 'sk-2',
@@ -315,7 +347,7 @@ void main() {
           outDir: '${dir.path}/out',
           sendWholeFile: true,
         );
-        await narrate(cfg);
+        await narrate(cfg, client: provider.client);
 
         final manifest = jsonDecode(
           File('${dir.path}/out/story/manifest.json').readAsStringSync(),
@@ -339,7 +371,7 @@ void main() {
         outDir: '${dir.path}/out',
         sendWholeFile: true,
       );
-      await narrate(cfg);
+      await narrate(cfg, client: provider.client);
 
       expect(provider.callCount, 1);
       expect(provider.calls.single.input, '$_inputText\n\n$_inputText');
@@ -354,7 +386,7 @@ void main() {
       'narrates from text via the provider without reading inputPath',
       () async {
         final cfg = typedConfig();
-        await narrate(cfg);
+        await narrate(cfg, client: provider.client);
 
         expect(provider.callCount, 1);
         expect(provider.calls.single.input, _inputText);
@@ -385,7 +417,7 @@ void main() {
         sampleLen: 1,
       );
       expect(planSegments(cfg), hasLength(4));
-      await narrate(cfg);
+      await narrate(cfg, client: provider.client);
       expect(provider.callCount, 1);
     });
   });

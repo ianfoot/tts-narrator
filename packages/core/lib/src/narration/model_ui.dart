@@ -1,15 +1,14 @@
+import 'model_profiles.dart';
+
 /// Declarative UI for a model's adjustable options.
 ///
-/// Which controls a model gets in the GUI is owned by the model's plugin (the
-/// provider package): a provider overrides `TtsProvider.modelUiSpecFor` per
-/// model and the app renders whatever options come back, generically. Core
-/// ships no model-specific UI knowledge and the app has no per-model branches.
+/// [ModelUiSpec.forProfile] derives the controls from the model's own declared
+/// capabilities ([TtsModelProfile.promptStyle] and [TtsModelProfile.supportsSpeed]),
+/// and the app renders whatever comes back generically. Core ships no per-model
+/// branches, and the app has none either.
 ///
 /// Option keys are a convention the app interprets against the model-agnostic
-/// narration settings: `accent`, `style`, `passagePrefix` bind to the
-/// bind to the corresponding `NarrationConfig` fields. A model whose plugin
-/// declares no spec gets no model-option controls.
-/// Options binding conventions the app interprets (see the rail):
+/// narration settings:
 ///   `accent`/`style`/`passagePrefix` — editable text against the matching
 ///   narration settings;
 ///   `gender` — a narrator-gender (male/female/any) segmented control that the
@@ -17,11 +16,58 @@
 ///   `speed` — a speech-rate slider bound to the `NarrationConfig.speed`
 ///   setting (1.0 = normal).
 ///
-/// A model whose plugin declares no spec gets no model-option controls.
+/// A model declaring neither capability gets no model-option controls.
 class ModelUiSpec {
   const ModelUiSpec([this.options = const <ModelUiControl>[]]);
 
   const ModelUiSpec.empty() : options = const <ModelUiControl>[];
+
+  /// The controls [model] supports, derived from the profile's capabilities.
+  ///
+  /// `promptStyle` models understand accent/style/prefix directives woven into
+  /// the text, so they get those fields plus a narrator-gender control the app
+  /// rewrites into the narrated prose. `supportsSpeed` models get the speed
+  /// slider. A model can qualify for either, both, or neither.
+  factory ModelUiSpec.forProfile(TtsModelProfile model) {
+    final options = <ModelUiControl>[];
+    if (model.promptStyle) {
+      options.addAll(const [
+        ModelUiControl(
+          key: 'gender',
+          label: 'Narrator gender',
+          type: ModelUiOptionType.gender,
+        ),
+        ModelUiControl(
+          key: 'accent',
+          label: 'Accent',
+          hint: 'e.g., Southern British English',
+        ),
+        ModelUiControl(
+          key: 'style',
+          label: 'Style / register',
+          hint: 'e.g., Warm, composed, literary',
+        ),
+        ModelUiControl(
+          key: 'passagePrefix',
+          label: 'Passage prefix',
+          hint:
+              'An opening directive woven into the first passage, read aloud '
+              'before the story starts. Add `[calm] ` here for a calm style.',
+          type: ModelUiOptionType.multiline,
+        ),
+      ]);
+    }
+    if (model.supportsSpeed) {
+      options.add(
+        const ModelUiControl(
+          key: 'speed',
+          label: 'Speed',
+          type: ModelUiOptionType.speed,
+        ),
+      );
+    }
+    return ModelUiSpec(options);
+  }
 
   /// The editable controls the model exposes, in display order.
   final List<ModelUiControl> options;
@@ -29,7 +75,7 @@ class ModelUiSpec {
   bool get isEmpty => options.isEmpty;
 }
 
-/// A single editable option declared by a model's plugin.
+/// A single editable option offered for a model.
 class ModelUiControl {
   const ModelUiControl({
     required this.key,
@@ -39,7 +85,7 @@ class ModelUiControl {
   });
 
   /// Declarative key the app binds against a narration setting or narrator
-  /// state (`accent`, `style`, `passagePrefix`, `gender`).
+  /// state (`accent`, `style`, `passagePrefix`, `gender`, `speed`).
   final String key;
 
   /// User-facing label for the control.

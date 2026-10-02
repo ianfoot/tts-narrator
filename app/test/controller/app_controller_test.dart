@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator/src/gui/controller/api_key_store.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
@@ -65,8 +65,10 @@ void main() {
     });
   }
 
-  AppController makeController() =>
-      AppController(loader: UserVoiceConfigLoader(configDir: configDir));
+  AppController makeController({SpeechClient? client}) => AppController(
+    loader: UserVoiceConfigLoader(configDir: configDir),
+    client: client,
+  );
 
   /// Writes the starter fish config (a `default_model` and a fish model file
   /// mirroring the shipped voice-config layout) so the controller preselects
@@ -79,6 +81,28 @@ void main() {
       },
       'models': {
         'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+      },
+      'defaults': {'fish': 'British Female Narrator'},
+      'voices': {
+        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+      },
+    });
+  }
+
+  /// As [writeFishConfig], but the model declares `prompt_style`, which is
+  /// what derives the prompt-controls portion of the model-options spec.
+  void writePromptStyleFishConfig() {
+    writeConfig({
+      'default_model': 'fish',
+      'providers': {
+        'openrouter': {'api_key': 'sk-test'},
+      },
+      'models': {
+        'fish': {
+          'id': 'fish-audio/s2.1-pro-free:free',
+          'format': 'mp3',
+          'prompt_style': true,
+        },
       },
       'defaults': {'fish': 'British Female Narrator'},
       'voices': {
@@ -131,7 +155,7 @@ void main() {
 
     test('setText with identical value is ignored', () {
       final c = makeController();
-c.setText('Hello');
+      c.setText('Hello');
       expect(c.dirty, isTrue);
       // Editing does not name the document; it stays null until first save.
       expect(c.documentName, isNull);
@@ -328,7 +352,7 @@ c.setText('Hello');
       writeConfig({
         'default_model': 'fish',
         'providers': {
-          'openrouter': {'OPENROUTER_API_KEY': ref},
+          'openrouter': {'api_key': ref},
         },
         'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
@@ -363,7 +387,7 @@ c.setText('Hello');
           apiKeyStore: await storeLoadedWith('sk-stored'),
         )..setText('A sentence.');
         final cfg = c.buildConfig();
-        expect(cfg.providerSettings['OPENROUTER_API_KEY'], 'sk-stored');
+        expect(cfg.providerSettings['api_key'], 'sk-stored');
         expect(c.apiKeySource, ApiKeySource.keychain);
         expect(c.apiKeyMissing, isFalse);
       },
@@ -390,7 +414,7 @@ c.setText('Hello');
         )..setText('A sentence.');
         final cfg = c.buildConfig();
         expect(
-          cfg.providerSettings['OPENROUTER_API_KEY'],
+          cfg.providerSettings['api_key'],
           Platform.environment['HOME'],
         );
         expect(c.apiKeySource, ApiKeySource.environment);
@@ -421,7 +445,7 @@ c.setText('Hello');
       expect(c.hasStoredApiKey, isTrue);
       expect(c.apiKeySource, ApiKeySource.keychain);
       expect(
-        c.buildConfig().providerSettings['OPENROUTER_API_KEY'],
+        c.buildConfig().providerSettings['api_key'],
         'sk-stored',
       );
       await c.removeApiKey();
@@ -690,10 +714,7 @@ c.setText('Hello');
 
     test('blocks when no model is configured', () {
       final c = makeController();
-      expect(
-        c.narrateBlockReason(),
-        NarrationBlockReason.noModelConfigured,
-      );
+      expect(c.narrateBlockReason(), NarrationBlockReason.noModelConfigured);
     });
 
     test('allows narration with text present and a configured model', () {
@@ -704,8 +725,9 @@ c.setText('Hello');
 
     test('blocks re-entrancy once a run starts', () async {
       writeFishConfig();
-      final c = makeController()..setText('Hello world. Enough words.');
-      final fake = FakeTtsProvider()..register();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client)
+        ..setText('Hello world. Enough words.');
       c.sampleLen = 1;
       c.outDir = dir.path;
       c.startRun();
@@ -734,14 +756,14 @@ c.setText('Hello');
     setUp(() => writeFishConfig());
 
     test('sampleLen sizes the segment plan so progress completes at 100%', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'First paragraph with enough words to become its own segment and then '
         'carry on a little longer to cross the minimum.\n\n'
         'Second paragraph with enough words to become its own segment as well '
         'and then carry on a little longer to cross the minimum.',
       );
-      final fake = FakeTtsProvider()..register();
       c.sampleLen = 1;
       c.outDir = dir.path;
       c.startRun();
@@ -754,14 +776,14 @@ c.setText('Hello');
     });
 
     test('cancelling a run clears the in-flight segment spinner', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'First paragraph with enough words to become its own segment and then '
         'carry on a little longer to cross the minimum.\n\n'
         'Second paragraph with enough words to become its own segment as well '
         'and then carry on a little longer to cross the minimum.',
       );
-      FakeTtsProvider().register();
       c.outDir = dir.path;
       c.startRun();
       c.cancelRun();
@@ -772,13 +794,13 @@ c.setText('Hello');
     });
 
     test('a successful run records the combined track path', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'A single paragraph long enough that it does not need any other '
         'company. It crosses the minimum word count comfortably and becomes '
         'one segment all on its own, plain and simple.',
       );
-      FakeTtsProvider().register();
       c.outDir = dir.path;
       expect(c.completedAudioPath, isNull);
       c.startRun();
@@ -791,14 +813,14 @@ c.setText('Hello');
     });
 
     test('a cancelled run never records a combined track path', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'First paragraph with enough words to become its own segment and then '
         'carry on a little longer to cross the minimum.\n\n'
         'Second paragraph with enough words to become its own segment as well '
         'and then carry on a little longer to cross the minimum.',
       );
-      FakeTtsProvider().register();
       c.outDir = dir.path;
       c.startRun();
       c.cancelRun();
@@ -808,17 +830,16 @@ c.setText('Hello');
     });
 
     test('cancelRun makes narration idle immediately', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'First paragraph with enough words to become its own segment and then '
         'carry on a little longer to cross the minimum.\n\n'
         'Second paragraph with enough words to become its own segment as well '
         'and then carry on a little longer to cross the minimum.',
       );
-      final fake = FakeTtsProvider();
       final gate = Completer<void>();
       fake.gate = gate;
-      fake.register();
       c.outDir = dir.path;
       c.startRun();
       expect(c.narrating, isTrue);
@@ -837,7 +858,8 @@ c.setText('Hello');
     });
 
     test('a successor run is not clobbered by the cancelled predecessor', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'First paragraph with enough words to become its own segment on its '
         'own, carrying straight past the minimum without needing any company '
@@ -847,10 +869,8 @@ c.setText('Hello');
         'also carrying well past the minimum so it does not fuse with anything '
         'around it either. It clears the bar all by itself just the same.',
       );
-      final fake = FakeTtsProvider();
       final gate = Completer<void>();
       fake.gate = gate;
-      fake.register();
       c.outDir = dir.path;
       c.sampleLen = null;
       // Run A: gated mid-flight, then cancelled.
@@ -875,13 +895,13 @@ c.setText('Hello');
     });
 
     test('starting a new run clears a prior completed track path', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'A single paragraph long enough that it does not need any other '
         'company. It crosses the minimum word count comfortably and becomes '
         'one segment all on its own, plain and simple.',
       );
-      FakeTtsProvider().register();
       c.outDir = dir.path;
       c.startRun();
       await Future<void>.delayed(const Duration(milliseconds: 20));
@@ -904,13 +924,13 @@ c.setText('Hello');
 
     test('canCleanupSegments enables and cleanupSegments removes per-segment '
         'files while keeping the combined track', () async {
-      final c = makeController();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client);
       c.setText(
         'A single paragraph long enough that it does not need any other '
         'company. It crosses the minimum word count comfortably and becomes '
         'one segment all on its own, plain and simple.',
       );
-      final fake = FakeTtsProvider()..register();
       c.outDir = dir.path;
       c.startRun();
       await Future<void>.delayed(const Duration(milliseconds: 20));
@@ -948,8 +968,9 @@ c.setText('Hello');
     });
 
     test('cleanupSegments is a no-op while a run is in flight', () async {
-      final c = makeController()..setText('Hello world. Enough words.');
-      FakeTtsProvider().register();
+      final fake = FakeTtsProvider();
+      final c = makeController(client: fake.client)
+        ..setText('Hello world. Enough words.');
       c.sampleLen = 1;
       c.outDir = dir.path;
       c.startRun();
@@ -960,22 +981,59 @@ c.setText('Hello');
   });
 
   group('modelUiSpec', () {
-    test('empty when no provider registers a spec for the model', () {
+    test('empty when the active model declares no capabilities', () {
       final c = makeController();
       expect(c.modelUiSpec.isEmpty, isTrue);
     });
 
-    test('resolves the active model spec from the registered provider', () {
-      final fake = FakeTtsProvider()
-        ..specsByAlias['fish'] = const ModelUiSpec([
-          ModelUiControl(key: 'accent', label: 'Accent'),
-        ]);
-      fake.register();
-      writeFishConfig();
+    test('prompt_style derives the prompt controls for the active model', () {
+      writePromptStyleFishConfig();
       final c = makeController();
       expect(c.modelUiSpec.isEmpty, isFalse);
       final keys = c.modelUiSpec.options.map((o) => o.key).toList();
-      expect(keys, ['accent']);
+      expect(keys, ['gender', 'accent', 'style', 'passagePrefix']);
+    });
+
+    test('speed adds only the speed control', () {
+      writeConfig({
+        'default_model': 'fast',
+        'providers': {
+          'openrouter': {'api_key': 'sk-test'},
+        },
+        'models': {
+          'fast': {
+            'id': 'openai/gpt-4o-mini-tts',
+            'format': 'mp3',
+            'speed': true,
+          },
+        },
+      });
+      final c = makeController();
+      final keys = c.modelUiSpec.options.map((o) => o.key).toList();
+      expect(keys, ['speed']);
+    });
+
+    test('follows the selected model when it switches', () {
+      writeConfig({
+        'default_model': 'plain',
+        'providers': {
+          'openrouter': {'api_key': 'sk-test'},
+        },
+        'models': {
+          'plain': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'styled': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'format': 'pcm',
+            'sample_rate': 24000,
+            'prompt_style': true,
+          },
+        },
+      });
+      final c = makeController();
+      expect(c.modelUiSpec.isEmpty, isTrue);
+      c.changeModel('styled');
+      final keys = c.modelUiSpec.options.map((o) => o.key).toList();
+      expect(keys, ['gender', 'accent', 'style', 'passagePrefix']);
     });
   });
 

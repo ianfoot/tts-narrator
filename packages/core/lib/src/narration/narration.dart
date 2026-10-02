@@ -7,7 +7,7 @@ import 'abort.dart';
 import 'concat.dart';
 import 'config.dart';
 import 'prompt.dart';
-import 'tts_provider.dart';
+import 'speech_client.dart';
 import 'wav.dart';
 
 /// Max characters per narration segment. Scenes (blank-line-separated
@@ -187,10 +187,15 @@ String outputDirPath(NarrationConfig config) {
 /// manifest into [config.outDir]. The manifest is rewritten after every segment
 /// so a failed run can be resumed via `--resume`.
 ///
+/// [client] is the speech seam, injected by the entrypoint rather than resolved
+/// from a registry: core never constructs one. [OpenAiSpeechClient] is the one
+/// the app supplies, configured entirely from [NarrationConfig.providerSettings].
+///
 /// [abort], when given, is checked before each segment and thread through to the
 /// HTTP client; cancelling it throws [AbortException] and stops the run.
 Future<void> narrate(
   NarrationConfig config, {
+  required SpeechClient client,
   NarrationProgress? onProgress,
   NarrationSegmentComplete? onSegmentComplete,
   AbortToken? abort,
@@ -198,7 +203,6 @@ Future<void> narrate(
   final paragraphs = planSegments(config);
 
   final count = min(config.sampleLen ?? paragraphs.length, paragraphs.length);
-  final provider = ttsProviderRegistry.resolve(config.profile.provider);
   final stem = inputStem(config.inputPath);
   final dir = outputDirPath(config);
   final outDir = Directory(dir)..createSync(recursive: true);
@@ -242,13 +246,13 @@ Future<void> narrate(
     }
 
     onProgress?.call(i, count, paragraph);
-    final audio = await provider.synthesize(
+    final audio = await client(
       model: config.profile.id,
       voice: config.profile.sendsVoiceField ? config.voice : null,
       responseFormat: config.profile.format,
       settings: config.providerSettings,
       input: input,
-      speed: config.speed,
+      speed: config.profile.supportsSpeed ? config.speed : null,
       abort: abort,
     );
 

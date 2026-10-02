@@ -314,12 +314,14 @@ class SettingsController extends ChangeNotifier {
 
   // --- API key (provider secrets) -----------------------------------
 
-  /// OpenRouter API-key setting names, in the provider's own lookup order
-  /// (`api_key` first, then `OPENROUTER_API_KEY`).
-  static const _apiKeySettingNames = ['api_key', 'OPENROUTER_API_KEY'];
+  /// Settings whose value is the API key itself, in the client's lookup order.
+  /// Deliberately excludes `api_key_env`: that setting holds the *name* of an
+  /// environment variable, not key material, so treating it as a key would
+  /// report the literal string as a usable credential.
+  static const _apiKeySettingNames = ['api_key'];
 
-  /// Provider ids the app requires an API key for. Mirrors the openrouter
-  /// registration in `main.dart`; other providers extend this set.
+  /// Provider ids the app requires an API key for. Only the vendors that
+  /// actually gate on a key belong here; keyless vendors are omitted.
   static const _keyedProviders = {'openrouter'};
 
   /// Whether [settings] carries a usable (non-empty) API key under any known
@@ -362,7 +364,7 @@ class SettingsController extends ChangeNotifier {
       resolved = _model.resolveProviderSettings(p);
     } on StateError {
       // A `${ENV}` reference the runtime cannot fulfil (the shipped starter
-      // config's `${OPENROUTER_API_KEY}` under a double-click launch, for
+      // config's `${OPENROUTER_API_KEY}` env reference under a double-click
       // instance) is treated as "no config/env key"; the secure store can
       // still provide one, so fall through and re-resolve with it injected.
       resolved = null;
@@ -381,16 +383,17 @@ class SettingsController extends ChangeNotifier {
   }
 
   /// Overrides injecting the stored [key] into [profile]'s provider block:
-  /// overrides whichever key-setting names are already present (preserving the
-  /// provider's native naming), else supplies `OPENROUTER_API_KEY` for a block
-  /// that carries none.
+  /// overrides whichever key-setting names are already present, else supplies
+  /// `api_key` for a block that carries none — the name the speech client reads
+  /// first, so a block holding only `api_key_env` (a variable name) still gets
+  /// the keychain value under a name the client will honour.
   Map<String, String> _apiKeyOverridesWith(TtsModelProfile p, String key) {
     final raw = _model.rawProviderSettings(p);
     final overrides = <String, String>{};
     for (final name in _apiKeySettingNames) {
       if (raw.containsKey(name)) overrides[name] = key;
     }
-    if (overrides.isEmpty) overrides['OPENROUTER_API_KEY'] = key;
+    if (overrides.isEmpty) overrides['api_key'] = key;
     return overrides;
   }
 

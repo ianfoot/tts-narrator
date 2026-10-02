@@ -45,7 +45,7 @@ class OpenAiSpeechClient {
     required String input,
     required String responseFormat,
     required Map<String, String> settings,
-    required double speed,
+    required double? speed,
     AbortToken? abort,
   }) async {
     final uri = _speechUri(settings);
@@ -62,8 +62,10 @@ class OpenAiSpeechClient {
     if (resolvedVoice != null && resolvedVoice.isNotEmpty) {
       body['voice'] = resolvedVoice;
     }
-    // 1.0 is the protocol default; sending it is noise.
-    if (speed != 1.0) {
+    // Capability-gated by the model profile: a model that declares
+    // `"speed": true` always gets the field, including the 1.0 default, so a
+    // capable model never has to infer "unset" from a missing key.
+    if (speed != null) {
       body['speed'] = speed;
     }
 

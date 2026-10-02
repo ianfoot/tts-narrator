@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
+import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'l10n_test_support.dart';
 
@@ -48,8 +49,14 @@ void writeConfig(String configDir, Map<String, Object?> body) {
   });
 }
 
-AppController makeController(String configDir) =>
-    AppController(loader: UserVoiceConfigLoader(configDir: configDir));
+/// Builds a controller over [configDir]. Pass [client] to drive narration
+/// with a fake instead of the network; omitting it keeps the real client,
+/// which is correct for tests that never start a run.
+AppController makeController(String configDir, {SpeechClient? client}) =>
+    AppController(
+      loader: UserVoiceConfigLoader(configDir: configDir),
+      client: client,
+    );
 
 /// Writes the starter fish config so the controller preselects fish with its
 /// default voice (as after the first-run download).

@@ -5,16 +5,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
-import 'package:tts_narrator_openrouter/openrouter_tts_provider.dart';
-import 'package:tts_narrator_mlx_audio/mlx_audio_tts_provider.dart';
 
+import 'l10n/app_localizations.dart';
 import 'src/gui/controller/app_controller.dart';
 import 'src/gui/controller/config_loader.dart';
 import 'src/gui/platform/app_root.dart';
 import 'src/gui/platform/platform_detection.dart';
-import 'l10n/app_localizations.dart';
 
-/// Root app that provides a Navigator so ConfigBootstrap can show dialogs.
 class BootstrapApp extends StatelessWidget {
   const BootstrapApp({
     super.key,
@@ -269,12 +266,6 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  // Providers are registered on every platform: the local OpenAI-compatible
-  // provider (id `mlx_audio`) is a plain HTTP client and works anywhere a
-  // compatible server answers; per-platform differences live in data (which
-  // starter voice-config files ship, via voice-config/manifest.json).
-  ttsProviderRegistry.register('openrouter', OpenRouterTtsProvider.new);
-  ttsProviderRegistry.register('mlx_audio', MlxAudioTtsProvider.new);
 
   final appSupportDir = await getApplicationSupportDirectory();
   final configDir = appSupportDir.path;

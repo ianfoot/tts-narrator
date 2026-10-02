@@ -3,6 +3,7 @@
   "provider": "mlx_audio",
   "format": "mp3",
   "display_name": "MLX Kokoro 82M",
+  "speed": true,
   "default_voice": "bm_george",
   "voices": {
     "George": {"id": "bm_george", "gender": "male"},

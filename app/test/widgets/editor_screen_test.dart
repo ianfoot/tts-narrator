@@ -11,12 +11,13 @@ import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
 import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
     show acceleratorLabel;
 import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
-import '../support/l10n_test_support.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
+import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
+import '../support/l10n_test_support.dart';
 
 void main() {
   late Directory dir;
@@ -55,9 +56,12 @@ void main() {
     );
   }
 
-  Future<AppController> makeController() async {
+  Future<AppController> makeController({SpeechClient? client}) async {
     writeFishConfig();
-    return AppController(loader: UserVoiceConfigLoader(configDir: configDir));
+    return AppController(
+      loader: UserVoiceConfigLoader(configDir: configDir),
+      client: client,
+    );
   }
 
   Future<void> pumpEditor(
@@ -82,7 +86,7 @@ void main() {
   testWidgets('boots to an empty editor with a zeroed status bar', (
     tester,
   ) async {
-    final controller = await makeController();
+    final controller = await makeController(client: FakeTtsProvider().client);
     await pumpEditor(tester, controller);
 
     expect(find.byType(EditorScreen), findsOneWidget);
@@ -282,13 +286,12 @@ void main() {
   });
 
   testWidgets('a completed run shows the full-play button', (tester) async {
-    final controller = await makeController();
+    final controller = await makeController(client: FakeTtsProvider().client);
     controller.setText(
       'A single paragraph long enough that it does not need any other '
       'company. It crosses the minimum word count comfortably and becomes '
       'one segment all on its own, plain and simple.',
     );
-    FakeTtsProvider().register();
     controller.outDir = dir.path;
     controller.startRun();
     await tester.runAsync(() async {
@@ -306,13 +309,12 @@ void main() {
     tester,
   ) async {
     final audio = installFakeAudioPlatform();
-    final controller = await makeController();
+    final controller = await makeController(client: FakeTtsProvider().client);
     controller.setText(
       'A single paragraph long enough that it does not need any other '
       'company. It crosses the minimum word count comfortably and becomes '
       'one segment all on its own, plain and simple.',
     );
-    FakeTtsProvider().register();
     controller.outDir = dir.path;
     controller.startRun();
     await tester.runAsync(() async {
@@ -334,14 +336,13 @@ void main() {
   testWidgets('a stopped run does not show the full-play button', (
     tester,
   ) async {
-    final controller = await makeController();
+    final controller = await makeController(client: FakeTtsProvider().client);
     controller.setText(
       'First paragraph with enough words to become its own segment and then '
       'carry on a little longer to cross the minimum.\n\n'
       'Second paragraph with enough words to become its own segment as well '
       'and then carry on a little longer to cross the minimum.',
     );
-    FakeTtsProvider().register();
     controller.outDir = dir.path;
     controller.startRun();
     controller.cancelRun();
@@ -359,13 +360,12 @@ void main() {
     tester,
   ) async {
     installFakeAudioPlatform();
-    final controller = await makeController();
+    final controller = await makeController(client: FakeTtsProvider().client);
     controller.setText(
       'A single paragraph long enough that it does not need any other '
       'company. It crosses the minimum word count comfortably and becomes '
       'one segment all on its own, plain and simple.',
     );
-    FakeTtsProvider().register();
     controller.outDir = dir.path;
 
     // First run completes and starts playing.

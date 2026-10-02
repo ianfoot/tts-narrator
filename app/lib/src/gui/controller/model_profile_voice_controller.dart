@@ -88,15 +88,13 @@ class ModelProfileVoiceController extends ChangeNotifier {
   Map<String, String> rawProviderSettings(TtsModelProfile profile) =>
       _voiceConfig.providers[profile.provider] ?? const {};
 
-  /// The editable GUI options for the active model, declared by its model's
-  /// plugin (the provider package). Empty when no model is configured or no
-  /// plugin declares a spec — the app has no per-model UI knowledge.
+  /// The editable GUI options for the active model, derived from the
+  /// capabilities it declares in its config file. Empty when no model is
+  /// configured or the model declares none — the app has no per-model UI
+  /// knowledge of its own.
   ModelUiSpec get modelUiSpec {
     final p = profile;
-    return p == null
-        ? const ModelUiSpec.empty()
-        : ttsProviderRegistry.resolveOrNull(p.provider)?.modelUiSpecFor(p) ??
-              const ModelUiSpec.empty();
+    return p == null ? const ModelUiSpec.empty() : ModelUiSpec.forProfile(p);
   }
 
   /// Default voice for the active [profile] from the config, or null when the

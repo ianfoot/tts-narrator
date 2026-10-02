@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/config/voice_config.dart';
 import 'package:tts_narrator_core/src/config/voice_config_io.dart';
+import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
 void main() {
   group('loadVoiceConfig', () {
@@ -40,6 +42,39 @@ void main() {
       expect(warnings, isEmpty);
     });
 
+    group('speed capability', () {
+      TtsModelProfile loadProfile(String json) {
+        writeModel('m', json);
+        return load().$1.models['m']!;
+      }
+
+      test('defaults to unsupported when the key is absent', () {
+        expect(
+          loadProfile('{"id":"x/y","provider":"openrouter"}').supportsSpeed,
+          isFalse,
+        );
+      });
+
+      test('reads the opt-in flag', () {
+        expect(
+          loadProfile('{"id":"x/y","provider":"openrouter","speed":true}')
+              .supportsSpeed,
+          isTrue,
+        );
+        expect(
+          loadProfile('{"id":"x/y","provider":"openrouter","speed":false}')
+              .supportsSpeed,
+          isFalse,
+        );
+      });
+
+      test('rejects a non-bool', () {
+        writeModel('m', '{"id":"x/y","provider":"openrouter","speed":"yes"}');
+        final (_, warnings) = load();
+        expect(warnings.single, contains('"speed" must be a bool'));
+      });
+    });
+
     test(
       'accepts a directory with only an empty config.json and no models',
       () {
@@ -69,6 +104,34 @@ void main() {
         File('${dir.path}${Platform.pathSeparator}config.json').existsSync(),
         isTrue,
       );
+    });
+
+    test('round-trips the speed capability through a model file', () {
+      writeVoiceConfig(
+        dir.path,
+        VoiceConfig(
+          defaultModel: 'fast',
+          models: {
+            'fast': const TtsModelProfile(
+              alias: 'fast',
+              id: 'x/y',
+              supportsSpeed: true,
+            ),
+            'plain': const TtsModelProfile(alias: 'plain', id: 'x/z'),
+          },
+        ),
+      );
+
+      final raw = jsonDecode(
+        File('${dir.path}${Platform.pathSeparator}fast.json')
+            .readAsStringSync(),
+      ) as Map<String, dynamic>;
+      expect(raw['speed'], isTrue);
+
+      final (cfg, warnings) = loadVoiceConfig(dir.path);
+      expect(warnings, isEmpty);
+      expect(cfg.models['fast']!.supportsSpeed, isTrue);
+      expect(cfg.models['plain']!.supportsSpeed, isFalse);
     });
   });
 }

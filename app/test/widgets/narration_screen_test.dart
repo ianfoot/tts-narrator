@@ -6,45 +6,33 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/narration/narration_screen.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
-import '../support/l10n_test_support.dart';
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
+import '../support/l10n_test_support.dart';
 
-/// Provider whose [synthesize] never returns: keeps a run in-flight so Cancel
-/// and the active-run Back confirm modal are meaningful.
-class _BlockingProvider implements TtsProvider {
-  @override
-  String get id => 'openrouter';
+/// Speech client whose [synthesize] never returns: keeps a run in-flight so
+/// Cancel and the active-run Back confirm modal are meaningful.
+class _BlockingClient {
+  SpeechClient get client => synthesize;
 
-  @override
-  String get name => 'Blocking TTS';
-
-  @override
-  ModelUiSpec modelUiSpecFor(TtsModelProfile model) =>
-      const ModelUiSpec.empty();
-
-  @override
   Future<GeneratedAudio> synthesize({
     required String model,
     required String? voice,
     required String input,
     required String responseFormat,
     required Map<String, String> settings,
-    double speed = 1.0,
+    required double? speed,
     AbortToken? abort,
   }) async {
     await Completer<void>().future;
     abort?.throwIfCancelled();
     return GeneratedAudio(bytes: const [0]);
   }
-
-  void register() => ttsProviderRegistry.register('openrouter', () => this);
 }
 
 void main() {
@@ -90,10 +78,12 @@ void main() {
     );
   }
 
-  AppController makeController() {
+  AppController makeController({SpeechClient? client}) {
     writeFishConfig();
-    final c = AppController(loader: UserVoiceConfigLoader(configDir: configDir))
-      ..outDir = dir.path;
+    final c = AppController(
+      loader: UserVoiceConfigLoader(configDir: configDir),
+      client: client,
+    )..outDir = dir.path;
     c.setText(
       'The rain fell on the quiet street all through the long cold night and '
       'every window glowed warm behind drawn curtains as the story of the '
@@ -152,8 +142,8 @@ void main() {
   testWidgets('a launched run renders the header and frozen summary pill', (
     tester,
   ) async {
-    final fake = FakeTtsProvider()..register();
-    final c = makeController()..sampleLen = 1;
+    final fake = FakeTtsProvider();
+    final c = makeController(client: fake.client)..sampleLen = 1;
     c.startRun();
     await pumpRun(tester, c);
 
@@ -182,10 +172,11 @@ void main() {
   testWidgets('empty-text plan failure renders the plan-error banner', (
     tester,
   ) async {
-    FakeTtsProvider().register();
     writeFishConfig();
-    final c = AppController(loader: UserVoiceConfigLoader(configDir: configDir))
-      ..outDir = dir.path;
+    final c = AppController(
+      loader: UserVoiceConfigLoader(configDir: configDir),
+      client: FakeTtsProvider().client,
+    )..outDir = dir.path;
     c.startRun();
     await pumpRun(tester, c);
 
@@ -196,8 +187,7 @@ void main() {
   testWidgets('segment cards render all four status states in 3 columns', (
     tester,
   ) async {
-    FakeTtsProvider().register();
-    final c = makeController()..sampleLen = 2;
+    final c = makeController(client: FakeTtsProvider().client)..sampleLen = 2;
     c.startRun();
     await pumpRun(tester, c);
     await tester.pump(const Duration(milliseconds: 50));
@@ -241,8 +231,7 @@ void main() {
     tester,
   ) async {
     final audio = installFakeAudioPlatform();
-    FakeTtsProvider().register();
-    final c = makeController()..sampleLen = 1;
+    final c = makeController(client: FakeTtsProvider().client)..sampleLen = 1;
     c.startRun();
     await pumpRun(tester, c);
     await tester.pump(const Duration(milliseconds: 50));
@@ -270,8 +259,7 @@ void main() {
   });
 
   testWidgets('Cancel Run stops a running narration', (tester) async {
-    _BlockingProvider().register();
-    final c = makeController()..sampleLen = 5;
+    final c = makeController(client: _BlockingClient().client)..sampleLen = 5;
     c.startRun();
     await pumpRun(tester, c);
 
@@ -287,8 +275,7 @@ void main() {
   testWidgets('Back during an active run prompts and Cancel Run leaves', (
     tester,
   ) async {
-    _BlockingProvider().register();
-    final c = makeController()..sampleLen = 3;
+    final c = makeController(client: _BlockingClient().client)..sampleLen = 3;
     c.startRun();
     await pumpRun(tester, c);
 
@@ -334,8 +321,7 @@ void main() {
   testWidgets(
     'system pop while a run is active prompts, then leaves on confirm',
     (tester) async {
-      _BlockingProvider().register();
-      final c = makeController()..sampleLen = 3;
+      final c = makeController(client: _BlockingClient().client)..sampleLen = 3;
       c.startRun();
       await pumpPushedRun(tester, c);
 
@@ -382,8 +368,7 @@ void main() {
   testWidgets('double-tap Back while running shows a single confirm dialog', (
     tester,
   ) async {
-    _BlockingProvider().register();
-    final c = makeController()..sampleLen = 3;
+    final c = makeController(client: _BlockingClient().client)..sampleLen = 3;
     c.startRun();
     await pumpPushedRun(tester, c);
 
@@ -420,9 +405,9 @@ void main() {
   });
 
   testWidgets('Back on an idle run pops without a prompt', (tester) async {
-    final c = makeController();
+    final fake = FakeTtsProvider();
+    final c = makeController(client: fake.client);
     final text = c.text;
-    final fake = FakeTtsProvider()..register();
     c.sampleLen = 1;
     c.startRun();
     await pumpRun(tester, c);
@@ -438,8 +423,7 @@ void main() {
   });
 
   testWidgets('the summary pill freezes the run parameters', (tester) async {
-    FakeTtsProvider().register();
-    final c = makeController()..sampleLen = 1;
+    final c = makeController(client: FakeTtsProvider().client)..sampleLen = 1;
     c.startRun();
     await pumpRun(tester, c);
     await tester.pump(const Duration(milliseconds: 50));
@@ -464,8 +448,7 @@ void main() {
     tester,
   ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    FakeTtsProvider().register();
-    final c = makeController()..sampleLen = 1;
+    final c = makeController(client: FakeTtsProvider().client)..sampleLen = 1;
     c.startRun();
     await tester.binding.setSurfaceSize(const Size(1000, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));

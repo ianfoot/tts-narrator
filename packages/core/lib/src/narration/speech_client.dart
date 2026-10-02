@@ -29,16 +29,18 @@ class GeneratedAudio {
 /// forever. A function keeps the seam that lets tests hand `narrate` a closure
 /// instead of standing up an HTTP server, without an empty hierarchy.
 ///
-/// [speed] is a speech-rate multiplier (1.0 = normal). [settings] is the run's
-/// resolved provider block. [abort] is checked before the first attempt and
-/// between retries — an already-cancelled token throws [AbortException] without
-/// calling the API.
+/// [settings] is the run's resolved provider block. [voice] and [speed] are
+/// capability-gated by the model profile and are null when the model does not
+/// take them: [speed] is a speech-rate multiplier (1.0 = normal), sent only for
+/// a model that declares `"speed": true`. [abort] is checked before the first
+/// attempt and between retries — an already-cancelled token throws
+/// [AbortException] without calling the API.
 typedef SpeechClient = Future<GeneratedAudio> Function({
   required String model,
   required String? voice,
   required String input,
   required String responseFormat,
   required Map<String, String> settings,
-  required double speed,
+  required double? speed,
   AbortToken? abort,
 });

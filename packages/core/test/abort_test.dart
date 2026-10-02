@@ -5,7 +5,6 @@ import 'package:tts_narrator_core/src/narration/abort.dart';
 import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/narration.dart';
-import 'package:tts_narrator_core/src/narration/tts_provider.dart';
 
 import 'support/fake_provider.dart';
 
@@ -80,7 +79,6 @@ void main() {
     setUp(() {
       dir = Directory.systemTemp.createTempSync('tts_abort_test_');
       provider = FakeTtsProvider();
-      ttsProviderRegistry.register(provider.id, () => provider);
     });
 
     tearDown(() {
@@ -100,13 +98,16 @@ void main() {
           profile: const TtsModelProfile(
             alias: 'test',
             id: 'test/model',
-            provider: 'fake',
           ),
           voice: 'v',
         );
 
         await expectLater(
-          narrate(config, abort: AbortToken()..cancel()),
+          narrate(
+            config,
+            client: provider.client,
+            abort: AbortToken()..cancel(),
+          ),
           throwsA(isA<AbortException>()),
         );
         expect(provider.callCount, 0);

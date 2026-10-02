@@ -172,6 +172,10 @@ _parseModelFile(String path, String alias) {
   if (sendsVoice != null && sendsVoice is! bool) {
     throw VoiceConfigurationError('"sends_voice" must be a bool');
   }
+  final supportsSpeed = raw['speed'];
+  if (supportsSpeed != null && supportsSpeed is! bool) {
+    throw VoiceConfigurationError('"speed" must be a bool');
+  }
   final provider = raw['provider'];
   if (provider is! String || provider.trim().isEmpty) {
     throw VoiceConfigurationError('needs a non-empty "provider"');
@@ -235,6 +239,7 @@ _parseModelFile(String path, String alias) {
       format: format ?? 'mp3',
       promptStyle: promptStyle ?? false,
       sendsVoiceField: sendsVoice ?? true,
+      supportsSpeed: supportsSpeed ?? false,
       sampleRate: sampleRate?.toInt(),
       provider: provider.trim(),
       displayName: displayName,
@@ -255,6 +260,7 @@ const _modelFileKeys = {
   'sample_rate',
   'prompt_style',
   'sends_voice',
+  'speed',
   'default_voice',
   'pricing',
   'voices',
@@ -306,6 +312,7 @@ Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
   if (p.sampleRate != null) 'sample_rate': p.sampleRate,
   if (p.promptStyle) 'prompt_style': p.promptStyle,
   if (!p.sendsVoiceField) 'sends_voice': p.sendsVoiceField,
+  if (p.supportsSpeed) 'speed': p.supportsSpeed,
   if (config.defaults[p.alias] != null)
     'default_voice': config.defaults[p.alias],
   if (config.pricing[p.alias] != null)

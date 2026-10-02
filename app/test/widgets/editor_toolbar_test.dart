@@ -10,6 +10,7 @@ import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_toolbar.dart';
 import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
     show acceleratorLabel;
+import 'package:tts_narrator_core/tts_narrator_core.dart';
 import '../support/l10n_test_support.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator/src/gui/widgets/app_icon_button.dart';
@@ -30,7 +31,7 @@ void main() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
-  AppController makeController() {
+  AppController makeController({SpeechClient? client}) {
     File('$configDir/config.json')
       ..parent.createSync(recursive: true)
       ..writeAsStringSync(
@@ -52,7 +53,10 @@ void main() {
         },
       }),
     );
-    return AppController(loader: UserVoiceConfigLoader(configDir: configDir));
+    return AppController(
+      loader: UserVoiceConfigLoader(configDir: configDir),
+      client: client,
+    );
   }
 
   Future<void> pumpToolbar(
@@ -275,12 +279,11 @@ void main() {
     });
 
     testWidgets('a completed run shows the full-play button', (tester) async {
-      final controller = makeController();
+      final controller = makeController(client: FakeTtsProvider().client);
       controller.setText(
         'A single paragraph long enough that it does not need any other '
         'company. It crosses the minimum word count comfortably.',
       );
-      FakeTtsProvider().register();
       controller.outDir = dir.path;
       controller.startRun();
       await tester.runAsync(() async {
@@ -294,9 +297,8 @@ void main() {
     testWidgets('a stopped run does not show the full-play button', (
       tester,
     ) async {
-      final controller = makeController();
+      final controller = makeController(client: FakeTtsProvider().client);
       controller.setText('First paragraph with enough words to stand alone.');
-      FakeTtsProvider().register();
       controller.outDir = dir.path;
       controller.startRun();
       controller.cancelRun();

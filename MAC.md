@@ -63,7 +63,8 @@ If you prefer a file-based approach:
   "default_model": "fish",
   "providers": {
     "openrouter": {
-      "OPENROUTER_API_KEY": "sk-or-your-api-key-here"
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key": "sk-or-your-api-key-here"
     }
   }
 }
@@ -166,3 +167,23 @@ curl http://localhost:8000/v1/audio/speech \
   }' \
   --output output.wav
 ```
+
+### 4. Point the App at It
+
+The `mlx_kokoro` model is included with the app, but the app also needs to know
+the server's address. Its settings live in `config.json` in the config
+directory (`~/.config/tts-narrator/`), under `providers`:
+
+```json
+{
+  "default_model": "fish",
+  "providers": {
+    "mlx_audio": { "base_url": "http://localhost:8000/v1" }
+  }
+}
+```
+
+`base_url` is the endpoint **root** — the app appends `/audio/speech` to it, so
+do not include that part. No API key is needed for the local server. The starter
+config already ships this block, so if `~/.config/tts-narrator/config.json`
+contains it you can skip this step.

@@ -141,7 +141,23 @@ void main() {
       });
     });
 
-    test('omits speed at the 1.0 default', () async {
+    test('omits speed when the model does not take it', () async {
+      final server = await _serve(_audio);
+      addTearDown(server.close);
+
+      await OpenAiSpeechClient().synthesize(
+        model: 'm',
+        voice: 'v',
+        input: 'hi',
+        responseFormat: 'mp3',
+        settings: server.block,
+        speed: null,
+      );
+
+      expect(server.requests.single.body.containsKey('speed'), isFalse);
+    });
+
+    test('sends speed at the 1.0 default when the model takes it', () async {
       final server = await _serve(_audio);
       addTearDown(server.close);
 
@@ -154,7 +170,7 @@ void main() {
         speed: 1.0,
       );
 
-      expect(server.requests.single.body.containsKey('speed'), isFalse);
+      expect(server.requests.single.body['speed'], 1.0);
     });
 
     test('default_voice fills in only a missing voice', () async {

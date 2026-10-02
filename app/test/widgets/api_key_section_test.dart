@@ -155,7 +155,7 @@ void main() {
     writeConfig(configDir, {
       'default_model': 'fish',
       'providers': {
-        'openrouter': {'OPENROUTER_API_KEY': r'${TTS_NARRATOR_NOT_SET}'},
+        'openrouter': {'api_key': r'${TTS_NARRATOR_NOT_SET}'},
       },
       'models': {
         'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
@@ -178,6 +178,6 @@ void main() {
 
     // "Stored in keychain" shows as the collapsed caption.
     expect(find.text('Stored in keychain'), findsOneWidget);
-    expect(c.buildConfig().providerSettings['OPENROUTER_API_KEY'], 'sk-stored');
+    expect(c.buildConfig().providerSettings['api_key'], 'sk-stored');
   });
 }

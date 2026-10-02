@@ -1,6 +1,10 @@
 {
   "default_model": "fish",
   "providers": {
-    "openrouter": { "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}" }
+    "openrouter": {
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "OPENROUTER_API_KEY"
+    },
+    "mlx_audio": { "base_url": "http://localhost:8000/v1" }
   }
 }

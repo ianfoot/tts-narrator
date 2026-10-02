@@ -3,6 +3,7 @@
   "provider": "openrouter",
   "format": "mp3",
   "display_name": "Kokoro 82M",
+  "speed": true,
   "default_voice": "Emma",
   "pricing": {
     "usd_per_m_chars": 0.62

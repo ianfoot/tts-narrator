@@ -2,10 +2,10 @@
 
 **tts-narrator** converts text into spoken audio. It splits your text into
 segments, calls a text-to-speech engine for each one, and saves the results as
-audio files. It ships with two providers: OpenRouter (cloud) and a generic
-OpenAI-compatible local audio server (the `mlx_audio` provider, defaulting to a
-fully local [mlx-audio](https://github.com/Blaizzy/mlx-audio) endpoint on Apple
-Silicon).
+audio files. Every engine is reached over the same OpenAI-compatible
+`/audio/speech` protocol, so cloud and local narration differ only by
+configuration: OpenRouter (cloud) and a local audio server such as
+[mlx-audio](https://github.com/Blaizzy/mlx-audio) (Apple Silicon).
 
 ## Getting started
 
@@ -23,8 +23,8 @@ For pre-built releases and full installation instructions, see
 
 Pre-built macOS releases (`TTS Narrator.app`) and Gatekeeper security bypass
 instructions are documented in **[MAC.md](MAC.md)**. The same file covers
-setting up the local OpenAI-compatible audio server (`mlx_audio`, a.k.a. the
-MLX Audio server, Apple Silicon only) so the app can narrate fully offline.
+setting up the local OpenAI-compatible audio server (a.k.a. the MLX Audio server,
+Apple Silicon only) so the app can narrate fully offline.
 
 ## Voice configuration
 
@@ -49,10 +49,19 @@ Cross-platform paths:
 {
   "default_model": "fish",
   "providers": {
-    "openrouter": { "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}" }
+    "openrouter": {
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "OPENROUTER_API_KEY"
+    },
+    "mlx_audio": { "base_url": "http://localhost:8000/v1" }
   }
 }
 ```
+
+Each `<id>` under `providers` is a settings block for one service. `base_url` is
+required — it is the endpoint **root**, and the app appends `/audio/speech` to
+it. `api_key_env` names an environment variable to read the key from;
+`api_key` sets it literally instead. Omit both for a keyless local server.
 
 `<path_provider_dir>/tts-narrator/fish.json`:
 
@@ -124,9 +133,9 @@ is repeated across blocks (`"Alice": {"id": "bf_alice", "gender": "female"}`).
 The plain string shorthand from older configs (`"Alice": "bf_alice"`) still
 loads. Configs ship with fish and kokoro tagged (fish from the curated list,
 kokoro from its `bf_*`/`bm_*` id convention); gemini's named voices carry no
-published gender signal, so its voices stay untagged — instead the openrouter
-plugin exposes a "Narrator gender" control in the rail's Model options for
-gemini (and any other prompt-styled model).
+published gender signal, so its voices stay untagged — instead a model that sets
+`"prompt_style": true` gets a "Narrator gender" control in the rail's Model
+options, which gemini does.
 
 Add or swap a model by adding/editing its `<alias>.json` file; it then
 becomes selectable via the model dropdown in the UI.
@@ -141,11 +150,11 @@ still works via the raw-id field in the settings rail.
 ### Kokoro voices
 
 The Kokoro model has two flavors: the cloud `kokoro` above, and `mlx_kokoro`
-for the local OpenAI-compatible audio server (the `mlx_audio` provider, Apple
-Silicon's MLX Audio runtimes). British voices (prefix `b`): female `bf_alice`,
-`bf_emma`, `bf_isabella`, `bf_lily`; male `bm_daniel`, `bm_fable`, `bm_george`,
-`bm_lewis`. Any `bf_*`/`bm_*` (or other accent prefixes) id is accepted.
-Friendly aliases live under `voices` in `kokoro.json`.
+for the local OpenAI-compatible audio server (`mlx_audio`, Apple Silicon's MLX
+Audio runtimes — it needs no API key). British voices (prefix `b`): female
+`bf_alice`, `bf_emma`, `bf_isabella`, `bf_lily`; male `bm_daniel`, `bm_fable`,
+`bm_george`, `bm_lewis`. Any `bf_*`/`bm_*` (or other accent prefixes) id is
+accepted. Friendly aliases live under `voices` in `kokoro.json`.
 
 ### Fish voices
 

@@ -157,7 +157,7 @@ abstract class AppLocalizations {
   /// No description provided for @gui_controller_errors_noApiKey.
   ///
   /// In en, this message translates to:
-  /// **'No OpenRouter API key set. Add one to the \"providers.openrouter\" block in config.json, set the OPENROUTER_API_KEY environment variable, or enter it in the Settings rail (stored in the system keychain).'**
+  /// **'No OpenRouter API key set. Add \"api_key\" to the \"providers.openrouter\" block in config.json, point \"api_key_env\" at the OPENROUTER_API_KEY environment variable, or enter it in the Settings rail (stored in the system keychain).'**
   String get gui_controller_errors_noApiKey;
 
   /// No description provided for @gui_controller_errors_cannotOpenTextFile.
