@@ -6,7 +6,7 @@ For end-user documentation (install, usage, voice configuration), see
 ## Requirements
 
 - Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.5`, Dart 3.13.4).
-- An OpenRouter API key for cloud narration (see the README and
+- An API key for your cloud TTS provider (see the README and
   **[MAC.md](MAC.md)** for setup options). A local OpenAI-compatible audio
   server needs no key.
 
@@ -90,7 +90,7 @@ concrete instance (`OpenAiSpeechClient` by default, overridable through
 `AppController(client:)` so tests never touch the network). Everything that
 varies between vendors is data:
 
-- **Cloud narration** (OpenRouter) is just a `base_url` plus a bearer token
+- **Cloud narration** is just a `base_url` plus a bearer token
   from `api_key` (literal or `${ENV}` reference) or the OS keychain.
   `X-Generation-Id` maps onto
   `GeneratedAudio.generationId`.
@@ -142,7 +142,7 @@ first segment.
   menu's buttons so the menu's own key handling wins. Both bars end Quit through
   `quitApp()`.
 - The sandboxed macOS app needs the **`com.apple.security.network.client`**
-  entitlement to reach the OpenRouter API; it's already present in
+  entitlement to reach your TTS provider's API; it's already present in
   `app/macos/Runner/DebugProfile.entitlements` and `Release.entitlements`.
 - Windows is planned but not yet scaffolded; the Linux runner is scaffolded but
   never compiled in CI, so changes to `app/linux/` are unverified by

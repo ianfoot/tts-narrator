@@ -4,7 +4,7 @@
 segments, calls a text-to-speech engine for each one, and saves the results as
 audio files. Every engine is reached over the same OpenAI-compatible
 `/audio/speech` protocol, so cloud and local narration differ only by
-configuration: OpenRouter (cloud) and a local audio server such as
+configuration: a cloud TTS provider and a local audio server such as
 [mlx-audio](https://github.com/Blaizzy/mlx-audio) (Apple Silicon).
 
 ## Getting started
@@ -54,23 +54,23 @@ Cross-platform paths:
 
 ```json
 {
-  "providers": ["openrouter", "mlx_audio"]
+  "providers": ["alpha", "beta"]
 }
 ```
 
-`<path_provider_dir>/tts-narrator/providers/openrouter.json`:
+`<path_provider_dir>/tts-narrator/providers/alpha.json`:
 
 ```json
 {
   "models": ["fish", "gemini", "kokoro"],
   "settings": {
-    "base_url": "https://openrouter.ai/api/v1",
-    "api_key": "${OPENROUTER_API_KEY}"
+    "base_url": "https://vendor.example/api/v1",
+    "api_key": "${VENDOR_API_KEY}"
   }
 }
 ```
 
-`<path_provider_dir>/tts-narrator/providers/mlx_audio.json`:
+`<path_provider_dir>/tts-narrator/providers/beta.json`:
 
 ```json
 {
@@ -175,8 +175,8 @@ still works via the raw-id field in the settings rail.
 ### Kokoro voices
 
 The Kokoro model has two flavors: the cloud `kokoro` above, and `mlx_kokoro`
-for the local OpenAI-compatible audio server (`mlx_audio`, Apple Silicon's MLX
-Audio runtimes — it needs no API key). British voices (prefix `b`): female
+for the local OpenAI-compatible audio server (the `beta` provider above, Apple
+Silicon's MLX Audio runtimes — it needs no API key). British voices (prefix `b`): female
 `bf_alice`, `bf_emma`, `bf_isabella`, `bf_lily`; male `bm_daniel`, `bm_fable`,
 `bm_george`, `bm_lewis`. Any `bf_*`/`bm_*` (or other accent prefixes) id is
 accepted. Friendly aliases live under `voices` in `models/kokoro.json`.
