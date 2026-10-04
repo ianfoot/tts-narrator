@@ -8,14 +8,14 @@ void main() {
     test('parses per-platform file lists', () {
       final manifest = ManifestVoiceConfig.fromJson({
         'platforms': {
-          'macos': ['fish.json', 'kokoro.json', 'mlx_kokoro.json'],
+          'macos': ['fish.json', 'kokoro.json', 'kokoro_local.json'],
           'linux': ['fish.json', 'kokoro.json'],
         },
       });
       expect(manifest.filesFor('macos'), [
         'fish.json',
         'kokoro.json',
-        'mlx_kokoro.json',
+        'kokoro_local.json',
       ]);
       expect(manifest.filesFor('linux'), ['fish.json', 'kokoro.json']);
       expect(manifest.hasPlatform('macos'), isTrue);
@@ -170,7 +170,7 @@ void main() {
         try {
           await downloadVoiceConfigFiles(
             dir.path,
-            files: ['fish.json', 'mlx_kokoro.json'],
+            files: ['fish.json', 'kokoro_local.json'],
             providers: ['alpha.json'],
             clientFactory: () =>
                 HttpClient()..connectionTimeout = const Duration(seconds: 5),
@@ -180,7 +180,7 @@ void main() {
           expect(File('${dir.path}/providers/alpha.json').existsSync(), isTrue);
           expect(File('${dir.path}/models/fish.json').existsSync(), isTrue);
           expect(
-            File('${dir.path}/models/mlx_kokoro.json').existsSync(),
+            File('${dir.path}/models/kokoro_local.json').existsSync(),
             isTrue,
           );
           // The remote paths keep the subdirectory split but are always
@@ -191,7 +191,7 @@ void main() {
               endsWith('/voice-config/config.json'),
               endsWith('/voice-config/providers/alpha.json'),
               endsWith('/voice-config/models/fish.json'),
-              endsWith('/voice-config/models/mlx_kokoro.json'),
+              endsWith('/voice-config/models/kokoro_local.json'),
             ]),
           );
           expect(

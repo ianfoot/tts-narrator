@@ -54,27 +54,27 @@ Cross-platform paths:
 
 ```json
 {
-  "providers": ["alpha", "beta"]
+  "providers": ["openrouter", "local"]
 }
 ```
 
-`<path_provider_dir>/tts-narrator/providers/alpha.json`:
+`<path_provider_dir>/tts-narrator/providers/openrouter.json`:
 
 ```json
 {
   "models": ["fish", "gemini", "kokoro"],
   "settings": {
-    "base_url": "https://vendor.example/api/v1",
-    "api_key": "${VENDOR_API_KEY}"
+    "base_url": "https://openrouter.ai/api/v1",
+    "api_key": "${OPENROUTER_API_KEY}"
   }
 }
 ```
 
-`<path_provider_dir>/tts-narrator/providers/beta.json`:
+`<path_provider_dir>/tts-narrator/providers/local.json`:
 
 ```json
 {
-  "models": ["mlx_kokoro"],
+  "models": ["kokoro_local"],
   "settings": { "base_url": "http://localhost:8000/v1" }
 }
 ```
@@ -142,11 +142,11 @@ Model differences drive how requests are built:
 | `fish` (default) | free-form 32-hex fish.audio id | ✗ (read aloud — prompt styling disabled) | `.mp3` (free) |
 | `gemini` | named voices (rated on the OpenRouter page) | ✓ (accent/style/`[calm]`) | 24 kHz PCM `.wav` |
 | `kokoro` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — prompt styling disabled) | `.mp3` |
-| `mlx_kokoro` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — prompt styling disabled) | `.wav` (local, free) |
+| `kokoro_local` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — prompt styling disabled) | `.wav` (local, free) |
 
 Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
 Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma`
-("Emma"), `mlx_kokoro`=`bm_george` ("George"). The voice can be selected in the
+("Emma"), `kokoro_local`=`bm_george` ("George"). The voice can be selected in the
 GUI settings rail.
 
 Gender tags drive a narrator-gender filter (and, for prompt-driven models, may
@@ -174,8 +174,8 @@ still works via the raw-id field in the settings rail.
 
 ### Kokoro voices
 
-The Kokoro model has two flavors: the cloud `kokoro` above, and `mlx_kokoro`
-for the local OpenAI-compatible audio server (the `beta` provider above, Apple
+The Kokoro model has two flavors: the cloud `kokoro` above, and `kokoro_local`
+for the local OpenAI-compatible audio server (the `local` provider above, Apple
 Silicon's MLX Audio runtimes — it needs no API key). British voices (prefix `b`): female
 `bf_alice`, `bf_emma`, `bf_isabella`, `bf_lily`; male `bm_daniel`, `bm_fable`,
 `bm_george`, `bm_lewis`. Any `bf_*`/`bm_*` (or other accent prefixes) id is
@@ -197,7 +197,7 @@ count, so files sort numerically), plus a `manifest.json` describing the run:
 - `gemini` → 24 kHz mono 16-bit PCM `.wav`
 - `kokoro` → `.mp3` (raw provider bytes)
 - `fish` → `.mp3` (raw provider bytes)
-- `mlx_kokoro` → `.wav` (raw provider bytes)
+- `kokoro_local` → `.wav` (raw provider bytes)
 
 So `story.txt` → `output/story/story_01.mp3` … `story_16.mp3`
 

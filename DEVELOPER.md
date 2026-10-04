@@ -98,7 +98,7 @@ varies between vendors is data:
   [mlx-audio](https://github.com/Blaizzy/mlx-audio) server at
   `http://localhost:8000`) needs no key — a keyless block simply sends no
   `Authorization` header. Its default preset ships as
-  `voice-config/models/mlx_kokoro.json`.
+  `voice-config/models/kokoro_local.json`.
 - **Adding a vendor** = a `providers/<name>.json` file (its `settings`, plus
   the `models` it serves) and the name added to the `config.json` registry. No
   code. A model file on its own is inert: nothing reaches it until a provider
@@ -115,7 +115,7 @@ Which starter model files the first-run bootstrap downloads is decided by data,
 not code: `voice-config/manifest.json` carries a top-level `providers` list
 fetched on every platform, and maps a platform tag (`macos`/`linux`/`windows`)
 to the model files shipped there by default (e.g. Linux and Windows omit
-`mlx_kokoro.json`). `packages/core` fetches/parses the manifest
+`kokoro_local.json`). `packages/core` fetches/parses the manifest
 (`ManifestVoiceConfig`, `fetchVoiceConfigManifest`) and the GUI caches a copy
 in its config dir, then only requires/downloads the current platform's list —
 provider files travel with them, and `config.json` is always fetched. The

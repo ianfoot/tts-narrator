@@ -206,13 +206,13 @@ curl http://localhost:8000/v1/audio/speech \
 
 ### 4. Point the App at It
 
-The `mlx_kokoro` model is included with the app, but the app also needs to know
-the server's address. Its settings live in `providers/mlx_audio.json` in the
+The `kokoro_local` model is included with the app, but the app also needs to know
+the server's address. Its settings live in `providers/local.json` in the
 config directory (`~/.config/tts-narrator/`):
 
 ```json
 {
-  "models": ["mlx_kokoro"],
+  "models": ["kokoro_local"],
   "settings": { "base_url": "http://localhost:8000/v1" }
 }
 ```
@@ -220,5 +220,5 @@ config directory (`~/.config/tts-narrator/`):
 `base_url` is the endpoint **root** — the app appends `/audio/speech` to it, so
 do not include that part. No API key is needed for the local server. The starter
 config already ships this block, so if
-`~/.config/tts-narrator/providers/mlx_audio.json` contains it you can skip this
+`~/.config/tts-narrator/providers/local.json` contains it you can skip this
 step.
