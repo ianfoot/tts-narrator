@@ -170,7 +170,7 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   }
 
   /// Platform-neutral starter set used when the manifest is unreachable
-  /// (mlx_kokoro.json is macOS-only data, so it is never in this fallback).
+  /// (kokoro_local.json is macOS-only data, so it is never in this fallback).
   ///
   /// With no manifest there are no provider files to fetch, so the fallback
   /// ships models only; the loader ignores models no provider claims anyway.
@@ -258,10 +258,7 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
     }
   }
 
-  /// Stems whose display name is not plain title-casing.
-  static const _stemOverrides = {'mlx': 'MLX'};
-
-  /// 'mlx_kokoro.json' -> 'MLX Kokoro'; 'fish.json' -> 'Fish'.
+  /// 'kokoro_local.json' -> 'Kokoro Local'; 'fish.json' -> 'Fish'.
   static String _starterDisplayName(String file) {
     return _withoutExtension(file).split('_').map(_capitalizeWord).join(' ');
   }
@@ -271,8 +268,6 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
       : file;
 
   static String _capitalizeWord(String word) {
-    final override = _stemOverrides[word];
-    if (override != null) return override;
     if (word.isEmpty) return word;
     return '${word[0].toUpperCase()}${word.substring(1)}';
   }
