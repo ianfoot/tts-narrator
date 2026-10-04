@@ -610,11 +610,11 @@ abstract class AppLocalizations {
   /// **'Segment {segmentNumber}'**
   String gui_narration_segmentLabel(int segmentNumber);
 
-  /// Trailing word count under a segment heading.
+  /// Trailing word count under a segment heading. {words} is the count; {wordLabel} is a localized plural of 'word'.
   ///
   /// In en, this message translates to:
-  /// **' · {words, plural, =1{word} other{words}}'**
-  String gui_narration_wordCountSuffix(int words);
+  /// **' · {words} {wordLabel}'**
+  String gui_narration_wordCountSuffix(int words, String wordLabel);
 
   /// No description provided for @gui_narration_processing.
   ///

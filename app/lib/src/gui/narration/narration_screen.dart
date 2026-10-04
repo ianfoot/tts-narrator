@@ -389,7 +389,10 @@ class _NarrationScreenState extends State<NarrationScreen> {
               ),
             ),
             Text(
-              _l10n.gui_narration_wordCountSuffix(words),
+              _l10n.gui_narration_wordCountSuffix(
+                words,
+                _l10n.core_plurals_word(words),
+              ),
               style: body.copyWith(color: colors.textSecondary),
             ),
           ],

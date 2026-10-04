@@ -358,14 +358,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String gui_narration_wordCountSuffix(int words) {
-    String _temp0 = intl.Intl.pluralLogic(
-      words,
-      locale: localeName,
-      other: 'words',
-      one: 'word',
-    );
-    return ' · $_temp0';
+  String gui_narration_wordCountSuffix(int words, String wordLabel) {
+    return ' · $words $wordLabel';
   }
 
   @override
