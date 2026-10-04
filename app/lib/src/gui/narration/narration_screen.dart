@@ -4,8 +4,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart' show formatCostUsd;
 
-import '../controller/app_controller.dart';
 import '../../../l10n/app_localizations.dart';
+import '../controller/app_controller.dart';
 import '../controller/l10n_labels.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_button.dart';
@@ -145,10 +145,6 @@ class _NarrationScreenState extends State<NarrationScreen> {
   AppTokens get _tokens => AppTokens.of(context);
 
   AppLocalizations get _l10n => AppLocalizations.of(context);
-
-  IconData _playIcon() => CupertinoIcons.play_fill;
-
-  IconData _stopIcon() => CupertinoIcons.stop_circle;
 
   @override
   Widget build(BuildContext context) {
@@ -427,32 +423,32 @@ class _NarrationScreenState extends State<NarrationScreen> {
     } else {
       child = _playStopButton(segment, isPlaying);
     }
-    // Sized to its content rather than a fixed width: [AppButton]'s outlined
-    // geometry carries CupertinoButton's default 16px padding, so a hard
-    // column width clipped the label on narrow surfaces.
+    // Sized to its content rather than a fixed width: the button's width
+    // follows its label, so a hard column width would clip it on narrow
+    // surfaces.
     return Align(alignment: Alignment.centerRight, child: child);
   }
 
-  /// Compact `▶ Play` / `⏹ Stop` toggle sized to fit the action column via
-  /// [AppButton]'s compact outlined geometry.
+  /// Compact `▶ Play` / `⏹ Stop` toggle, built from the same [AppButton] as
+  /// the editor toolbar's full-track button so the two read identically.
   Widget _playStopButton(NarrationSegment segment, bool isPlaying) {
-    final colors = _tokens.colors;
+    final tokens = _tokens;
     final label = isPlaying
         ? _l10n.gui_narration_stop
         : _l10n.gui_narration_play;
     return AppButton(
       key: Key('segAction_${segment.index}'),
-      onPressed: () => _togglePlay(segment),
       style: AppButtonStyle.outlined,
       compact: true,
+      onPressed: () => _togglePlay(segment),
       icon: Icon(
-        isPlaying ? _stopIcon() : _playIcon(),
+        isPlaying ? CupertinoIcons.stop_circle : CupertinoIcons.play_fill,
         size: 14,
-        color: colors.textPrimary,
+        color: tokens.colors.textPrimary,
       ),
       // Reused clips explain themselves; the rest just restate the label.
       tooltip: segment.resumed ? _l10n.gui_narration_resumedTooltip : label,
-      child: Text(label, style: _tokens.typography.body),
+      child: Text(label, style: tokens.typography.body),
     );
   }
 
