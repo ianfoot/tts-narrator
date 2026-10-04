@@ -139,9 +139,12 @@ header and the server decides whether it needed one.
 {
   "id": "hexgrad/kokoro-82m",
   "format": "mp3",
-  "default_voice": "Emma",
+  "sends_language": true,
+  "default_voice": "bf_emma",
+  "default_language": "b",
+  "languages": { "b": "British English", "a": "American English", "j": "Japanese" },
   "pricing": { "usd_per_m_chars": 0.62 },
-  "voices": { "Emma": "bf_emma", "Lewis": "bm_lewis" }
+  "voices": { "bf_emma": { "name": "Emma" }, "bm_lewis": { "name": "Lewis" } }
 }
 ```
 
@@ -153,25 +156,36 @@ Model differences drive how requests are built:
 | --- | --- | --- | --- |
 | `fish` (default) | free-form 32-hex fish.audio id | ✗ (read aloud — prompt styling disabled) | `.mp3` (free) |
 | `gemini` | named voices (rated on the OpenRouter page) | ✓ (accent/style/`[calm]`) | 24 kHz PCM `.wav` |
-| `kokoro` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — prompt styling disabled) | `.mp3` |
-| `kokoro_local` | free-form id (`bf_*` female, `bm_*` male) | ✗ (read aloud — prompt styling disabled) | `.wav` (local, free) |
+| `kokoro` | Kokoro-82M voices (54 voices, 9 languages, keyed by id) | ✗ (read aloud — prompt styling disabled) | `.mp3` |
+| `kokoro_local` | same Kokoro-82M voices | ✗ (read aloud — prompt styling disabled) | `.wav` (local, free) |
 
 Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
-Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma`
-("Emma"), `kokoro_local`=`bm_george` ("George"). The voice can be selected in the
-GUI settings rail.
+Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma` ("Emma"),
+`kokoro_local`=`bm_george` ("George"). The voice can be selected in the GUI
+settings rail.
 
 Gender tags drive a narrator-gender filter (and, for prompt-driven models, may
 rewrite the "narrator" phrase in the passage prefix). Tagging is per-voice and
-inline: each voice in a model's `voices` block is an object with `id` and an
-optional `gender` (`male`/`female`/`neutral`) — one entry per voice, so nothing
-is repeated across blocks (`"Alice": {"id": "bf_alice", "gender": "female"}`).
-The plain string shorthand from older configs (`"Alice": "bf_alice"`) still
-loads. Configs ship with fish, kokoro and kokoro_local tagged (fish from the curated
-list, the two kokoros from their `bf_*`/`bm_*` id convention); gemini's named voices carry no
-published gender signal, so its voices stay untagged — instead a model that sets
+inline: each voice in a model's `voices` block is keyed by its id and may carry a
+`name` and an optional `gender` (`male`/`female`/`neutral`) — one entry per voice,
+so nothing is repeated across blocks (`"bf_alice": {"name": "Alice", "gender":
+"female"}`). Both the id and the name resolve to the same voice, and the plain
+string shorthand from older configs (`"Charon": "Charon"`) still loads. Configs
+ship with fish tagged (from its curated list) and gemini untagged — gemini's
+named voices carry no published gender signal, so instead a model that sets
 `"prompt_style": true` gets a "Narrator gender" control in the rail's Model
-options, which gemini does.
+options, which gemini does. The two Kokoro files declare no gender tags at all:
+they set `languages`, and that declaration is the evidence that their ids follow
+the `<lang><gender>_<name>` convention, so gender is read off the second
+character (see [docs/KOKORO.md](docs/KOKORO.md)).
+
+A model that declares a `languages` table gets a Language dropdown above the
+voice picker, which narrows the list to that language and re-picks a voice when
+the current one is filtered away. It starts on the model's `default_language`.
+When the model also sets `"sends_language": true`, the selected code travels to
+the provider as `lang_code` (the same opt-in shape as `"speed"`); models without
+the flag never see the field. For Kokoro the code is simply the first letter of
+the voice id — see [docs/KOKORO.md](docs/KOKORO.md).
 
 Add or swap a model by editing its `models/<alias>.json` file, and adding a new
 one by dropping it in `models/` and listing its alias in some provider's
@@ -188,10 +202,19 @@ still works via the raw-id field in the settings rail.
 
 The Kokoro model has two flavors: the cloud `kokoro` above, and `kokoro_local`
 for the local OpenAI-compatible audio server (the `local` provider above, Apple
-Silicon's MLX Audio runtimes — it needs no API key). British voices (prefix `b`): female
-`bf_alice`, `bf_emma`, `bf_isabella`, `bf_lily`; male `bm_daniel`, `bm_fable`,
-`bm_george`, `bm_lewis`. Any `bf_*`/`bm_*` (or other accent prefixes) id is
-accepted. Friendly aliases live under `voices` in `models/kokoro.json`.
+Silicon's MLX Audio runtimes — it needs no API key). Both speak all 54 Kokoro-82M
+voices across 9 languages, and each voice id is `<lang><gender>_<name>`: the
+first letter is the language (which is also the `lang_code` sent to the
+provider) and the second is the gender. British English (`b`) is the default;
+`bf_*`/`bm_*` are the British female/male voices, `af_*`/`am_*` American, `jf_*`
+Japanese, and so on — the full table is in [docs/KOKORO.md](docs/KOKORO.md).
+
+The `voices` map in both model files is keyed by the raw voice id and carries the
+friendly name inside the entry (`"bf_emma": {"name": "Emma"}`), because the names
+collide across languages (`Santa`, `Dora`, `Alex` and `Alpha` each exist more
+than once) while the ids are unique — the dropdown shows the names and the id is
+what gets sent. Any unlisted id still works via the raw-id field in the settings
+rail.
 
 ### Fish voices
 
@@ -217,7 +240,8 @@ The manifest is rewritten after every segment, so an interrupted run can be
 picked up without re-generating completed paragraphs.
 
 Manifest contents:
-- `model`, `voice`, optional `voice_label` (friendly alias if used), `format`,
+- `model`, `voice`, optional `voice_label` (friendly alias if used), optional
+  `language` (only when the model sends one), `format`,
   `sample_rate` (`sample_rate` is omitted for MP3)
 - per-segment `wav`, `bytes`, `duration_seconds` (null for MP3), `fingerprint`,
   `excerpt`, and the exact `input`/`prompt` that produced it (for

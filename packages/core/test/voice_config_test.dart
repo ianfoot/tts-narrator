@@ -181,7 +181,7 @@ void main() {
       expect(cfg.voices['x']?.containsKey('C'), isFalse);
     });
 
-    test('skips malformed voice-object entries and bad genders quietly', () {
+    test('falls back to the key when an entry names no usable id', () {
       writeModel('x', '''
 {
   "id": "a/b",
@@ -196,16 +196,46 @@ void main() {
 }
 ''');
       final (cfg, warnings) = load();
-      expect(cfg.voices['x']?['A']?.gender, VoiceGender.female);
-      expect(cfg.voices['x']?.containsKey('B'), isFalse);
-      expect(cfg.voices['x']?.containsKey('C'), isFalse);
-      expect(cfg.voices['x']?.containsKey('D'), isFalse);
+      final voices = cfg.voices['x']!;
+      expect(voices['A']?.gender, VoiceGender.female);
+      // An entry that spells out no usable id is a voice keyed by its key.
+      expect(voices['B']?.id, 'B');
+      expect(voices['C']?.id, 'C');
+      expect(voices['C']?.gender, VoiceGender.male);
+      expect(voices['D']?.id, 'D');
       // Unrecognized gender strings are dropped, the voice kept.
-      expect(cfg.voices['x']?['E']?.id, 'ok2');
-      expect(cfg.voices['x']?['E']?.gender, isNull);
+      expect(voices['E']?.id, 'ok2');
+      expect(voices['E']?.gender, isNull);
       // Case-insensitive gender parsing.
-      expect(cfg.voices['x']?['F']?.gender, VoiceGender.male);
+      expect(voices['F']?.gender, VoiceGender.male);
       expect(warnings, isEmpty);
+    });
+
+    test('reads a voice name and keeps it out of the id', () {
+      writeModel('x', '''
+{
+  "id": "a/b",
+  "voices": {
+    "bf_emma": {"name": "Emma"},
+    "am_santa": {"name": "Santa"},
+    "em_santa": {"name": "Santa"},
+    "plain": {},
+    "blank": {"name": "   "},
+    "wrong": {"name": 42}
+  }
+}
+''');
+      final (cfg, _) = load();
+      final voices = cfg.voices['x']!;
+      expect(voices['bf_emma']?.id, 'bf_emma');
+      expect(voices['bf_emma']?.name, 'Emma');
+      // Duplicate names are fine; the keys are what must be unique.
+      expect(voices['am_santa']?.name, 'Santa');
+      expect(voices['em_santa']?.name, 'Santa');
+      expect(voices['plain']?.id, 'plain');
+      expect(voices['plain']?.name, isNull);
+      expect(voices['blank']?.name, isNull);
+      expect(voices['wrong']?.name, isNull);
     });
 
     test('rejects a non-object voices block', () {

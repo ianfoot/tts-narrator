@@ -7,25 +7,28 @@ AudioPricing pricingFor(VoiceConfig config, String modelAlias) =>
     config.pricing[modelAlias] ?? freePricing;
 
 /// Resolves a `--voice` value to the provider voice id for [modelAlias].
+///
+/// The value may be a `voices` key or a voice's `name`; the label comes back as
+/// the voice's name when it has one.
 (String id, String label) resolveVoice(
   VoiceConfig config,
   String modelAlias,
   String value,
-) {
-  final modelVoices = config.voices[modelAlias];
-  if (modelVoices != null) {
-    final voice = modelVoices[value];
-    if (voice != null) return (voice.id, value);
-  }
-  return (value, value);
-}
+) => config.resolveVoice(modelAlias, value);
 
-/// The gender tag for [voiceLabel] under [modelAlias], or null when untagged.
+/// The gender for [voiceLabel] under [modelAlias]: its entry's `gender` tag when
+/// it has one, else the one its id names (for language-prefixed id schemes).
+/// Null when neither applies.
 VoiceGender? genderFor(
   VoiceConfig config,
   String modelAlias,
   String voiceLabel,
-) => config.voices[modelAlias]?[voiceLabel]?.gender;
+) => config.genderFor(modelAlias, voiceLabel);
+
+/// The language code [voiceId] speaks under [modelAlias], or null when the model
+/// declares no languages or the id is not language-prefixed.
+String? languageFor(VoiceConfig config, String modelAlias, String voiceId) =>
+    config.languageFor(modelAlias, voiceId);
 
 /// The configured models, sorted by alias. Models exist only in the config —
 /// there is no compiled fallback — so an empty config yields no models.
@@ -58,10 +61,12 @@ TtsModelProfile? defaultModelFor(VoiceConfig config) {
   return profileFor(provider.models.first, config);
 }
 
-String? _resolveAlias(VoiceConfig config, String modelAlias, String value) {
-  final modelVoices = config.voices[modelAlias];
-  return modelVoices?[value]?.id ?? (value.isNotEmpty ? value : null);
-}
+String? _resolveAlias(VoiceConfig config, String modelAlias, String value) =>
+    config.voiceFor(modelAlias, value)?.id ?? (value.isNotEmpty ? value : null);
+
+/// The name to show for [value] — its own, when it names a configured voice.
+String _labelFor(VoiceConfig config, String modelAlias, String value) =>
+    config.voiceFor(modelAlias, value)?.name ?? value;
 
 /// The default voice (+ friendly label) for [model].
 ///
@@ -74,7 +79,7 @@ String? _resolveAlias(VoiceConfig config, String modelAlias, String value) {
   final configured = config.defaults[model.alias];
   if (configured != null && configured.trim().isNotEmpty) {
     final id = _resolveAlias(config, model.alias, configured);
-    if (id != null) return (id, configured);
+    if (id != null) return (id, _labelFor(config, model.alias, configured));
     throw VoiceConfigurationError(
       'Default voice "$configured" for "${model.alias}" is not a configured '
       'voice or raw id.',
@@ -86,16 +91,28 @@ String? _resolveAlias(VoiceConfig config, String modelAlias, String value) {
   );
 }
 
-/// All selectable voices for [model] (or all models when null).
+/// All selectable voices for [model] (or all models when null), narrowed to
+/// [language] when given.
+///
+/// A voice whose id is not language-prefixed is kept whatever [language] is
+/// asked for: an untagged voice has no language to be in the wrong one, and
+/// hiding it would make a free-form voice unreachable once a language is picked.
 List<VoiceOption> voiceEntries({
   TtsModelProfile? model,
   required VoiceConfig config,
+  String? language,
 }) {
   final profiles = model != null ? [model] : effectiveModels(config);
   final entries = <VoiceOption>[];
   for (final p in profiles) {
     void add(String id, String label, bool isAlias) {
       if (entries.any((e) => e.model == p.alias && e.id == id)) return;
+      final voiceLanguage = languageFor(config, p.alias, id);
+      if (language != null &&
+          voiceLanguage != null &&
+          voiceLanguage != language) {
+        return;
+      }
       entries.add(
         VoiceOption(
           model: p.alias,
@@ -103,13 +120,15 @@ List<VoiceOption> voiceEntries({
           label: label,
           isAlias: isAlias,
           gender: genderFor(config, p.alias, label),
+          language: voiceLanguage,
         ),
       );
     }
 
     for (final e
         in (config.voices[p.alias] ?? const <String, Voice>{}).entries) {
-      add(e.value.id, e.key, true);
+      // A voice shows its name when it has one, else its `voices` key.
+      add(e.value.id, e.value.name ?? e.key, true);
     }
     try {
       final (id, label) = defaultVoiceFor(p, config);

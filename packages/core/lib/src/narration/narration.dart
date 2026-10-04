@@ -268,6 +268,7 @@ Future<void> narrate(
       apiKey: config.apiKey,
       input: input,
       speed: config.profile.supportsSpeed ? config.speed : null,
+      language: config.profile.sendsLanguageField ? config.language : null,
       abort: abort,
     );
 
@@ -383,6 +384,10 @@ void _writeManifest(
     'voice': config.voice,
     if (config.voiceLabel != null && config.voiceLabel != config.voice)
       'voice_label': config.voiceLabel,
+    // Only what was actually sent: a model that ignores `lang_code` has no
+    // language to record, and an omitted field is what the manifest should say.
+    if (config.profile.sendsLanguageField && config.language != null)
+      'language': config.language,
     'format': config.profile.format,
     'sample_rate': ?rate,
     'max_segment_length': config.sendWholeFile

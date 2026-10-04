@@ -185,6 +185,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_settings_selectVoiceHint => 'Select a Voice...';
 
   @override
+  String get gui_settings_languageLabel => 'Language';
+
+  @override
+  String get gui_settings_selectLanguageHint => 'Select a Language...';
+
+  @override
   String get gui_settings_genderAny => 'Any';
 
   @override
@@ -313,6 +319,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gui_settings_genderControlTooltip => 'Filter voices by gender';
+
+  @override
+  String get gui_settings_languageDropdownTooltip =>
+      'Language sent to the model (lang_code)';
 
   @override
   String get gui_settings_advancedVoiceIdTooltip =>

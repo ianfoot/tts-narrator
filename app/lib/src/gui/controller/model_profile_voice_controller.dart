@@ -30,6 +30,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
     final voice = _defaultVoiceFor(def);
     _voice = voice?.$1 ?? '';
     _voiceLabel = voice?.$2;
+    if (def != null) _language = _voiceConfig.defaultLanguageFor(def.alias);
   }
 
   final UserVoiceConfigLoader _loader;
@@ -137,8 +138,12 @@ class ModelProfileVoiceController extends ChangeNotifier {
       _voiceLabel = null;
     }
     _modelAlias = alias;
-    // Gender tags are per-model; the filter does not carry across a switch.
+    // Gender tags and language tables are per-model; neither filter carries
+    // across a switch. The surviving voice is left alone even when the new
+    // model has no entry for it — a raw id is unvalidated passthrough, and the
+    // picker just shows nothing highlighted.
     _voiceGender = VoiceGender.neutral;
+    _language = _voiceConfig.defaultLanguageFor(alias);
     notifyListeners();
   }
 
@@ -176,28 +181,123 @@ class ModelProfileVoiceController extends ChangeNotifier {
   set voiceGenderFilter(VoiceGender value) {
     if (value == _voiceGender) return;
     _voiceGender = value;
-    _applyGenderFilter();
+    final p = profile;
+    if (p != null) {
+      if (value != VoiceGender.neutral && !_hasVisible(p, gender: value)) {
+        // Nothing to narrow to: keep the full list rather than an empty one.
+        _voiceGender = VoiceGender.neutral;
+      }
+      _keepVisibleVoice(p, _visibleEntries(p));
+    }
     notifyListeners();
   }
 
-  /// Whether the active model tags any of its voices with a gender (drives the
-  /// voice-picker gender control in "Model & voice").
+  /// Whether the active model has any voice of a known gender — tagged with
+  /// `gender` in its config, or named by one (`<lang><gender>_<name>` ids read
+  /// their gender off the id). Drives the voice-picker gender control in
+  /// "Model & voice".
   bool get hasGenderTags {
     final p = profile;
-    return p != null &&
-        (_voiceConfig.voices[p.alias]?.values.any((v) => v.gender != null) ??
-            false);
+    return p != null && _hasGenders(p);
   }
 
-  /// Selectable voices for the active model, narrowed to [voiceGenderFilter].
-  /// Each entry is `(value, displayLabel)`: tagged voices get a compact
-  /// ` (m)`/` (f)`/` (n)` suffix so gender is visible in the dropdown.
+  // --- Voice language -----------------------------------------------
+
+  /// The last language chosen in the picker, or the model's configured
+  /// `default_language` when nothing has been chosen; null for a model that
+  /// declares none.
+  ///
+  /// Backed by state rather than read straight off the voice so a model switch
+  /// can restore the *new* model's default, and so a free-form voice id with no
+  /// language prefix still leaves the picker on a real language. [language]
+  /// prefers the selected voice and falls back to this.
+  String? _language;
+
+  /// The language the selected voice speaks, or null when the active model
+  /// declares no languages.
+  ///
+  /// Read off the voice id, so the picker and the voice cannot disagree: any
+  /// voice whose id starts with one of the model's declared codes *is* that
+  /// language's voice. A raw id with no such prefix (or no voice selected yet)
+  /// falls back to the last chosen language, then the model's default, then the
+  /// first code it declares — so the picker always shows a concrete language
+  /// rather than a blank.
+  String? get language {
+    final p = profile;
+    if (p == null) return null;
+    final codes = _voiceConfig.languagesFor(p.alias);
+    if (codes.isEmpty) return null;
+    final fromVoice = _voiceConfig.languageFor(p.alias, _voice);
+    if (fromVoice != null) return fromVoice;
+    final chosen = _language;
+    if (chosen != null && codes.containsKey(chosen)) return chosen;
+    final configured = _voiceConfig.defaultLanguageFor(p.alias);
+    return configured != null && codes.containsKey(configured)
+        ? configured
+        : codes.keys.first;
+  }
+
+  /// Whether the active model declares a language table (drives the language
+  /// dropdown in "Model & voice"); false for single-language models.
+  bool get hasLanguages {
+    final p = profile;
+    return p != null && _voiceConfig.languagesFor(p.alias).isNotEmpty;
+  }
+
+  /// Selectable languages for the active model as `(code, label)`, in the order
+  /// the model file declares them — the declaration order is the display order,
+  /// so a config can put British English first.
+  List<(String, String)> get languageItems {
+    final p = profile;
+    if (p == null) return const [];
+    return [
+      for (final e in _voiceConfig.languagesFor(p.alias).entries)
+        (e.key, e.value),
+    ];
+  }
+
+  /// Applies a language choice from the picker: keeps the current voice when it
+  /// already speaks [code], otherwise switches to the model default voice in
+  /// that language, else the first voice that speaks it. A choice with no voice
+  /// behind it is ignored (the picker stays where it was) rather than emptying
+  /// the voice list.
+  void applyLanguage(String code) {
+    final p = profile;
+    if (p == null) return;
+    if (!_voiceConfig.languagesFor(p.alias).containsKey(code)) return;
+    final previous = _language;
+    _language = code;
+    if (!_hasVisible(p, language: code)) {
+      _language = previous;
+      return;
+    }
+    _keepVisibleVoice(p, _visibleEntries(p));
+    notifyListeners();
+  }
+
+  /// Whether the active model would show any voice under the given filters.
+  /// Unset arguments fall back to the active [language] / [voiceGenderFilter].
+  bool _hasVisible(TtsModelProfile p, {String? language, VoiceGender? gender}) =>
+      _filteredEntries(
+        p,
+        language: language ?? _language,
+        gender: gender ?? _voiceGender,
+      ).isNotEmpty;
+
+  /// Voices the picker shows for the active model under the active filters.
+  List<VoiceOption> _visibleEntries(TtsModelProfile p) =>
+      _filteredEntries(p, language: _language);
+
+  /// Selectable voices for the active model, narrowed to [language] and
+  /// [voiceGenderFilter]. Each entry is `(value, displayLabel)`: tagged voices
+  /// get a compact ` (m)`/` (f)`/` (n)` suffix so gender is visible in the
+  /// dropdown.
   List<(String, String)> get voiceItems {
     final p = profile;
     return p == null
         ? const <(String, String)>[]
         : [
-            for (final e in _genderFilteredVoiceEntries(p))
+            for (final e in _visibleEntries(p))
               (
                 e.label,
                 e.gender == null
@@ -207,50 +307,53 @@ class ModelProfileVoiceController extends ChangeNotifier {
           ];
   }
 
-  List<VoiceOption> _genderFilteredVoiceEntries(TtsModelProfile p) {
-    final all = voiceEntries(model: p, config: _voiceConfig);
-    if (_voiceGender == VoiceGender.neutral) return all;
-    // Untagged models have nothing to filter against: a gender set via a
-    // prompt-style model's option still keeps the full voice list.
-    final tagged =
-        _voiceConfig.voices[p.alias]?.values.any((v) => v.gender != null) ??
-        false;
-    if (!tagged) return all;
+  /// Voices for [p] under an explicit language and gender filter.
+  ///
+  /// A model with no voice of a known gender has nothing to narrow against: a
+  /// gender set via a prompt-style model's option still keeps the full list.
+  List<VoiceOption> _filteredEntries(
+    TtsModelProfile p, {
+    String? language,
+    VoiceGender? gender,
+  }) {
+    final entries = voiceEntries(
+      model: p,
+      config: _voiceConfig,
+      language: language,
+    );
+    final g = gender ?? _voiceGender;
+    if (g == VoiceGender.neutral) return entries;
+    if (!_hasGenders(p)) return entries;
     return [
-      for (final e in all)
-        if (e.gender == _voiceGender) e,
+      for (final e in entries)
+        if (e.gender == g) e,
     ];
   }
 
-  /// Adjusts the selected voice to match the active [voiceGenderFilter]: when
-  /// the model's voices are gender-tagged, auto-switches the selection so it
-  /// matches the filter. Selecting "any" ([VoiceGender.neutral]) leaves the
-  /// voice untouched. When a gender is picked but the model has no voices of
-  /// that gender, the filter reverts to "any" so the picker keeps the full
-  /// list rather than leaving a voice hidden behind an empty filter.
-  void _applyGenderFilter() {
-    final p = profile;
-    if (p == null) return;
-    final g = _voiceGender;
-    if (g == VoiceGender.neutral) return;
-    final matches = _genderFilteredVoiceEntries(p);
-    if (matches.isEmpty) {
-      _voiceGender = VoiceGender.neutral;
-      return;
-    }
-    if (!matches.any((e) => e.id == _voice || e.label == _voiceLabel)) {
-      // Prefer the model default when it matches the filter, else the first
-      // matching voice — mirrors changeModel's reset-to-default semantics.
-      late final VoiceOption pick;
-      final def = _defaultVoiceFor(p);
-      if (def != null) {
-        final defEntry = matches.where((e) => e.id == def.$1);
-        pick = defEntry.isNotEmpty ? defEntry.first : matches.first;
-      } else {
-        pick = matches.first;
-      }
-      _voice = pick.id;
-      _voiceLabel = pick.label;
-    }
+  /// Whether any of [p]'s selectable voices resolves to a gender, whether from a
+  /// config tag or from its id.
+  bool _hasGenders(TtsModelProfile p) =>
+      voiceEntries(model: p, config: _voiceConfig).any((e) => e.gender != null);
+
+  /// Makes sure the selected voice is one of [matches], so the picker never
+  /// highlights a value the filters hide.
+  ///
+  /// Prefers the model default when it is visible — mirrors changeModel's
+  /// reset-to-default semantics — and falls back to the first visible voice.
+  void _keepVisibleVoice(TtsModelProfile p, List<VoiceOption> matches) {
+    if (matches.isEmpty) return;
+    // Match on the id, never the label: two voices may share a name (Kokoro
+    // has three Santas), so a label match would keep a voice the filters hide.
+    final current = _voice;
+    final stillVisible = current.isNotEmpty
+        ? matches.any((e) => e.id == current)
+        : matches.any((e) => e.label == _voiceLabel);
+    if (stillVisible) return;
+    final def = _defaultVoiceFor(p);
+    final defEntries =
+        def == null ? const <VoiceOption>[] : matches.where((e) => e.id == def.$1);
+    final pick = defEntries.isNotEmpty ? defEntries.first : matches.first;
+    _voice = pick.id;
+    _voiceLabel = pick.label;
   }
 }

@@ -10,6 +10,7 @@ class NarrationConfig {
     required this.profile,
     required this.voice,
     this.voiceLabel,
+    this.language,
     this.accent = PromptDefaults.accent,
     this.style = PromptDefaults.style,
     this.passagePrefix = PromptDefaults.passagePrefix,
@@ -47,6 +48,14 @@ class NarrationConfig {
   /// Human-readable label for [voice]: the friendly alias when one was used,
   /// otherwise the raw id. Used for display (banner) and the manifest.
   final String? voiceLabel;
+
+  /// Language code for the selected voice (Kokoro: `b`, `j`, ...), or null for
+  /// a model that does not take one.
+  ///
+  /// Read off the voice id's first character by the GUI (see
+  /// `VoiceConfig.languageFor`), so it always agrees with [voice]; the model
+  /// profile decides whether it is sent at all.
+  final String? language;
 
   /// Free-text accent description used in the prompt.
   final String accent;
@@ -115,6 +124,7 @@ class NarrationConfig {
     profile: profile,
     voice: voice,
     voiceLabel: voiceLabel,
+    language: language,
     accent: accent,
     style: style,
     passagePrefix: passagePrefix,

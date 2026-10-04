@@ -903,6 +903,37 @@ void main() {
       expect(c.hasGenderTags, isFalse);
     });
 
+    test('an untagged multilingual model reads its genders off the ids', () {
+      writeConfig({
+        'models': {
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'format': 'mp3',
+            'sends_language': true,
+            'default_language': 'b',
+            'languages': {'b': 'British English', 'j': 'Japanese'},
+          },
+        },
+        'defaults': {'kokoro': 'bf_emma'},
+        'voices': {
+          'kokoro': {
+            'bf_emma': {'name': 'Emma'},
+            'jm_kumo': {'name': 'Kumo'},
+          },
+        },
+      });
+      final c = makeController()..changeModel('kokoro');
+      expect(c.hasGenderTags, isTrue);
+      // The default language narrows the list to the British voice, and its
+      // `f` is read straight off the id.
+      expect(c.voiceItems.map((e) => e.$2), ['Emma (f)']);
+      c.applyVoiceLanguage('j');
+      expect(c.voiceItems.map((e) => e.$2), ['Kumo (m)']);
+      c.voiceGenderFilter = VoiceGender.male;
+      expect(c.voiceItems.map((e) => e.$1), ['Kumo']);
+      expect(c.voiceLabel, 'Kumo');
+    });
+
     test('the gender filter narrows voiceItems and appends shorthand', () {
       writeKokoro();
       final c = makeController()..changeModel('kokoro');
@@ -1010,6 +1041,136 @@ void main() {
       c.voiceGenderFilter = VoiceGender.male;
       expect(c.voiceItems.map((e) => e.$1), before);
       expect(c.voiceLabel, 'Charon'); // no auto-switch; default stays
+    });
+  });
+
+  group('voice language', () {
+    final kokoroBody = <String, Object?>{
+      'models': {
+        'kokoro': {
+          'id': 'hexgrad/kokoro-82m',
+          'format': 'mp3',
+          'sends_language': true,
+          'default_language': 'b',
+          'languages': {
+            'a': 'American English',
+            'b': 'British English',
+            'j': 'Japanese',
+          },
+        },
+      },
+      'defaults': {'kokoro': 'Emma'},
+      'voices': {
+        'kokoro': {
+          'Aria': {'id': 'af_heart', 'gender': 'female'},
+          'Alice': {'id': 'bf_alice', 'gender': 'female'},
+          'Daniel': {'id': 'bm_daniel', 'gender': 'male'},
+          'Emma': {'id': 'bf_emma', 'gender': 'female'},
+          'Kumo': {'id': 'jm_kumo', 'gender': 'male'},
+        },
+      },
+    };
+
+    final geminiBody = <String, Object?>{
+      'models': {
+        'gemini': {
+          'id': 'google/gemini-3.1-flash-tts-preview',
+          'format': 'pcm',
+        },
+      },
+      'defaults': {'gemini': 'Charon'},
+      'voices': {
+        'gemini': {'Charon': 'Charon'},
+      },
+    };
+
+    test('hasLanguages is true when a model declares a language table', () {
+      writeConfig(kokoroBody);
+      final c = makeController()..changeModel('kokoro');
+      expect(c.hasLanguages, isTrue);
+      expect(
+        c.languageItems.map((e) => e.$1),
+        ['a', 'b', 'j'], // declaration order, not sorted
+      );
+      expect(c.languageItems.map((e) => e.$2), [
+        'American English',
+        'British English',
+        'Japanese',
+      ]);
+    });
+
+    test('a model with no language table has no languages', () {
+      writeConfig(geminiBody);
+      final c = makeController()..changeModel('gemini');
+      expect(c.hasLanguages, isFalse);
+      expect(c.languageItems, isEmpty);
+      expect(c.voiceLanguage, isNull);
+    });
+
+    test('the language is read off the selected voice id', () {
+      writeConfig(kokoroBody);
+      final c = makeController()..changeModel('kokoro');
+      expect(c.voiceLanguage, 'b'); // bf_emma
+      c.setVoice('jm_kumo', label: 'Kumo');
+      expect(c.voiceLanguage, 'j');
+      // A free-form id outside the table names no language, so the declared
+      // default stands in rather than inventing a code.
+      c.setVoice('weird_id');
+      expect(c.voiceLanguage, 'b');
+    });
+
+    test('picking a language narrows the voices and re-picks one', () {
+      writeConfig(kokoroBody);
+      final c = makeController()..changeModel('kokoro');
+      // The model's `default_language` (b) filters the list from the start, so
+      // the Japanese Kumo is out of the box.
+      expect(c.voiceItems.map((e) => e.$1), ['Alice', 'Daniel', 'Emma']);
+      c.applyVoiceLanguage('j');
+      expect(c.voiceItems.map((e) => e.$1), ['Kumo']);
+      expect(c.voiceLabel, 'Kumo'); // auto-selected to stay visible
+      c.applyVoiceLanguage('a');
+      expect(c.voiceItems.map((e) => e.$1), ['Aria']);
+      expect(c.voiceLabel, 'Aria');
+    });
+
+    test('an undeclared language is ignored', () {
+      writeConfig(kokoroBody);
+      final c = makeController()..changeModel('kokoro');
+      c.applyVoiceLanguage('j');
+      c.applyVoiceLanguage('z'); // not in the table
+      expect(c.voiceLanguage, 'j');
+      expect(c.voiceItems.map((e) => e.$1), ['Kumo']);
+    });
+
+    test('changing model resets the language to the new default', () {
+      writeConfig({
+        'models': {
+          ...kokoroBody['models']! as Map<String, Object?>,
+          'local': {
+            'id': 'mlx-community/Kokoro-82M-bf16',
+            'format': 'wav',
+            'sends_language': true,
+            'default_language': 'a',
+            'languages': {'a': 'American English', 'b': 'British English'},
+          },
+        },
+        'defaults': {
+          ...kokoroBody['defaults']! as Map<String, Object?>,
+          'local': 'bf_george',
+        },
+        'voices': {
+          ...kokoroBody['voices']! as Map<String, Object?>,
+          'local': {
+            'George': {'id': 'bf_george', 'gender': 'male'},
+          },
+        },
+      });
+      final c = makeController()..changeModel('kokoro');
+      c.applyVoiceLanguage('j');
+      expect(c.voiceLanguage, 'j');
+      c.changeModel('local');
+      expect(c.voiceLanguage, 'a');
+      expect(c.languageItems.map((e) => e.$1), ['a', 'b']);
     });
   });
 

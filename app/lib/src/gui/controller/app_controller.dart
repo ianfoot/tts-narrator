@@ -167,6 +167,29 @@ class AppController extends ChangeNotifier {
   /// ` (m)`/` (f)`/` (n)` suffix so gender is visible in the dropdown.
   List<(String, String)> get voiceItems => _model.voiceItems;
 
+  // --- Voice language ------------------------------------------------
+
+  /// The active model's language code (e.g. `b` for British English); null
+  /// when the model declares no languages.
+  String? get voiceLanguage => _model.language;
+
+  /// Whether the active model declares a language list (drives the
+  /// voice-picker language dropdown).
+  bool get hasLanguages => _model.hasLanguages;
+
+  /// Selectable languages for the active model, in declaration order. Each
+  /// entry is `(code, label)`.
+  List<(String, String)> get languageItems => _model.languageItems;
+
+  /// Applies a language code, narrowing [voiceItems] to that language and
+  /// re-picking a visible voice when the current one filters away. Codes the
+  /// model does not declare are ignored.
+  void applyVoiceLanguage(String code) {
+    if (code == _model.language) return;
+    _model.applyLanguage(code);
+    notifyListeners();
+  }
+
   // --- Appearance ----------------------------------------------------
 
   /// The user's appearance choice ([AppThemeMode.system] follows the OS).

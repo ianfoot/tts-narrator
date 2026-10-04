@@ -90,6 +90,8 @@ const String kVoiceConfigModelsDir = 'models';
   final defaults = <String, String>{};
   final pricing = <String, AudioPricing>{};
   final voices = <String, Map<String, Voice>>{};
+  final languages = <String, Map<String, String>>{};
+  final defaultLanguages = <String, String>{};
 
   final modelsDir = '$configDir$separator$kVoiceConfigModelsDir';
   for (final file in _jsonFilesIn(modelsDir)) {
@@ -105,6 +107,10 @@ const String kVoiceConfigModelsDir = 'models';
       if (m.defaultVoice != null) defaults[alias] = m.defaultVoice!;
       if (m.pricing != null) pricing[alias] = m.pricing!;
       if (m.voices.isNotEmpty) voices[alias] = m.voices;
+      if (m.languages.isNotEmpty) languages[alias] = m.languages;
+      if (m.defaultLanguage != null) {
+        defaultLanguages[alias] = m.defaultLanguage!;
+      }
     } on VoiceConfigurationError catch (e) {
       warnings.add('Skipped model "$alias": ${e.message}');
     }
@@ -127,6 +133,8 @@ const String kVoiceConfigModelsDir = 'models';
       defaults: defaults,
       pricing: pricing,
       voices: voices,
+      languages: languages,
+      defaultLanguages: defaultLanguages,
     ),
     warnings,
   );
@@ -240,6 +248,8 @@ ProviderConfig _parseProviderFile(String path, String name) {
   String? defaultVoice,
   AudioPricing? pricing,
   Map<String, Voice> voices,
+  Map<String, String> languages,
+  String? defaultLanguage,
 })
 _parseModelFile(String path, String alias, String provider) {
   final raw = _readJson(path);
@@ -269,6 +279,10 @@ _parseModelFile(String path, String alias, String provider) {
   final supportsSpeed = raw['speed'];
   if (supportsSpeed != null && supportsSpeed is! bool) {
     throw VoiceConfigurationError('"speed" must be a bool');
+  }
+  final sendsLanguage = raw['sends_language'];
+  if (sendsLanguage != null && sendsLanguage is! bool) {
+    throw VoiceConfigurationError('"sends_language" must be a bool');
   }
   final displayName = raw['display_name'];
   if (displayName != null && displayName is! String) {
@@ -305,21 +319,61 @@ _parseModelFile(String path, String alias, String provider) {
     if (voicesRaw is! Map<String, dynamic>) {
       throw VoiceConfigurationError('"voices" must be an object');
     }
-    voicesRaw.forEach((label, value) {
+    voicesRaw.forEach((key, value) {
       if (value is String) {
-        if (value.isNotEmpty) voices[label] = Voice(id: value);
+        if (value.isNotEmpty) voices[key] = Voice(id: value);
         return;
       }
       if (value is! Map<String, dynamic>) return;
-      final id = value['id'];
-      if (id is! String || id.isEmpty) return;
-      voices[label] = Voice(
+      // The key is the voice id unless the entry spells one out, so a config can
+      // key voices by the id that is unique and name them inside.
+      final rawId = value['id'];
+      final id = rawId is String && rawId.isNotEmpty ? rawId : key;
+      if (id.isEmpty) return;
+      final rawName = value['name'];
+      voices[key] = Voice(
         id: id,
+        name: rawName is String && rawName.trim().isNotEmpty
+            ? rawName.trim()
+            : null,
         gender: parseVoiceGender(
           value['gender'] is String ? value['gender'] : null,
         ),
       );
     });
+  }
+
+  final languages = <String, String>{};
+  final languagesRaw = raw['languages'];
+  if (languagesRaw != null) {
+    if (languagesRaw is! Map<String, dynamic>) {
+      throw VoiceConfigurationError(
+        '"languages" must be an object of code → label',
+      );
+    }
+    languagesRaw.forEach((code, label) {
+      if (code.isEmpty || label is! String || label.trim().isEmpty) {
+        throw VoiceConfigurationError(
+          '"languages" must map non-empty codes to non-blank string labels',
+        );
+      }
+      languages[code] = label;
+    });
+  }
+
+  String? defaultLanguage;
+  final defaultLanguageRaw = raw['default_language'];
+  if (defaultLanguageRaw != null) {
+    if (defaultLanguageRaw is! String || defaultLanguageRaw.isEmpty) {
+      throw VoiceConfigurationError('"default_language" must be a string');
+    }
+    if (!languages.containsKey(defaultLanguageRaw)) {
+      throw VoiceConfigurationError(
+        '"default_language" is "$defaultLanguageRaw", which is not a code in '
+        '"languages" (${languages.keys.isEmpty ? "none declared" : languages.keys.join(", ")})',
+      );
+    }
+    defaultLanguage = defaultLanguageRaw;
   }
 
   return (
@@ -330,6 +384,7 @@ _parseModelFile(String path, String alias, String provider) {
       promptStyle: promptStyle ?? false,
       sendsVoiceField: sendsVoice ?? true,
       supportsSpeed: supportsSpeed ?? false,
+      sendsLanguageField: sendsLanguage ?? false,
       sampleRate: sampleRate?.toInt(),
       provider: provider,
       displayName: displayName,
@@ -337,6 +392,8 @@ _parseModelFile(String path, String alias, String provider) {
     defaultVoice: defaultVoice,
     pricing: pricing,
     voices: voices,
+    languages: languages,
+    defaultLanguage: defaultLanguage,
   );
 }
 
@@ -364,8 +421,15 @@ Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
   if (p.promptStyle) 'prompt_style': p.promptStyle,
   if (!p.sendsVoiceField) 'sends_voice': p.sendsVoiceField,
   if (p.supportsSpeed) 'speed': p.supportsSpeed,
+  if (p.sendsLanguageField) 'sends_language': p.sendsLanguageField,
   if (config.defaults[p.alias] != null)
     'default_voice': config.defaults[p.alias],
+  if (config.defaultLanguages[p.alias] != null)
+    'default_language': config.defaultLanguages[p.alias],
+  if ((config.languages[p.alias] ?? const {}).isNotEmpty)
+    'languages': {
+      for (final e in config.languagesFor(p.alias).entries) e.key: e.value,
+    },
   if (config.pricing[p.alias] != null)
     'pricing': {
       if (config.pricing[p.alias]!.usdPerMChars != null)
@@ -379,7 +443,9 @@ Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
     'voices': {
       for (final e in config.voices[p.alias]!.entries)
         e.key: {
-          'id': e.value.id,
+          // An entry keyed by its own id needs no `id`; one keyed by a name does.
+          if (e.value.id != e.key) 'id': e.value.id,
+          if (e.value.name != null) 'name': e.value.name,
           if (e.value.gender != null) 'gender': e.value.gender!.label,
         },
     },
@@ -414,7 +480,9 @@ void writeVoiceConfig(String configDir, VoiceConfig config) {
           flush: true,
         );
     } on FileSystemException catch (e) {
-      throw VoiceConfigurationError('Cannot write voice config "$configDir": $e');
+      throw VoiceConfigurationError(
+        'Cannot write voice config "$configDir": $e',
+      );
     }
   }
 

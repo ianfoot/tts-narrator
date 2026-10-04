@@ -200,6 +200,44 @@ void main() {
       expect(server.requests.last.body['voice'], 'bf_emma');
     });
 
+    test('carries lang_code when a language is chosen', () async {
+      final server = await _serve(_audio);
+      addTearDown(server.close);
+
+      await OpenAiSpeechClient().synthesize(
+        model: 'hexgrad/kokoro-82m',
+        voice: 'jm_kumo',
+        input: 'hi',
+        responseFormat: 'mp3',
+        settings: server.block,
+        speed: 1.0,
+        language: 'j',
+      );
+
+      expect(server.requests.single.body['lang_code'], 'j');
+    });
+
+    test('omits lang_code for a null or empty language', () async {
+      final server = await _serve(_audio);
+      addTearDown(server.close);
+
+      for (final language in [null, '']) {
+        await OpenAiSpeechClient().synthesize(
+          model: 'm',
+          voice: 'v',
+          input: 'hi',
+          responseFormat: 'mp3',
+          settings: server.block,
+          speed: 1.0,
+          language: language,
+        );
+      }
+
+      for (final request in server.requests) {
+        expect(request.body.containsKey('lang_code'), isFalse);
+      }
+    });
+
     test('maps X-Generation-Id onto generationId', () async {
       final server = await _serve((request) {
         request.response.headers.set('X-Generation-Id', 'gen-1');

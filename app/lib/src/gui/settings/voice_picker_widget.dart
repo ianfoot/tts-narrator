@@ -8,9 +8,9 @@ import '../widgets/app_dropdown.dart';
 import '../widgets/segmented_control.dart';
 import 'settings_labels.dart';
 
-/// The voice half of the settings rail: an optional narrator-gender filter
-/// (only when the active model's voice list is gender-tagged) above the voice
-/// alias picker. Extracted from the model section so per-model panels can
+/// The voice half of the settings rail: an optional language dropdown and
+/// narrator-gender filter (only when the active model declares them) above the
+/// voice alias picker. Extracted from the model section so per-model panels can
 /// compose it independently of the model picker.
 ///
 /// Every control writes straight to [AppController], which notifies the editor
@@ -30,6 +30,18 @@ class VoicePickerWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         settingsFieldLabel(tokens, l10n.gui_settings_voiceAliasLabel),
+        if (controller.hasLanguages) ...[
+          const SizedBox(height: 12),
+          AppDropdown<String>(
+            key: const Key('languageDropdown'),
+            tooltip: l10n.gui_settings_languageDropdownTooltip,
+            value: controller.voiceLanguage,
+            items: controller.languageItems,
+            hint: l10n.gui_settings_selectLanguageHint,
+            onChanged: (code) => controller.applyVoiceLanguage(code),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (controller.hasGenderTags) ...[
           const SizedBox(height: 12),
           SegmentedControl<VoiceGender>(

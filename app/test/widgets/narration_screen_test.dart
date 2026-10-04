@@ -27,6 +27,7 @@ class _BlockingClient {
     required String responseFormat,
     required Map<String, String> settings,
     required double? speed,
+    String? language,
     String? apiKey,
     AbortToken? abort,
   }) async {

@@ -97,6 +97,8 @@
   "gui_settings_overridesSelectedAlias": "Overrides selected alias",
   "gui_settings_freeFormVoiceHint": "free-form id or provider voice",
   "gui_settings_selectVoiceHint": "Select a Voice...",
+  "gui_settings_languageLabel": "Language",
+  "gui_settings_selectLanguageHint": "Select a Language...",
   "gui_settings_genderAny": "Any",
   "gui_settings_genderFemale": "Female",
   "gui_settings_genderMale": "Male",
@@ -141,6 +143,7 @@
   "gui_settings_prefixFieldTooltip": "Text prepended to each paragraph",
   "gui_settings_sampleLenFieldTooltip": "Number of paragraphs to narrate in sample mode",
   "gui_settings_genderControlTooltip": "Filter voices by gender",
+  "gui_settings_languageDropdownTooltip": "Language sent to the model (lang_code)",
   "gui_settings_advancedVoiceIdTooltip": "Enter custom voice settings",
 
   "gui_narration_backToEditor": "Back to editor",

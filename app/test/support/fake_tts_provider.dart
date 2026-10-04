@@ -17,6 +17,7 @@ class FakeTtsProvider {
       String input,
       String responseFormat,
       double? speed,
+      String? language,
       String? apiKey,
     })
   >
@@ -34,6 +35,7 @@ class FakeTtsProvider {
     required String responseFormat,
     required Map<String, String> settings,
     required double? speed,
+    String? language,
     String? apiKey,
     AbortToken? abort,
   }) async {
@@ -52,6 +54,7 @@ class FakeTtsProvider {
       input: input,
       responseFormat: responseFormat,
       speed: speed,
+      language: language,
       apiKey: apiKey,
     ));
     return GeneratedAudio(bytes: bytes);
