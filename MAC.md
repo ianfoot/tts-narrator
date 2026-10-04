@@ -51,14 +51,17 @@ After launching the app for the first time:
 ✅ Available for double-click launches (no shell environment)
 ✅ Stored per provider — switching models never moves a key between providers
 
-### Method 2: Config File (macOS Standard Location)
+### Method 2: Config File
 
-If you prefer a file-based approach:
+If you prefer a file-based approach, edit the provider file directly:
 
 1. Open **Finder** → Go → **Home** (`Cmd+Shift+H`)
-2. Open the hidden `.config` folder (`Cmd+Shift+.` shows hidden files), then `tts-narrator`
-3. Create a file named `providers` inside `tts-narrator`
-4. Inside it, create a file named `alpha.json` with this content:
+2. Open **Library** → **Application Support** → **`com.wyrdness.tts-narrator`**
+   (press `Cmd+Shift+.` to reveal the hidden `Library` folder)
+3. Open the **`providers`** folder. It is created when the app first launches;
+   if you are seeding a key *before* the first launch, create the `providers`
+   folder yourself inside `com.wyrdness.tts-narrator`
+4. Create a file named `alpha.json` inside it with this content:
 
 ```json
 {
@@ -113,7 +116,7 @@ nothing — the variable is set, but nothing reads it.
 
 - **GUI API key** → **Keychain Access**, one entry per provider, named
   `tts-narrator.api_key.<provider>` (e.g. `tts-narrator.api_key.alpha`)
-- **Config file** → `~/.config/tts-narrator/providers/<provider>.json`
+- **Config file** → `~/Library/Application Support/com.wyrdness.tts-narrator/providers/<provider>.json`
 - **Environment Variable** → only when the config's `api_key` is a `${VAR}`
   reference; active shell session only
 
@@ -207,8 +210,8 @@ curl http://localhost:8000/v1/audio/speech \
 ### 4. Point the App at It
 
 The `kokoro_local` model is included with the app, but the app also needs to know
-the server's address. Its settings live in `providers/local.json` in the
-config directory (`~/.config/tts-narrator/`):
+the server's address. Its settings live in `providers/local.json` in the config
+directory (`~/Library/Application Support/com.wyrdness.tts-narrator/`):
 
 ```json
 {
@@ -220,5 +223,5 @@ config directory (`~/.config/tts-narrator/`):
 `base_url` is the endpoint **root** — the app appends `/audio/speech` to it, so
 do not include that part. No API key is needed for the local server. The starter
 config already ships this block, so if
-`~/.config/tts-narrator/providers/local.json` contains it you can skip this
-step.
+`~/Library/Application Support/com.wyrdness.tts-narrator/providers/local.json`
+contains it you can skip this step.

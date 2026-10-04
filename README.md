@@ -45,12 +45,17 @@ provider's `models` list. Order matters: the first provider in the registry is
 the default, and the first model in that provider's list is the model
 preselected on cold start.
 
-Cross-platform paths:
-- macOS: `~/.config/tts-narrator/`
-- Linux: `~/.config/tts-narrator/`
-- Windows: `%APPDATA%/tts-narrator/`
+The config directory, per platform:
 
-`<path_provider_dir>/tts-narrator/config.json`:
+| Platform | Path |
+| --- | --- |
+| macOS | `~/Library/Application Support/com.wyrdness.tts-narrator/` |
+| Linux | `~/.local/share/com.wyrdness.tts-narrator/` |
+
+Both sit inside a hidden folder, so reveal it first with `Cmd+Shift+.` on macOS,
+or `Ctrl+H` in most Linux file managers. Windows is not supported yet.
+
+`<config_dir>/config.json`:
 
 ```json
 {
@@ -58,7 +63,7 @@ Cross-platform paths:
 }
 ```
 
-`<path_provider_dir>/tts-narrator/providers/openrouter.json`:
+`<config_dir>/providers/openrouter.json`:
 
 ```json
 {
@@ -70,7 +75,7 @@ Cross-platform paths:
 }
 ```
 
-`<path_provider_dir>/tts-narrator/providers/local.json`:
+`<config_dir>/providers/local.json`:
 
 ```json
 {
@@ -79,10 +84,17 @@ Cross-platform paths:
 }
 ```
 
-`settings` is a block for one service. `base_url` is required — it is the
-endpoint **root**, and the app appends `/audio/speech` to it. `api_key` is
-optional and takes either a literal key or a `${VAR}` reference to an
-environment variable. Omit it for a local server that needs no credential.
+`settings` is a flat map of strings for one service. The keys the app reads:
+
+| Setting | Required | Meaning |
+| --- | --- | --- |
+| `base_url` | yes | the speech endpoint **root**, e.g. `https://openrouter.ai/api/v1`. The app appends `/audio/speech`, so do not include that part. A trailing slash is normalized |
+| `endpoint` | no | documented alias for `base_url`, for configs that already use that name. Carries the same root semantics |
+| `api_key` | no | the credential: a literal key, or a `${VAR}` reference read from the environment. Never sent as a normal setting — it is stripped out and delivered separately, so a secret is not carried in the settings map |
+| `default_voice` | no | voice id to use when the request names none. Fills a gap only; an explicitly chosen voice always wins |
+
+Every other key passes through untouched to the service as a request setting,
+so a vendor can take options the app knows nothing about.
 
 You can also enter a key in the Settings rail instead, and it is stored in the
 OS keychain. That wins over the config block, because the provider file is
@@ -90,7 +102,7 @@ downloaded from a remote and may carry someone else's key. The app never
 requires a key: if none is configured, the request carries no `Authorization`
 header and the server decides whether it needed one.
 
-`<path_provider_dir>/tts-narrator/models/fish.json`:
+`<config_dir>/models/fish.json`:
 
 ```json
 {
@@ -104,7 +116,7 @@ header and the server decides whether it needed one.
 }
 ```
 
-`<path_provider_dir>/tts-narrator/models/gemini.json`:
+`<config_dir>/models/gemini.json`:
 
 ```json
 {
@@ -121,7 +133,7 @@ header and the server decides whether it needed one.
 }
 ```
 
-`<path_provider_dir>/tts-narrator/models/kokoro.json`:
+`<config_dir>/models/kokoro.json`:
 
 ```json
 {
@@ -155,8 +167,8 @@ inline: each voice in a model's `voices` block is an object with `id` and an
 optional `gender` (`male`/`female`/`neutral`) — one entry per voice, so nothing
 is repeated across blocks (`"Alice": {"id": "bf_alice", "gender": "female"}`).
 The plain string shorthand from older configs (`"Alice": "bf_alice"`) still
-loads. Configs ship with fish and kokoro tagged (fish from the curated list,
-kokoro from its `bf_*`/`bm_*` id convention); gemini's named voices carry no
+loads. Configs ship with fish, kokoro and kokoro_local tagged (fish from the curated
+list, the two kokoros from their `bf_*`/`bm_*` id convention); gemini's named voices carry no
 published gender signal, so its voices stay untagged — instead a model that sets
 `"prompt_style": true` gets a "Narrator gender" control in the rail's Model
 options, which gemini does.
@@ -245,7 +257,7 @@ consistent narrator.
 A Flutter desktop app (`app/`) provides an editor-first interface: type or
 paste the text you want narrated right into the window (no backing file — the
 core reads the in-memory text via `sourceText`), then click **Narrate**. A collapsible settings rail controls the model, voice, and
-model-specific options (declared by each model's provider plugin), the run view
+model-specific options (declared by each model's own `models/<alias>.json`), the run view
 shows per-segment progress with in-app playback of finished clips, Cancel, and
 Back — and the editor is intact when you return. macOS gets the standard native
 menu bar (`PlatformMenuBar`) with App / File / Edit / View / Window: Open (⌘O),
