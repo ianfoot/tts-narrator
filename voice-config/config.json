@@ -1,3 +1,3 @@
 {
-  "providers": ["openrouter", "mlx_audio"]
+  "providers": ["openrouter", "local"]
 }

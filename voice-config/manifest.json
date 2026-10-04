@@ -1,11 +1,11 @@
 {
-  "providers": ["openrouter.json", "mlx_audio.json"],
+  "providers": ["openrouter.json", "local.json"],
   "platforms": {
     "macos": [
       "fish.json",
       "gemini.json",
       "kokoro.json",
-      "mlx_kokoro.json"
+      "kokoro_local.json"
     ],
     "linux": [
       "fish.json",

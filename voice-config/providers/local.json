@@ -1,5 +1,5 @@
 {
-  "models": ["mlx_kokoro"],
+  "models": ["kokoro_local"],
   "settings": {
     "base_url": "http://localhost:8000/v1"
   }
