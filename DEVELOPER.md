@@ -38,8 +38,22 @@ same core can be driven from the GUI or from another front end without rework.
 
 ## Voice configuration internals
 
-The config **directory** is shared by the CLI and the GUI (macOS/Linux default
-to `~/.config/tts-narrator`, Windows to `%APPDATA%`):
+The config **directory** is shared by the CLI and the GUI. The GUI resolves it
+with `getApplicationSupportDirectory()` (`app/lib/main.dart`), which returns the
+platform app-data root with the app id appended:
+
+| Platform | Path |
+| --- | --- |
+| macOS | `~/Library/Application Support/com.wyrdness.tts-narrator/` |
+| Linux | `~/.local/share/com.wyrdness.tts-narrator/` |
+| Windows | `%APPDATA%\com.wyrdness.tts-narrator\` (not yet scaffolded) |
+
+The app id comes from `PRODUCT_BUNDLE_IDENTIFIER` (macOS) and `APPLICATION_ID`
+(Linux), so the directory is already namespaced per app and needs no
+`tts-narrator/` segment of its own. Separately, `defaultConfigDir()` in
+`voice_config_io.dart` returns `~/.config/tts-narrator` (`%APPDATA%\tts-narrator`
+on Windows); that is the fallback used only when a caller injects no directory,
+so in practice the tests and any non-GUI front end. The GUI always injects one.
 
 - `config.json` — the registry: an ordered list of provider names, nothing
   else. The first entry is the default provider.
@@ -50,6 +64,8 @@ to `~/.config/tts-narrator`, Windows to `%APPDATA%`):
   aliases). The `voices` values may be plain strings or objects with `id` and
   an optional `gender` (`male`/`female`/`neutral`).
 
+So the directory holds three kinds of file:
+
 The relation is inverted: a provider names its models, not the other way
 round, so a model file carries no `provider` key. The loader builds the
 alias→provider index from the providers and stamps it onto each profile; a
@@ -58,16 +74,23 @@ meaningful, the default model is the first model in the first provider's list
 rather than a `default_model` key — a filename sort cannot be trusted to
 express "preferred".
 
-Secrets: a provider's `settings` is an opaque string→string map. A value of the
-form `${ENV_NAME}` reads that environment variable once at run-config build time
-(a missing or empty variable is an error naming it); any other value is used
-literally. The rule is generic — core never interprets the keys, and each
-vendor keeps its own setting names.
+Secrets: a provider's `settings` is a flat `Map<String, String>`, and a value of
+the form `${ENV_NAME}` reads that environment variable once at run-config build
+time (a missing or empty variable is an error naming it); any other value is used
+literally.
 
-The GUI reads the `path_provider` `getApplicationSupportDirectory()` config
-(`tts-narrator/` subfolder) for voice aliases and the per-provider `settings`
-block, but never writes it — edit those files directly. A key can come from
-three places, in this order: the OS keychain (what the user typed into the
+Core reads exactly four keys — `base_url` (alias `endpoint`) to build the speech
+URL, `default_voice` to fill in an unspecified voice, and `api_key`, which is
+stripped out before expansion and delivered separately as
+`NarrationConfig.apiKey` so a secret is never carried in the settings map. Every
+other key passes through untouched to the service, which is how a vendor can
+accept options the app knows nothing about. So a settings block is *not* fully
+opaque: adding a key core must understand means touching
+`provider_settings.dart` and the client, not just the config.
+
+The GUI reads that config directory for voice aliases and the per-provider
+`settings` block, but never writes it — edit those files directly. A key can come
+from three places, in this order: the OS keychain (what the user typed into the
 Settings rail), an `api_key` literal in the provider block, then an `api_key`
 `${VAR}` reference. Keychain first on purpose — the provider file is
 downloaded from a remote, so a key in it may belong to someone else, while a
@@ -75,20 +98,19 @@ keychain entry was typed deliberately by this user. Note a GUI app launched from
 the Finder doesn't inherit a shell's environment, so for double-click use either
 enter the key in Settings or set `api_key` literally.
 
-The app never blocks a run on a missing key. `api_key` is stripped out of
-`NarrationConfig.providerSettings` and delivered as `NarrationConfig.apiKey`
-alongside it, so a secret is never in the settings map; a null `apiKey` just
-means the request carries no `Authorization` header and the server decides. A
-401/403 from the vendor is the only place the user is told to add a key.
+A missing key is never an error: a null `apiKey` just means the request carries
+no `Authorization` header and the service decides. A 401/403 is the only place
+the user is told to add one, and that message branches on whether a key was
+actually sent — a rejected key needs a different fix from no key at all.
 
-## Voice vendors
+## Providers
 
-Every vendor speaks the same wire protocol, so there is exactly one client in
+Every provider speaks the same wire protocol, so there is exactly one client in
 **core**: `OpenAiSpeechClient`. `SpeechClient` is the function type the
 narration layer takes — `narrate` requires one, and `RunController` owns the
 concrete instance (`OpenAiSpeechClient` by default, overridable through
 `AppController(client:)` so tests never touch the network). Everything that
-varies between vendors is data:
+varies between providers is data:
 
 - **Cloud narration** is just a `base_url` plus a bearer token
   from `api_key` (literal or `${ENV}` reference) or the OS keychain.
@@ -99,12 +121,28 @@ varies between vendors is data:
   `http://localhost:8000`) needs no key — a keyless block simply sends no
   `Authorization` header. Its default preset ships as
   `voice-config/models/kokoro_local.json`.
-- **Adding a vendor** = a `providers/<name>.json` file (its `settings`, plus
+- **Adding a provider** = a `providers/<name>.json` file (its `settings`, plus
   the `models` it serves) and the name added to the `config.json` registry. No
   code. A model file on its own is inert: nothing reaches it until a provider
   claims it.
 
-Transport concerns are handled once, in the client, for every vendor: retry on
+The four settings core understands:
+
+| Setting | Read by | Notes |
+| --- | --- | --- |
+| `base_url` | `providerBaseUrl` | **A root, not the full URL.** The client appends `/audio/speech` (`_speechUri`). A trailing slash is trimmed first |
+| `endpoint` | `providerBaseUrl` | Alias for `base_url`, checked only when `base_url` is absent. Same root semantics |
+| `api_key` | `resolveProviderApiKey` | Literal or `${VAR}`. Stripped from `providerSettings` before expansion and passed as `NarrationConfig.apiKey` |
+| `default_voice` | `OpenAiSpeechClient._defaultVoice` | Fills an unspecified voice only; an explicit voice always wins |
+
+The `base_url`-is-a-root rule is the one that bites. Both former provider
+packages treated `endpoint` as a **full** speech URL, so a config carrying
+`http://localhost:8000/v1/audio/speech` under either key now double-appends and
+yields `…/audio/speech/audio/speech`. No shipped config sets it, and there is no
+compatibility shim for it (see the "no legacy handling" decision) — the value has
+to be a root.
+
+Transport concerns are handled once, in the client, for every provider: retry on
 `500`/`502`/`503`/`529` and on an empty 2xx stream (`_retries = 3` allowed
 *after* the first, so 4 requests in the worst case, with `2 * attempt` seconds
 of backoff), and abort support.
@@ -298,9 +336,11 @@ title.
   There is no MP3 encoding or concatenation step — the model emits these formats.
 - Transient `502` (empty audio stream) failures are retried up to 3 times,
   matching a documented Gemini TTS quirk. (Fish failures are not billed.)
-- The fish bootstrap is compiled in
-  (`packages/core/lib/src/narration/model_profiles.dart`); every other model
-  comes from its own `models/<alias>.json` file in the voice config.
+- Every model — `fish` included — comes from its own `models/<alias>.json` file
+  in the voice config. `TtsModelProfile` in
+  `packages/core/lib/src/narration/model_profiles.dart` is just the parsed shape
+  (with a now-`required provider`, stamped on by the loader from the owning
+  provider's `models` list); there is no compiled-in bootstrap for any model.
 - Per-model capabilities are declared in the model file, never sniffed from the
   model id. `prompt_style: true` derives the "Narrator gender" / accent / style /
   passage-prefix controls in the settings rail's Model options; `speed: true`
