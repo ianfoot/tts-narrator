@@ -17,6 +17,10 @@ import '../support/l10n_test_support.dart';
 import '../support/recording_cleanup_controller.dart';
 import '../support/settings_fixtures.dart' as fixtures;
 
+/// Default for the optional toggle callbacks; a top-level tear-off is a
+/// constant, which an inline `() {}` closure is not.
+void _noop() {}
+
 void main() {
   late Directory dir;
   late String configDir;
@@ -59,7 +63,7 @@ void main() {
     VoidCallback? onToggleRail,
     Future<String?> Function()? pickDirectory,
     bool playingFull = false,
-    VoidCallback? onTogglePlayFull,
+    VoidCallback onTogglePlayFull = _noop,
     void Function(String)? onShowGuard,
     VoidCallback? onCleanupSegments,
   }) async {
@@ -285,6 +289,9 @@ void main() {
       await pumpToolbar(tester, controller);
       expect(find.byKey(const Key('editorFullPlayButton')), findsOneWidget);
       expect(find.text('Play Full'), findsOneWidget);
+      // The toolbar's height is fixed, so the label has to be painted inside
+      // the button rather than merely present in the tree.
+      expect(tester.getRect(find.text('Play Full')).height, greaterThan(0));
     });
 
     testWidgets('a stopped run does not show the full-play button', (

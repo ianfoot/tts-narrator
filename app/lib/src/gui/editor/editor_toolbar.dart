@@ -22,7 +22,7 @@ class EditorToolbar extends StatefulWidget {
     required this.onToggleRail,
     required this.pickDirectory,
     this.playingFull = false,
-    this.onTogglePlayFull,
+    required this.onTogglePlayFull,
     this.onShowGuard,
     this.onCleanupSegments,
   });
@@ -32,7 +32,7 @@ class EditorToolbar extends StatefulWidget {
   final VoidCallback onToggleRail;
   final Future<String?> Function()? pickDirectory;
   final bool playingFull;
-  final VoidCallback? onTogglePlayFull;
+  final VoidCallback onTogglePlayFull;
   final void Function(String message)? onShowGuard;
 
   /// Fired by the clean-up button; runs the shared confirm-and-delete flow.
@@ -166,37 +166,29 @@ class _EditorToolbarState extends State<EditorToolbar> {
     );
   }
 
+  /// Full-track play/stop toggle. Geometry, typography and colours all come
+  /// from [AppButton], the same widget the narration screen's per-segment
+  /// play/stop buttons use, so the two read identically.
   Widget? _buildFullPlayButton(AppTokens tokens) {
     if (controller.completedAudioPath == null) return null;
-    final colors = tokens.colors;
-    final label = widget.playingFull
+
+    final playing = widget.playingFull;
+    final label = playing
         ? _l10n.gui_editor_toolbar_stop
         : _l10n.gui_editor_toolbar_playFull;
-    final btnIcon = Icon(
-      widget.playingFull
-          ? CupertinoIcons.stop_circle
-          : CupertinoIcons.play_fill,
-      size: 14,
-      color: colors.textPrimary,
-    );
-    return CupertinoButton(
+    return AppButton(
       key: const Key('editorFullPlayButton'),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      onPressed: widget.onTogglePlayFull ?? () {},
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          border: Border.all(color: colors.borderSubtle, width: 0.8),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: DefaultTextStyle(
-          style: tokens.typography.body,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [btnIcon, const SizedBox(width: 4), Text(label)],
-          ),
-        ),
+      style: AppButtonStyle.outlined,
+      compact: true,
+      onPressed: widget.onTogglePlayFull,
+      icon: Icon(
+        playing ? CupertinoIcons.stop_circle : CupertinoIcons.play_fill,
+        size: 14,
+        color: tokens.colors.textPrimary,
       ),
+      tooltip:
+          '${_l10n.gui_editor_toolbar_playFull} (${acceleratorLabel('N')})',
+      child: Text(label, style: tokens.typography.body),
     );
   }
 
@@ -218,6 +210,7 @@ class _EditorToolbarState extends State<EditorToolbar> {
       message: '${_l10n.gui_editor_toolbar_narrate} (${acceleratorLabel('N')})',
       child: AppButton(
         key: const Key('editorNarrateButton'),
+        style: .filled,
         onPressed: () {
           final reason = controller.narrateBlockReason();
           if (reason != null) {

@@ -297,6 +297,9 @@ void main() {
     expect(controller.completedAudioPath, isNotNull);
     expect(find.byKey(const Key('editorFullPlayButton')), findsOneWidget);
     expect(find.text('Play Full'), findsOneWidget);
+    // Present in the tree is not the same as painted: the toolbar's fixed
+    // height once collapsed this label to nothing.
+    expect(tester.getRect(find.text('Play Full')).height, greaterThan(0));
   });
 
   testWidgets('full-play button toggles to Stop and reverts on clip end', (

@@ -243,6 +243,8 @@ void main() {
     audio.emitComplete();
     await tester.pump();
     expect(find.text('Play'), findsOneWidget);
+    // Painted, not merely present in the tree.
+    expect(tester.getRect(find.text('Play')).height, greaterThan(0));
 
     // Play again, then manual Stop reverts without a platform completion.
     await tester.tap(find.text('Play'));

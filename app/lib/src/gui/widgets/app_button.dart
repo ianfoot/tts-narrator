@@ -60,13 +60,21 @@ class AppButton extends StatelessWidget {
     if (style == AppButtonStyle.outlined) {
       button = CupertinoButton(
         onPressed: onPressed,
-        child: Container(
-          padding: pad,
-          decoration: BoxDecoration(
-            border: Border.all(color: tokens.colors.borderSubtle, width: 0.8),
-            borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
+        // Zero out the SDK padding (the filled branch does the same) so the
+        // container's own `pad` decides the height. CupertinoButton's default
+        // 16px all-round padding consumed the toolbar's tight 44px and
+        // collapsed the label paragraph to zero height, hiding the text.
+        padding: EdgeInsets.zero,
+        child: DefaultTextStyle(
+          style: TextStyle(color: tokens.colors.textPrimary),
+          child: Container(
+            padding: pad,
+            decoration: BoxDecoration(
+              border: Border.all(color: tokens.colors.borderSubtle, width: 0.8),
+              borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
+            ),
+            child: label,
           ),
-          child: label,
         ),
       );
     } else {
