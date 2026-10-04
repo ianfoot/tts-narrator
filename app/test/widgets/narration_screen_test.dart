@@ -214,7 +214,11 @@ void main() {
     expect(find.text('Segment 2'), findsOneWidget);
     expect(find.text('Segment 3'), findsOneWidget);
     expect(find.text('Segment 4'), findsOneWidget);
-    expect(find.textContaining('words'), findsWidgets);
+    // Exact strings, not `textContaining('words')`: the suffix must carry the
+    // count, and a noun-only substring match also passes against the bug this
+    // guards (the count consumed by the ICU plural and dropped).
+    expect(find.text(' · 5 words'), findsOneWidget);
+    expect(find.text(' · 4 words'), findsOneWidget);
 
     // Col 3 actions: pending/processing labels; Play for completed + reused.
     expect(find.text('Pending'), findsOneWidget);

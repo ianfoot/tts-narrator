@@ -174,10 +174,13 @@
     "description": "Numbered segment heading in the narration list.",
     "placeholders": { "segmentNumber": { "type": "int" } }
   },
-  "gui_narration_wordCountSuffix": " · {words, plural, =1{word} other{words}}",
+  "gui_narration_wordCountSuffix": " · {words} {wordLabel}",
   "@gui_narration_wordCountSuffix": {
-    "description": "Trailing word count under a segment heading.",
-    "placeholders": { "words": { "type": "int" } }
+    "description": "Trailing word count under a segment heading. {words} is the count; {wordLabel} is a localized plural of 'word'.",
+    "placeholders": {
+      "words": { "type": "int" },
+      "wordLabel": { "type": "String" }
+    }
   },
   "gui_narration_processing": "Processing...",
   "gui_narration_pending": "Pending",
