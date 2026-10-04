@@ -18,9 +18,9 @@ final _linuxManifest = ManifestVoiceConfig.fromJson({
 });
 
 final _macosManifest = ManifestVoiceConfig.fromJson({
-  'providers': ['alpha.json', 'beta.json'],
+  'providers': ['alpha.json', 'local.json'],
   'platforms': {
-    'macos': ['fish.json', 'gemini.json', 'kokoro.json', 'mlx_kokoro.json'],
+    'macos': ['fish.json', 'gemini.json', 'kokoro.json', 'kokoro_local.json'],
   },
 });
 
@@ -166,7 +166,7 @@ void main() {
       expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsNothing);
     });
 
-    testWidgets('on macOS the dialog lists the MLX Kokoro starter', (
+    testWidgets('on macOS the dialog lists the Kokoro Local starter', (
       tester,
     ) async {
       await withPlatform(TargetPlatform.macOS, () async {
@@ -175,11 +175,11 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsOneWidget);
-        expect(find.textContaining('MLX Kokoro'), findsOneWidget);
+        expect(find.textContaining('Kokoro Local'), findsOneWidget);
       });
     });
 
-    testWidgets('on Linux the dialog omits the MLX Kokoro starter', (
+    testWidgets('on Linux the dialog omits the Kokoro Local starter', (
       tester,
     ) async {
       await withPlatform(TargetPlatform.linux, () async {
@@ -188,7 +188,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsOneWidget);
-        expect(find.textContaining('MLX Kokoro'), findsNothing);
+        expect(find.textContaining('Kokoro Local'), findsNothing);
       });
     });
 

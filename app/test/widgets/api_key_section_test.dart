@@ -85,20 +85,20 @@ void main() {
     // still hold one, and whether the endpoint wants it is the server's call.
     writeConfig(configDir, {
       'providers': {
-        'beta': {'base_url': 'http://localhost:8000/v1'},
+        'local': {'base_url': 'http://localhost:8000/v1'},
       },
       'models': {
-        'mlx_kokoro': {'id': 'mlx-community/Kokoro-82M-bf16', 'format': 'wav'},
+        'kokoro_local': {'id': 'mlx-community/Kokoro-82M-bf16', 'format': 'wav'},
       },
-      'defaults': {'mlx_kokoro': 'George'},
+      'defaults': {'kokoro_local': 'George'},
       'voices': {
-        'mlx_kokoro': {
+        'kokoro_local': {
           'George': {'id': 'bm_george', 'gender': 'male'},
         },
       },
     });
     final c = makeController(configDir);
-    expect(c.activeProvider, 'beta');
+    expect(c.activeProvider, 'local');
     await pumpSection(tester, c);
 
     expect(find.byKey(const Key('apiKeyDisclosure')), findsOneWidget);
