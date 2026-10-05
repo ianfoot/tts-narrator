@@ -14,7 +14,7 @@ class MainFlutterWindow: NSWindow {
     NSWindow.allowsAutomaticWindowTabbing = false
 
     // Enforce the spec's minimum window size so the fixed 44px toolbar,
-    // the settings rail, and the status bar never get clipped off.
+    // the run-setup panel, and the status bar never get clipped off.
     contentMinSize = Self.minContentSize
 
     let flutterViewController = FlutterViewController()

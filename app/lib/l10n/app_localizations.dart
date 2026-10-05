@@ -196,11 +196,11 @@ abstract class AppLocalizations {
   /// **'Appearance: {mode}'**
   String gui_editor_toolbar_appearanceTooltip(String mode);
 
-  /// No description provided for @gui_editor_toolbar_showHideSettings.
+  /// No description provided for @gui_editor_toolbar_showHideRunSetup.
   ///
   /// In en, this message translates to:
-  /// **'Show / hide settings'**
-  String get gui_editor_toolbar_showHideSettings;
+  /// **'Show / hide run setup'**
+  String get gui_editor_toolbar_showHideRunSetup;
 
   /// No description provided for @gui_editor_toolbar_setOutputFolder.
   ///
@@ -279,299 +279,299 @@ abstract class AppLocalizations {
     String cost,
   );
 
-  /// No description provided for @gui_settings_header.
+  /// No description provided for @gui_run_setup_header.
   ///
   /// In en, this message translates to:
-  /// **'Settings'**
-  String get gui_settings_header;
+  /// **'Run Setup'**
+  String get gui_run_setup_header;
 
-  /// No description provided for @gui_settings_modelVoiceSection.
+  /// No description provided for @gui_run_setup_modelVoiceSection.
   ///
   /// In en, this message translates to:
   /// **'Model & voice'**
-  String get gui_settings_modelVoiceSection;
+  String get gui_run_setup_modelVoiceSection;
 
-  /// No description provided for @gui_settings_modelLabel.
+  /// No description provided for @gui_run_setup_modelLabel.
   ///
   /// In en, this message translates to:
   /// **'Model'**
-  String get gui_settings_modelLabel;
+  String get gui_run_setup_modelLabel;
 
-  /// No description provided for @gui_settings_voiceAliasLabel.
+  /// No description provided for @gui_run_setup_voiceAliasLabel.
   ///
   /// In en, this message translates to:
   /// **'Voice alias'**
-  String get gui_settings_voiceAliasLabel;
+  String get gui_run_setup_voiceAliasLabel;
 
-  /// No description provided for @gui_settings_advancedVoiceId.
+  /// No description provided for @gui_run_setup_advancedVoiceId.
   ///
   /// In en, this message translates to:
   /// **'Advanced Voice ID'**
-  String get gui_settings_advancedVoiceId;
+  String get gui_run_setup_advancedVoiceId;
 
-  /// No description provided for @gui_settings_overridesSelectedAlias.
+  /// No description provided for @gui_run_setup_overridesSelectedAlias.
   ///
   /// In en, this message translates to:
   /// **'Overrides selected alias'**
-  String get gui_settings_overridesSelectedAlias;
+  String get gui_run_setup_overridesSelectedAlias;
 
-  /// No description provided for @gui_settings_freeFormVoiceHint.
+  /// No description provided for @gui_run_setup_freeFormVoiceHint.
   ///
   /// In en, this message translates to:
   /// **'free-form id or provider voice'**
-  String get gui_settings_freeFormVoiceHint;
+  String get gui_run_setup_freeFormVoiceHint;
 
-  /// No description provided for @gui_settings_selectVoiceHint.
+  /// No description provided for @gui_run_setup_selectVoiceHint.
   ///
   /// In en, this message translates to:
   /// **'Select a Voice...'**
-  String get gui_settings_selectVoiceHint;
+  String get gui_run_setup_selectVoiceHint;
 
-  /// No description provided for @gui_settings_languageLabel.
+  /// No description provided for @gui_run_setup_languageLabel.
   ///
   /// In en, this message translates to:
   /// **'Language'**
-  String get gui_settings_languageLabel;
+  String get gui_run_setup_languageLabel;
 
-  /// No description provided for @gui_settings_selectLanguageHint.
+  /// No description provided for @gui_run_setup_selectLanguageHint.
   ///
   /// In en, this message translates to:
   /// **'Select a Language...'**
-  String get gui_settings_selectLanguageHint;
+  String get gui_run_setup_selectLanguageHint;
 
-  /// No description provided for @gui_settings_genderAny.
+  /// No description provided for @gui_run_setup_genderAny.
   ///
   /// In en, this message translates to:
   /// **'Any'**
-  String get gui_settings_genderAny;
+  String get gui_run_setup_genderAny;
 
-  /// No description provided for @gui_settings_genderFemale.
+  /// No description provided for @gui_run_setup_genderFemale.
   ///
   /// In en, this message translates to:
   /// **'Female'**
-  String get gui_settings_genderFemale;
+  String get gui_run_setup_genderFemale;
 
-  /// No description provided for @gui_settings_genderMale.
+  /// No description provided for @gui_run_setup_genderMale.
   ///
   /// In en, this message translates to:
   /// **'Male'**
-  String get gui_settings_genderMale;
+  String get gui_run_setup_genderMale;
 
-  /// No description provided for @gui_settings_modelOptionsSection.
+  /// No description provided for @gui_run_setup_modelOptionsSection.
   ///
   /// In en, this message translates to:
   /// **'Model options'**
-  String get gui_settings_modelOptionsSection;
+  String get gui_run_setup_modelOptionsSection;
 
-  /// No description provided for @gui_settings_speedLabel.
+  /// No description provided for @gui_run_setup_speedLabel.
   ///
   /// In en, this message translates to:
   /// **'Speed'**
-  String get gui_settings_speedLabel;
+  String get gui_run_setup_speedLabel;
 
-  /// No description provided for @gui_settings_speedTooltip.
+  /// No description provided for @gui_run_setup_speedTooltip.
   ///
   /// In en, this message translates to:
   /// **'Speech rate multiplier (1.0 = normal)'**
-  String get gui_settings_speedTooltip;
+  String get gui_run_setup_speedTooltip;
 
-  /// No description provided for @gui_settings_runSection.
+  /// No description provided for @gui_run_setup_runSection.
   ///
   /// In en, this message translates to:
   /// **'Run'**
-  String get gui_settings_runSection;
+  String get gui_run_setup_runSection;
 
-  /// No description provided for @gui_settings_sendWholeFile.
+  /// No description provided for @gui_run_setup_sendWholeFile.
   ///
   /// In en, this message translates to:
   /// **'Send whole file'**
-  String get gui_settings_sendWholeFile;
+  String get gui_run_setup_sendWholeFile;
 
-  /// No description provided for @gui_settings_minWordsLabel.
+  /// No description provided for @gui_run_setup_minWordsLabel.
   ///
   /// In en, this message translates to:
   /// **'Min words per segment'**
-  String get gui_settings_minWordsLabel;
+  String get gui_run_setup_minWordsLabel;
 
-  /// No description provided for @gui_settings_sampleMode.
+  /// No description provided for @gui_run_setup_sampleMode.
   ///
   /// In en, this message translates to:
   /// **'Sample mode'**
-  String get gui_settings_sampleMode;
+  String get gui_run_setup_sampleMode;
 
-  /// No description provided for @gui_settings_narrateFirstSegments.
+  /// No description provided for @gui_run_setup_narrateFirstSegments.
   ///
   /// In en, this message translates to:
   /// **'Narrate first segments only'**
-  String get gui_settings_narrateFirstSegments;
+  String get gui_run_setup_narrateFirstSegments;
 
-  /// No description provided for @gui_settings_skipCompletedSegments.
+  /// No description provided for @gui_run_setup_skipCompletedSegments.
   ///
   /// In en, this message translates to:
   /// **'Skip completed segments (Resume)'**
-  String get gui_settings_skipCompletedSegments;
+  String get gui_run_setup_skipCompletedSegments;
 
   /// Model dropdown label when a profile has no display name.
   ///
   /// In en, this message translates to:
   /// **'{alias} — {id}'**
-  String gui_settings_modelDisplayFallback(String alias, String id);
+  String gui_run_setup_modelDisplayFallback(String alias, String id);
 
-  /// No description provided for @gui_settings_apiKeySection.
+  /// No description provided for @gui_run_setup_apiKeySection.
   ///
   /// In en, this message translates to:
   /// **'API key'**
-  String get gui_settings_apiKeySection;
+  String get gui_run_setup_apiKeySection;
 
-  /// No description provided for @gui_settings_apiKeySectionTooltip.
+  /// No description provided for @gui_run_setup_apiKeySectionTooltip.
   ///
   /// In en, this message translates to:
   /// **'API key for the narration provider'**
-  String get gui_settings_apiKeySectionTooltip;
+  String get gui_run_setup_apiKeySectionTooltip;
 
-  /// No description provided for @gui_settings_apiKeyStatusLabel.
+  /// No description provided for @gui_run_setup_apiKeyStatusLabel.
   ///
   /// In en, this message translates to:
   /// **'Key source'**
-  String get gui_settings_apiKeyStatusLabel;
+  String get gui_run_setup_apiKeyStatusLabel;
 
-  /// No description provided for @gui_settings_apiKeyStatusKeychain.
+  /// No description provided for @gui_run_setup_apiKeyStatusKeychain.
   ///
   /// In en, this message translates to:
   /// **'Stored in keychain'**
-  String get gui_settings_apiKeyStatusKeychain;
+  String get gui_run_setup_apiKeyStatusKeychain;
 
-  /// No description provided for @gui_settings_apiKeyStatusConfig.
+  /// No description provided for @gui_run_setup_apiKeyStatusConfig.
   ///
   /// In en, this message translates to:
   /// **'Set in provider config'**
-  String get gui_settings_apiKeyStatusConfig;
+  String get gui_run_setup_apiKeyStatusConfig;
 
-  /// No description provided for @gui_settings_apiKeyStatusEnvironment.
+  /// No description provided for @gui_run_setup_apiKeyStatusEnvironment.
   ///
   /// In en, this message translates to:
   /// **'Set via environment variable'**
-  String get gui_settings_apiKeyStatusEnvironment;
+  String get gui_run_setup_apiKeyStatusEnvironment;
 
-  /// No description provided for @gui_settings_apiKeyStatusMissing.
+  /// No description provided for @gui_run_setup_apiKeyStatusMissing.
   ///
   /// In en, this message translates to:
   /// **'Not set'**
-  String get gui_settings_apiKeyStatusMissing;
+  String get gui_run_setup_apiKeyStatusMissing;
 
-  /// No description provided for @gui_settings_apiKeyFieldPlaceholder.
+  /// No description provided for @gui_run_setup_apiKeyFieldPlaceholder.
   ///
   /// In en, this message translates to:
   /// **'Paste your API key here'**
-  String get gui_settings_apiKeyFieldPlaceholder;
+  String get gui_run_setup_apiKeyFieldPlaceholder;
 
-  /// No description provided for @gui_settings_apiKeyFieldTooltip.
+  /// No description provided for @gui_run_setup_apiKeyFieldTooltip.
   ///
   /// In en, this message translates to:
   /// **'API key, saved to the system keychain'**
-  String get gui_settings_apiKeyFieldTooltip;
+  String get gui_run_setup_apiKeyFieldTooltip;
 
-  /// No description provided for @gui_settings_apiKeySave.
+  /// No description provided for @gui_run_setup_apiKeySave.
   ///
   /// In en, this message translates to:
   /// **'Save'**
-  String get gui_settings_apiKeySave;
+  String get gui_run_setup_apiKeySave;
 
-  /// No description provided for @gui_settings_apiKeyRemove.
+  /// No description provided for @gui_run_setup_apiKeyRemove.
   ///
   /// In en, this message translates to:
   /// **'Remove'**
-  String get gui_settings_apiKeyRemove;
+  String get gui_run_setup_apiKeyRemove;
 
-  /// No description provided for @gui_settings_apiKeyStoreError.
+  /// No description provided for @gui_run_setup_apiKeyStoreError.
   ///
   /// In en, this message translates to:
   /// **'Could not reach the system key store.'**
-  String get gui_settings_apiKeyStoreError;
+  String get gui_run_setup_apiKeyStoreError;
 
-  /// No description provided for @gui_settings_modelDropdownTooltip.
+  /// No description provided for @gui_run_setup_modelDropdownTooltip.
   ///
   /// In en, this message translates to:
   /// **'Select the TTS model to use for narration'**
-  String get gui_settings_modelDropdownTooltip;
+  String get gui_run_setup_modelDropdownTooltip;
 
-  /// No description provided for @gui_settings_voiceDropdownTooltip.
+  /// No description provided for @gui_run_setup_voiceDropdownTooltip.
   ///
   /// In en, this message translates to:
   /// **'Choose voice for current model'**
-  String get gui_settings_voiceDropdownTooltip;
+  String get gui_run_setup_voiceDropdownTooltip;
 
-  /// No description provided for @gui_settings_sendWholeFileTooltip.
+  /// No description provided for @gui_run_setup_sendWholeFileTooltip.
   ///
   /// In en, this message translates to:
   /// **'Generate single audio file instead of segments'**
-  String get gui_settings_sendWholeFileTooltip;
+  String get gui_run_setup_sendWholeFileTooltip;
 
-  /// No description provided for @gui_settings_sampleModeTooltip.
+  /// No description provided for @gui_run_setup_sampleModeTooltip.
   ///
   /// In en, this message translates to:
   /// **'Generate only first N segments for testing'**
-  String get gui_settings_sampleModeTooltip;
+  String get gui_run_setup_sampleModeTooltip;
 
-  /// No description provided for @gui_settings_resumeTooltip.
+  /// No description provided for @gui_run_setup_resumeTooltip.
   ///
   /// In en, this message translates to:
   /// **'Skip already generated segments when resuming'**
-  String get gui_settings_resumeTooltip;
+  String get gui_run_setup_resumeTooltip;
 
-  /// No description provided for @gui_settings_minWordsSliderTooltip.
+  /// No description provided for @gui_run_setup_minWordsSliderTooltip.
   ///
   /// In en, this message translates to:
   /// **'Merge paragraphs shorter than this word count'**
-  String get gui_settings_minWordsSliderTooltip;
+  String get gui_run_setup_minWordsSliderTooltip;
 
-  /// No description provided for @gui_settings_voiceRawFieldTooltip.
+  /// No description provided for @gui_run_setup_voiceRawFieldTooltip.
   ///
   /// In en, this message translates to:
   /// **'Custom voice ID or provider voice identifier'**
-  String get gui_settings_voiceRawFieldTooltip;
+  String get gui_run_setup_voiceRawFieldTooltip;
 
-  /// No description provided for @gui_settings_accentFieldTooltip.
+  /// No description provided for @gui_run_setup_accentFieldTooltip.
   ///
   /// In en, this message translates to:
   /// **'Voice accent description (e.g., \'southern British English\')'**
-  String get gui_settings_accentFieldTooltip;
+  String get gui_run_setup_accentFieldTooltip;
 
-  /// No description provided for @gui_settings_styleFieldTooltip.
+  /// No description provided for @gui_run_setup_styleFieldTooltip.
   ///
   /// In en, this message translates to:
   /// **'Voice style personality (e.g., \'warm, composed\')'**
-  String get gui_settings_styleFieldTooltip;
+  String get gui_run_setup_styleFieldTooltip;
 
-  /// No description provided for @gui_settings_prefixFieldTooltip.
+  /// No description provided for @gui_run_setup_prefixFieldTooltip.
   ///
   /// In en, this message translates to:
   /// **'Text prepended to each paragraph'**
-  String get gui_settings_prefixFieldTooltip;
+  String get gui_run_setup_prefixFieldTooltip;
 
-  /// No description provided for @gui_settings_sampleLenFieldTooltip.
+  /// No description provided for @gui_run_setup_sampleLenFieldTooltip.
   ///
   /// In en, this message translates to:
   /// **'Number of paragraphs to narrate in sample mode'**
-  String get gui_settings_sampleLenFieldTooltip;
+  String get gui_run_setup_sampleLenFieldTooltip;
 
-  /// No description provided for @gui_settings_genderControlTooltip.
+  /// No description provided for @gui_run_setup_genderControlTooltip.
   ///
   /// In en, this message translates to:
   /// **'Filter voices by gender'**
-  String get gui_settings_genderControlTooltip;
+  String get gui_run_setup_genderControlTooltip;
 
-  /// No description provided for @gui_settings_languageDropdownTooltip.
+  /// No description provided for @gui_run_setup_languageDropdownTooltip.
   ///
   /// In en, this message translates to:
   /// **'Language sent to the model (lang_code)'**
-  String get gui_settings_languageDropdownTooltip;
+  String get gui_run_setup_languageDropdownTooltip;
 
-  /// No description provided for @gui_settings_advancedVoiceIdTooltip.
+  /// No description provided for @gui_run_setup_advancedVoiceIdTooltip.
   ///
   /// In en, this message translates to:
   /// **'Enter custom voice settings'**
-  String get gui_settings_advancedVoiceIdTooltip;
+  String get gui_run_setup_advancedVoiceIdTooltip;
 
   /// No description provided for @gui_narration_backToEditor.
   ///
@@ -694,11 +694,11 @@ abstract class AppLocalizations {
   /// **'TTS Narrator'**
   String get gui_menu_appMenu;
 
-  /// No description provided for @gui_menu_preferences.
+  /// No description provided for @gui_menu_settings.
   ///
   /// In en, this message translates to:
-  /// **'Preferences…'**
-  String get gui_menu_preferences;
+  /// **'Settings…'**
+  String get gui_menu_settings;
 
   /// No description provided for @gui_menu_file.
   ///
@@ -826,11 +826,11 @@ abstract class AppLocalizations {
   /// **'Dark'**
   String get gui_menu_themeModeDark;
 
-  /// No description provided for @gui_menu_toggleSettingsPanel.
+  /// No description provided for @gui_menu_toggleRunSetupPanel.
   ///
   /// In en, this message translates to:
-  /// **'Toggle Settings Panel'**
-  String get gui_menu_toggleSettingsPanel;
+  /// **'Toggle Run Setup Panel'**
+  String get gui_menu_toggleRunSetupPanel;
 
   /// No description provided for @gui_menu_window.
   ///
@@ -928,221 +928,221 @@ abstract class AppLocalizations {
   /// **'Initializing...'**
   String get gui_bootstrap_initializing;
 
-  /// No description provided for @gui_config_title.
+  /// No description provided for @gui_settings_title.
   ///
   /// In en, this message translates to:
-  /// **'Providers & Voices'**
-  String get gui_config_title;
+  /// **'Settings'**
+  String get gui_settings_title;
 
-  /// No description provided for @gui_config_close.
+  /// No description provided for @gui_settings_close.
   ///
   /// In en, this message translates to:
   /// **'Close'**
-  String get gui_config_close;
+  String get gui_settings_close;
 
-  /// No description provided for @gui_config_revealFolder.
+  /// No description provided for @gui_settings_revealFolder.
   ///
   /// In en, this message translates to:
   /// **'Reveal Config Folder'**
-  String get gui_config_revealFolder;
+  String get gui_settings_revealFolder;
 
-  /// No description provided for @gui_config_revealFolderTooltip.
+  /// No description provided for @gui_settings_revealFolderTooltip.
   ///
   /// In en, this message translates to:
   /// **'Open the voice config directory in the file manager'**
-  String get gui_config_revealFolderTooltip;
+  String get gui_settings_revealFolderTooltip;
 
-  /// No description provided for @gui_config_warningsTitle.
+  /// No description provided for @gui_settings_warningsTitle.
   ///
   /// In en, this message translates to:
   /// **'Config warnings'**
-  String get gui_config_warningsTitle;
+  String get gui_settings_warningsTitle;
 
-  /// No description provided for @gui_config_noModels.
+  /// No description provided for @gui_settings_noModels.
   ///
   /// In en, this message translates to:
   /// **'No models configured. Download the starter configurations to begin.'**
-  String get gui_config_noModels;
+  String get gui_settings_noModels;
 
-  /// No description provided for @gui_config_modelsTitle.
+  /// No description provided for @gui_settings_modelsTitle.
   ///
   /// In en, this message translates to:
   /// **'Models'**
-  String get gui_config_modelsTitle;
+  String get gui_settings_modelsTitle;
 
-  /// No description provided for @gui_config_editedBadgeTooltip.
+  /// No description provided for @gui_settings_editedBadgeTooltip.
   ///
   /// In en, this message translates to:
   /// **'This model has a local override in the user folder'**
-  String get gui_config_editedBadgeTooltip;
+  String get gui_settings_editedBadgeTooltip;
 
-  /// No description provided for @gui_config_fieldModelId.
+  /// No description provided for @gui_settings_fieldModelId.
   ///
   /// In en, this message translates to:
   /// **'Model ID'**
-  String get gui_config_fieldModelId;
+  String get gui_settings_fieldModelId;
 
-  /// No description provided for @gui_config_fieldProvider.
+  /// No description provided for @gui_settings_fieldProvider.
   ///
   /// In en, this message translates to:
   /// **'Provider'**
-  String get gui_config_fieldProvider;
+  String get gui_settings_fieldProvider;
 
-  /// No description provided for @gui_config_fieldFormat.
+  /// No description provided for @gui_settings_fieldFormat.
   ///
   /// In en, this message translates to:
   /// **'Format'**
-  String get gui_config_fieldFormat;
+  String get gui_settings_fieldFormat;
 
   /// Title shown in place of a model's voice table when its config file does not parse.
   ///
   /// In en, this message translates to:
   /// **'Cannot read the voice list for {alias}'**
-  String gui_config_voicesUnreadableTitle(String alias);
+  String gui_settings_voicesUnreadableTitle(String alias);
 
   /// Hint under an unreadable voice table, when a local override can be discarded.
   ///
   /// In en, this message translates to:
   /// **'Revert to Downloaded discards this file and restores the downloaded one.'**
-  String get gui_config_voicesUnreadableRevert;
+  String get gui_settings_voicesUnreadableRevert;
 
   /// Caption shown under a locked model's read-only voice table.
   ///
   /// In en, this message translates to:
   /// **'This model\'s voice list is fixed. Add a models/{alias}.json file in the user folder to override it.'**
-  String gui_config_voicesLockedCaption(String alias);
+  String gui_settings_voicesLockedCaption(String alias);
 
-  /// No description provided for @gui_config_columnLabel.
+  /// No description provided for @gui_settings_columnLabel.
   ///
   /// In en, this message translates to:
   /// **'Label'**
-  String get gui_config_columnLabel;
+  String get gui_settings_columnLabel;
 
-  /// No description provided for @gui_config_columnId.
+  /// No description provided for @gui_settings_columnId.
   ///
   /// In en, this message translates to:
   /// **'Voice ID'**
-  String get gui_config_columnId;
+  String get gui_settings_columnId;
 
-  /// No description provided for @gui_config_columnGender.
+  /// No description provided for @gui_settings_columnGender.
   ///
   /// In en, this message translates to:
   /// **'Gender'**
-  String get gui_config_columnGender;
+  String get gui_settings_columnGender;
 
-  /// No description provided for @gui_config_addVoice.
+  /// No description provided for @gui_settings_addVoice.
   ///
   /// In en, this message translates to:
   /// **'Add Voice'**
-  String get gui_config_addVoice;
+  String get gui_settings_addVoice;
 
-  /// No description provided for @gui_config_editVoice.
+  /// No description provided for @gui_settings_editVoice.
   ///
   /// In en, this message translates to:
   /// **'Edit Voice'**
-  String get gui_config_editVoice;
+  String get gui_settings_editVoice;
 
-  /// No description provided for @gui_config_removeVoice.
+  /// No description provided for @gui_settings_removeVoice.
   ///
   /// In en, this message translates to:
   /// **'Remove'**
-  String get gui_config_removeVoice;
+  String get gui_settings_removeVoice;
 
-  /// No description provided for @gui_config_setDefault.
+  /// No description provided for @gui_settings_setDefault.
   ///
   /// In en, this message translates to:
   /// **'Set as default'**
-  String get gui_config_setDefault;
+  String get gui_settings_setDefault;
 
-  /// No description provided for @gui_config_isDefault.
+  /// No description provided for @gui_settings_isDefault.
   ///
   /// In en, this message translates to:
   /// **'Default'**
-  String get gui_config_isDefault;
+  String get gui_settings_isDefault;
 
-  /// No description provided for @gui_config_revert.
+  /// No description provided for @gui_settings_revert.
   ///
   /// In en, this message translates to:
   /// **'Revert to Downloaded'**
-  String get gui_config_revert;
+  String get gui_settings_revert;
 
-  /// No description provided for @gui_config_revertTooltip.
+  /// No description provided for @gui_settings_revertTooltip.
   ///
   /// In en, this message translates to:
   /// **'Discard the local override for this model'**
-  String get gui_config_revertTooltip;
+  String get gui_settings_revertTooltip;
 
-  /// No description provided for @gui_config_genderAny.
+  /// No description provided for @gui_settings_genderAny.
   ///
   /// In en, this message translates to:
   /// **'Not set'**
-  String get gui_config_genderAny;
+  String get gui_settings_genderAny;
 
-  /// No description provided for @gui_config_genderMale.
+  /// No description provided for @gui_settings_genderMale.
   ///
   /// In en, this message translates to:
   /// **'Male'**
-  String get gui_config_genderMale;
+  String get gui_settings_genderMale;
 
-  /// No description provided for @gui_config_genderFemale.
+  /// No description provided for @gui_settings_genderFemale.
   ///
   /// In en, this message translates to:
   /// **'Female'**
-  String get gui_config_genderFemale;
+  String get gui_settings_genderFemale;
 
-  /// No description provided for @gui_config_genderNeutral.
+  /// No description provided for @gui_settings_genderNeutral.
   ///
   /// In en, this message translates to:
   /// **'Neutral'**
-  String get gui_config_genderNeutral;
+  String get gui_settings_genderNeutral;
 
-  /// No description provided for @gui_config_voiceDialogAddTitle.
+  /// No description provided for @gui_settings_voiceDialogAddTitle.
   ///
   /// In en, this message translates to:
   /// **'Add voice'**
-  String get gui_config_voiceDialogAddTitle;
+  String get gui_settings_voiceDialogAddTitle;
 
-  /// No description provided for @gui_config_voiceDialogEditTitle.
+  /// No description provided for @gui_settings_voiceDialogEditTitle.
   ///
   /// In en, this message translates to:
   /// **'Edit voice'**
-  String get gui_config_voiceDialogEditTitle;
+  String get gui_settings_voiceDialogEditTitle;
 
-  /// No description provided for @gui_config_voiceDialogLabel.
+  /// No description provided for @gui_settings_voiceDialogLabel.
   ///
   /// In en, this message translates to:
   /// **'Label'**
-  String get gui_config_voiceDialogLabel;
+  String get gui_settings_voiceDialogLabel;
 
-  /// No description provided for @gui_config_voiceDialogLabelHint.
+  /// No description provided for @gui_settings_voiceDialogLabelHint.
   ///
   /// In en, this message translates to:
   /// **'Shown in the voice picker'**
-  String get gui_config_voiceDialogLabelHint;
+  String get gui_settings_voiceDialogLabelHint;
 
-  /// No description provided for @gui_config_voiceDialogId.
+  /// No description provided for @gui_settings_voiceDialogId.
   ///
   /// In en, this message translates to:
   /// **'Voice ID'**
-  String get gui_config_voiceDialogId;
+  String get gui_settings_voiceDialogId;
 
-  /// No description provided for @gui_config_voiceDialogIdHint.
+  /// No description provided for @gui_settings_voiceDialogIdHint.
   ///
   /// In en, this message translates to:
   /// **'Sent to the provider, e.g. a 32-character id'**
-  String get gui_config_voiceDialogIdHint;
+  String get gui_settings_voiceDialogIdHint;
 
-  /// No description provided for @gui_config_voiceDialogSave.
+  /// No description provided for @gui_settings_voiceDialogSave.
   ///
   /// In en, this message translates to:
   /// **'Save'**
-  String get gui_config_voiceDialogSave;
+  String get gui_settings_voiceDialogSave;
 
-  /// No description provided for @gui_config_voiceDialogCancel.
+  /// No description provided for @gui_settings_voiceDialogCancel.
   ///
   /// In en, this message translates to:
   /// **'Cancel'**
-  String get gui_config_voiceDialogCancel;
+  String get gui_settings_voiceDialogCancel;
 }
 
 class _AppLocalizationsDelegate

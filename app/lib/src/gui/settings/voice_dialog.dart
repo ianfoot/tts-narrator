@@ -5,7 +5,7 @@ import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_dropdown.dart';
 import '../widgets/app_text_field.dart';
-import 'config_labels.dart';
+import 'settings_labels.dart';
 
 /// The values collected by the add/edit voice dialog.
 typedef VoiceDraft = ({String label, String id, VoiceGender? gender});
@@ -91,28 +91,28 @@ class _VoiceDialogState extends State<_VoiceDialog> {
         padding: const EdgeInsets.only(top: 12),
         child: Column(
           children: [
-            _FieldLabel(l10n.gui_config_voiceDialogLabel),
+            _FieldLabel(l10n.gui_settings_voiceDialogLabel),
             AppTextField(
               key: const Key('voiceDialogLabelField'),
               controller: _label,
-              hintText: l10n.gui_config_voiceDialogLabelHint,
+              hintText: l10n.gui_settings_voiceDialogLabelHint,
             ),
             const SizedBox(height: 12),
-            _FieldLabel(l10n.gui_config_voiceDialogId),
+            _FieldLabel(l10n.gui_settings_voiceDialogId),
             AppTextField(
               key: const Key('voiceDialogIdField'),
               controller: _id,
-              hintText: l10n.gui_config_voiceDialogIdHint,
+              hintText: l10n.gui_settings_voiceDialogIdHint,
             ),
             const SizedBox(height: 12),
-            _FieldLabel(l10n.gui_config_columnGender),
+            _FieldLabel(l10n.gui_settings_columnGender),
             Align(
               alignment: Alignment.centerLeft,
               child: AppDropdown<VoiceGender?>(
                 key: const Key('voiceDialogGenderDropdown'),
                 value: _gender,
-                hint: l10n.gui_config_genderAny,
-                items: configGenderItems(l10n),
+                hint: l10n.gui_settings_genderAny,
+                items: settingsGenderItems(l10n),
                 onChanged: (value) => setState(() => _gender = value),
               ),
             ),
@@ -123,13 +123,13 @@ class _VoiceDialogState extends State<_VoiceDialog> {
         CupertinoDialogAction(
           key: const Key('voiceDialogCancelButton'),
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.gui_config_voiceDialogCancel),
+          child: Text(l10n.gui_settings_voiceDialogCancel),
         ),
         CupertinoDialogAction(
           key: const Key('voiceDialogSaveButton'),
           isDefaultAction: true,
           onPressed: _submit,
-          child: Text(l10n.gui_config_voiceDialogSave),
+          child: Text(l10n.gui_settings_voiceDialogSave),
         ),
       ],
     );

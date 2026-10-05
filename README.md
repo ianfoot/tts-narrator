@@ -101,7 +101,7 @@ them, and shadow their counterparts by name — see
 Every other key passes through untouched to the service as a request setting,
 so a vendor can take options the app knows nothing about.
 
-You can also enter a key in the Settings rail instead, and it is stored in the
+You can also enter a key in the Run Setup panel instead, and it is stored in the
 OS keychain. That wins over the config block, because the provider file is
 downloaded from a remote and may carry someone else's key. The app never
 requires a key: if none is configured, the request carries no `Authorization`
@@ -167,7 +167,7 @@ Model differences drive how requests are built:
 Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
 Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma` ("Emma"),
 `kokoro_local`=`bm_george` ("George"). The voice can be selected in the GUI
-settings rail.
+Run Setup panel.
 
 Gender tags drive a narrator-gender filter (and, for prompt-driven models, may
 rewrite the "narrator" phrase in the passage prefix). Tagging is per-voice and
@@ -178,7 +178,7 @@ so nothing is repeated across blocks (`"bf_alice": {"name": "Alice", "gender":
 string shorthand from older configs (`"Charon": "Charon"`) still loads. Configs
 ship with fish tagged (from its curated list) and gemini untagged — gemini's
 named voices carry no published gender signal, so instead a model that sets
-`"prompt_style": true` gets a "Narrator gender" control in the rail's Model
+`"prompt_style": true` gets a "Narrator gender" control in the Run Setup panel's Model
 options, which gemini does. The two Kokoro files declare no gender tags at all:
 they set `languages`, and that declaration is the evidence that their ids follow
 the `<lang><gender>_<name>` convention, so gender is read off the second
@@ -201,7 +201,7 @@ one by dropping it in `models/` and listing its alias in some provider's
 Voices are the named ones on the OpenRouter page (e.g. `Charon`, `Zephyr`,
 `Puck`). Add friendly aliases for the ones you use under `voices` in
 `models/gemini.json` — the drop-down shows whatever you configure. Any unlisted id
-still works via the raw-id field in the settings rail.
+still works via the raw-id field in the Run Setup panel.
 
 ### Kokoro voices
 
@@ -218,8 +218,8 @@ The `voices` map in both model files is keyed by the raw voice id and carries th
 friendly name inside the entry (`"bf_emma": {"name": "Emma"}`), because the names
 collide across languages (`Santa`, `Dora`, `Alex` and `Alpha` each exist more
 than once) while the ids are unique — the dropdown shows the names and the id is
-what gets sent. Any unlisted id still works via the raw-id field in the settings
-rail.
+what gets sent. Any unlisted id still works via the raw-id field in the Run Setup
+panel.
 
 ### Fish voices
 
@@ -230,10 +230,10 @@ page and in `voice-config/models/fish.json`.
 
 Fish is the model to reach for when you want more voices than ship by default:
 they are just ids, so any the service accepts can be added — from the
-preferences screen, or by hand in `user/models/fish.json` (copy the downloaded
+settings screen, or by hand in `user/models/fish.json` (copy the downloaded
 file first; see [Your own overrides](#your-own-overrides)). The curated 27 are
 an example set, not a limit. An unlisted id also still works via the raw-id
-field in the settings rail.
+field in the Run Setup panel.
 
 ## Your own overrides
 
@@ -280,7 +280,7 @@ the copy.
 
 ### Editing voices in the app
 
-**TTS Narrator → Preferences…** (`Cmd+,` on macOS, `Ctrl+,` elsewhere) opens a
+**TTS Narrator → Settings…** (`Cmd+,` on macOS, `Ctrl+,` elsewhere) opens a
 providers and voices screen: a model list on the left, and for the selected model
 its id, provider and format, plus a table of voices you can add, rename, re-gender,
 remove, and choose a default from.
@@ -376,7 +376,7 @@ consistent narrator.
 
 A Flutter desktop app (`app/`) provides an editor-first interface: type or
 paste the text you want narrated right into the window (no backing file — the
-core reads the in-memory text via `sourceText`), then click **Narrate**. A collapsible settings rail controls the model, voice, and
+core reads the in-memory text via `sourceText`), then click **Narrate**. A collapsible Run Setup panel controls the model, voice, and
 model-specific options (declared by each model's own `models/<alias>.json`), the run view
 shows per-segment progress with in-app playback of finished clips, Cancel, and
 Back — and the editor is intact when you return. macOS gets the standard native

@@ -34,7 +34,7 @@ abstract final class PromptDefaults {
   /// The male narrator form.
   static const malePhrase = 'male narrator';
 
-  /// Default minimum words per segment, mirroring the settings-rail slider
+  /// Default minimum words per segment, mirroring the run-setup panel slider
   /// range of 10-100.
   static const minWords = 30;
 

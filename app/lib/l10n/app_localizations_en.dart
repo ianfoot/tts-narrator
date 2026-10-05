@@ -108,7 +108,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get gui_editor_toolbar_showHideSettings => 'Show / hide settings';
+  String get gui_editor_toolbar_showHideRunSetup => 'Show / hide run setup';
 
   @override
   String get gui_editor_toolbar_setOutputFolder => 'Set output folder';
@@ -161,171 +161,173 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get gui_settings_header => 'Settings';
+  String get gui_run_setup_header => 'Run Setup';
 
   @override
-  String get gui_settings_modelVoiceSection => 'Model & voice';
+  String get gui_run_setup_modelVoiceSection => 'Model & voice';
 
   @override
-  String get gui_settings_modelLabel => 'Model';
+  String get gui_run_setup_modelLabel => 'Model';
 
   @override
-  String get gui_settings_voiceAliasLabel => 'Voice alias';
+  String get gui_run_setup_voiceAliasLabel => 'Voice alias';
 
   @override
-  String get gui_settings_advancedVoiceId => 'Advanced Voice ID';
+  String get gui_run_setup_advancedVoiceId => 'Advanced Voice ID';
 
   @override
-  String get gui_settings_overridesSelectedAlias => 'Overrides selected alias';
+  String get gui_run_setup_overridesSelectedAlias => 'Overrides selected alias';
 
   @override
-  String get gui_settings_freeFormVoiceHint => 'free-form id or provider voice';
+  String get gui_run_setup_freeFormVoiceHint =>
+      'free-form id or provider voice';
 
   @override
-  String get gui_settings_selectVoiceHint => 'Select a Voice...';
+  String get gui_run_setup_selectVoiceHint => 'Select a Voice...';
 
   @override
-  String get gui_settings_languageLabel => 'Language';
+  String get gui_run_setup_languageLabel => 'Language';
 
   @override
-  String get gui_settings_selectLanguageHint => 'Select a Language...';
+  String get gui_run_setup_selectLanguageHint => 'Select a Language...';
 
   @override
-  String get gui_settings_genderAny => 'Any';
+  String get gui_run_setup_genderAny => 'Any';
 
   @override
-  String get gui_settings_genderFemale => 'Female';
+  String get gui_run_setup_genderFemale => 'Female';
 
   @override
-  String get gui_settings_genderMale => 'Male';
+  String get gui_run_setup_genderMale => 'Male';
 
   @override
-  String get gui_settings_modelOptionsSection => 'Model options';
+  String get gui_run_setup_modelOptionsSection => 'Model options';
 
   @override
-  String get gui_settings_speedLabel => 'Speed';
+  String get gui_run_setup_speedLabel => 'Speed';
 
   @override
-  String get gui_settings_speedTooltip =>
+  String get gui_run_setup_speedTooltip =>
       'Speech rate multiplier (1.0 = normal)';
 
   @override
-  String get gui_settings_runSection => 'Run';
+  String get gui_run_setup_runSection => 'Run';
 
   @override
-  String get gui_settings_sendWholeFile => 'Send whole file';
+  String get gui_run_setup_sendWholeFile => 'Send whole file';
 
   @override
-  String get gui_settings_minWordsLabel => 'Min words per segment';
+  String get gui_run_setup_minWordsLabel => 'Min words per segment';
 
   @override
-  String get gui_settings_sampleMode => 'Sample mode';
+  String get gui_run_setup_sampleMode => 'Sample mode';
 
   @override
-  String get gui_settings_narrateFirstSegments => 'Narrate first segments only';
+  String get gui_run_setup_narrateFirstSegments =>
+      'Narrate first segments only';
 
   @override
-  String get gui_settings_skipCompletedSegments =>
+  String get gui_run_setup_skipCompletedSegments =>
       'Skip completed segments (Resume)';
 
   @override
-  String gui_settings_modelDisplayFallback(String alias, String id) {
+  String gui_run_setup_modelDisplayFallback(String alias, String id) {
     return '$alias — $id';
   }
 
   @override
-  String get gui_settings_apiKeySection => 'API key';
+  String get gui_run_setup_apiKeySection => 'API key';
 
   @override
-  String get gui_settings_apiKeySectionTooltip =>
+  String get gui_run_setup_apiKeySectionTooltip =>
       'API key for the narration provider';
 
   @override
-  String get gui_settings_apiKeyStatusLabel => 'Key source';
+  String get gui_run_setup_apiKeyStatusLabel => 'Key source';
 
   @override
-  String get gui_settings_apiKeyStatusKeychain => 'Stored in keychain';
+  String get gui_run_setup_apiKeyStatusKeychain => 'Stored in keychain';
 
   @override
-  String get gui_settings_apiKeyStatusConfig => 'Set in provider config';
+  String get gui_run_setup_apiKeyStatusConfig => 'Set in provider config';
 
   @override
-  String get gui_settings_apiKeyStatusEnvironment =>
+  String get gui_run_setup_apiKeyStatusEnvironment =>
       'Set via environment variable';
 
   @override
-  String get gui_settings_apiKeyStatusMissing => 'Not set';
+  String get gui_run_setup_apiKeyStatusMissing => 'Not set';
 
   @override
-  String get gui_settings_apiKeyFieldPlaceholder => 'Paste your API key here';
+  String get gui_run_setup_apiKeyFieldPlaceholder => 'Paste your API key here';
 
   @override
-  String get gui_settings_apiKeyFieldTooltip =>
+  String get gui_run_setup_apiKeyFieldTooltip =>
       'API key, saved to the system keychain';
 
   @override
-  String get gui_settings_apiKeySave => 'Save';
+  String get gui_run_setup_apiKeySave => 'Save';
 
   @override
-  String get gui_settings_apiKeyRemove => 'Remove';
+  String get gui_run_setup_apiKeyRemove => 'Remove';
 
   @override
-  String get gui_settings_apiKeyStoreError =>
+  String get gui_run_setup_apiKeyStoreError =>
       'Could not reach the system key store.';
 
   @override
-  String get gui_settings_modelDropdownTooltip =>
+  String get gui_run_setup_modelDropdownTooltip =>
       'Select the TTS model to use for narration';
 
   @override
-  String get gui_settings_voiceDropdownTooltip =>
+  String get gui_run_setup_voiceDropdownTooltip =>
       'Choose voice for current model';
 
   @override
-  String get gui_settings_sendWholeFileTooltip =>
+  String get gui_run_setup_sendWholeFileTooltip =>
       'Generate single audio file instead of segments';
 
   @override
-  String get gui_settings_sampleModeTooltip =>
+  String get gui_run_setup_sampleModeTooltip =>
       'Generate only first N segments for testing';
 
   @override
-  String get gui_settings_resumeTooltip =>
+  String get gui_run_setup_resumeTooltip =>
       'Skip already generated segments when resuming';
 
   @override
-  String get gui_settings_minWordsSliderTooltip =>
+  String get gui_run_setup_minWordsSliderTooltip =>
       'Merge paragraphs shorter than this word count';
 
   @override
-  String get gui_settings_voiceRawFieldTooltip =>
+  String get gui_run_setup_voiceRawFieldTooltip =>
       'Custom voice ID or provider voice identifier';
 
   @override
-  String get gui_settings_accentFieldTooltip =>
+  String get gui_run_setup_accentFieldTooltip =>
       'Voice accent description (e.g., \'southern British English\')';
 
   @override
-  String get gui_settings_styleFieldTooltip =>
+  String get gui_run_setup_styleFieldTooltip =>
       'Voice style personality (e.g., \'warm, composed\')';
 
   @override
-  String get gui_settings_prefixFieldTooltip =>
+  String get gui_run_setup_prefixFieldTooltip =>
       'Text prepended to each paragraph';
 
   @override
-  String get gui_settings_sampleLenFieldTooltip =>
+  String get gui_run_setup_sampleLenFieldTooltip =>
       'Number of paragraphs to narrate in sample mode';
 
   @override
-  String get gui_settings_genderControlTooltip => 'Filter voices by gender';
+  String get gui_run_setup_genderControlTooltip => 'Filter voices by gender';
 
   @override
-  String get gui_settings_languageDropdownTooltip =>
+  String get gui_run_setup_languageDropdownTooltip =>
       'Language sent to the model (lang_code)';
 
   @override
-  String get gui_settings_advancedVoiceIdTooltip =>
+  String get gui_run_setup_advancedVoiceIdTooltip =>
       'Enter custom voice settings';
 
   @override
@@ -404,7 +406,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_menu_appMenu => 'TTS Narrator';
 
   @override
-  String get gui_menu_preferences => 'Preferences…';
+  String get gui_menu_settings => 'Settings…';
 
   @override
   String get gui_menu_file => 'File';
@@ -470,7 +472,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_menu_themeModeDark => 'Dark';
 
   @override
-  String get gui_menu_toggleSettingsPanel => 'Toggle Settings Panel';
+  String get gui_menu_toggleRunSetupPanel => 'Toggle Run Setup Panel';
 
   @override
   String get gui_menu_window => 'Window';
@@ -526,120 +528,120 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_bootstrap_initializing => 'Initializing...';
 
   @override
-  String get gui_config_title => 'Providers & Voices';
+  String get gui_settings_title => 'Settings';
 
   @override
-  String get gui_config_close => 'Close';
+  String get gui_settings_close => 'Close';
 
   @override
-  String get gui_config_revealFolder => 'Reveal Config Folder';
+  String get gui_settings_revealFolder => 'Reveal Config Folder';
 
   @override
-  String get gui_config_revealFolderTooltip =>
+  String get gui_settings_revealFolderTooltip =>
       'Open the voice config directory in the file manager';
 
   @override
-  String get gui_config_warningsTitle => 'Config warnings';
+  String get gui_settings_warningsTitle => 'Config warnings';
 
   @override
-  String get gui_config_noModels =>
+  String get gui_settings_noModels =>
       'No models configured. Download the starter configurations to begin.';
 
   @override
-  String get gui_config_modelsTitle => 'Models';
+  String get gui_settings_modelsTitle => 'Models';
 
   @override
-  String get gui_config_editedBadgeTooltip =>
+  String get gui_settings_editedBadgeTooltip =>
       'This model has a local override in the user folder';
 
   @override
-  String get gui_config_fieldModelId => 'Model ID';
+  String get gui_settings_fieldModelId => 'Model ID';
 
   @override
-  String get gui_config_fieldProvider => 'Provider';
+  String get gui_settings_fieldProvider => 'Provider';
 
   @override
-  String get gui_config_fieldFormat => 'Format';
+  String get gui_settings_fieldFormat => 'Format';
 
   @override
-  String gui_config_voicesUnreadableTitle(String alias) {
+  String gui_settings_voicesUnreadableTitle(String alias) {
     return 'Cannot read the voice list for $alias';
   }
 
   @override
-  String get gui_config_voicesUnreadableRevert =>
+  String get gui_settings_voicesUnreadableRevert =>
       'Revert to Downloaded discards this file and restores the downloaded one.';
 
   @override
-  String gui_config_voicesLockedCaption(String alias) {
+  String gui_settings_voicesLockedCaption(String alias) {
     return 'This model\'s voice list is fixed. Add a models/$alias.json file in the user folder to override it.';
   }
 
   @override
-  String get gui_config_columnLabel => 'Label';
+  String get gui_settings_columnLabel => 'Label';
 
   @override
-  String get gui_config_columnId => 'Voice ID';
+  String get gui_settings_columnId => 'Voice ID';
 
   @override
-  String get gui_config_columnGender => 'Gender';
+  String get gui_settings_columnGender => 'Gender';
 
   @override
-  String get gui_config_addVoice => 'Add Voice';
+  String get gui_settings_addVoice => 'Add Voice';
 
   @override
-  String get gui_config_editVoice => 'Edit Voice';
+  String get gui_settings_editVoice => 'Edit Voice';
 
   @override
-  String get gui_config_removeVoice => 'Remove';
+  String get gui_settings_removeVoice => 'Remove';
 
   @override
-  String get gui_config_setDefault => 'Set as default';
+  String get gui_settings_setDefault => 'Set as default';
 
   @override
-  String get gui_config_isDefault => 'Default';
+  String get gui_settings_isDefault => 'Default';
 
   @override
-  String get gui_config_revert => 'Revert to Downloaded';
+  String get gui_settings_revert => 'Revert to Downloaded';
 
   @override
-  String get gui_config_revertTooltip =>
+  String get gui_settings_revertTooltip =>
       'Discard the local override for this model';
 
   @override
-  String get gui_config_genderAny => 'Not set';
+  String get gui_settings_genderAny => 'Not set';
 
   @override
-  String get gui_config_genderMale => 'Male';
+  String get gui_settings_genderMale => 'Male';
 
   @override
-  String get gui_config_genderFemale => 'Female';
+  String get gui_settings_genderFemale => 'Female';
 
   @override
-  String get gui_config_genderNeutral => 'Neutral';
+  String get gui_settings_genderNeutral => 'Neutral';
 
   @override
-  String get gui_config_voiceDialogAddTitle => 'Add voice';
+  String get gui_settings_voiceDialogAddTitle => 'Add voice';
 
   @override
-  String get gui_config_voiceDialogEditTitle => 'Edit voice';
+  String get gui_settings_voiceDialogEditTitle => 'Edit voice';
 
   @override
-  String get gui_config_voiceDialogLabel => 'Label';
+  String get gui_settings_voiceDialogLabel => 'Label';
 
   @override
-  String get gui_config_voiceDialogLabelHint => 'Shown in the voice picker';
+  String get gui_settings_voiceDialogLabelHint => 'Shown in the voice picker';
 
   @override
-  String get gui_config_voiceDialogId => 'Voice ID';
+  String get gui_settings_voiceDialogId => 'Voice ID';
 
   @override
-  String get gui_config_voiceDialogIdHint =>
+  String get gui_settings_voiceDialogIdHint =>
       'Sent to the provider, e.g. a 32-character id';
 
   @override
-  String get gui_config_voiceDialogSave => 'Save';
+  String get gui_settings_voiceDialogSave => 'Save';
 
   @override
-  String get gui_config_voiceDialogCancel => 'Cancel';
+  String get gui_settings_voiceDialogCancel => 'Cancel';
 }

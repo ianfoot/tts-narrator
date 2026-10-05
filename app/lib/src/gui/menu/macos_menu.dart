@@ -12,7 +12,7 @@ import 'edit_actions.dart';
 /// instead, which mirrors these commands as widgets.
 ///
 /// Pure configuration over the controller's platform-neutral command slots and
-/// the app navigator: App (About/Preferences/Services/Hide/Quit), File
+/// the app navigator: App (About/Settings/Services/Hide/Quit), File
 /// (Open/Save/Save As/Narrate), Edit (undo/redo/cut/copy/paste/select all,
 /// dispatched to the focused text field by [EditActions]), View (Appearance,
 /// Toggle Settings Panel, Full Screen) and Window (Minimize/Zoom/Front). The
@@ -48,12 +48,12 @@ PlatformMenu _appMenu(AppController controller, AppLocalizations l10n) {
       PlatformMenuItemGroup(
         members: <PlatformMenuItem>[
           PlatformMenuItem(
-            label: l10n.gui_menu_preferences,
+            label: l10n.gui_menu_settings,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.comma,
               meta: true,
             ),
-            onSelected: () => controller.commands.onPreferences?.call(),
+            onSelected: () => controller.commands.onSettings?.call(),
           ),
         ],
       ),
@@ -248,12 +248,13 @@ PlatformMenu _viewMenu(AppController controller, AppLocalizations l10n) {
             ],
           ),
           PlatformMenuItem(
-            label: l10n.gui_menu_toggleSettingsPanel,
+            label: l10n.gui_menu_toggleRunSetupPanel,
             shortcut: const SingleActivator(
               LogicalKeyboardKey.backslash,
               meta: true,
             ),
-            onSelected: () => controller.commands.onToggleSettingsPanel?.call(),
+            onSelected: () =>
+                controller.commands.onToggleRunSetupPanel?.call(),
           ),
         ],
       ),

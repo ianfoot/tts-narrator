@@ -16,13 +16,13 @@ import 'document_controller.dart';
 import 'run_controller.dart';
 import 'settings_controller.dart';
 
-/// Localized text for [ApiKeySource], rendered on the settings-rail status line.
+/// Localized text for [ApiKeySource], rendered on the run-setup status line.
 extension ApiKeySourceX on ApiKeySource {
   String apiKeyStatusLabel(AppLocalizations l10n) => switch (this) {
-    ApiKeySource.keychain => l10n.gui_settings_apiKeyStatusKeychain,
-    ApiKeySource.config => l10n.gui_settings_apiKeyStatusConfig,
-    ApiKeySource.environment => l10n.gui_settings_apiKeyStatusEnvironment,
-    ApiKeySource.missing => l10n.gui_settings_apiKeyStatusMissing,
+    ApiKeySource.keychain => l10n.gui_run_setup_apiKeyStatusKeychain,
+    ApiKeySource.config => l10n.gui_run_setup_apiKeyStatusConfig,
+    ApiKeySource.environment => l10n.gui_run_setup_apiKeyStatusEnvironment,
+    ApiKeySource.missing => l10n.gui_run_setup_apiKeyStatusMissing,
   };
 }
 

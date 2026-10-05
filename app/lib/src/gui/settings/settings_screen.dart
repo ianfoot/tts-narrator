@@ -12,7 +12,7 @@ import '../widgets/app_button.dart';
 import 'model_editor.dart';
 import 'model_list.dart';
 
-/// Full-screen "Providers & Voices" preferences screen.
+/// Full-screen settings screen for the shipped provider and voice configuration.
 ///
 /// A model list on the left, the selected model's voice table on the right.
 /// Everything shown is read from the same config directory the loader uses; the
@@ -20,19 +20,19 @@ import 'model_list.dart';
 /// the `user/` overlay so a re-download of the starter configs can never clobber
 /// a reader's own voice list.
 ///
-/// The screen is a pushed route rather than a section in the settings rail: the
-/// rail is 320px wide, and a voice table with three columns plus per-row
+/// The screen is a pushed route rather than a section in the run-setup panel: the
+/// panel is 320px wide, and a voice table with three columns plus per-row
 /// actions does not fit in it without becoming unreadable.
-class ConfigScreen extends StatefulWidget {
-  const ConfigScreen({super.key, required this.controller});
+class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key, required this.controller});
 
   final AppController controller;
 
   @override
-  State<ConfigScreen> createState() => _ConfigScreenState();
+  State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _ConfigScreenState extends State<ConfigScreen> {
+class _SettingsScreenState extends State<SettingsScreen> {
   /// The model whose voices are on show. Independent of the model the narrator
   /// uses — browsing a config must not change what the next run will speak with.
   late String? _selectedAlias;
@@ -110,7 +110,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
                     child: model == null
                         ? Center(
                             child: Text(
-                              l10n.gui_config_noModels,
+                              l10n.gui_settings_noModels,
                               style: tokens.typography.body.copyWith(
                                 color: tokens.colors.textSecondary,
                               ),
@@ -139,7 +139,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
         children: [
           Expanded(
             child: Text(
-              l10n.gui_config_title,
+              l10n.gui_settings_title,
               style: tokens.typography.headerSemibold.copyWith(
                 color: tokens.colors.textPrimary,
               ),
@@ -148,10 +148,10 @@ class _ConfigScreenState extends State<ConfigScreen> {
           AppButton(
             key: const Key('revealConfigFolderButton'),
             style: AppButtonStyle.outlined,
-            tooltip: l10n.gui_config_revealFolderTooltip,
+            tooltip: l10n.gui_settings_revealFolderTooltip,
             onPressed: _revealConfigFolder,
             child: Text(
-              l10n.gui_config_revealFolder,
+              l10n.gui_settings_revealFolder,
               style: tokens.typography.control.copyWith(
                 color: tokens.colors.textPrimary,
               ),
@@ -161,7 +161,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
           AppButton(
             key: const Key('closeConfigButton'),
             onPressed: () => Navigator.of(context).maybePop(),
-            child: Text(l10n.gui_config_close),
+            child: Text(l10n.gui_settings_close),
           ),
         ],
       ),
@@ -199,7 +199,7 @@ class _Warnings extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            l10n.gui_config_warningsTitle,
+            l10n.gui_settings_warningsTitle,
             style: tokens.typography.body.copyWith(
               color: tokens.colors.accentWarning,
             ),

@@ -18,7 +18,7 @@ import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/fake_tts_provider.dart';
-import '../support/settings_fixtures.dart' as fixtures;
+import '../support/run_setup_fixtures.dart' as fixtures;
 
 void main() {
   late Directory dir;
@@ -839,7 +839,7 @@ void main() {
   });
 
   group('reloadConfig', () {
-    // The preferences screen writes to the `user/` overlay and then calls
+    // The settings screen writes to the `user/` overlay and then calls
     // reloadConfig(); these cases cover what the reader keeps across that
     // re-read, since a save must not silently move them off their voice.
     void writeOverlayModel(String alias, Map<String, Object?> body) {
@@ -972,7 +972,7 @@ void main() {
       // Voice ids that are not language-prefixed, so the chosen language is only
       // held in state. A voice save cannot change it — resetting to the model's
       // `default_language` on every edit would undo the reader's pick each time
-      // they touched a voice in preferences.
+      // they touched a voice in settings.
       writeConfig({
         'providers': {
           'alpha': {
@@ -1045,7 +1045,7 @@ void main() {
       expect(c.voiceGenderFilter, VoiceGender.male);
       expect(c.voice, 'bm_daniel');
 
-      // Delete the last male voice in preferences.
+      // Delete the last male voice in settings.
       writeOverlayModel('kokoro', {
         'id': 'hexgrad/kokoro-82m',
         'format': 'mp3',
@@ -1570,7 +1570,7 @@ void main() {
       expect(c.commands.onOpen, isNull);
       expect(c.commands.onNarrate, isNull);
       expect(c.commands.onCancel, isNull);
-      expect(c.commands.onPreferences, isNull);
+      expect(c.commands.onSettings, isNull);
     });
   });
 
@@ -1910,23 +1910,23 @@ void main() {
     });
   });
 
-  group('settings panel', () {
+  group('run setup panel', () {
     test('starts visible', () {
       final c = makeController();
-      expect(c.settingsPanelVisible, isTrue);
+      expect(c.runSetupPanelVisible, isTrue);
     });
 
-    test('toggleSettingsPanel flips the value and notifies listeners', () {
+    test('toggleRunSetupPanel flips the value and notifies listeners', () {
       final c = makeController();
       var notifications = 0;
       c.addListener(() => notifications++);
 
-      c.toggleSettingsPanel();
-      expect(c.settingsPanelVisible, isFalse);
+      c.toggleRunSetupPanel();
+      expect(c.runSetupPanelVisible, isFalse);
       expect(notifications, 1);
 
-      c.toggleSettingsPanel();
-      expect(c.settingsPanelVisible, isTrue);
+      c.toggleRunSetupPanel();
+      expect(c.runSetupPanelVisible, isTrue);
       expect(notifications, 2);
     });
   });

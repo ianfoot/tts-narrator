@@ -66,14 +66,14 @@ class AppController extends ChangeNotifier {
 
   /// The OS-secure per-provider API-key store (Keychain / Credential Manager /
   /// libsecret). The run-config fallback reads the cached
-  /// [ApiKeyStore.value] synchronously; the settings rail manages the active
+  /// [ApiKeyStore.value] synchronously; the run-setup panel manages the active
   /// provider's key through this.
   final ApiKeyStore _apiKeyStore;
 
   /// The provider owning the active model, or null when no model is configured.
   ///
   /// This is the name an API key is filed under, and the only thing gating the
-  /// settings rail's API-key section: with no model there is no provider to hold
+  /// run-setup panel's API-key section: with no model there is no provider to hold
   /// a key, so the section has nothing to act on. Whether the provider *needs* a
   /// key is not consulted — the section is offered for every provider, because
   /// the user may hold a key the config does not mention, and the server, not
@@ -110,7 +110,7 @@ class AppController extends ChangeNotifier {
   /// The active model alias, or null when no model is configured.
   String? get modelAlias => _model.modelAlias;
 
-  /// The app's writer for the config directory. The preferences screen goes
+  /// The app's writer for the config directory. The settings screen goes
   /// through it, so every save lands in the `user/` overlay and the downloaded
   /// files stay as they shipped.
   VoiceConfigStore get voiceConfigStore => _model.voiceConfigStore;
@@ -121,7 +121,7 @@ class AppController extends ChangeNotifier {
   /// Friendly voice label when one was picked; null means the raw id.
   String? get voiceLabel => _model.voiceLabel;
 
-  /// Re-reads the config directory after the preferences screen wrote to it,
+  /// Re-reads the config directory after the settings screen wrote to it,
   /// keeping the selected model and voice.
   void reloadConfig() {
     _model.reloadConfig();
@@ -244,19 +244,19 @@ class AppController extends ChangeNotifier {
     super.dispose();
   }
 
-  // --- Settings panel -----------------------------------------------
+  // --- Run setup panel -----------------------------------------------
 
-  /// Whether the settings rail is shown on the editor. Driven by the toolbar
+  /// Whether the run-setup panel is shown on the editor. Driven by the toolbar
   /// toggle and, on macOS, the View menu command, so both dispatch through one
   /// piece of state.
-  bool get settingsPanelVisible => _settings.settingsPanelVisible;
+  bool get runSetupPanelVisible => _settings.runSetupPanelVisible;
 
-  /// Flips [settingsPanelVisible] and notifies listeners.
-  void toggleSettingsPanel() => _settings.toggleSettingsPanel();
+  /// Flips [runSetupPanelVisible] and notifies listeners.
+  void toggleRunSetupPanel() => _settings.toggleRunSetupPanel();
 
   // --- API key (secure store) --------------------------------------
 
-  /// The OS-secure key store backing the settings rail's "API key" section.
+  /// The OS-secure key store backing the run-setup panel's "API key" section.
   ApiKeyStore get apiKeyStore => _apiKeyStore;
 
   /// Where the active model's API key comes from (config / env / keychain /
@@ -319,7 +319,7 @@ class AppController extends ChangeNotifier {
     _settings.speed = value;
   }
 
-  /// Minimum words per segment (clamped to the settings rail's 10-100 slider
+  /// Minimum words per segment (clamped to the run-setup panel's 10-100 slider
   /// range). Changing it revises the live segment plan and estimate the editor
   /// shows.
   int get minWords => _settings.minWords;
@@ -329,7 +329,7 @@ class AppController extends ChangeNotifier {
   }
 
   /// Whether to narrate the whole document as a single TTS call instead of
-  /// segmenting it. When true, [minWords] is ignored and the settings rail
+  /// segmenting it. When true, [minWords] is ignored and the run-setup panel
   /// hides the "Min words per segment" control.
   bool get sendWholeFile => _settings.sendWholeFile;
 
@@ -338,7 +338,7 @@ class AppController extends ChangeNotifier {
   }
 
   /// Whether the current document is small enough for whole-file narration
-  /// (see `maxWholeFileLength` in the core). The settings rail hides the "Send
+  /// (see `maxWholeFileLength` in the core). The run-setup panel hides the "Send
   /// whole file" toggle when false (documents over the cap).
   bool get wholeFileAvailable => _settings.wholeFileAvailable;
 

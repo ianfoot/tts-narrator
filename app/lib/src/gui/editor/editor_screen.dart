@@ -5,10 +5,10 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../cleanup_segments_flow.dart';
 import '../controller/app_controller.dart';
-import '../settings/settings_panel.dart';
-import '../../../l10n/app_localizations.dart';
+import '../run_setup/run_setup_panel.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_text_field.dart';
 import 'editor_status_bar.dart';
@@ -37,7 +37,7 @@ class EditorScreen extends StatefulWidget {
 
 class _EditorScreenState extends State<EditorScreen> {
   static const _bannerDuration = Duration(milliseconds: 150);
-  static const _railSlideDuration = Duration(milliseconds: 200);
+  static const _runSetupSlideDuration = Duration(milliseconds: 200);
 
   late final TextEditingController _textController;
   String? _guardMessage;
@@ -154,8 +154,8 @@ class _EditorScreenState extends State<EditorScreen> {
           children: [
             EditorToolbar(
               controller: _controller,
-              railVisible: _controller.settingsPanelVisible,
-              onToggleRail: _controller.toggleSettingsPanel,
+              runSetupVisible: _controller.runSetupPanelVisible,
+              onToggleRunSetupPanel: _controller.toggleRunSetupPanel,
               pickDirectory: widget.pickDirectory,
               playingFull: _playingFull,
               onTogglePlayFull: _togglePlayFull,
@@ -188,8 +188,8 @@ class _EditorScreenState extends State<EditorScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   AnimatedSwitcher(
-                    duration: _railSlideDuration,
-                    reverseDuration: _railSlideDuration,
+                    duration: _runSetupSlideDuration,
+                    reverseDuration: _runSetupSlideDuration,
                     switchInCurve: Curves.easeInOut,
                     switchOutCurve: Curves.easeInOut,
                     transitionBuilder: (child, animation) => SlideTransition(
@@ -199,12 +199,14 @@ class _EditorScreenState extends State<EditorScreen> {
                       ).animate(animation),
                       child: child,
                     ),
-                    child: _controller.settingsPanelVisible
-                        ? SettingsPanel(
-                            key: const ValueKey('railVisible'),
+                    child: _controller.runSetupPanelVisible
+                        ? RunSetupPanel(
+                            key: const ValueKey('runSetupVisible'),
                             controller: _controller,
                           )
-                        : const SizedBox.shrink(key: ValueKey('railHidden')),
+                        : const SizedBox.shrink(
+                            key: ValueKey('runSetupHidden'),
+                          ),
                   ),
                   Expanded(child: _buildEditor()),
                 ],

@@ -10,21 +10,21 @@ import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
     show ApiKeySource;
-import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
+import 'package:tts_narrator/src/gui/run_setup/run_setup_panel.dart';
 import 'package:tts_narrator/src/gui/widgets/app_button.dart';
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 import 'package:tts_narrator/src/gui/widgets/segmented_control.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/l10n_test_support.dart';
-import '../support/settings_fixtures.dart' as fixtures;
+import '../support/run_setup_fixtures.dart' as fixtures;
 
 void main() {
   late Directory dir;
   late String configDir;
 
   setUp(() {
-    dir = Directory.systemTemp.createTempSync('tts_settings_panel_');
+    dir = Directory.systemTemp.createTempSync('tts_run_setup_panel_');
     configDir = '${dir.path}/cfg';
   });
 
@@ -85,14 +85,17 @@ void main() {
     });
   }
 
-  Future<void> pumpRail(WidgetTester tester, AppController controller) async {
+  Future<void> pumpRunSetupPanel(
+    WidgetTester tester,
+    AppController controller,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(1200, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: testLocalizationsDelegates,
         supportedLocales: testSupportedLocales,
-        home: Scaffold(body: SettingsPanel(controller: controller)),
+        home: Scaffold(body: RunSetupPanel(controller: controller)),
       ),
     );
   }
@@ -103,9 +106,9 @@ void main() {
     ) async {
       writeConfig({});
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
-      expect(find.byKey(const Key('settingsPanel')), findsOneWidget);
+      expect(find.byKey(const Key('runSetupPanel')), findsOneWidget);
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
       expect(find.byKey(const Key('voiceDropdown')), findsOneWidget);
       expect(find.byKey(const Key('voiceAdvancedDisclosure')), findsOneWidget);
@@ -166,7 +169,7 @@ void main() {
         },
       });
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
       await expandVoiceRaw(tester);
 
       await tester.tap(find.byKey(const Key('modelDropdown')));
@@ -194,7 +197,7 @@ void main() {
       });
       final c = makeController();
       c.setVoice('my_custom_voice');
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       await tester.tap(find.byKey(const Key('modelDropdown')));
       await tester.pumpAndSettle();
@@ -215,7 +218,7 @@ void main() {
         },
       });
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       await tester.tap(find.byKey(const Key('voiceDropdown')));
       await tester.pumpAndSettle();
@@ -229,7 +232,7 @@ void main() {
     testWidgets('typing a raw voice id updates the controller', (tester) async {
       writeConfig({});
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
       await expandVoiceRaw(tester);
 
       await tester.enterText(
@@ -250,7 +253,7 @@ void main() {
     ) async {
       writeConfig({});
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       expect(find.byKey(const Key('voiceRawField')), findsNothing);
       expect(find.text('Overrides selected alias'), findsOneWidget);
@@ -286,7 +289,7 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final c = makeController();
       c.changeModel('kokoro');
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       final control = tester.widget<SegmentedControl<VoiceGender>>(
         find.byKey(const Key('genderControl')),
@@ -358,7 +361,7 @@ void main() {
       // Kokoro declares "speed": true in its model file, so the rail offers
       // the slider for it; fish declares nothing and gets none.
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       expect(c.modelAlias, 'fish');
       expect(find.text('MODEL OPTIONS'), findsNothing);
@@ -396,7 +399,7 @@ void main() {
       });
       final c = makeController();
       c.changeModel('gemini');
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       // Untagged voices -> no filter in "Model & voice".
       expect(find.byKey(const Key('genderControl')), findsNothing);
@@ -419,7 +422,7 @@ void main() {
     ) async {
       writeFishConfigWith({'prompt_style': true});
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       // prompt_style derives the section, so the controls exist.
       expect(find.text('MODEL OPTIONS'), findsOneWidget);
@@ -459,7 +462,7 @@ void main() {
     ) async {
       writeFishConfig();
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       expect(find.text('MODEL OPTIONS'), findsNothing);
       expect(find.byKey(const Key('accentField')), findsNothing);
@@ -471,7 +474,7 @@ void main() {
     ) async {
       writeFishConfigWith({'speed': true});
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       expect(find.text('Speed'), findsOneWidget);
       expect(find.byKey(const Key('speedSlider')), findsOneWidget);
@@ -484,7 +487,7 @@ void main() {
     ) async {
       writeFishConfigWith({'prompt_style': true});
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       final field = tester.widget<CupertinoTextField>(
         find.descendant(
@@ -502,7 +505,7 @@ void main() {
     ) async {
       writeConfig({});
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       expect(c.sendWholeFile, isFalse);
       expect(find.byKey(const Key('wholeFileSwitch')), findsOneWidget);
@@ -516,7 +519,7 @@ void main() {
     ) async {
       writeConfig({});
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       await tester.tap(find.byKey(const Key('wholeFileSwitch')));
       await tester.pump();
@@ -541,7 +544,7 @@ void main() {
       writeConfig({});
       final c = makeController();
       c.setText(List.filled(maxWholeFileLength + 1, 'x').join());
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       expect(c.wholeFileAvailable, isFalse);
       expect(find.byKey(const Key('wholeFileSwitch')), findsNothing);
@@ -554,7 +557,7 @@ void main() {
     ) async {
       writeConfig({});
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       expect(c.minWords, 30);
       expect(find.byKey(const Key('minWordsSlider')), findsOneWidget);
@@ -565,7 +568,7 @@ void main() {
     ) async {
       writeConfig({});
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       expect(find.byKey(const Key('sampleLenField')), findsNothing);
 
@@ -596,7 +599,7 @@ void main() {
     ) async {
       writeConfig({});
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       await tester.tap(find.byKey(const Key('sampleSwitch')));
       await tester.pump();
@@ -619,7 +622,7 @@ void main() {
     testWidgets('the resume switch writes through', (tester) async {
       writeConfig({});
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       await tester.tap(find.byKey(const Key('resumeSwitch')));
       await tester.pump();
@@ -655,14 +658,14 @@ void main() {
     ) async {
       writeFishConfig(); // no providers block -> no config/env key.
       final c = makeController();
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       // Collapsed by default: the caption mirrors the status.
       expect(find.byKey(const Key('apiKeyField')), findsNothing);
       expect(find.text('Not set'), findsOneWidget);
       // The section header carries a tooltip explaining what the key is for.
       expect(
-        find.byTooltip(testL10n.gui_settings_apiKeySectionTooltip),
+        find.byTooltip(testL10n.gui_run_setup_apiKeySectionTooltip),
         findsOneWidget,
       );
 
@@ -672,7 +675,7 @@ void main() {
       // The empty field shows a placeholder so the input area stays visible
       // against the dark rail background.
       expect(
-        find.text(testL10n.gui_settings_apiKeyFieldPlaceholder),
+        find.text(testL10n.gui_run_setup_apiKeyFieldPlaceholder),
         findsOneWidget,
       );
       expect(find.text('Not set'), findsOneWidget);
@@ -685,7 +688,7 @@ void main() {
       (tester) async {
         writeFishConfig();
         final c = makeController();
-        await pumpRail(tester, c);
+        await pumpRunSetupPanel(tester, c);
         await expandApiKey(tester);
 
         await tester.enterText(
@@ -746,7 +749,7 @@ void main() {
         loader: UserVoiceConfigLoader(configDir: configDir),
         apiKeyStore: store,
       );
-      await pumpRail(tester, c);
+      await pumpRunSetupPanel(tester, c);
 
       // "Stored in keychain" shows as the collapsed caption.
       expect(find.text('Stored in keychain'), findsOneWidget);
@@ -778,9 +781,9 @@ void main() {
       final c = makeController();
       await tester.binding.setSurfaceSize(const Size(1200, 1800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.pumpWidget(testApp(home: SettingsPanel(controller: c)));
+      await tester.pumpWidget(testApp(home: RunSetupPanel(controller: c)));
 
-      expect(find.byKey(const Key('settingsPanel')), findsOneWidget);
+      expect(find.byKey(const Key('runSetupPanel')), findsOneWidget);
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
       // The default fish model declares no options -> no styling-only controls.
       expect(find.byKey(const Key('useCalmTagSwitch')), findsNothing);

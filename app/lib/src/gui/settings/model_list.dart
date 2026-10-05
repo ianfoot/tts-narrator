@@ -5,7 +5,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart' show TtsModelProfile;
 import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_section.dart';
-import 'config_labels.dart';
+import 'settings_labels.dart';
 
 /// Left-hand model list for the providers & voices screen.
 ///
@@ -34,10 +34,10 @@ class ModelList extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return AppSection(
-      title: l10n.gui_config_modelsTitle,
+      title: l10n.gui_settings_modelsTitle,
       child: models.isEmpty
           ? Text(
-              l10n.gui_config_noModels,
+              l10n.gui_settings_noModels,
               style: AppTokens.of(context).typography.body,
             )
           : Column(
@@ -45,7 +45,7 @@ class ModelList extends StatelessWidget {
               children: [
                 for (final model in models)
                   _ModelRow(
-                    label: configModelLabel(model, l10n),
+                    label: settingsModelLabel(model, l10n),
                     selected: model.alias == selectedAlias,
                     edited: hasOverlay(model.alias),
                     onTap: () => onSelect(model.alias),
@@ -92,7 +92,7 @@ class _ModelRow extends StatelessWidget {
           ),
           if (edited)
             Tooltip(
-              message: AppLocalizations.of(context).gui_config_editedBadgeTooltip,
+              message: AppLocalizations.of(context).gui_settings_editedBadgeTooltip,
               child: Icon(
                 CupertinoIcons.circle_fill,
                 size: 7,
@@ -103,7 +103,7 @@ class _ModelRow extends StatelessWidget {
       ),
     );
     if (!selected) return row;
-    // Selection is a left rail rather than a filled row so the accent dot keeps
+    // Selection is a left bar rather than a filled row so the accent dot keeps
     // reading as "this one has a local override" instead of competing with it.
     return DecoratedBox(
       decoration: BoxDecoration(

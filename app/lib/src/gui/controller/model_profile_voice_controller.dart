@@ -66,7 +66,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   /// Re-reads the config directory, keeping the selected model and voice.
   ///
-  /// Called after the preferences screen writes an overlay file, so the picker
+  /// Called after the settings screen writes an overlay file, so the picker
   /// shows what was just saved without an app restart. The model alias is
   /// re-resolved against the new config and falls back to the default model if
   /// the file it named is gone; the voice is then re-picked by **id** from
@@ -145,13 +145,13 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   /// The raw (unexpanded) `settings` block for [profile] straight from
   /// `providers/<name>.json`, or an empty map when the provider has no block.
-  /// The settings rail uses this to tell whether a key came from config (literal
+  /// The run-setup panel uses this to tell whether a key came from config (literal
   /// or `${ENV}` reference) vs the secure store.
   Map<String, String> rawProviderSettings(TtsModelProfile profile) =>
       _voiceConfig.providers[profile.provider]?.settings ?? const {};
 
   /// The environment the loader expands `${ENV}` references against. Exposed so
-  /// the settings rail resolves an `api_key` reference against the same map the
+  /// the run-setup panel resolves an `api_key` reference against the same map the
   /// run config is built from, rather than a second copy of the process
   /// environment.
   Map<String, String> get environment => _loader.environment;

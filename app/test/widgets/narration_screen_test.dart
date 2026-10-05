@@ -13,7 +13,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
 import '../support/l10n_test_support.dart';
-import '../support/settings_fixtures.dart' as fixtures;
+import '../support/run_setup_fixtures.dart' as fixtures;
 
 /// Speech client whose [synthesize] never returns: keeps a run in-flight so
 /// Cancel and the active-run Back confirm modal are meaningful.

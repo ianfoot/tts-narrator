@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tts_narrator/src/gui/config/config_screen.dart';
+import 'package:tts_narrator/src/gui/settings/settings_screen.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/l10n_test_support.dart';
-import '../support/settings_fixtures.dart' as fixtures;
+import '../support/run_setup_fixtures.dart' as fixtures;
 
 /// Widget tests for the providers & voices screen.
 ///
@@ -20,7 +20,7 @@ void main() {
   late String configDir;
 
   setUp(() {
-    dir = Directory.systemTemp.createTempSync('tts_config_screen_test_');
+    dir = Directory.systemTemp.createTempSync('tts_settings_screen_test_');
     configDir = '${dir.path}/cfg';
   });
 
@@ -66,11 +66,11 @@ void main() {
 
   AppController makeController() => fixtures.makeController(configDir);
 
-  Future<void> pumpConfigScreen(WidgetTester tester, AppController c) async {
+  Future<void> pumpSettingsScreen(WidgetTester tester, AppController c) async {
     await tester.binding.setSurfaceSize(const Size(1200, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      testApp(home: ConfigScreen(controller: c)),
+      testApp(home: SettingsScreen(controller: c)),
     );
     await tester.pumpAndSettle();
   }
@@ -80,9 +80,9 @@ void main() {
       tester,
     ) async {
       writeEditableConfig();
-      await pumpConfigScreen(tester, makeController());
+      await pumpSettingsScreen(tester, makeController());
 
-      expect(find.text('Providers & Voices'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
       // The metadata section header is upper-cased by AppSection; the model list
       // row beside it keeps the display name and appends the alias, so the two
       // are told apart here by more than a substring.
@@ -108,7 +108,7 @@ void main() {
       fixtures.writeConfig(configDir, {
         'models': <String, Object?>{},
       });
-      await pumpConfigScreen(tester, makeController());
+      await pumpSettingsScreen(tester, makeController());
 
       // Both panes say it: the list has nothing to list, and the editor pane
       // has no model to show. Two is the point — one message in a pane that
@@ -125,7 +125,7 @@ void main() {
       tester,
     ) async {
       writeLockedConfig();
-      await pumpConfigScreen(tester, makeController());
+      await pumpSettingsScreen(tester, makeController());
 
       expect(find.byKey(const Key('addVoiceButton')), findsNothing);
       expect(find.textContaining('voice list is fixed'), findsOneWidget);
@@ -138,7 +138,7 @@ void main() {
     ) async {
       writeEditableConfig();
       final c = makeController();
-      await pumpConfigScreen(tester, c);
+      await pumpSettingsScreen(tester, c);
 
       await tester.tap(find.byKey(const Key('addVoiceButton')));
       await tester.pumpAndSettle();
@@ -169,7 +169,7 @@ void main() {
 
     testWidgets('a cancelled dialog writes nothing', (tester) async {
       writeEditableConfig();
-      await pumpConfigScreen(tester, makeController());
+      await pumpSettingsScreen(tester, makeController());
 
       await tester.tap(find.byKey(const Key('addVoiceButton')));
       await tester.pumpAndSettle();
@@ -185,7 +185,7 @@ void main() {
 
     testWidgets('a blank row is refused and no file is written', (tester) async {
       writeEditableConfig();
-      await pumpConfigScreen(tester, makeController());
+      await pumpSettingsScreen(tester, makeController());
 
       await tester.tap(find.byKey(const Key('addVoiceButton')));
       await tester.pumpAndSettle();
@@ -201,7 +201,7 @@ void main() {
       tester,
     ) async {
       writeEditableConfig();
-      await pumpConfigScreen(tester, makeController());
+      await pumpSettingsScreen(tester, makeController());
 
       await tester.tap(
         find.byKey(
@@ -222,7 +222,7 @@ void main() {
 
     testWidgets('a non-default voice can be removed', (tester) async {
       writeEditableConfig();
-      await pumpConfigScreen(tester, makeController());
+      await pumpSettingsScreen(tester, makeController());
 
       await tester.tap(
         find.byKey(
@@ -247,7 +247,7 @@ void main() {
 
     testWidgets('renaming a voice carries the default across', (tester) async {
       writeEditableConfig();
-      await pumpConfigScreen(tester, makeController());
+      await pumpSettingsScreen(tester, makeController());
 
       await tester.tap(
         find.byKey(
@@ -272,7 +272,7 @@ void main() {
       tester,
     ) async {
       writeEditableConfig();
-      await pumpConfigScreen(tester, makeController());
+      await pumpSettingsScreen(tester, makeController());
 
       await tester.tap(
         find.byKey(
@@ -289,7 +289,7 @@ void main() {
   group('overlay state', () {
     testWidgets('an untouched model shows no revert control', (tester) async {
       writeEditableConfig();
-      await pumpConfigScreen(tester, makeController());
+      await pumpSettingsScreen(tester, makeController());
 
       expect(find.byKey(const Key('revertModelButton')), findsNothing);
     });
@@ -299,7 +299,7 @@ void main() {
     ) async {
       writeEditableConfig();
       final c = makeController();
-      await pumpConfigScreen(tester, c);
+      await pumpSettingsScreen(tester, c);
 
       await tester.tap(find.byKey(const Key('addVoiceButton')));
       await tester.pumpAndSettle();
@@ -350,7 +350,7 @@ void main() {
         storeMessage = e.message;
       }
 
-      await pumpConfigScreen(tester, makeController());
+      await pumpSettingsScreen(tester, makeController());
 
       // The store's own words, not a paraphrase: it names the file and the
       // syntax error, which is what the user has to go and fix.
@@ -394,7 +394,7 @@ void main() {
           'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
         },
       });
-      await pumpConfigScreen(tester, makeController());
+      await pumpSettingsScreen(tester, makeController());
 
       // Refused on fish, so the message belongs to fish.
       await tester.tap(

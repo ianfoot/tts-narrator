@@ -13,7 +13,7 @@ import '../theme/app_tokens.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_dropdown.dart';
 import '../widgets/app_icon_button.dart';
-import 'config_labels.dart';
+import 'settings_labels.dart';
 import 'voice_dialog.dart';
 
 /// The voice list for one model: label, provider id, gender, and the default
@@ -91,7 +91,7 @@ class _VoiceTableState extends State<VoiceTable> {
     final l10n = AppLocalizations.of(context);
     final draft = await showVoiceDialog(
       context,
-      title: l10n.gui_config_voiceDialogAddTitle,
+      title: l10n.gui_settings_voiceDialogAddTitle,
     );
     if (draft == null) return;
     _after(
@@ -108,7 +108,7 @@ class _VoiceTableState extends State<VoiceTable> {
     final l10n = AppLocalizations.of(context);
     final draft = await showVoiceDialog(
       context,
-      title: l10n.gui_config_voiceDialogEditTitle,
+      title: l10n.gui_settings_voiceDialogEditTitle,
       initialLabel: voice.label,
       initialId: voice.id,
       initialGender: voice.gender,
@@ -179,12 +179,12 @@ class _VoiceTableState extends State<VoiceTable> {
               key: const Key('addVoiceButton'),
               icon: const Icon(CupertinoIcons.add, size: 14),
               onPressed: _add,
-              child: Text(l10n.gui_config_addVoice),
+              child: Text(l10n.gui_settings_addVoice),
             ),
           )
         else
           Text(
-            l10n.gui_config_voicesLockedCaption(widget.alias),
+            l10n.gui_settings_voicesLockedCaption(widget.alias),
             style: tokens.typography.body.copyWith(
               color: tokens.colors.textSecondary,
             ),
@@ -231,7 +231,7 @@ class _Unreadable extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n.gui_config_voicesUnreadableTitle(alias),
+          l10n.gui_settings_voicesUnreadableTitle(alias),
           style: tokens.typography.control.copyWith(
             color: tokens.colors.textPrimary,
           ),
@@ -247,7 +247,7 @@ class _Unreadable extends StatelessWidget {
         if (hasOverlay) ...[
           const SizedBox(height: 6),
           Text(
-            l10n.gui_config_voicesUnreadableRevert,
+            l10n.gui_settings_voicesUnreadableRevert,
             style: tokens.typography.body.copyWith(
               color: tokens.colors.textSecondary,
             ),
@@ -293,11 +293,11 @@ class _HeaderRow extends StatelessWidget {
       child: Row(
         children: [
           fixedCell(_RowMetrics.defaultMark, ''),
-          flexCell(l10n.gui_config_columnLabel),
+          flexCell(l10n.gui_settings_columnLabel),
           const SizedBox(width: AppMetrics.segmentGap),
-          flexCell(l10n.gui_config_columnId),
+          flexCell(l10n.gui_settings_columnId),
           const SizedBox(width: AppMetrics.segmentGap),
-          fixedCell(_RowMetrics.gender, l10n.gui_config_columnGender),
+          fixedCell(_RowMetrics.gender, l10n.gui_settings_columnGender),
           const SizedBox(width: AppMetrics.segmentGap),
           fixedCell(_RowMetrics.actions, ''),
         ],
@@ -370,12 +370,12 @@ class _VoiceRow extends StatelessWidget {
                 ? AppDropdown<VoiceGender?>(
                     key: Key('voiceGender_${voice.id}'),
                     value: voice.gender,
-                    hint: l10n.gui_config_genderAny,
-                    items: configGenderItems(l10n),
+                    hint: l10n.gui_settings_genderAny,
+                    items: settingsGenderItems(l10n),
                     onChanged: onRetag,
                   )
                 : Text(
-                    voice.gender.configLabel(l10n),
+                    voice.gender.settingsLabel(l10n),
                     style: tokens.typography.control.copyWith(
                       color: colors.textSecondary,
                     ),
@@ -392,13 +392,13 @@ class _VoiceRow extends StatelessWidget {
                       AppIconButton(
                         key: Key('editVoice_${voice.id}'),
                         icon: const Icon(CupertinoIcons.pencil, size: 14),
-                        tooltip: l10n.gui_config_editVoice,
+                        tooltip: l10n.gui_settings_editVoice,
                         onPressed: onEdit,
                       ),
                       AppIconButton(
                         key: Key('removeVoice_${voice.id}'),
                         icon: const Icon(CupertinoIcons.minus, size: 14),
-                        tooltip: l10n.gui_config_removeVoice,
+                        tooltip: l10n.gui_settings_removeVoice,
                         onPressed: onRemove,
                       ),
                     ],
@@ -440,14 +440,14 @@ class _DefaultMark extends StatelessWidget {
     );
     if (!editable) {
       if (!isDefault) return const SizedBox.shrink();
-      return Tooltip(message: l10n.gui_config_isDefault, child: icon);
+      return Tooltip(message: l10n.gui_settings_isDefault, child: icon);
     }
     return AppIconButton(
       key: Key('defaultVoiceMark_$voiceId'),
       icon: icon,
       tooltip: isDefault
-          ? l10n.gui_config_isDefault
-          : l10n.gui_config_setDefault,
+          ? l10n.gui_settings_isDefault
+          : l10n.gui_settings_setDefault,
       onPressed: isDefault ? null : onPressed,
     );
   }

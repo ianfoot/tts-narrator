@@ -3,12 +3,12 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
-import 'package:tts_narrator/src/gui/settings/model_voice_section.dart';
+import 'package:tts_narrator/src/gui/run_setup/model_voice_section.dart';
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 import 'package:tts_narrator/src/gui/widgets/segmented_control.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
-import '../support/settings_fixtures.dart';
+import '../support/run_setup_fixtures.dart';
 
 void main() {
   late Directory dir;
@@ -24,7 +24,7 @@ void main() {
   });
 
   Future<void> pumpSection(WidgetTester tester, AppController c) =>
-      pumpSettingsSection(tester, ModelVoiceSection(controller: c));
+      pumpRunSetupSection(tester, ModelVoiceSection(controller: c));
 
   group('boot', () {
     testWidgets('boots with the model and voice pickers and a collapsed '

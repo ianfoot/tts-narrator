@@ -7,9 +7,9 @@ import '../theme/app_tokens.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/disclosure.dart';
-import 'settings_labels.dart';
+import 'run_setup_labels.dart';
 
-/// The "API key" section of the settings rail: where the active model's key
+/// The "API key" section of the run-setup panel: where the active model's key
 /// comes from, a masked field to enter a new one, and Save / Remove buttons
 /// backed by the OS secure store. The stored key is a fallback only — a key
 /// already present in config.json or the environment keeps precedence (see
@@ -72,7 +72,7 @@ class _ApiKeySectionState extends State<ApiKeySection> {
     try {
       await _controller.saveApiKey(_apiKey.text);
     } catch (_) {
-      setState(() => _apiKeyError = _l10n.gui_settings_apiKeyStoreError);
+      setState(() => _apiKeyError = _l10n.gui_run_setup_apiKeyStoreError);
       return;
     }
     _apiKey.clear();
@@ -84,7 +84,7 @@ class _ApiKeySectionState extends State<ApiKeySection> {
     try {
       await _controller.removeApiKey();
     } catch (_) {
-      setState(() => _apiKeyError = _l10n.gui_settings_apiKeyStoreError);
+      setState(() => _apiKeyError = _l10n.gui_run_setup_apiKeyStoreError);
       return;
     }
     _apiKey.clear();
@@ -101,15 +101,15 @@ class _ApiKeySectionState extends State<ApiKeySection> {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Disclosure(
         key: const Key('apiKeyDisclosure'),
-        label: _l10n.gui_settings_apiKeySection,
-        tooltip: _l10n.gui_settings_apiKeySectionTooltip,
+        label: _l10n.gui_run_setup_apiKeySection,
+        tooltip: _l10n.gui_run_setup_apiKeySectionTooltip,
         caption: _controller.apiKeySource.apiKeyStatusLabel(_l10n),
         expanded: _apiKeyExpanded,
         onToggle: (value) => setState(() => _apiKeyExpanded = value),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            settingsFieldLabel(_tokens, _l10n.gui_settings_apiKeyStatusLabel),
+            runSetupFieldLabel(_tokens, _l10n.gui_run_setup_apiKeyStatusLabel),
             Text(
               _controller.apiKeySource.apiKeyStatusLabel(_l10n),
               // Neutral whatever the state: "Not set" is a fact, not a fault.
@@ -122,10 +122,10 @@ class _ApiKeySectionState extends State<ApiKeySection> {
             const SizedBox(height: 12),
             AppTextField(
               key: const Key('apiKeyField'),
-              tooltip: _l10n.gui_settings_apiKeyFieldTooltip,
+              tooltip: _l10n.gui_run_setup_apiKeyFieldTooltip,
               controller: _apiKey,
               obscureText: true,
-              hintText: _l10n.gui_settings_apiKeyFieldPlaceholder,
+              hintText: _l10n.gui_run_setup_apiKeyFieldPlaceholder,
               hintStyle: _tokens.typography.body.copyWith(
                 color: _tokens.colors.textTertiary,
               ),
@@ -137,14 +137,14 @@ class _ApiKeySectionState extends State<ApiKeySection> {
                 AppButton(
                   key: const Key('apiKeySaveButton'),
                   onPressed: () => _saveApiKey(),
-                  child: Text(_l10n.gui_settings_apiKeySave),
+                  child: Text(_l10n.gui_run_setup_apiKeySave),
                 ),
                 const SizedBox(width: 8),
                 AppButton(
                   key: const Key('apiKeyRemoveButton'),
                   style: AppButtonStyle.outlined,
                   onPressed: _controller.hasStoredApiKey ? _removeApiKey : null,
-                  child: Text(_l10n.gui_settings_apiKeyRemove),
+                  child: Text(_l10n.gui_run_setup_apiKeyRemove),
                 ),
               ],
             ),

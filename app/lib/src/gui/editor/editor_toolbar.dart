@@ -18,8 +18,8 @@ class EditorToolbar extends StatefulWidget {
   const EditorToolbar({
     super.key,
     required this.controller,
-    required this.railVisible,
-    required this.onToggleRail,
+    required this.runSetupVisible,
+    required this.onToggleRunSetupPanel,
     required this.pickDirectory,
     this.playingFull = false,
     required this.onTogglePlayFull,
@@ -28,8 +28,8 @@ class EditorToolbar extends StatefulWidget {
   });
 
   final AppController controller;
-  final bool railVisible;
-  final VoidCallback onToggleRail;
+  final bool runSetupVisible;
+  final VoidCallback onToggleRunSetupPanel;
   final Future<String?> Function()? pickDirectory;
   final bool playingFull;
   final VoidCallback onTogglePlayFull;
@@ -249,10 +249,10 @@ class _EditorToolbarState extends State<EditorToolbar> {
             mainAxisSize: MainAxisSize.min,
             children: [
               AppIconButton(
-                key: const Key('railToggleButton'),
-                tooltip: _l10n.gui_editor_toolbar_showHideSettings,
+                key: const Key('runSetupToggleButton'),
+                tooltip: _l10n.gui_editor_toolbar_showHideRunSetup,
                 icon: const Icon(CupertinoIcons.sidebar_left),
-                onPressed: widget.onToggleRail,
+                onPressed: widget.onToggleRunSetupPanel,
               ),
               const SizedBox(width: 6),
               _buildAppearanceButton(tokens),

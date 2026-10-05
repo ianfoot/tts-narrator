@@ -10,7 +10,7 @@ import 'package:tts_narrator/src/gui/platform/platform_detection.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 
 import '../support/l10n_test_support.dart';
-import '../support/settings_fixtures.dart' as fixtures;
+import '../support/run_setup_fixtures.dart' as fixtures;
 
 /// A throwaway controller over a temp config dir, mirroring the macOS menu
 /// test so the bar is exercised against a real loaded model.
@@ -212,16 +212,16 @@ void main() {
       expect(picked, 1);
     });
 
-    testWidgets('Toggle Settings Panel dispatches its command slot', (
+    testWidgets('Toggle Run Setup Panel dispatches its command slot', (
       tester,
     ) async {
       final controller = await makeController();
       var toggled = 0;
-      controller.commands.onToggleSettingsPanel = () => toggled++;
+      controller.commands.onToggleRunSetupPanel = () => toggled++;
       await pumpBar(tester, controller);
       await openMenu(tester, 'View');
 
-      await tester.tap(find.text('Toggle Settings Panel'));
+      await tester.tap(find.text('Toggle Run Setup Panel'));
       await tester.pumpAndSettle();
 
       expect(toggled, 1);

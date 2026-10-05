@@ -99,7 +99,7 @@ class SettingsController extends ChangeNotifier {
   /// The persistent preference store; null when the host has none (tests).
   final SharedPreferences? _prefs;
 
-  /// The OS-secure key store backing the API-key section of the settings rail;
+  /// The OS-secure key store backing the API-key section of the run-setup panel;
   /// null when the host injects none (tests) — the key simply never falls back
   /// to secure storage.
   final ApiKeyStore? apiKeyStore;
@@ -111,18 +111,18 @@ class SettingsController extends ChangeNotifier {
   /// narrator-gender passage-prefix rewrite for prompt-style models).
   final ModelProfileVoiceController _model;
 
-  // --- Settings panel -----------------------------------------------
+  // --- Run setup panel -----------------------------------------------
 
-  bool _settingsPanelVisible = true;
+  bool _runSetupPanelVisible = true;
 
-  /// Whether the settings rail is shown on the editor. Driven by the toolbar
+  /// Whether the run-setup panel is shown on the editor. Driven by the toolbar
   /// toggle and, on macOS, the View menu command, so both dispatch through one
   /// piece of state.
-  bool get settingsPanelVisible => _settingsPanelVisible;
+  bool get runSetupPanelVisible => _runSetupPanelVisible;
 
-  /// Flips [settingsPanelVisible] and notifies listeners.
-  void toggleSettingsPanel() {
-    _settingsPanelVisible = !_settingsPanelVisible;
+  /// Flips [runSetupPanelVisible] and notifies listeners.
+  void toggleRunSetupPanel() {
+    _runSetupPanelVisible = !_runSetupPanelVisible;
     notifyListeners();
   }
 
@@ -187,7 +187,7 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Speech-rate multiplier (1.0 = normal), clamped to the settings rail's
+  /// Speech-rate multiplier (1.0 = normal), clamped to the run-setup panel's
   /// 0.25-2.0 slider range. Sent to providers via `NarrationConfig.speed`.
   double get speed => _speed;
 
@@ -198,7 +198,7 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Minimum words per segment (clamped to the settings rail's 10-100
+  /// Minimum words per segment (clamped to the run-setup panel's 10-100
   /// slider range). Changing it revises the live segment plan and estimate the
   /// editor shows.
   int get minWords => _minWords;
@@ -211,7 +211,7 @@ class SettingsController extends ChangeNotifier {
   }
 
   /// Whether to narrate the whole document as a single TTS call instead of
-  /// segmenting it. When true, [minWords] is ignored and the settings rail
+  /// segmenting it. When true, [minWords] is ignored and the run-setup panel
   /// hides the "Min words per segment" control.
   bool get sendWholeFile => _sendWholeFile;
 
@@ -227,7 +227,7 @@ class SettingsController extends ChangeNotifier {
       _document.text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
 
   /// Whether the current document is small enough for whole-file narration
-  /// (see `maxWholeFileLength` in the core). The settings rail hides the "Send
+  /// (see `maxWholeFileLength` in the core). The run-setup panel hides the "Send
   /// whole file" toggle when false (documents over the cap).
   bool get wholeFileAvailable => _wholeFileText.length <= maxWholeFileLength;
 
@@ -357,7 +357,7 @@ class SettingsController extends ChangeNotifier {
   }
 
   /// Where the active model's API key comes from, mirroring the precedence in
-  /// [_resolveApiKey]. Drives the settings rail's status line.
+  /// [_resolveApiKey]. Drives the run-setup panel's status line.
   ///
   /// A `${ENV}` reference the runtime cannot fulfil does NOT count as "set via
   /// the environment" — it resolves to no key, so the status has to agree with

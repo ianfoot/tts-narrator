@@ -7,7 +7,7 @@ import '../theme/app_tokens.dart';
 import '../widgets/app_section.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/segmented_control.dart';
-import 'settings_labels.dart';
+import 'run_setup_labels.dart';
 import 'speed_widget.dart';
 
 /// The "Model options" section: renders the active model's plugin-declared
@@ -92,7 +92,7 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
         .toList();
     if (options.isEmpty) return const SizedBox.shrink();
     return AppSection(
-      title: l10n.gui_settings_modelOptionsSection,
+      title: l10n.gui_run_setup_modelOptionsSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -115,15 +115,15 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              settingsFieldLabel(_tokens, option.label),
+              runSetupFieldLabel(_tokens, option.label),
               const SizedBox(height: 6),
               SegmentedControl<VoiceGender>(
                 key: const Key('genderOptionSegmented'),
                 value: g,
                 items: [
-                  (VoiceGender.neutral, l10n.gui_settings_genderAny),
-                  (VoiceGender.female, l10n.gui_settings_genderFemale),
-                  (VoiceGender.male, l10n.gui_settings_genderMale),
+                  (VoiceGender.neutral, l10n.gui_run_setup_genderAny),
+                  (VoiceGender.female, l10n.gui_run_setup_genderFemale),
+                  (VoiceGender.male, l10n.gui_run_setup_genderMale),
                 ],
                 onChanged: (v) => _controller.voiceGenderFilter = v,
               ),
@@ -135,13 +135,13 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            settingsFieldLabel(_tokens, option.label),
+            runSetupFieldLabel(_tokens, option.label),
             AppTextField(
               key: Key('${option.key}Field'),
               tooltip: switch (option.key) {
-                'accent' => l10n.gui_settings_accentFieldTooltip,
-                'style' => l10n.gui_settings_styleFieldTooltip,
-                'passagePrefix' => l10n.gui_settings_prefixFieldTooltip,
+                'accent' => l10n.gui_run_setup_accentFieldTooltip,
+                'style' => l10n.gui_run_setup_styleFieldTooltip,
+                'passagePrefix' => l10n.gui_run_setup_prefixFieldTooltip,
                 _ => null,
               },
               controller: _modelOptionController(option.key),

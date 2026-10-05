@@ -92,12 +92,12 @@ opaque: adding a key core must understand means touching
 `provider_settings.dart` and the client, not just the config.
 
 A key can come from three places, in this order: the OS keychain (what the user
-typed into the Settings rail), an `api_key` literal in the provider block, then an
+typed into the Run Setup panel), an `api_key` literal in the provider block, then an
 `api_key` `${VAR}` reference. Keychain first on purpose — the provider file is
 downloaded from a remote, so a key in it may belong to someone else, while a
 keychain entry was typed deliberately by this user. Note a GUI app launched from
 the Finder doesn't inherit a shell's environment, so for double-click use either
-enter the key in Settings or set `api_key` literally.
+enter the key in the Run Setup panel or set `api_key` literally.
 
 A missing key is never an error: a null `apiKey` just means the request carries
 no `Authorization` header and the service decides. A 401/403 is the only place
@@ -157,7 +157,7 @@ Merge rules, in the order they matter:
   a parse failure per file and keeps the downloaded parse, so a half-written
   override costs the user their edits rather than the model. Everything the
   loader complains about is returned as a warning string, and the overlay's are
-  prefixed `Overlay: ` so the config screen can show the provenance.
+  prefixed `Overlay: ` so the settings screen can show the provenance.
 - **The final "provider lists model X but models/X.json is missing" pass runs over
   the merged provider list**, so an alias is reported once, not once per layer.
 
@@ -292,19 +292,19 @@ first segment.
 - Windows is planned but not yet scaffolded; the Linux runner is scaffolded but
   never compiled in CI, so changes to `app/linux/` are unverified by
   `flutter analyze`/`flutter test`.
-- `app/lib/src/gui/config/` is the providers-and-voices screen, pushed as a
-  full-screen route from the `⌘,` / `Ctrl+,` preferences item (and the macOS App
-  menu's "Preferences…", which had been dispatching into a null slot until this).
-  A full-screen route rather than a section in the 320px settings rail, because a
+- `app/lib/src/gui/settings/` is the providers-and-voices screen, pushed as a
+  full-screen route from the `⌘,` / `Ctrl+,` settings item (and the macOS App
+  menu's "Settings…", which had been dispatching into a null slot until this).
+  A full-screen route rather than a section in the 320px run-setup panel, because a
   voice table with an id and a gender column does not fit that width.
-  `ConfigScreen` → `ModelList` + `ModelEditor` → `VoiceTable` → `voice_dialog.dart`,
-  with `config_labels.dart` holding the view's display strings (the extension member
-  is `configLabel`, not `label`, because `VoiceGender.label` already exists in core
+  `SettingsScreen` → `ModelList` + `ModelEditor` → `VoiceTable` → `voice_dialog.dart`,
+  with `settings_labels.dart` holding the view's display strings (the extension member
+  is `settingsLabel`, not `label`, because `VoiceGender.label` already exists in core
   and the instance member would win).
   Two things it depends on: the store is reached through
   `AppController.voiceConfigStore` (so the controller layer, not the widget, owns
   the config directory), and every write ends in `controller.reloadConfig()` so
-  the settings rail's picker and the "edited" dots both refresh. The screen's
+  the run-setup panel's picker and the "edited" dots both refresh. The screen's
   selected model is local state initialised from `controller.modelAlias` — browsing
   a config must not change what the narrator speaks with. `AppRoot` guards against
   stacking two copies with a `_configOpen` flag, and both it and the run view now
@@ -467,11 +467,11 @@ title.
   provider's `models` list); there is no compiled-in bootstrap for any model.
 - Per-model capabilities are declared in the model file, never sniffed from the
   model id. `prompt_style: true` derives the "Narrator gender" / accent / style /
-  passage-prefix controls in the settings rail's Model options; `speed: true`
+  passage-prefix controls in the run-setup panel's Model options; `speed: true`
   derives the speed slider and is what puts `speed` in the request body. A
   model declaring neither shows no model-options section at all. Both are
   computed by `ModelUiSpec.forProfile`, so adding a vendor can never strand the
-  settings rail.
+  run-setup panel.
 - Multilingual models opt in with `sends_language: true`, which is what puts
   `lang_code` in the request body — the same gating shape as `speed`. The codes
   themselves are data: `languages` is a `{code: label}` table (its declaration

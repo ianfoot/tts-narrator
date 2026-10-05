@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
-import 'package:tts_narrator/src/gui/settings/model_options_section.dart';
+import 'package:tts_narrator/src/gui/run_setup/model_options_section.dart';
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
-import '../support/settings_fixtures.dart';
+import '../support/run_setup_fixtures.dart';
 
 void main() {
   late Directory dir;
@@ -23,7 +23,7 @@ void main() {
   });
 
   Future<void> pumpSection(WidgetTester tester, AppController c) =>
-      pumpSettingsSection(tester, ModelOptionsSection(controller: c));
+      pumpRunSetupSection(tester, ModelOptionsSection(controller: c));
 
   /// Writes a single `fish` model with the given extra model-file keys, so a
   /// test can opt a model into the prompt-style and/or speed capabilities

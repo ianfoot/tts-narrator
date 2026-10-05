@@ -7,9 +7,9 @@ import '../widgets/app_section.dart';
 import '../widgets/app_slider.dart';
 import '../widgets/app_switch.dart';
 import '../widgets/app_text_field.dart';
-import 'settings_labels.dart';
+import 'run_setup_labels.dart';
 
-/// The "Run" section of the settings rail: whole-file toggle, the minimum
+/// The "Run" section of the run-setup panel: whole-file toggle, the minimum
 /// words-per-segment slider (hidden while whole-file is on), sample mode with
 /// its inline segment count, and the skip-completed-segments toggle.
 class RunSection extends StatefulWidget {
@@ -98,7 +98,7 @@ class _RunSectionState extends State<RunSection> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return AppSection(
-      title: l10n.gui_settings_runSection,
+      title: l10n.gui_run_setup_runSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -108,14 +108,14 @@ class _RunSectionState extends State<RunSection> {
               child: Row(
                 children: [
                   Expanded(
-                    child: settingsControlLabel(
+                    child: runSetupControlLabel(
                       _tokens,
-                      l10n.gui_settings_sendWholeFile,
+                      l10n.gui_run_setup_sendWholeFile,
                     ),
                   ),
                   AppSwitch(
                     key: const Key('wholeFileSwitch'),
-                    tooltip: l10n.gui_settings_sendWholeFileTooltip,
+                    tooltip: l10n.gui_run_setup_sendWholeFileTooltip,
                     value: _controller.sendWholeFile,
                     onChanged: (v) => _controller.sendWholeFile = v,
                   ),
@@ -123,14 +123,14 @@ class _RunSectionState extends State<RunSection> {
               ),
             ),
           if (!_controller.sendWholeFile) ...[
-            settingsFieldLabel(_tokens, l10n.gui_settings_minWordsLabel),
+            runSetupFieldLabel(_tokens, l10n.gui_run_setup_minWordsLabel),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: AppSlider(
                     key: const Key('minWordsSlider'),
-                    tooltip: l10n.gui_settings_minWordsSliderTooltip,
+                    tooltip: l10n.gui_run_setup_minWordsSliderTooltip,
                     value: _controller.minWords.toDouble(),
                     onChanged: _onMinWordsChanged,
                     min: 10,
@@ -161,14 +161,14 @@ class _RunSectionState extends State<RunSection> {
             child: Row(
               children: [
                 Expanded(
-                  child: settingsControlLabel(
+                  child: runSetupControlLabel(
                     _tokens,
-                    l10n.gui_settings_sampleMode,
+                    l10n.gui_run_setup_sampleMode,
                   ),
                 ),
                 AppSwitch(
                   key: const Key('sampleSwitch'),
-                  tooltip: l10n.gui_settings_sampleModeTooltip,
+                  tooltip: l10n.gui_run_setup_sampleModeTooltip,
                   value: _sampleOn,
                   onChanged: _onSampleOnChanged,
                 ),
@@ -182,7 +182,7 @@ class _RunSectionState extends State<RunSection> {
                 children: [
                   Expanded(
                     child: Text(
-                      l10n.gui_settings_narrateFirstSegments,
+                      l10n.gui_run_setup_narrateFirstSegments,
                       style: _tokens.typography.body,
                     ),
                   ),
@@ -191,7 +191,7 @@ class _RunSectionState extends State<RunSection> {
                     width: 48,
                     child: AppTextField(
                       key: const Key('sampleLenField'),
-                      tooltip: l10n.gui_settings_sampleLenFieldTooltip,
+                      tooltip: l10n.gui_run_setup_sampleLenFieldTooltip,
                       controller: _sampleLen,
                       onChanged: _onSampleLenChanged,
                       keyboardType: TextInputType.number,
@@ -205,14 +205,14 @@ class _RunSectionState extends State<RunSection> {
             child: Row(
               children: [
                 Expanded(
-                  child: settingsControlLabel(
+                  child: runSetupControlLabel(
                     _tokens,
-                    l10n.gui_settings_skipCompletedSegments,
+                    l10n.gui_run_setup_skipCompletedSegments,
                   ),
                 ),
                 AppSwitch(
                   key: const Key('resumeSwitch'),
-                  tooltip: l10n.gui_settings_resumeTooltip,
+                  tooltip: l10n.gui_run_setup_resumeTooltip,
                   value: _controller.resume,
                   onChanged: (v) => _controller.resume = v,
                 ),

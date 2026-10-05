@@ -231,14 +231,14 @@ class LinuxMenuBar extends StatelessWidget {
             : null,
       ),
       const _Separator(),
-      // Preferences is a document-neutral command, so it sits in its own group
+      // Settings is a document-neutral command, so it sits in its own group
       // between the document actions and the app-level one (Quit) rather than
       // being mixed in with Open/Save.
       _item(
         tokens,
-        l10n.gui_menu_preferences,
+        l10n.gui_menu_settings,
         accelerator: ',',
-        onSelected: () => controller.commands.onPreferences?.call(),
+        onSelected: () => controller.commands.onSettings?.call(),
       ),
       const _Separator(),
       _item(tokens, l10n.gui_menu_quit, accelerator: 'Q', onSelected: quitApp),
@@ -321,9 +321,9 @@ class LinuxMenuBar extends StatelessWidget {
     ),
     _item(
       tokens,
-      l10n.gui_menu_toggleSettingsPanel,
+      l10n.gui_menu_toggleRunSetupPanel,
       accelerator: '\\',
-      onSelected: () => controller.commands.onToggleSettingsPanel?.call(),
+      onSelected: () => controller.commands.onToggleRunSetupPanel?.call(),
     ),
   ];
 

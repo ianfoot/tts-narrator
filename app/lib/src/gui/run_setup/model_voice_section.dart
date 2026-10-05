@@ -7,10 +7,10 @@ import '../theme/app_tokens.dart';
 import '../widgets/app_dropdown.dart';
 import '../widgets/app_section.dart';
 import 'advanced_voice_widget.dart';
-import 'settings_labels.dart';
+import 'run_setup_labels.dart';
 import 'voice_picker_widget.dart';
 
-/// The "Model & voice" section of the settings rail: the active model picker
+/// The "Model & voice" section of the run-setup panel: the active model picker
 /// composing the voice picker and the collapsible advanced raw voice-id field.
 ///
 /// The voice and advanced-voice widgets are extracted so per-model panels can
@@ -55,14 +55,14 @@ class _ModelVoiceSectionState extends State<ModelVoiceSection> {
     final l10n = AppLocalizations.of(context);
     final tokens = _tokens;
     return AppSection(
-      title: l10n.gui_settings_modelVoiceSection,
+      title: l10n.gui_run_setup_modelVoiceSection,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          settingsFieldLabel(tokens, l10n.gui_settings_modelLabel),
+          runSetupFieldLabel(tokens, l10n.gui_run_setup_modelLabel),
           AppDropdown<String>(
             key: const Key('modelDropdown'),
-            tooltip: l10n.gui_settings_modelDropdownTooltip,
+            tooltip: l10n.gui_run_setup_modelDropdownTooltip,
             value: _controller.modelAlias,
             items: _modelItems(l10n),
             onChanged: (alias) => _controller.changeModel(alias),
@@ -81,7 +81,7 @@ class _ModelVoiceSectionState extends State<ModelVoiceSection> {
     for (final p in effectiveModels(_controller.voiceConfig))
       (
         p.alias,
-        p.displayName ?? l10n.gui_settings_modelDisplayFallback(p.alias, p.id),
+        p.displayName ?? l10n.gui_run_setup_modelDisplayFallback(p.alias, p.id),
       ),
   ];
 }

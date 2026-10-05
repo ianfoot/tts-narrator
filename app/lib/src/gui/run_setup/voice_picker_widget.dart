@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
-import '../controller/app_controller.dart';
 import '../../../l10n/app_localizations.dart';
+import '../controller/app_controller.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_dropdown.dart';
 import '../widgets/segmented_control.dart';
-import 'settings_labels.dart';
+import 'run_setup_labels.dart';
 
-/// The voice half of the settings rail: an optional language dropdown and
+/// The voice picker of the run-setup panel: an optional language dropdown and
 /// narrator-gender filter (only when the active model declares them) above the
 /// voice alias picker. Extracted from the model section so per-model panels can
 /// compose it independently of the model picker.
@@ -29,15 +29,15 @@ class VoicePickerWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        settingsFieldLabel(tokens, l10n.gui_settings_voiceAliasLabel),
+        runSetupFieldLabel(tokens, l10n.gui_run_setup_voiceAliasLabel),
         if (controller.hasLanguages) ...[
           const SizedBox(height: 12),
           AppDropdown<String>(
             key: const Key('languageDropdown'),
-            tooltip: l10n.gui_settings_languageDropdownTooltip,
+            tooltip: l10n.gui_run_setup_languageDropdownTooltip,
             value: controller.voiceLanguage,
             items: controller.languageItems,
-            hint: l10n.gui_settings_selectLanguageHint,
+            hint: l10n.gui_run_setup_selectLanguageHint,
             onChanged: (code) => controller.applyVoiceLanguage(code),
           ),
           const SizedBox(height: 12),
@@ -46,12 +46,12 @@ class VoicePickerWidget extends StatelessWidget {
           const SizedBox(height: 12),
           SegmentedControl<VoiceGender>(
             key: const Key('genderControl'),
-            tooltip: l10n.gui_settings_genderControlTooltip,
+            tooltip: l10n.gui_run_setup_genderControlTooltip,
             value: controller.voiceGenderFilter,
             items: [
-              (VoiceGender.neutral, l10n.gui_settings_genderAny),
-              (VoiceGender.female, l10n.gui_settings_genderFemale),
-              (VoiceGender.male, l10n.gui_settings_genderMale),
+              (VoiceGender.neutral, l10n.gui_run_setup_genderAny),
+              (VoiceGender.female, l10n.gui_run_setup_genderFemale),
+              (VoiceGender.male, l10n.gui_run_setup_genderMale),
             ],
             onChanged: (g) => controller.voiceGenderFilter = g,
           ),
@@ -59,10 +59,10 @@ class VoicePickerWidget extends StatelessWidget {
         ],
         AppDropdown<String>(
           key: const Key('voiceDropdown'),
-          tooltip: l10n.gui_settings_voiceDropdownTooltip,
+          tooltip: l10n.gui_run_setup_voiceDropdownTooltip,
           value: _selectedVoiceId,
           items: controller.voiceItems,
-          hint: l10n.gui_settings_selectVoiceHint,
+          hint: l10n.gui_run_setup_selectVoiceHint,
           onChanged: (id) => controller.applyVoiceId(id),
         ),
       ],

@@ -8,7 +8,7 @@ import '../widgets/app_button.dart';
 import '../widgets/app_section.dart';
 import 'voice_table.dart';
 
-/// Right-hand pane for the providers & voices screen: the selected model's
+/// Right-hand pane for the settings screen: the selected model's
 /// read-only metadata, then its voice table.
 ///
 /// Only voices are editable, and only for a model whose config declares
@@ -88,19 +88,19 @@ class _Metadata extends StatelessWidget {
           _row(
             context,
             labelWidth,
-            l10n.gui_config_fieldModelId,
+            l10n.gui_settings_fieldModelId,
             model.id,
           ),
           _row(
             context,
             labelWidth,
-            l10n.gui_config_fieldProvider,
+            l10n.gui_settings_fieldProvider,
             model.provider,
           ),
           _row(
             context,
             labelWidth,
-            l10n.gui_config_fieldFormat,
+            l10n.gui_settings_fieldFormat,
             model.format,
           ),
         ],
@@ -187,10 +187,10 @@ class _RevertButtonState extends State<_RevertButton> {
         AppButton(
           key: const Key('revertModelButton'),
           style: AppButtonStyle.outlined,
-          tooltip: l10n.gui_config_revertTooltip,
+          tooltip: l10n.gui_settings_revertTooltip,
           onPressed: _revert,
           child: Text(
-            l10n.gui_config_revert,
+            l10n.gui_settings_revert,
             style: tokens.typography.control.copyWith(
               color: tokens.colors.textPrimary,
             ),
