@@ -8,12 +8,12 @@ import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/controller/settings_controller.dart'
     show ApiKeySource;
-import 'package:tts_narrator/src/gui/settings/api_key_section.dart';
+import 'package:tts_narrator/src/gui/run_setup/api_key_section.dart';
 import 'package:tts_narrator/src/gui/widgets/app_button.dart';
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 
 import '../support/l10n_test_support.dart';
-import '../support/settings_fixtures.dart';
+import '../support/run_setup_fixtures.dart';
 
 /// A key store whose writes always fail, standing in for an unreachable
 /// keychain / Secret Service.
@@ -45,7 +45,7 @@ void main() {
   });
 
   Future<void> pumpSection(WidgetTester tester, AppController c) =>
-      pumpSettingsSection(tester, ApiKeySection(controller: c));
+      pumpRunSetupSection(tester, ApiKeySection(controller: c));
 
   AppButton buttonWith(WidgetTester tester, String key) =>
       tester.widget<AppButton>(find.byKey(Key(key)));
@@ -62,7 +62,7 @@ void main() {
     expect(find.text('Not set'), findsOneWidget);
     // The section header carries a tooltip explaining what the key is for.
     expect(
-      find.byTooltip(testL10n.gui_settings_apiKeySectionTooltip),
+      find.byTooltip(testL10n.gui_run_setup_apiKeySectionTooltip),
       findsOneWidget,
     );
 
@@ -70,9 +70,9 @@ void main() {
 
     expect(find.byKey(const Key('apiKeyField')), findsOneWidget);
     // The empty field shows a placeholder so the input area stays visible
-    // against the dark rail background.
+    // against the dark panel background.
     expect(
-      find.text(testL10n.gui_settings_apiKeyFieldPlaceholder),
+      find.text(testL10n.gui_run_setup_apiKeyFieldPlaceholder),
       findsOneWidget,
     );
     expect(find.text('Not set'), findsOneWidget);
@@ -178,7 +178,7 @@ void main() {
 
     // The failure lands on the status row instead of surfacing as an
     // unhandled async error, and the typed key stays editable.
-    expect(find.text(testL10n.gui_settings_apiKeyStoreError), findsOneWidget);
+    expect(find.text(testL10n.gui_run_setup_apiKeyStoreError), findsOneWidget);
     final field = tester.widget<AppTextField>(
       find.byKey(const Key('apiKeyField')),
     );

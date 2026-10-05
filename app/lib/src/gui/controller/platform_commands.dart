@@ -11,11 +11,11 @@ class PlatformCommands {
 
   VoidCallback? onCancel;
 
-  VoidCallback? onPreferences;
+  VoidCallback? onSettings;
 
   /// Mirrors the toolbar toggle so non-macOS platforms can bind the same
   /// action to an in-app control.
-  VoidCallback? onToggleSettingsPanel;
+  VoidCallback? onToggleRunSetupPanel;
 
   /// Mirrors the controller's folder-picker entry point so the menu bar and
   /// any key binding dispatch through one slot.

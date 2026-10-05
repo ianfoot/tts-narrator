@@ -9,7 +9,7 @@ import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
 import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
     show acceleratorLabel;
-import 'package:tts_narrator/src/gui/settings/settings_panel.dart';
+import 'package:tts_narrator/src/gui/run_setup/run_setup_panel.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
@@ -17,7 +17,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
 import '../support/l10n_test_support.dart';
-import '../support/settings_fixtures.dart' as fixtures;
+import '../support/run_setup_fixtures.dart' as fixtures;
 
 void main() {
   late Directory dir;
@@ -92,10 +92,10 @@ void main() {
     );
     expect(find.byKey(const Key('editorOpenButton')), findsOneWidget);
     expect(find.byKey(const Key('editorNarrateButton')), findsOneWidget);
-    // Narration is initiated from the toolbar only; the settings rail has no
+    // Narration is initiated from the toolbar only; the run-setup panel has no
     // Narrate button of its own.
     expect(find.byKey(const Key('railNarrateButton')), findsNothing);
-    expect(find.byKey(const Key('railToggleButton')), findsOneWidget);
+    expect(find.byKey(const Key('runSetupToggleButton')), findsOneWidget);
     expect(
       find.byTooltip(
         '${testL10n.gui_editor_toolbar_openTextFile} '
@@ -135,21 +135,21 @@ void main() {
     },
   );
 
-  testWidgets('the settings rail is visible by default and toggles away', (
+  testWidgets('the run-setup panel is visible by default and toggles away', (
     tester,
   ) async {
     final controller = await makeController();
     await pumpEditor(tester, controller);
 
-    expect(find.byType(SettingsPanel), findsOneWidget);
+    expect(find.byType(RunSetupPanel), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('railToggleButton')));
+    await tester.tap(find.byKey(const Key('runSetupToggleButton')));
     await tester.pumpAndSettle();
-    expect(find.byType(SettingsPanel), findsNothing);
+    expect(find.byType(RunSetupPanel), findsNothing);
 
-    await tester.tap(find.byKey(const Key('railToggleButton')));
+    await tester.tap(find.byKey(const Key('runSetupToggleButton')));
     await tester.pumpAndSettle();
-    expect(find.byType(SettingsPanel), findsOneWidget);
+    expect(find.byType(RunSetupPanel), findsOneWidget);
   });
 
   testWidgets('a controller-driven panel toggle hides and restores the rail', (
@@ -158,15 +158,15 @@ void main() {
     final controller = await makeController();
     await pumpEditor(tester, controller);
 
-    expect(find.byType(SettingsPanel), findsOneWidget);
+    expect(find.byType(RunSetupPanel), findsOneWidget);
 
-    controller.toggleSettingsPanel();
+    controller.toggleRunSetupPanel();
     await tester.pumpAndSettle();
-    expect(find.byType(SettingsPanel), findsNothing);
+    expect(find.byType(RunSetupPanel), findsNothing);
 
-    controller.toggleSettingsPanel();
+    controller.toggleRunSetupPanel();
     await tester.pumpAndSettle();
-    expect(find.byType(SettingsPanel), findsOneWidget);
+    expect(find.byType(RunSetupPanel), findsOneWidget);
   });
 
   testWidgets('macOS editor text is top-aligned in the expanding field', (

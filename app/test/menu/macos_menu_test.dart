@@ -11,7 +11,7 @@ import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 
 import '../support/l10n_test_support.dart';
 import '../support/recording_cleanup_controller.dart';
-import '../support/settings_fixtures.dart' as fixtures;
+import '../support/run_setup_fixtures.dart' as fixtures;
 
 Future<AppController> makeController() async {
   final dir = Directory.systemTemp.createTempSync('tts_menu_test_');
@@ -30,7 +30,7 @@ Future<AppController> makeController() async {
 }
 
 /// The leaf items of [menu], expanding [PlatformMenuItemGroup] members and
-/// recursing into submenus ([PlatformMenu]) so grouped commands (Preferences,
+/// recursing into submenus ([PlatformMenu]) so grouped commands (Settings,
 /// the Edit group, the Appearance submenu) appear alongside the standalone
 /// ones.
 List<PlatformMenuItem> leafItems(PlatformMenu menu) => <PlatformMenuItem>[
@@ -195,7 +195,7 @@ void main() {
           PlatformProvidedMenuItemType.quit,
         ]),
       );
-      expect(leafItems(app).any((m) => m.label == 'Preferences…'), isTrue);
+      expect(leafItems(app).any((m) => m.label == 'Settings…'), isTrue);
 
       final viewProvided = leafItems(view)
           .whereType<PlatformProvidedMenuItem>()
@@ -276,17 +276,17 @@ void main() {
       },
     );
 
-    test('Preferences dispatches through the onPreferences slot', () async {
+    test('Settings dispatches through the onSettings slot', () async {
       final controller = await makeController();
       var opened = false;
-      controller.commands.onPreferences = () => opened = true;
+      controller.commands.onSettings = () => opened = true;
       final app = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
         l10n: testL10n,
       )[0];
 
-      leafItem(app, 'Preferences…').onSelected?.call();
+      leafItem(app, 'Settings…').onSelected?.call();
       expect(opened, isTrue);
     });
 
@@ -329,7 +329,7 @@ void main() {
 
   group('View menu commands', () {
     test(
-      'View has an Appearance submenu and a Toggle Settings Panel item',
+      'View has an Appearance submenu and a Toggle Run Setup Panel item',
       () async {
         final view = buildMacMenu(
           controller: await makeController(),
@@ -351,7 +351,7 @@ void main() {
           'Dark',
         ]);
         expectMetaShortcut(
-          leafItem(view, 'Toggle Settings Panel'),
+          leafItem(view, 'Toggle Run Setup Panel'),
           LogicalKeyboardKey.backslash,
         );
       },
@@ -388,17 +388,17 @@ void main() {
       expect(leafItem(view, 'Light').label, 'Light');
     });
 
-    test('Toggle Settings Panel dispatches through the slot', () async {
+    test('Toggle Run Setup Panel dispatches through the slot', () async {
       final controller = await makeController();
       var toggled = false;
-      controller.commands.onToggleSettingsPanel = () => toggled = true;
+      controller.commands.onToggleRunSetupPanel = () => toggled = true;
       final view = buildMacMenu(
         controller: controller,
         navigatorKey: GlobalKey<NavigatorState>(),
         l10n: testL10n,
       )[3];
 
-      leafItem(view, 'Toggle Settings Panel').onSelected?.call();
+      leafItem(view, 'Toggle Run Setup Panel').onSelected?.call();
       expect(toggled, isTrue);
     });
   });

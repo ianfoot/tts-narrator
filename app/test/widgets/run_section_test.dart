@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
-import 'package:tts_narrator/src/gui/settings/run_section.dart';
+import 'package:tts_narrator/src/gui/run_setup/run_section.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart'
     show maxWholeFileLength;
 
-import '../support/settings_fixtures.dart';
+import '../support/run_setup_fixtures.dart';
 
 void main() {
   late Directory dir;
@@ -23,7 +23,7 @@ void main() {
   });
 
   Future<void> pumpSection(WidgetTester tester, AppController c) =>
-      pumpSettingsSection(tester, RunSection(controller: c));
+      pumpRunSetupSection(tester, RunSection(controller: c));
 
   testWidgets('the whole-file switch renders on by default off', (
     tester,

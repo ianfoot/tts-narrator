@@ -11,7 +11,7 @@ import 'package:tts_narrator/src/gui/theme/app_tokens.dart';
 /// Widget tests default to an 800x600 logical surface. That is narrower than
 /// the app's minimum 900x600 window, and the Ahem test font renders every
 /// glyph `fontSize` px wide, so full-screen layouts (toolbar + status bar +
-/// the 320px rail) overflow at the default size even though they fit at the
+/// the 320px panel) overflow at the default size even though they fit at the
 /// app's real fonts and window sizes. Screen-level tests therefore pump on a
 /// realistic surface through this helper.
 Future<void> setSpecWindowSize(WidgetTester tester) async {

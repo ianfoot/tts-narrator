@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
+import '../settings/settings_screen.dart';
 import '../controller/app_controller.dart';
 import '../controller/document_controller.dart' show untitledDocumentName;
 import '../editor/editor_screen.dart';
@@ -20,9 +21,11 @@ import 'platform_detection.dart';
 /// in-app [LinuxMenuBar] plus a [CallbackShortcuts] accelerator map on
 /// Linux/Windows, all dispatching through one [AppController] and navigator key.
 ///
-/// Wires the controller's command slots: the native Open file picker and the
-/// Narrate / Cancel slots (navigate to the run view; Cancel stops the run).
-/// Preferences stays reserved for the native menu bar.
+/// Wires the controller's command slots: the native Open file picker, the
+/// Narrate / Cancel slots (navigate to the run view; Cancel stops the run) and
+/// Settings (push the providers & voices screen). Every pushed full-screen
+/// route goes through [_fadeSlideRoute] so the run view and the settings
+/// screen present as one family.
 class AppRoot extends StatefulWidget {
   const AppRoot({super.key, required this.controller});
 
@@ -35,6 +38,10 @@ class AppRoot extends StatefulWidget {
 class _AppRootState extends State<AppRoot> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
+  /// Set while the settings screen is on the navigator stack, so a repeated
+  /// ⌘, cannot stack two copies. Cleared on the route's pop.
+  bool _settingsOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -43,9 +50,10 @@ class _AppRootState extends State<AppRoot> {
     widget.controller.commands.onCancel = () => widget.controller.cancelRun();
     widget.controller.commands.onSetOutputFolder =
         widget.controller.pickOutputFolder;
-    widget.controller.commands.onToggleSettingsPanel =
-        widget.controller.toggleSettingsPanel;
+    widget.controller.commands.onToggleRunSetupPanel =
+        widget.controller.toggleRunSetupPanel;
     widget.controller.commands.onClearText = widget.controller.clearText;
+    widget.controller.commands.onSettings = _openSettings;
     widget.controller.saveLocationPicker = _pickSaveLocation;
     // Follow the system appearance live (CupertinoApp has no darkTheme/
     // themeMode, so the theme is rebuilt when the platform brightness flips).
@@ -61,8 +69,9 @@ class _AppRootState extends State<AppRoot> {
     widget.controller.commands.onNarrate = null;
     widget.controller.commands.onCancel = null;
     widget.controller.commands.onSetOutputFolder = null;
-    widget.controller.commands.onToggleSettingsPanel = null;
+    widget.controller.commands.onToggleRunSetupPanel = null;
     widget.controller.commands.onClearText = null;
+    widget.controller.commands.onSettings = null;
     widget.controller.saveLocationPicker = null;
     super.dispose();
   }
@@ -109,10 +118,37 @@ class _AppRootState extends State<AppRoot> {
     _navigatorKey.currentState?.push(_runRoute());
   }
 
+  /// Opens the providers & voices settings screen. Guarded against a
+  /// double-trigger the same way [narrateBlockReason] guards the run view: the
+  /// slot is a plain callback, so a second ⌘, before the first push settles
+  /// would otherwise stack two copies of the screen.
+  void _openSettings() {
+    if (_settingsOpen) return;
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null) return;
+    _settingsOpen = true;
+    // Cleared on both the way back and the way out if the push never completes,
+    // so a navigator that goes away mid-flight cannot latch the guard.
+    navigator
+        .push(
+          _fadeSlideRoute(
+            (context) => SettingsScreen(controller: widget.controller),
+          ),
+        )
+        .then((_) => _settingsOpen = false)
+        .onError((_, _) => _settingsOpen = false);
+  }
+
   /// The run view's 250ms cross-fade slide-up from a 20px offset (UI spec §4).
   /// A bare [PageRouteBuilder] so the run view presents identically on every
   /// platform.
-  PageRouteBuilder<void> _runRoute() {
+  PageRouteBuilder<void> _runRoute() =>
+      _fadeSlideRoute((context) => NarrationScreen(controller: widget.controller));
+
+  /// The shared full-screen push: a 250ms fade-and-slide from 20px below, so the
+  /// narration run view and the settings screen present as one family rather
+  /// than as two unrelated routes.
+  PageRouteBuilder<void> _fadeSlideRoute(WidgetBuilder builder) {
     const duration = Duration(milliseconds: 250);
     final screenHeight = MediaQuery.sizeOf(
       _navigatorKey.currentContext ?? context,
@@ -121,8 +157,7 @@ class _AppRootState extends State<AppRoot> {
     return PageRouteBuilder<void>(
       transitionDuration: duration,
       reverseTransitionDuration: duration,
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          NarrationScreen(controller: widget.controller),
+      pageBuilder: (context, animation, secondaryAnimation) => builder(context),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         final curved = CurvedAnimation(
           parent: animation,
@@ -229,7 +264,9 @@ class _AppRootState extends State<AppRoot> {
     final controller = widget.controller;
     return <ShortcutActivator, VoidCallback>{
       const SingleActivator(LogicalKeyboardKey.backslash, control: true): () =>
-          controller.commands.onToggleSettingsPanel?.call(),
+          controller.commands.onToggleRunSetupPanel?.call(),
+      const SingleActivator(LogicalKeyboardKey.comma, control: true): () =>
+          controller.commands.onSettings?.call(),
       const SingleActivator(LogicalKeyboardKey.keyQ, control: true): () =>
           quitApp(),
     };

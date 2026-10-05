@@ -4,7 +4,7 @@ import '../controller/app_controller.dart';
 import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_slider.dart';
-import 'settings_labels.dart';
+import 'run_setup_labels.dart';
 
 /// A speech-rate slider bound to the controller's `speed` setting. Rendered for
 /// models whose plugin declares a `speed` model option (e.g. kokoro); the value
@@ -22,14 +22,14 @@ class SpeedWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        settingsFieldLabel(tokens, l10n.gui_settings_speedLabel),
+        runSetupFieldLabel(tokens, l10n.gui_run_setup_speedLabel),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: AppSlider(
                 key: const Key('speedSlider'),
-                tooltip: l10n.gui_settings_speedTooltip,
+                tooltip: l10n.gui_run_setup_speedTooltip,
                 value: controller.speed,
                 onChanged: (v) => controller.speed = v,
                 min: 0.25,

@@ -303,7 +303,8 @@ class AppMetrics {
   /// Bottom status bar height (fixed anchor).
   static const double statusBarHeight = 28;
 
-  /// Settings rail width (fixed when expanded).
+  /// Width of a fixed side panel when expanded. Also the width of the settings
+  /// screen's model list, which keeps both lists aligned.
   static const double railWidth = 320;
 
   /// Minimum breathing room around the run view's per-segment action column.

@@ -9,9 +9,9 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'l10n_test_support.dart';
 
-/// Shared fixtures for the settings-rail section widget tests. Each section
+/// Shared fixtures for the run-setup panel section widget tests. Each section
 /// takes only an [AppController], so a section-under-test is pumped directly
-/// (no full [SettingsPanel]) on a rail-sized surface.
+/// (no full [RunSetupPanel]) on a panel-sized surface.
 ///
 /// Config layout helpers mirror the [UserVoiceConfigLoader] registry layout:
 /// `config.json` is the ordered list of providers, each `providers/<name>.json`
@@ -122,10 +122,10 @@ void writeFishConfig(String configDir) {
   });
 }
 
-/// Pumps the given settings-rail section on a rail-sized surface (the same
-/// 1200x1800 logical size the full settings rail tests use) and restores the
-/// default surface when the test ends.
-Future<void> pumpSettingsSection(WidgetTester tester, Widget child) async {
+/// Pumps the given run-setup section on a panel-sized surface (the same
+/// 1200x1800 logical size the full run-setup panel tests use) and restores the
+/// default test surface afterwards.
+Future<void> pumpRunSetupSection(WidgetTester tester, Widget child) async {
   await tester.binding.setSurfaceSize(const Size(1200, 1800));
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(

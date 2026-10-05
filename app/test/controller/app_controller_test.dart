@@ -18,7 +18,7 @@ import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/fake_tts_provider.dart';
-import '../support/settings_fixtures.dart' as fixtures;
+import '../support/run_setup_fixtures.dart' as fixtures;
 
 void main() {
   late Directory dir;
@@ -838,6 +838,232 @@ void main() {
     });
   });
 
+  group('reloadConfig', () {
+    // The settings screen writes to the `user/` overlay and then calls
+    // reloadConfig(); these cases cover what the reader keeps across that
+    // re-read, since a save must not silently move them off their voice.
+    void writeOverlayModel(String alias, Map<String, Object?> body) {
+      File('$configDir/user/models/$alias.json')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync(jsonEncode(body));
+    }
+
+    test('a voice added in the overlay shows up without a restart', () {
+      writeFishConfig();
+      final c = makeController();
+      expect(c.voiceItems.where((i) => i.$1 == 'deadbeef'), isEmpty);
+
+      writeOverlayModel('fish', {
+        'id': 'fish-audio/s2.1-pro-free:free',
+        'voices_editable': true,
+        'default_voice': 'British Female Narrator',
+        'voices': {
+          'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          'Newcomer': 'deadbeef',
+        },
+      });
+      c.reloadConfig();
+
+      expect(c.voiceItems.where((i) => i.$1 == 'deadbeef'), hasLength(1));
+    });
+
+    test('a renamed label keeps the reader on the same voice id', () {
+      writeFishConfig();
+      final c = makeController();
+      expect(c.voice, '89f41ea230034706881f85a8227d6ab9');
+      expect(c.voiceLabel, 'British Female Narrator');
+
+      writeOverlayModel('fish', {
+        'id': 'fish-audio/s2.1-pro-free:free',
+        'voices_editable': true,
+        'default_voice': 'Renamed Narrator',
+        'voices': {
+          'Renamed Narrator': '89f41ea230034706881f85a8227d6ab9',
+        },
+      });
+      c.reloadConfig();
+
+      // Same id, new label: the selection is by id, so it survives and picks
+      // up the new friendly name.
+      expect(c.voice, '89f41ea230034706881f85a8227d6ab9');
+      expect(c.voiceLabel, 'Renamed Narrator');
+    });
+
+    test('a voice whose id is gone falls back to the model default', () {
+      writeFishConfig();
+      final c = makeController();
+      c.setVoice('some_other_voice');
+      expect(c.voice, 'some_other_voice');
+
+      writeOverlayModel('fish', {
+        'id': 'fish-audio/s2.1-pro-free:free',
+        'voices_editable': true,
+        'default_voice': 'Replacement',
+        'voices': {'Replacement': 'cafebabe'},
+      });
+      c.reloadConfig();
+
+      expect(c.voice, 'cafebabe');
+      expect(c.voiceLabel, 'Replacement');
+    });
+
+    test('a model that disappears falls back to the default model', () {
+      writeConfig({
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'gemini': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'format': 'pcm',
+            'sample_rate': 24000,
+          },
+        },
+        'defaults': {
+          'fish': 'British Female Narrator',
+          'gemini': 'Charon',
+        },
+        'voices': {
+          'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+          'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
+        },
+      });
+      final c = makeController();
+      c.changeModel('gemini');
+      expect(c.modelAlias, 'gemini');
+
+      // Re-point the registry at fish only, the way a user narrowing their
+      // config would.
+      fixtures.writeConfig(configDir, {
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+        },
+        'defaults': {'fish': 'British Female Narrator'},
+        'voices': {
+          'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+        },
+      });
+      c.reloadConfig();
+
+      expect(c.modelAlias, 'fish');
+      expect(c.voice, '89f41ea230034706881f85a8227d6ab9');
+    });
+
+    test('an emptied config leaves nothing selected rather than throwing', () {
+      writeFishConfig();
+      final c = makeController();
+      expect(c.modelAlias, 'fish');
+
+      fixtures.writeConfig(configDir, {'models': <String, Object?>{}});
+      c.reloadConfig();
+
+      expect(c.modelAlias, isNull);
+      expect(c.profile, isNull);
+    });
+
+    test('reloadConfig notifies listeners', () {
+      writeFishConfig();
+      final c = makeController();
+      var notified = 0;
+      c.addListener(() => notified++);
+      c.reloadConfig();
+      expect(notified, 1);
+    });
+
+    test('the chosen language survives a voice edit on the same model', () {
+      // Voice ids that are not language-prefixed, so the chosen language is only
+      // held in state. A voice save cannot change it — resetting to the model's
+      // `default_language` on every edit would undo the reader's pick each time
+      // they touched a voice in settings.
+      writeConfig({
+        'providers': {
+          'alpha': {
+            'base_url': 'https://vendor.example/api/v1',
+            'api_key': 'sk-test',
+          },
+        },
+        'models': {
+          'teller': {
+            'id': 'vendor/teller',
+            'format': 'mp3',
+            'sends_language': true,
+            'default_language': 'en',
+            'languages': {'en': 'English', 'fr': 'French'},
+          },
+        },
+        'defaults': {'teller': 'Ada'},
+        'voices': {
+          'teller': {
+            'Ada': {'id': 'ada'},
+            'Amelie': {'id': 'amelie'},
+          },
+        },
+      });
+      final c = makeController();
+      expect(c.voiceLanguage, 'en');
+      c.applyVoiceLanguage('fr');
+      expect(c.voiceLanguage, 'fr');
+
+      writeOverlayModel('teller', {
+        'id': 'vendor/teller',
+        'format': 'mp3',
+        'voices_editable': true,
+        'sends_language': true,
+        'default_language': 'en',
+        'languages': {'en': 'English', 'fr': 'French'},
+        'voices': {
+          'Ada': {'id': 'ada'},
+          'Amelie': {'id': 'amelie'},
+          'Renard': {'id': 'renard'},
+        },
+      });
+      c.reloadConfig();
+
+      expect(c.modelAlias, 'teller');
+      expect(c.voiceLanguage, 'fr');
+    });
+
+    test('a gender filter left with no voice resets rather than hiding it', () {
+      writeConfig({
+        'providers': {
+          'alpha': {
+            'base_url': 'https://vendor.example/api/v1',
+            'api_key': 'sk-test',
+          },
+        },
+        'models': {
+          'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+        },
+        'defaults': {'kokoro': 'Emma'},
+        'voices': {
+          'kokoro': {
+            'Emma': {'id': 'bf_emma', 'gender': 'female'},
+            'Daniel': {'id': 'bm_daniel', 'gender': 'male'},
+          },
+        },
+      });
+      final c = makeController();
+      c.voiceGenderFilter = VoiceGender.male;
+      expect(c.voiceGenderFilter, VoiceGender.male);
+      expect(c.voice, 'bm_daniel');
+
+      // Delete the last male voice in settings.
+      writeOverlayModel('kokoro', {
+        'id': 'hexgrad/kokoro-82m',
+        'format': 'mp3',
+        'voices_editable': true,
+        'voices': {
+          'Emma': {'id': 'bf_emma', 'gender': 'female'},
+        },
+      });
+      c.reloadConfig();
+
+      // The filter would have narrowed the list to nothing, leaving the picker
+      // empty with the run config still sending the deleted id.
+      expect(c.voiceGenderFilter, VoiceGender.neutral);
+      expect(c.voice, 'bf_emma');
+      expect(c.voiceItems.map((e) => e.$1), ['bf_emma']);
+    });
+  });
+
   group('voice gender', () {
     // A provider's `models` list is what claims a model file, so a body
     // naming only one of the two would leave the other orphaned and unread.
@@ -1344,7 +1570,7 @@ void main() {
       expect(c.commands.onOpen, isNull);
       expect(c.commands.onNarrate, isNull);
       expect(c.commands.onCancel, isNull);
-      expect(c.commands.onPreferences, isNull);
+      expect(c.commands.onSettings, isNull);
     });
   });
 
@@ -1684,23 +1910,23 @@ void main() {
     });
   });
 
-  group('settings panel', () {
+  group('run setup panel', () {
     test('starts visible', () {
       final c = makeController();
-      expect(c.settingsPanelVisible, isTrue);
+      expect(c.runSetupPanelVisible, isTrue);
     });
 
-    test('toggleSettingsPanel flips the value and notifies listeners', () {
+    test('toggleRunSetupPanel flips the value and notifies listeners', () {
       final c = makeController();
       var notifications = 0;
       c.addListener(() => notifications++);
 
-      c.toggleSettingsPanel();
-      expect(c.settingsPanelVisible, isFalse);
+      c.toggleRunSetupPanel();
+      expect(c.runSetupPanelVisible, isFalse);
       expect(notifications, 1);
 
-      c.toggleSettingsPanel();
-      expect(c.settingsPanelVisible, isTrue);
+      c.toggleRunSetupPanel();
+      expect(c.runSetupPanelVisible, isTrue);
       expect(notifications, 2);
     });
   });

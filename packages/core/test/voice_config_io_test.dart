@@ -482,4 +482,510 @@ void main() {
       expect(reloaded.models['stray'], isNotNull);
     });
   });
+
+  group('the user overlay', () {
+    late Directory dir;
+
+    setUp(() => dir = Directory.systemTemp.createTempSync('tts_config_test_'));
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    String at(String dirName, String file) =>
+        '${dir.path}${Platform.pathSeparator}$dirName'
+        '${Platform.pathSeparator}$file';
+
+    void writeRegistry(String contents) =>
+        File('${dir.path}${Platform.pathSeparator}$kVoiceConfigRegistryName')
+            .writeAsStringSync(contents);
+
+    /// The overlay's own registry: a second `config.json`, which the loader
+    /// merges with the base rather than the overlay replacing it.
+    void writeOverlayRegistry(String contents) {
+      final file = File(
+        at(kVoiceConfigOverlayDirName, kVoiceConfigRegistryName),
+      );
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync(contents);
+    }
+
+    /// A file inside [layer]'s providers or models directory. [layer] is either
+    /// the config root or the overlay root, so the two call sites below read as
+    /// `writeModel(base, ...)` / `writeModel(overlay, ...)` rather than as
+    /// duplicated path arithmetic.
+    void writeProvider(String layer, String name, String contents) {
+      final file = File(at('$layer/$kVoiceConfigProvidersDir', '$name.json'));
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync(contents);
+    }
+
+    void writeModel(String layer, String alias, String contents) {
+      final file = File(at('$layer/$kVoiceConfigModelsDir', '$alias.json'));
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync(contents);
+    }
+
+    /// The config root, where the downloaded starter files live.
+    const base = '.';
+    /// The overlay root, where everything the user authors lands.
+    const overlay = kVoiceConfigOverlayDirName;
+
+    String modelJson(String id, {String? defaultVoice}) => jsonEncode({
+      'id': id,
+      'default_voice': ?defaultVoice,
+    });
+
+    /// A base layer claiming [models] for [provider], plus a model file per
+    /// alias of the form `<alias>-base`.
+    void writeBase({
+      String provider = testProvider,
+      List<String> models = const ['one'],
+      List<String> providerOrder = const [],
+      Map<String, String> settingsByProvider = const {},
+    }) {
+      writeRegistry(
+        jsonEncode({
+          'providers': providerOrder.isEmpty
+              ? [provider]
+              : [provider, ...providerOrder],
+        }),
+      );
+      writeProvider(
+        base,
+        provider,
+        jsonEncode({
+          'models': models,
+          'settings': jsonDecode(
+            settingsByProvider[provider] ??
+                '{"base_url":"$testBaseUrl"}',
+          ),
+        }),
+      );
+      for (final alias in models) {
+        writeModel(base, alias, modelJson('$alias-base'));
+      }
+    }
+
+    (VoiceConfig, List<String>) load() => loadVoiceConfig(dir.path);
+
+    test('the overlay dir name is the documented "user"', () {
+      expect(kVoiceConfigOverlayDirName, 'user');
+    });
+
+    test('a base-only directory loads exactly as it did before', () {
+      writeBase();
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      expect(cfg.models.keys, ['one']);
+      expect(cfg.models['one']!.id, 'one-base');
+    });
+
+    test('a model file in the overlay replaces the downloaded one', () {
+      writeBase();
+      writeModel(overlay, 'one', modelJson('one-overlay'));
+
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      expect(cfg.models['one']!.id, 'one-overlay');
+    });
+
+    test(
+      'an overlay model the base provider still claims needs no overlay '
+      'registry',
+      () {
+        writeBase();
+        // The user only ever authored a model file, nothing else.
+        writeModel(overlay, 'one', modelJson('one-overlay'));
+        final (cfg, _) = load();
+        expect(cfg.models['one']!.id, 'one-overlay');
+      },
+    );
+
+    test('an overlay model only loads once some provider claims it', () {
+      writeBase();
+      writeModel(overlay, 'two', modelJson('two-overlay'));
+
+      final (cfg, _) = load();
+      expect(cfg.models.containsKey('two'), isFalse);
+    });
+
+    test('an overlay provider file can claim a model of its own', () {
+      writeBase();
+      // A provider file the user wrote names a model the downloaded layer never
+      // mentions. The overlay registry names it, so the alias can load.
+      writeProvider(
+        overlay,
+        'alpha',
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      writeModel(overlay, 'two', modelJson('two-overlay'));
+      writeOverlayRegistry(jsonEncode({'providers': ['alpha']}));
+
+      final (cfg, _) = load();
+      expect(cfg.models['two']!.id, 'two-overlay');
+      expect(cfg.models['two']!.provider, 'alpha');
+    });
+
+    test('an overlay provider file replaces the downloaded one', () {
+      writeBase();
+      writeProvider(
+        overlay,
+        testProvider,
+        jsonEncode({
+          'models': ['one'],
+          'settings': {'base_url': 'https://overlay.example/v1'},
+        }),
+      );
+
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      expect(
+        cfg.providers[testProvider]!.settings['base_url'],
+        'https://overlay.example/v1',
+      );
+    });
+
+    test('an inherited provider file override does not reorder the list', () {
+      // The documented way to change one setting is to drop a same-named file
+      // into the overlay with no registry entry beside it. That is an edit to a
+      // provider already in use, so it must not move that provider to the front:
+      // being first decides the default model, and editing a base_url should
+      // never change which model the app launches on.
+      writeBase(provider: 'alpha', providerOrder: const [testProvider]);
+      writeProvider(
+        base,
+        testProvider,
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      writeModel(base, 'two', modelJson('two-base'));
+      writeProvider(
+        overlay,
+        testProvider,
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"https://overlay.example/v1"}'),
+        }),
+      );
+
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      expect(cfg.providers.keys, ['alpha', testProvider]);
+      // The override itself still lands; only its position is left alone.
+      expect(
+        cfg.providers[testProvider]!.settings['base_url'],
+        'https://overlay.example/v1',
+      );
+      expect(defaultModelFor(cfg)?.alias, 'one');
+    });
+
+    test('a provider the overlay registry names does move to the front', () {
+      writeBase(provider: 'alpha', providerOrder: const [testProvider]);
+      writeProvider(
+        base,
+        testProvider,
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      writeModel(base, 'two', modelJson('two-base'));
+      writeProvider(
+        overlay,
+        testProvider,
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      // Re-listing a provider the baseline already serves is what the README
+      // tells a user to do, so it has to be the way to promote one.
+      writeOverlayRegistry(jsonEncode({'providers': [testProvider]}));
+
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      expect(cfg.providers.keys, [testProvider, 'alpha']);
+      expect(defaultModelFor(cfg)?.alias, 'two');
+    });
+
+    test('re-listing a downloaded provider warns about nothing', () {
+      writeBase(provider: 'alpha', providerOrder: const [testProvider]);
+      writeProvider(
+        base,
+        testProvider,
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      writeModel(base, 'two', modelJson('two-base'));
+      // The registry copied wholesale, with one new name appended -- no overlay
+      // file for the re-listed provider, because the downloaded one serves it.
+      writeOverlayRegistry(
+        jsonEncode({
+          'providers': ['alpha', testProvider, 'brand_new'],
+        }),
+      );
+      writeProvider(
+        overlay,
+        'brand_new',
+        jsonEncode({
+          'models': ['three'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      writeModel(overlay, 'three', modelJson('three-overlay'));
+
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      // Only the genuinely new name is promoted; the two re-listed ones keep the
+      // baseline's order, which is the point of separating the two lists.
+      expect(cfg.providers.keys, ['brand_new', 'alpha', testProvider]);
+      expect(cfg.models.keys, containsAll(['one', 'two', 'three']));
+    });
+
+    test('an overlay provider registers ahead of the downloaded ones', () {
+      writeBase(provider: 'beta', providerOrder: const ['beta']);
+      writeRegistry(jsonEncode({'providers': ['beta']}));
+      writeProvider(
+        overlay,
+        'alpha',
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      writeModel(overlay, 'two', modelJson('two-overlay'));
+      writeOverlayRegistry(jsonEncode({'providers': ['alpha']}));
+
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      expect(cfg.providers.keys, ['alpha', 'beta']);
+    });
+
+    test('an overlay provider file overriding a registered one is not flagged '
+        'as unregistered', () {
+      writeBase();
+      writeProvider(
+        overlay,
+        testProvider,
+        jsonEncode({
+          'models': ['one'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+
+      final (_, warnings) = load();
+      expect(
+        warnings.where((w) => w.contains('not listed in config.json')),
+        isEmpty,
+      );
+    });
+
+    test('an overlay provider file the registry never names is ignored with a '
+        'warning', () {
+      writeBase();
+      writeProvider(
+        overlay,
+        'alpha',
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      writeModel(overlay, 'two', modelJson('two-overlay'));
+
+      final (cfg, warnings) = load();
+      expect(cfg.providers.containsKey('alpha'), isFalse);
+      expect(cfg.models.containsKey('two'), isFalse);
+      expect(
+        warnings.single,
+        startsWith('Overlay: Provider file "alpha.json" is not listed'),
+      );
+    });
+
+    test('overlay warnings are prefixed so their provenance is visible', () {
+      writeBase();
+      writeModel(overlay, 'one', jsonEncode({'no_id': true}));
+
+      final (_, warnings) = load();
+      // The overlay file wins, so the base file's absence of the same key is
+      // not reported a second time.
+      expect(
+        warnings.where((w) => w.startsWith('Overlay: ')),
+        hasLength(1),
+      );
+      expect(warnings, hasLength(1));
+    });
+
+    test('voices_editable is read from the file', () {
+      writeBase();
+      writeModel(
+        base,
+        'one',
+        jsonEncode({'id': 'one-base', 'voices_editable': true}),
+      );
+
+      final (cfg, _) = load();
+      expect(cfg.models['one']!.voicesEditable, isTrue);
+    });
+
+    test('a model that declares no voices_editable reads as locked', () {
+      writeBase();
+      final (cfg, _) = load();
+      expect(cfg.models['one']!.voicesEditable, isFalse);
+    });
+
+    test('a non-bool voices_editable is rejected like every other flag', () {
+      writeBase();
+      writeModel(
+        base,
+        'one',
+        jsonEncode({'id': 'one-base', 'voices_editable': 'yes'}),
+      );
+
+      final (cfg, warnings) = load();
+      // A wrong type makes the whole model file unusable, exactly as it does
+      // for `speed` and `sends_language` — the flag is not silently coerced.
+      expect(cfg.models, isEmpty);
+      expect(
+        warnings.where((w) => w.contains('voices_editable')),
+        hasLength(1),
+      );
+    });
+
+    test('a claim survives an overlay provider dropping it from its list', () {
+      writeBase();
+      // Claims merge additively, so an overlay provider that stops listing a
+      // model does not un-claim it: the base file still claims it and the
+      // downloaded model file is still readable. Only a same-named provider file
+      // can change who serves an alias.
+      writeProvider(
+        overlay,
+        testProvider,
+        jsonEncode({
+          'models': const <String>[],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      expect(cfg.models['one']!.provider, testProvider);
+    });
+
+    test('a broken overlay model file falls back to the downloaded one', () {
+      writeBase();
+      // The overlay file wins the alias but cannot be parsed, so it contributes
+      // only a warning. The model must not disappear with it: a half-written
+      // user file should degrade to the shipped list, not take the model away.
+      writeModel(overlay, 'one', jsonEncode({'no_id': true}));
+
+      final (cfg, warnings) = load();
+      expect(cfg.models['one']!.id, 'one-base');
+      expect(
+        warnings.where((w) => w.startsWith('Overlay: ')),
+        hasLength(1),
+      );
+    });
+
+    test('a model no layer resolves is warned once, not once per layer', () {
+      writeBase();
+      // The provider claims an alias neither layer has a file for. The merged
+      // provider list mentions it exactly once, so the warning does too.
+      writeProvider(
+        base,
+        testProvider,
+        jsonEncode({
+          'models': ['one', 'ghost'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+
+      final (cfg, warnings) = load();
+      expect(cfg.models.keys, ['one']);
+      expect(
+        warnings.where(
+          (w) => w.contains('$kVoiceConfigModelsDir/ghost.json is missing'),
+        ),
+        hasLength(1),
+      );
+    });
+  });
+
+  group('the voice entry codec', () {
+    test('voiceFromEntry reads all three accepted shapes', () {
+      expect(voiceFromEntry('Charon', 'Charon').voice?.id, 'Charon');
+      expect(voiceFromEntry('bf_emma', {'name': 'Emma'}).voice?.id, 'bf_emma');
+      final explicit = voiceFromEntry('Alice', {
+        'id': 'c536',
+        'gender': 'female',
+      }).voice;
+      expect(explicit?.id, 'c536');
+      expect(explicit?.gender, VoiceGender.female);
+    });
+
+    test('voiceFromEntry reports why an entry is unusable', () {
+      final bad = voiceFromEntry('Typo', {'idd': 'nope'});
+      expect(bad.voice, isNull);
+      expect(bad.problem, isNotNull);
+    });
+
+    test('voiceEntryJson round-trips a voice through voiceFromEntry', () {
+      for (final voice in const [
+        Voice(id: 'Charon'),
+        Voice(id: 'bf_emma', name: 'Emma'),
+        Voice(id: 'c536', gender: VoiceGender.female),
+      ]) {
+        final encoded = voiceEntryJson(voice.id, voice);
+        final decoded = voiceFromEntry(voice.id, encoded).voice;
+        expect(decoded, isNotNull);
+        expect(decoded!.id, voice.id);
+        expect(decoded.name, voice.name);
+        expect(decoded.gender, voice.gender);
+      }
+    });
+
+    test('voiceEntryJson omits an id that repeats the key', () {
+      expect(voiceEntryJson('Charon', const Voice(id: 'Charon')), isEmpty);
+    });
+
+    test('canonicalVoiceEntryJson always states the id and never a name', () {
+      expect(
+        canonicalVoiceEntryJson(const Voice(id: 'Charon', name: 'Charon')),
+        {'id': 'Charon'},
+      );
+      expect(
+        canonicalVoiceEntryJson(
+          const Voice(id: 'bf_emma', name: 'Emma', gender: VoiceGender.female),
+        ),
+        {'id': 'bf_emma', 'gender': 'female'},
+      );
+    });
+
+    test('readModelJson prefers the overlay and falls back to the base', () {
+      final dir = Directory.systemTemp.createTempSync('tts_config_test_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      void write(String layer, String alias, String contents) {
+        final file = File(
+          '${dir.path}${Platform.pathSeparator}$layer'
+          '${Platform.pathSeparator}$kVoiceConfigModelsDir'
+          '${Platform.pathSeparator}$alias.json',
+        );
+        file.parent.createSync(recursive: true);
+        file.writeAsStringSync(contents);
+      }
+
+      write('.', 'one', '{"id":"one-base"}');
+      expect(readModelJson(dir.path, 'one')!['id'], 'one-base');
+
+      write(kVoiceConfigOverlayDirName, 'one', '{"id":"one-overlay"}');
+      expect(readModelJson(dir.path, 'one')!['id'], 'one-overlay');
+
+      expect(readModelJson(dir.path, 'absent'), isNull);
+    });
+  });
 }

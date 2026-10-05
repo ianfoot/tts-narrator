@@ -91,20 +91,124 @@ accept options the app knows nothing about. So a settings block is *not* fully
 opaque: adding a key core must understand means touching
 `provider_settings.dart` and the client, not just the config.
 
-The GUI reads that config directory for voice aliases and the per-provider
-`settings` block, but never writes it — edit those files directly. A key can come
-from three places, in this order: the OS keychain (what the user typed into the
-Settings rail), an `api_key` literal in the provider block, then an `api_key`
-`${VAR}` reference. Keychain first on purpose — the provider file is
+A key can come from three places, in this order: the OS keychain (what the user
+typed into the Run Setup panel), an `api_key` literal in the provider block, then an
+`api_key` `${VAR}` reference. Keychain first on purpose — the provider file is
 downloaded from a remote, so a key in it may belong to someone else, while a
 keychain entry was typed deliberately by this user. Note a GUI app launched from
 the Finder doesn't inherit a shell's environment, so for double-click use either
-enter the key in Settings or set `api_key` literally.
+enter the key in the Run Setup panel or set `api_key` literally.
 
 A missing key is never an error: a null `apiKey` just means the request carries
 no `Authorization` header and the service decides. A 401/403 is the only place
 the user is told to add one, and that message branches on whether a key was
 actually sent — a rejected key needs a different fix from no key at all.
+
+### Two layers: downloaded and authored
+
+The config directory is a **stack of two layers**. The layer the app downloaded
+is read-only as far as the app is concerned; a `user/` subdirectory beside it
+holds what the user authored. `kVoiceConfigOverlayDirName` (`'user'`) names the
+overlay, and `loadVoiceConfig` loads base, then overlay, then merges.
+
+The separation is not belt-and-braces, it is load-bearing. `downloadVoiceConfigFiles`
+fetches a file whenever it is *absent*, so a file the user edited in place would
+be silently restored from GitHub the next time it went missing — and the missing
+check runs over the starter file list in `ConfigBootstrap._checkConfig`, not over
+whatever the user happened to have. The overlay gives the two lifetimes cleanly:
+the downloaded copy is replaceable at any time, the authored one never is.
+
+Merge rules, in the order they matter:
+
+- **Model and provider files replace wholesale.** A `user/models/fish.json` is
+  read as the entire `fish` model. Partial overlays would mean every reader
+  (the GUI table, the CLI, a future importer) has to reconcile two half-files, and
+  the failure mode is a voice that silently vanishes from the picker.
+- **Registries accumulate.** `user/config.json` is merged with the downloaded
+  one rather than replacing it, so naming one new provider there does not silently
+  drop the shipped ones. A provider named there moves to the front of the merged
+  list, and first means default — reordering the shipped order is a deliberate
+  thing for a user to do in writing, not a side effect of editing a file.
+- **A layer inherits the registry of the layer it shadows.** `_loadProviderLayer`
+  takes an `alsoRegistered` set, and the overlay passes the base's provider names,
+  so `user/providers/openrouter.json` overrides without needing a
+  `user/config.json` repeating the name. An inherited name is only *loaded* if
+  its file is actually present — otherwise every provider the overlay chose not
+  to override would produce a bogus "missing provider file" warning.
+- **Inheriting is not the same as promoting.** An inherited name that happens to
+  have an overlay file keeps its position in the *base* registry, because
+  `_ProviderLayer.promoted` holds only the names the layer's own `config.json`
+  listed. Otherwise `user/providers/local.json` — the documented way to change one
+  `base_url` — would promote `local` above `openrouter` and flip
+  `defaultModelFor`, so editing a URL would change which model the app starts on.
+  The corollary: a promotion naming a provider with no overlay file is dropped,
+  since there is nothing of the user's to promote.
+- **A redundant re-listing is not an error.** A name in the overlay's own
+  registry that is *also* in the base registry is served by the downloaded file
+  and must not warn, even though no `user/providers/<name>.json` exists. Copying
+  the shipped registry into `user/config.json` to append one entry is the natural
+  way to use it, and it would otherwise produce a warning about a file the user
+  never intended to override.
+- **Claims accumulate.** `claimedBy = {...base, ...overlay}`, so an overlay
+  provider that drops a model from its `models` list does not un-claim it: the
+  downloaded provider file still claims it. Changing who serves an alias needs a
+  *same-named* provider file.
+- **A broken overlay file degrades, it does not brick.** The model layer catches
+  a parse failure per file and keeps the downloaded parse, so a half-written
+  override costs the user their edits rather than the model. Everything the
+  loader complains about is returned as a warning string, and the overlay's are
+  prefixed `Overlay: ` so the settings screen can show the provenance.
+- **The final "provider lists model X but models/X.json is missing" pass runs over
+  the merged provider list**, so an alias is reported once, not once per layer.
+
+Read paths go through the store rather than through the filesystem, and
+`readModelJson` deliberately resolves **overlay first**: that is the order a
+read-then-edit flow needs, and `revertModel` deleting the overlay file is what
+makes the downloaded copy show through again.
+
+`VoiceConfigStore` (`packages/core/lib/src/config/voice_config_store.dart`) is the
+app's only writer, and the only reason a write is safe: it never writes outside
+`user/`, it writes through a temp file and `renameSync` (a rename removes an
+existing destination as part of the same call, so the previous file survives
+right up until the new one takes its place), and it preserves every key it does
+not own — including keys a future schema version adds, which a round-trip
+through `TtsModelProfile` would drop.
+
+"Preserves every key it does not own" covers `default_voice` too, in both
+directions. A rename has to carry it across, because it is a key into the same
+map being rewritten and `defaultVoiceFor` throws when it stops resolving. And a
+`default_voice` that names *nothing* in the list — an id not in `voices`, which
+`resolveVoice` still honours by falling back to the raw string — is left exactly
+as found, because no edit to an unrelated voice has standing to remove it. The
+store can set a default; nothing in it can clear one, which is the right shape
+for a key whose absence would make the model unselectable.
+
+Do not reach for `writeVoiceConfig` from app code. It is the CLI's
+round-trip-the-whole-tree writer: it emits a fixed key set through
+`TtsModelProfile`, so it silently drops unknown keys, rewrites provider `api_key`
+literals, and would destroy `manifest.json`.
+
+A `voices` entry has three accepted shapes (key is id / key is name with explicit
+id / plain string). Read and write share one codec so they cannot drift:
+`voiceFromEntry` decodes, `voiceEntryJson` round-trips minimally (used by
+`writeVoiceConfig`), and `canonicalVoiceEntryJson` emits the one form the editor
+writes — key is the label, `id` always stated, no `name`, since the picker already
+reads `name ?? key` and stating both would be redundant. Folding `name` into the
+key is safe for id-convention models because `languageFromVoiceId` and
+`genderFromVoiceId` read the **id**, not the key.
+
+Editing has two traps worth knowing before changing the store. `default_voice` is
+resolved by a key-then-name scan (`VoiceConfig.resolveVoice`) and
+`defaultVoiceFor` **throws** when it resolves to nothing, which would break
+`changeModel` and `buildConfig` — so a rename has to carry the default across, and
+removing the default is refused rather than cleared. And `voiceEntries` dedupes on
+`(model, id)`, so a second row with a duplicate id would disappear from the picker
+with no warning; the store rejects it up front.
+
+`voices_editable` is a model-file flag that gates the **UI affordance** only.
+Absent means the table is read-only; the capability itself is always available by
+hand-writing an overlay file, so the flag is a statement about which models the
+project is willing to keep in sync, not an access control. Only `fish` sets it.
 
 ## Providers
 
@@ -188,6 +292,23 @@ first segment.
 - Windows is planned but not yet scaffolded; the Linux runner is scaffolded but
   never compiled in CI, so changes to `app/linux/` are unverified by
   `flutter analyze`/`flutter test`.
+- `app/lib/src/gui/settings/` is the providers-and-voices screen, pushed as a
+  full-screen route from the `⌘,` / `Ctrl+,` settings item (and the macOS App
+  menu's "Settings…", which had been dispatching into a null slot until this).
+  A full-screen route rather than a section in the 320px run-setup panel, because a
+  voice table with an id and a gender column does not fit that width.
+  `SettingsScreen` → `ModelList` + `ModelEditor` → `VoiceTable` → `voice_dialog.dart`,
+  with `settings_labels.dart` holding the view's display strings (the extension member
+  is `settingsLabel`, not `label`, because `VoiceGender.label` already exists in core
+  and the instance member would win).
+  Two things it depends on: the store is reached through
+  `AppController.voiceConfigStore` (so the controller layer, not the widget, owns
+  the config directory), and every write ends in `controller.reloadConfig()` so
+  the run-setup panel's picker and the "edited" dots both refresh. The screen's
+  selected model is local state initialised from `controller.modelAlias` — browsing
+  a config must not change what the narrator speaks with. `AppRoot` guards against
+  stacking two copies with a `_configOpen` flag, and both it and the run view now
+  share one `_fadeSlideRoute` transition.
 
 ## Design tokens
 
@@ -346,11 +467,11 @@ title.
   provider's `models` list); there is no compiled-in bootstrap for any model.
 - Per-model capabilities are declared in the model file, never sniffed from the
   model id. `prompt_style: true` derives the "Narrator gender" / accent / style /
-  passage-prefix controls in the settings rail's Model options; `speed: true`
+  passage-prefix controls in the run-setup panel's Model options; `speed: true`
   derives the speed slider and is what puts `speed` in the request body. A
   model declaring neither shows no model-options section at all. Both are
   computed by `ModelUiSpec.forProfile`, so adding a vendor can never strand the
-  settings rail.
+  run-setup panel.
 - Multilingual models opt in with `sends_language: true`, which is what puts
   `lang_code` in the request body — the same gating shape as `speed`. The codes
   themselves are data: `languages` is a `{code: label}` table (its declaration

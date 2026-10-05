@@ -15,7 +15,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import '../support/fake_tts_provider.dart';
 import '../support/l10n_test_support.dart';
 import '../support/recording_cleanup_controller.dart';
-import '../support/settings_fixtures.dart' as fixtures;
+import '../support/run_setup_fixtures.dart' as fixtures;
 
 /// Default for the optional toggle callbacks; a top-level tear-off is a
 /// constant, which an inline `() {}` closure is not.
@@ -59,8 +59,8 @@ void main() {
   Future<void> pumpToolbar(
     WidgetTester tester,
     AppController controller, {
-    bool railVisible = true,
-    VoidCallback? onToggleRail,
+    bool runSetupVisible = true,
+    VoidCallback? onToggleRunSetupPanel,
     Future<String?> Function()? pickDirectory,
     bool playingFull = false,
     VoidCallback onTogglePlayFull = _noop,
@@ -76,8 +76,8 @@ void main() {
         home: Scaffold(
           body: EditorToolbar(
             controller: controller,
-            railVisible: railVisible,
-            onToggleRail: onToggleRail ?? () {},
+            runSetupVisible: runSetupVisible,
+            onToggleRunSetupPanel: onToggleRunSetupPanel ?? () {},
             pickDirectory: pickDirectory,
             playingFull: playingFull,
             onTogglePlayFull: onTogglePlayFull,
@@ -90,11 +90,17 @@ void main() {
   }
 
   group('toolbar controls', () {
-    testWidgets('railToggleButton invokes onToggleRail', (tester) async {
+    testWidgets('runSetupToggleButton invokes onToggleRunSetupPanel', (
+      tester,
+    ) async {
       final controller = makeController();
       bool toggled = false;
-      await pumpToolbar(tester, controller, onToggleRail: () => toggled = true);
-      await tester.tap(find.byKey(const Key('railToggleButton')));
+      await pumpToolbar(
+        tester,
+        controller,
+        onToggleRunSetupPanel: () => toggled = true,
+      );
+      await tester.tap(find.byKey(const Key('runSetupToggleButton')));
       expect(toggled, isTrue);
     });
 
@@ -135,6 +141,50 @@ void main() {
       await tester.tap(find.byKey(const Key('editorNarrateButton')));
       await tester.pump();
       expect(narrated, isTrue);
+    });
+  });
+
+  group('settings button', () {
+    testWidgets('settingsButton invokes controller.onSettings', (tester) async {
+      final controller = makeController();
+      var opened = false;
+      controller.commands.onSettings = () => opened = true;
+      await pumpToolbar(tester, controller);
+      await tester.tap(find.byKey(const Key('settingsButton')));
+      expect(opened, isTrue);
+    });
+
+    testWidgets('shows the Settings tooltip with its accelerator', (
+      tester,
+    ) async {
+      final controller = makeController();
+      await pumpToolbar(tester, controller);
+      expect(find.byKey(const Key('settingsButton')), findsOneWidget);
+      expect(
+        find.byTooltip(
+          '${testL10n.gui_editor_toolbar_settings} '
+          '(${acceleratorLabel(',')})',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a tap is a harmless no-op when onSettings is unwired', (
+      tester,
+    ) async {
+      final controller = makeController();
+      expect(controller.commands.onSettings, isNull);
+      await pumpToolbar(tester, controller);
+      // The button always hands CupertinoButton a closure, so it stays enabled
+      // (unlike the save button, which greys out); the unwired slot just
+      // swallows the call.
+      final button = tester.widget<AppIconButton>(
+        find.byKey(const Key('settingsButton')),
+      );
+      expect(button.onPressed, isNotNull);
+      await tester.tap(find.byKey(const Key('settingsButton')));
+      await tester.pump();
+      expect(find.byKey(const Key('settingsButton')), findsOneWidget);
     });
   });
 

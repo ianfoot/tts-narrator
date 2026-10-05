@@ -6,7 +6,7 @@ import '../theme/app_tokens.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/disclosure.dart';
 
-/// The collapsible advanced voice-id entry of the settings rail: a disclosure
+/// The collapsible advanced voice-id entry of the run-setup panel: a disclosure
 /// revealing a free-form raw voice id field that overrides the picked alias.
 /// Extracted from the model section so per-model panels can compose it
 /// independently of the voice picker.
@@ -75,17 +75,17 @@ class _AdvancedVoiceWidgetState extends State<AdvancedVoiceWidget> {
     final l10n = AppLocalizations.of(context);
     return Disclosure(
       key: const Key('voiceAdvancedDisclosure'),
-      tooltip: l10n.gui_settings_advancedVoiceIdTooltip,
-      label: l10n.gui_settings_advancedVoiceId,
+      tooltip: l10n.gui_run_setup_advancedVoiceIdTooltip,
+      label: l10n.gui_run_setup_advancedVoiceId,
       expanded: _voiceRawExpanded,
-      caption: l10n.gui_settings_overridesSelectedAlias,
+      caption: l10n.gui_run_setup_overridesSelectedAlias,
       onToggle: (value) => setState(() => _voiceRawExpanded = value),
       child: AppTextField(
         key: const Key('voiceRawField'),
-        tooltip: l10n.gui_settings_voiceRawFieldTooltip,
+        tooltip: l10n.gui_run_setup_voiceRawFieldTooltip,
         controller: _voiceRaw,
         onChanged: _onVoiceRawChanged,
-        hintText: l10n.gui_settings_freeFormVoiceHint,
+        hintText: l10n.gui_run_setup_freeFormVoiceHint,
         style: _tokens.typography.body.copyWith(
           color: _tokens.colors.textPrimary,
         ),

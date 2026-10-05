@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 
-import '../controller/app_controller.dart';
 import '../../../l10n/app_localizations.dart';
+import '../controller/app_controller.dart';
 import '../theme/app_tokens.dart';
 import 'api_key_section.dart';
 import 'model_options_section.dart';
 import 'model_voice_section.dart';
 import 'run_section.dart';
 
-/// Left-side settings rail beside the editor: model & voice, styling, and run
+/// Left-side run-setup panel beside the editor: model & voice, styling, and run
 /// options. Every control writes straight to [AppController], which notifies
-/// the editor so the status-bar estimate stays live. The rail is hidden via the
+/// the editor so the status-bar estimate stays live. The panel is hidden via the
 /// editor toolbar's toggle; narration is initiated from the toolbar, not here.
 ///
 /// A thin composition root: each section is its own widget owning its local
 /// controls and syncing back from the controller.
-class SettingsPanel extends StatelessWidget {
-  const SettingsPanel({super.key, required this.controller});
+class RunSetupPanel extends StatelessWidget {
+  const RunSetupPanel({super.key, required this.controller});
 
   final AppController controller;
 
@@ -25,7 +25,7 @@ class SettingsPanel extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final tokens = AppTokens.of(context);
     return Container(
-      key: const Key('settingsPanel'),
+      key: const Key('runSetupPanel'),
       width: AppMetrics.railWidth,
       decoration: BoxDecoration(
         border: Border(
@@ -38,7 +38,7 @@ class SettingsPanel extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
             child: Text(
-              l10n.gui_settings_header,
+              l10n.gui_run_setup_header,
               style: tokens.typography.headerSemibold.copyWith(
                 color: tokens.colors.accentPrimary,
               ),
