@@ -141,6 +141,15 @@ class SettingsController extends ChangeNotifier {
   String _passagePrefix = PromptDefaults.passagePrefix;
   double _speed = 1.0;
 
+  /// Voice-design prose, or null when the user has not edited the model's own
+  /// [TtsModelProfile.defaultInstruct].
+  ///
+  /// Held as an *override* rather than a value so a model switch can go back to
+  /// the newly selected model's default: a voice description written for one
+  /// model means nothing to the next one, and silently keeping it would narrate
+  /// the wrong narrator.
+  String? _instruct;
+
   /// Selected UI locale, or null to follow the platform's resolution against
   /// [AppLocalizations.supportedLocales].
   ///
@@ -185,6 +194,31 @@ class SettingsController extends ChangeNotifier {
     if (value == _passagePrefix) return;
     _passagePrefix = value;
     notifyListeners();
+  }
+
+  /// Voice-design prose for a model that declares `"sends_instruct": true`.
+  ///
+  /// Resolves to the user's edit when there is one, else the active model's
+  /// [TtsModelProfile.defaultInstruct], so a freshly selected voice-design model
+  /// is runnable with no input while remaining editable. Empty for any other
+  /// model, and dropped from the request by the capability gate either way.
+  String get instruct =>
+      _instruct ?? _model.profile?.defaultInstruct ?? '';
+
+  set instruct(String value) {
+    if (value == _instruct) return;
+    _instruct = value.isEmpty ? null : value;
+    notifyListeners();
+  }
+
+  /// Drops any user [instruct] override so the active model's own default shows
+  /// again. Called on a model switch, where the previous override described a
+  /// different model.
+  ///
+  /// Does not notify, for the same reason as [applyNarratorGender]: the model
+  /// switch's own write owns the single broadcast.
+  void resetInstruct() {
+    _instruct = null;
   }
 
   /// Speech-rate multiplier (1.0 = normal), clamped to the run-setup panel's
@@ -390,26 +424,32 @@ class SettingsController extends ChangeNotifier {
     if (p == null) {
       throw const NoModelConfigured();
     }
-    final raw = _model.voice.trim();
-    String voiceId;
+    // A voice-design model synthesizes its narrator from prose and sends no
+    // voice at all, so it declares none and has nothing to resolve. Resolving a
+    // voice for it would demand a row the picker does not even show, and block
+    // the run on a field that is dropped on the way out.
+    String voiceId = '';
     String? label;
-    if (raw.isEmpty) {
-      final def = _model.defaultVoice;
-      if (def == null) {
-        throw NoVoiceSelected(p.alias);
+    if (p.sendsVoiceField) {
+      final raw = _model.voice.trim();
+      if (raw.isEmpty) {
+        final def = _model.defaultVoice;
+        if (def == null) {
+          throw NoVoiceSelected(p.alias);
+        }
+        voiceId = def.$1;
+        label = def.$2 == def.$1 ? null : def.$2;
+      } else {
+        final (id, resolvedLabel) = resolveVoice(
+          _model.voiceConfig,
+          p.alias,
+          raw,
+        );
+        voiceId = id;
+        label = (_model.voiceLabel != null && id == raw)
+            ? _model.voiceLabel
+            : (resolvedLabel != id ? resolvedLabel : null);
       }
-      voiceId = def.$1;
-      label = def.$2 == def.$1 ? null : def.$2;
-    } else {
-      final (id, resolvedLabel) = resolveVoice(
-        _model.voiceConfig,
-        p.alias,
-        raw,
-      );
-      voiceId = id;
-      label = (_model.voiceLabel != null && id == raw)
-          ? _model.voiceLabel
-          : (resolvedLabel != id ? resolvedLabel : null);
     }
     final providerBlock = _model.rawProviderSettings(p);
     return NarrationConfig(
@@ -422,6 +462,7 @@ class SettingsController extends ChangeNotifier {
       accent: accent,
       style: style,
       passagePrefix: passagePrefix,
+      instruct: instruct,
       minWords: minWords,
       sendWholeFile: sendWholeFile,
       sampleLen: sampleLen,

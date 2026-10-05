@@ -319,6 +319,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Text prepended to each paragraph';
 
   @override
+  String get gui_run_setup_instructFieldTooltip =>
+      'Describe the narrator in prose; the model designs the voice from it';
+
+  @override
   String get gui_run_setup_sampleLenFieldTooltip =>
       'Number of paragraphs to narrate in sample mode';
 

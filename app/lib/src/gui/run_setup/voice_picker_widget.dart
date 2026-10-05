@@ -17,6 +17,13 @@ import 'run_setup_labels.dart';
 /// so the status-bar estimate stays live. Values are re-read from the
 /// controller on every build, so a model switch landing in the parent section
 /// re-renders this picker with the new voice list.
+///
+/// The label, gender filter and voice dropdown are all scoped to choosing a
+/// voice, so they disappear together for a model that sends no voice id and
+/// writes its narrator from prose instead — such a model has no rows to pick
+/// between, and an empty dropdown under a "Voice" label would be a lie. The
+/// language dropdown stays: it narrows the voice list, but it is also the
+/// `lang_code` a model synthesises in, so a voice-design model still needs it.
 class VoicePickerWidget extends StatelessWidget {
   const VoicePickerWidget({super.key, required this.controller});
 
@@ -26,10 +33,12 @@ class VoicePickerWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final tokens = AppTokens.of(context);
+    final takesVoice = controller.takesVoice;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        runSetupFieldLabel(tokens, l10n.gui_run_setup_voiceAliasLabel),
+        if (takesVoice)
+          runSetupFieldLabel(tokens, l10n.gui_run_setup_voiceAliasLabel),
         if (controller.hasLanguages) ...[
           const SizedBox(height: 12),
           AppDropdown<String>(
@@ -40,31 +49,32 @@ class VoicePickerWidget extends StatelessWidget {
             hint: l10n.gui_run_setup_selectLanguageHint,
             onChanged: (code) => controller.applyVoiceLanguage(code),
           ),
-          const SizedBox(height: 12),
         ],
-        if (controller.hasGenderTags) ...[
+        if (takesVoice) ...[
           const SizedBox(height: 12),
-          SegmentedControl<VoiceGender>(
-            key: const Key('genderControl'),
-            tooltip: l10n.gui_run_setup_genderControlTooltip,
-            value: controller.voiceGenderFilter,
-            items: [
-              (VoiceGender.neutral, l10n.gui_run_setup_genderAny),
-              (VoiceGender.female, l10n.gui_run_setup_genderFemale),
-              (VoiceGender.male, l10n.gui_run_setup_genderMale),
-            ],
-            onChanged: (g) => controller.voiceGenderFilter = g,
+          if (controller.hasGenderTags) ...[
+            SegmentedControl<VoiceGender>(
+              key: const Key('genderControl'),
+              tooltip: l10n.gui_run_setup_genderControlTooltip,
+              value: controller.voiceGenderFilter,
+              items: [
+                (VoiceGender.neutral, l10n.gui_run_setup_genderAny),
+                (VoiceGender.female, l10n.gui_run_setup_genderFemale),
+                (VoiceGender.male, l10n.gui_run_setup_genderMale),
+              ],
+              onChanged: (g) => controller.voiceGenderFilter = g,
+            ),
+            const SizedBox(height: 12),
+          ],
+          AppDropdown<String>(
+            key: const Key('voiceDropdown'),
+            tooltip: l10n.gui_run_setup_voiceDropdownTooltip,
+            value: _selectedVoiceId,
+            items: controller.voiceItems,
+            hint: l10n.gui_run_setup_selectVoiceHint,
+            onChanged: (id) => controller.applyVoiceId(id),
           ),
-          const SizedBox(height: 12),
         ],
-        AppDropdown<String>(
-          key: const Key('voiceDropdown'),
-          tooltip: l10n.gui_run_setup_voiceDropdownTooltip,
-          value: _selectedVoiceId,
-          items: controller.voiceItems,
-          hint: l10n.gui_run_setup_selectVoiceHint,
-          onChanged: (id) => controller.applyVoiceId(id),
-        ),
       ],
     );
   }

@@ -542,6 +542,14 @@ _parseModelFile(String path, String alias, String provider) {
   if (sendsLanguage != null && sendsLanguage is! bool) {
     throw VoiceConfigurationError('"sends_language" must be a bool');
   }
+  final sendsInstruct = raw['sends_instruct'];
+  if (sendsInstruct != null && sendsInstruct is! bool) {
+    throw VoiceConfigurationError('"sends_instruct" must be a bool');
+  }
+  final defaultInstructRaw = raw['default_instruct'];
+  if (defaultInstructRaw != null && defaultInstructRaw is! String) {
+    throw VoiceConfigurationError('"default_instruct" must be a string');
+  }
   final displayName = raw['display_name'];
   if (displayName != null && displayName is! String) {
     throw VoiceConfigurationError('"display_name" must be a string');
@@ -634,9 +642,11 @@ _parseModelFile(String path, String alias, String provider) {
       sendsVoiceField: sendsVoice ?? true,
       supportsSpeed: supportsSpeed ?? false,
       sendsLanguageField: sendsLanguage ?? false,
+      sendsInstructField: sendsInstruct ?? false,
       sampleRate: sampleRate?.toInt(),
       provider: provider,
       displayName: displayName,
+      defaultInstruct: defaultInstructRaw as String?,
       voicesEditable: voicesEditable ?? false,
     ),
     defaultVoice: defaultVoice,
@@ -704,6 +714,9 @@ Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
   if (!p.sendsVoiceField) 'sends_voice': p.sendsVoiceField,
   if (p.supportsSpeed) 'speed': p.supportsSpeed,
   if (p.sendsLanguageField) 'sends_language': p.sendsLanguageField,
+  if (p.sendsInstructField) 'sends_instruct': p.sendsInstructField,
+  if (p.defaultInstruct != null && p.defaultInstruct!.isNotEmpty)
+    'default_instruct': p.defaultInstruct,
   if (config.defaults[p.alias] != null)
     'default_voice': config.defaults[p.alias],
   if (config.defaultLanguages[p.alias] != null)

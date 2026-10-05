@@ -338,6 +338,66 @@ void main() {
       expect(c.voice, isEmpty);
       expect(() => c.buildConfig(), throwsA(isA<NoVoiceSelected>()));
     });
+
+    test('a model that takes no voice builds without one', () {
+      // The counterpart to the NoVoiceSelected case above: a voice-design model
+      // declares no voices at all, so there is nothing to select. Demanding one
+      // would make the model unrunnable on the grounds that a field it never
+      // sends is empty.
+      writeConfig({
+        'models': {
+          'qwen': {
+            'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+            'format': 'wav',
+            'sample_rate': 24000,
+            'sends_voice': false,
+            'sends_instruct': true,
+            'default_instruct':
+                'An older male narrator with a resonant, warm tone.',
+          },
+        },
+      });
+      final c = makeController();
+      c.changeModel('qwen');
+      expect(c.voice, isEmpty);
+
+      final cfg = c.buildConfig();
+      expect(cfg.voice, isEmpty);
+      // The prose the model file defaults to reaches the request instead.
+      expect(cfg.instruct, 'An older male narrator with a resonant, warm tone.');
+    });
+
+    test('instruct is the user edit, and a model switch drops a stale one', () {
+      writeConfig({
+        'models': {
+          'qwen': {
+            'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+            'format': 'wav',
+            'sends_voice': false,
+            'sends_instruct': true,
+            'default_instruct': 'The shipped default.',
+          },
+          'gemini': {'id': 'google/gemini-3.1-flash-tts-preview'},
+        },
+        'defaults': {'gemini': 'Charon'},
+        'voices': {
+          'gemini': {'Charon': 'Charon'},
+        },
+      });
+      final c = makeController();
+      c.changeModel('qwen');
+      expect(c.instruct, 'The shipped default.');
+
+      c.instruct = 'A young, bright and energetic presenter.';
+      expect(c.buildConfig().instruct, 'A young, bright and energetic presenter.');
+
+      // Prose written for one model says nothing about the next, so switching
+      // goes back to the newly selected model's own default rather than
+      // narrating the previous model in the previous voice.
+      c.changeModel('gemini');
+      expect(c.instruct, isEmpty);
+      expect(c.buildConfig().instruct, isEmpty);
+    });
   });
 
   group('API key secure-store fallback', () {

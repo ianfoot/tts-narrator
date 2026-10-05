@@ -142,6 +142,7 @@
   "gui_run_setup_accentFieldTooltip": "Voice accent description (e.g., 'southern British English')",
   "gui_run_setup_styleFieldTooltip": "Voice style personality (e.g., 'warm, composed')",
   "gui_run_setup_prefixFieldTooltip": "Text prepended to each paragraph",
+  "gui_run_setup_instructFieldTooltip": "Describe the narrator in prose; the model designs the voice from it",
   "gui_run_setup_sampleLenFieldTooltip": "Number of paragraphs to narrate in sample mode",
   "gui_run_setup_genderControlTooltip": "Filter voices by gender",
   "gui_run_setup_languageDropdownTooltip": "Language sent to the model (lang_code)",

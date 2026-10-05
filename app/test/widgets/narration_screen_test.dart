@@ -28,6 +28,7 @@ class _BlockingClient {
     required Map<String, String> settings,
     required double? speed,
     String? language,
+    String? instruct,
     String? apiKey,
     AbortToken? abort,
   }) async {

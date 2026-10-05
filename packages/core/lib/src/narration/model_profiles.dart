@@ -19,9 +19,11 @@ class TtsModelProfile {
     this.sendsVoiceField = true,
     this.supportsSpeed = false,
     this.sendsLanguageField = false,
+    this.sendsInstructField = false,
     this.sampleRate,
     required this.provider,
     this.displayName,
+    this.defaultInstruct,
     this.voicesEditable = false,
   });
 
@@ -62,6 +64,18 @@ class TtsModelProfile {
   /// omitted entirely otherwise.
   final bool sendsLanguageField;
 
+  /// Whether the model accepts an `instruct` field in the request body.
+  ///
+  /// Qwen3 Voice Design has no voice list at all: it *writes* the voice from a
+  /// natural-language description — persona and demographics, pitch and timbre,
+  /// pace, emotional tone, accent. That prose travels in `instruct`, a field no
+  /// other model on the protocol defines, so it is opt-in per model
+  /// (`"sends_instruct": true`) exactly like [supportsSpeed].
+  ///
+  /// Mutually exclusive in practice with [sendsVoiceField]: a voice-design model
+  /// is described, not selected.
+  final bool sendsInstructField;
+
   /// PCM sample rate used for the WAV header and duration; null for MP3.
   final int? sampleRate;
 
@@ -69,6 +83,16 @@ class TtsModelProfile {
   /// the model config file, and opaque to core: it is a lookup key into user
   /// config, never a vendor the code knows about.
   final String provider;
+
+  /// The `instruct` prose a [sendsInstructField] model starts from, if the model
+  /// file supplies one.
+  ///
+  /// Voice design has no "unset" state to fall back to — the model is described
+  /// or it is not, so a shipped model that declares `sends_instruct` should say
+  /// something here. Carrying it on the profile (rather than only in the model
+  /// file) is what lets the GUI prefill an editable control without core knowing
+  /// anything about the GUI's defaults.
+  final String? defaultInstruct;
 
   /// Whether the user may edit this model's voice list from the app.
   ///
@@ -92,9 +116,11 @@ class TtsModelProfile {
     sendsVoiceField: sendsVoiceField,
     supportsSpeed: supportsSpeed,
     sendsLanguageField: sendsLanguageField,
+    sendsInstructField: sendsInstructField,
     sampleRate: sampleRate,
     provider: provider ?? this.provider,
     displayName: displayName,
+    defaultInstruct: defaultInstruct,
     voicesEditable: voicesEditable,
   );
 }

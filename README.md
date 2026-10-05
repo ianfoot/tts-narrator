@@ -163,11 +163,14 @@ Model differences drive how requests are built:
 | `gemini` | named voices (rated on the OpenRouter page) | ✓ (accent/style/`[calm]`) | 24 kHz PCM `.wav` |
 | `kokoro` | Kokoro-82M voices (54 voices, 9 languages, keyed by id) | ✗ (read aloud — prompt styling disabled) | `.mp3` |
 | `kokoro_local` | same Kokoro-82M voices | ✗ (read aloud — prompt styling disabled) | `.wav` (local, free) |
+| `qwen3_voicedesign` | ✗ (none — the voice is described, not chosen) | ✗ (prose voice design instead) | 24 kHz `.wav` (local, free) |
 
 Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
 Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma` ("Emma"),
 `kokoro_local`=`bm_george` ("George"). The voice can be selected in the GUI
-Run Setup panel.
+Run Setup panel. `qwen3_voicedesign` has no default voice and no voice dropdown:
+it declares `"sends_voice": false` and describes the narrator in prose instead
+(see [docs/QWEN3_VOICEDESIGN.md](docs/QWEN3_VOICEDESIGN.md)).
 
 Gender tags drive a narrator-gender filter (and, for prompt-driven models, may
 rewrite the "narrator" phrase in the passage prefix). Tagging is per-voice and
@@ -191,6 +194,13 @@ When the model also sets `"sends_language": true`, the selected code travels to
 the provider as `lang_code` (the same opt-in shape as `"speed"`); models without
 the flag never see the field. For Kokoro the code is simply the first letter of
 the voice id — see [docs/KOKORO.md](docs/KOKORO.md).
+
+A model that declares `"sends_instruct": true` sends no voice id and instead gets
+a multiline **Voice design** box in Model options, prefilled from the model
+file's `default_instruct` and sent as the request body's `instruct` field. Only
+`qwen3_voicedesign` uses it. That prose describes the narrator and is never
+spoken, unlike `accent`/`style`, which are woven into the text the model reads
+aloud.
 
 Add or swap a model by editing its `models/<alias>.json` file, and adding a new
 one by dropping it in `models/` and listing its alias in some provider's

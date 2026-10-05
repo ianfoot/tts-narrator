@@ -122,6 +122,33 @@ void writeFishConfig(String configDir) {
   });
 }
 
+/// Writes a voice-design config: a model that takes no voice id and writes its
+/// narrator from prose instead, the way Qwen3 TTS Voice Design does.
+///
+/// Declares no `default_voice` and no `voices` on purpose — that is the honest
+/// shape for such a model, and it is the shape the GUI has to cope with: no
+/// voice to resolve at run time and nothing to show in the voice picker. The
+/// language list is there because `lang_code` is a real request field for this
+/// model, so the language dropdown still has to reach it.
+void writeVoiceDesignConfig(String configDir) {
+  writeConfig(configDir, {
+    'models': {
+      'qwen': {
+        'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+        'format': 'wav',
+        'sample_rate': 24000,
+        'sends_voice': false,
+        'sends_instruct': true,
+        'sends_language': true,
+        'default_instruct':
+            'An older male narrator with a resonant, warm tone, a low pitch.',
+        'default_language': 'English',
+        'languages': {'English': 'English', 'Chinese': 'Chinese'},
+      },
+    },
+  });
+}
+
 /// Pumps the given run-setup section on a panel-sized surface (the same
 /// 1200x1800 logical size the full run-setup panel tests use) and restores the
 /// default test surface afterwards.

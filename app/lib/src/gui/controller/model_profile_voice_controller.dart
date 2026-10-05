@@ -265,6 +265,19 @@ class ModelProfileVoiceController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Whether the active model takes a voice at all.
+  ///
+  /// False for a model that writes its voice from prose instead (`"sends_voice":
+  /// false`, as Qwen3 Voice Design does): it has no voices to choose between,
+  /// and the picker has no row to select, so "Model & voice" drops the
+  /// dropdown rather than showing an empty one.
+  ///
+  /// True while no model is selected, because "does not take a voice" is
+  /// something a model has to declare; an empty config says nothing either way,
+  /// and the section still shows its pickers rather than blanking itself before
+  /// the user has chosen anything.
+  bool get takesVoice => profile?.sendsVoiceField ?? true;
+
   /// Whether the active model has any voice of a known gender — tagged with
   /// `gender` in its config, or named by one (`<lang><gender>_<name>` ids read
   /// their gender off the id). Drives the voice-picker gender control in

@@ -2,10 +2,11 @@ import 'model_profiles.dart';
 
 /// Declarative UI for a model's adjustable options.
 ///
-/// [ModelUiSpec.forProfile] derives the controls from the model's own declared
-/// capabilities ([TtsModelProfile.promptStyle] and [TtsModelProfile.supportsSpeed]),
-/// and the app renders whatever comes back generically. Core ships no per-model
-/// branches, and the app has none either.
+  /// [ModelUiSpec.forProfile] derives the controls from the model's own declared
+  /// capabilities ([TtsModelProfile.promptStyle], [TtsModelProfile.supportsSpeed],
+  /// [TtsModelProfile.sendsInstructField]), and the app renders whatever comes
+  /// back generically. Core ships no per-model branches, and the app has none
+  /// either.
 ///
 /// Option keys are a convention the app interprets against the model-agnostic
 /// narration settings:
@@ -14,7 +15,11 @@ import 'model_profiles.dart';
 ///   `gender` — a narrator-gender (male/female/any) segmented control that the
 ///   app wires to its voice/narrator gender state;
 ///   `speed` — a speech-rate slider bound to the `NarrationConfig.speed`
-///   setting (1.0 = normal).
+///   setting (1.0 = normal);
+///   `instruct` — a multiline voice description bound to
+///   `NarrationConfig.instruct` and sent as the request body's `instruct`
+///   field, for models that synthesize a voice from prose rather than
+///   selecting one from a list.
 ///
 /// A model declaring neither capability gets no model-option controls.
 class ModelUiSpec {
@@ -66,6 +71,22 @@ class ModelUiSpec {
         ),
       );
     }
+    // Voice design has no accent/style pair to speak aloud, so `instruct` is a
+    // field of its own: one multiline box describing the narrator, prefilled
+    // from the model file. Offered independently of `promptStyle` because the
+    // two never apply to the same model.
+    if (model.sendsInstructField) {
+      options.add(
+        const ModelUiControl(
+          key: 'instruct',
+          label: 'Voice design',
+          type: ModelUiOptionType.multiline,
+          hint:
+              'Describe the narrator in prose: persona and age, pitch and '
+              'timbre, pace, emotional tone, accent.',
+        ),
+      );
+    }
     return ModelUiSpec(options);
   }
 
@@ -85,7 +106,7 @@ class ModelUiControl {
   });
 
   /// Declarative key the app binds against a narration setting or narrator
-  /// state (`accent`, `style`, `passagePrefix`, `gender`, `speed`).
+  /// state (`accent`, `style`, `passagePrefix`, `gender`, `speed`, `instruct`).
   final String key;
 
   /// User-facing label for the control.

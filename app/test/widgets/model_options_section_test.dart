@@ -162,4 +162,45 @@ void main() {
     expect(c.voiceGenderFilter, VoiceGender.male);
     expect(c.passagePrefix, contains('male narrator'));
   });
+
+  group('voice design', () {
+    testWidgets('renders the prose the model file defaults to', (
+      tester,
+    ) async {
+      writeVoiceDesignConfig(configDir);
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
+
+      expect(find.byKey(const Key('instructField')), findsOneWidget);
+      // Prefilled, not blank: the shipped model is runnable with no input.
+      expect(c.instruct, contains('resonant, warm tone'));
+      expect(find.text('Voice design'), findsOneWidget);
+    });
+
+    testWidgets('an edit reaches the controller', (tester) async {
+      writeVoiceDesignConfig(configDir);
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
+
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(const Key('instructField')),
+          matching: find.byType(CupertinoTextField),
+        ),
+        'A young, bright and energetic presenter.',
+      );
+      expect(c.instruct, 'A young, bright and energetic presenter.');
+    });
+
+    testWidgets('a model that takes no instruct shows no prose box', (
+      tester,
+    ) async {
+      writeCapableFish({'prompt_style': true});
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
+
+      expect(find.byKey(const Key('instructField')), findsNothing);
+      expect(c.instruct, isEmpty);
+    });
+  });
 }

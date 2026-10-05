@@ -269,6 +269,12 @@ Future<void> narrate(
       input: input,
       speed: config.profile.supportsSpeed ? config.speed : null,
       language: config.profile.sendsLanguageField ? config.language : null,
+      // Voice design: the model reads the prose instead of a voice id. Falls
+      // back to the profile's default so a model that declares the capability
+      // never sends an undescribed request the vendor cannot fulfil.
+      instruct: config.profile.sendsInstructField
+          ? (config.instruct ?? config.profile.defaultInstruct)
+          : null,
       abort: abort,
     );
 

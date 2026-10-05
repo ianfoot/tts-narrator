@@ -14,6 +14,7 @@ class NarrationConfig {
     this.accent = PromptDefaults.accent,
     this.style = PromptDefaults.style,
     this.passagePrefix = PromptDefaults.passagePrefix,
+    this.instruct,
     this.minWords = PromptDefaults.minWords,
     this.sendWholeFile = false,
     this.sampleLen,
@@ -72,6 +73,16 @@ class NarrationConfig {
   /// Pooled preamble applied to every paragraph prompt.
   final String passagePrefix;
 
+  /// Natural-language description of the voice to synthesize, sent as the
+  /// `instruct` field for a model whose profile declares
+  /// [TtsModelProfile.sendsInstructField]; null for every other model.
+  ///
+  /// Unlike [accent] and [style] — which are directives woven *into the spoken
+  /// text* for prompt-style models — this describes the narrator and never
+  /// reaches the audio as words. Qwen3 Voice Design is the model that reads it:
+  /// it has no voice list, so the prose is the only way to choose a voice.
+  final String? instruct;
+
   /// If set, only narrate this many paragraphs (smoke test).
   final int? sampleLen;
 
@@ -128,6 +139,7 @@ class NarrationConfig {
     accent: accent,
     style: style,
     passagePrefix: passagePrefix,
+    instruct: instruct,
     minWords: minWords,
     sendWholeFile: sendWholeFile,
     sampleLen: sampleLen,

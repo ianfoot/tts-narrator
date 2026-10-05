@@ -414,6 +414,31 @@ void main() {
       expect(c.voiceGenderFilter, VoiceGender.male);
       expect(c.passagePrefix, contains('male narrator'));
     });
+
+    testWidgets(
+      'a voice-design model drops the voice picker but keeps the language one',
+      (tester) async {
+        fixtures.writeVoiceDesignConfig(configDir);
+        final c = makeController();
+        await pumpRunSetupPanel(tester, c);
+
+        // No voice id is ever sent, so there is nothing to pick: the dropdown
+        // and its advanced-override row both disappear rather than sitting
+        // empty under a "Voice" label.
+        expect(find.byKey(const Key('voiceDropdown')), findsNothing);
+        expect(find.byKey(const Key('voiceAdvancedDisclosure')), findsNothing);
+        // The label goes with them, so nothing dangles above the language row.
+        expect(find.text('Voice alias'), findsNothing);
+
+        // Language survives: it narrows the voice list, but it is also the
+        // lang_code the model synthesises in, so this model still needs it.
+        expect(find.byKey(const Key('languageDropdown')), findsOneWidget);
+
+        // Its narrator is written from prose instead, in the model options.
+        expect(find.byKey(const Key('instructField')), findsOneWidget);
+        expect(c.takesVoice, isFalse);
+      },
+    );
   });
 
   group('model options (derived from the model profile)', () {
