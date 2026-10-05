@@ -155,13 +155,26 @@ class ModelProfileVoiceController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Applies a friendly voice alias; resolves it to the provider raw id.
+  /// Applies a voice picked from the list, by id.
+  ///
+  /// The list's value is the id, not the label, so a model with two voices of the
+  /// same name (Kokoro has three Santas) selects the one the reader actually
+  /// clicked. [label] is passed alongside for display only.
   /// Returns false (leaving the selection unchanged) when no model is active.
-  bool applyVoiceLabel(String label) {
+  bool applyVoiceId(String id, {String? label}) {
     final p = profile;
     if (p == null) return false;
-    final (id, _) = resolveVoice(_voiceConfig, p.alias, label);
-    setVoice(id, label: label);
+    // Look the label up from the entry the id came from, so a pick from the
+    // dropdown keeps its friendly name without the caller having to pass the
+    // display string back through the widget.
+    var friendly = label;
+    for (final e in _visibleEntries(p)) {
+      if (e.id == id) {
+        friendly = e.label;
+        break;
+      }
+    }
+    setVoice(id, label: friendly);
     return true;
   }
 
@@ -258,40 +271,55 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   /// Applies a language choice from the picker: keeps the current voice when it
   /// already speaks [code], otherwise switches to the model default voice in
-  /// that language, else the first voice that speaks it. A choice with no voice
-  /// behind it is ignored (the picker stays where it was) rather than emptying
-  /// the voice list.
+  /// that language, else the first voice that speaks it.
+  ///
+  /// The language the reader picked always wins. When it is the *gender* filter
+  /// that would empty the list — French has one voice and it is female, so Male +
+  /// French leaves nothing — the gender filter is cleared rather than the
+  /// language silently snapping back, which is the same bargain the gender setter
+  /// makes in the other order. Only a language with no voice at all behind it is
+  /// refused outright.
   void applyLanguage(String code) {
     final p = profile;
     if (p == null) return;
     if (!_voiceConfig.languagesFor(p.alias).containsKey(code)) return;
-    final previous = _language;
-    _language = code;
     if (!_hasVisible(p, language: code)) {
-      _language = previous;
-      return;
+      if (!_hasVisible(p, language: code, gender: VoiceGender.neutral)) return;
+      _voiceGender = VoiceGender.neutral;
     }
-    _keepVisibleVoice(p, _visibleEntries(p));
+    _language = code;
+    _keepVisibleVoice(p, _filteredEntries(p, language: code));
     notifyListeners();
   }
 
+  /// The language the voice list is actually narrowed by: the [language] getter,
+  /// so the list can never disagree with the dropdown that chose it.
+  ///
+  /// Filtering used to read the [_language] field, which left the two out of step
+  /// whenever the language came from somewhere other than the picker — a voice id
+  /// typed into Advanced Voice ID, say, which moves the dropdown without touching
+  /// the field.
+  String? get _activeLanguage => language;
+
   /// Whether the active model would show any voice under the given filters.
-  /// Unset arguments fall back to the active [language] / [voiceGenderFilter].
+  /// Unset arguments fall back to the active [_activeLanguage] /
+  /// [voiceGenderFilter].
   bool _hasVisible(TtsModelProfile p, {String? language, VoiceGender? gender}) =>
       _filteredEntries(
         p,
-        language: language ?? _language,
+        language: language ?? _activeLanguage,
         gender: gender ?? _voiceGender,
       ).isNotEmpty;
 
   /// Voices the picker shows for the active model under the active filters.
   List<VoiceOption> _visibleEntries(TtsModelProfile p) =>
-      _filteredEntries(p, language: _language);
+      _filteredEntries(p, language: _activeLanguage);
 
   /// Selectable voices for the active model, narrowed to [language] and
-  /// [voiceGenderFilter]. Each entry is `(value, displayLabel)`: tagged voices
-  /// get a compact ` (m)`/` (f)`/` (n)` suffix so gender is visible in the
-  /// dropdown.
+  /// [voiceGenderFilter]. Each entry is `(id, displayLabel)`: the id is the value
+  /// because it is the only thing that distinguishes two voices sharing a name,
+  /// and tagged voices get a compact ` (m)`/` (f)`/` (n)` suffix so gender is
+  /// visible in the dropdown.
   List<(String, String)> get voiceItems {
     final p = profile;
     return p == null
@@ -299,7 +327,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
         : [
             for (final e in _visibleEntries(p))
               (
-                e.label,
+                e.id,
                 e.gender == null
                     ? e.label
                     : '${e.label} (${e.gender!.shorthand})',

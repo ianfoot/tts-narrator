@@ -105,7 +105,12 @@ List<VoiceOption> voiceEntries({
   final profiles = model != null ? [model] : effectiveModels(config);
   final entries = <VoiceOption>[];
   for (final p in profiles) {
-    void add(String id, String label, bool isAlias) {
+    // The voice itself is passed down rather than its label: the gender has to
+    // come off this entry, not off a name lookup, since several voices in one
+    // model may share a name (Kokoro has three Santas) and a name lookup would
+    // answer for the first of them.
+    void add(Voice voice, String label, bool isAlias) {
+      final id = voice.id;
       if (entries.any((e) => e.model == p.alias && e.id == id)) return;
       final voiceLanguage = languageFor(config, p.alias, id);
       if (language != null &&
@@ -119,7 +124,7 @@ List<VoiceOption> voiceEntries({
           id: id,
           label: label,
           isAlias: isAlias,
-          gender: genderFor(config, p.alias, label),
+          gender: config.genderOfVoice(p.alias, voice),
           language: voiceLanguage,
         ),
       );
@@ -128,11 +133,11 @@ List<VoiceOption> voiceEntries({
     for (final e
         in (config.voices[p.alias] ?? const <String, Voice>{}).entries) {
       // A voice shows its name when it has one, else its `voices` key.
-      add(e.value.id, e.value.name ?? e.key, true);
+      add(e.value, e.value.name ?? e.key, true);
     }
     try {
       final (id, label) = defaultVoiceFor(p, config);
-      add(id, label, false);
+      add(config.voiceFor(p.alias, id) ?? Voice(id: id), label, false);
     } on VoiceConfigurationError {
       // No default for this model yet; skip (raw-id entry stays available).
     }

@@ -40,6 +40,10 @@ const String kVoiceConfigModelsDir = 'models';
 /// `config.json` whose file or whose models are missing, and a provider file
 /// that `config.json` does not register, are each reported as warnings.
 ///
+/// A model file that parses keeps every usable part of itself, so one bad voice
+/// entry is skipped on its own -- reported as a warning like any other -- rather
+/// than costing the whole model.
+///
 /// If files don't exist, [downloadVoiceConfigFiles] fetches them from GitHub.
 ///
 /// Returns the loaded config plus warnings for anything skipped or broken.
@@ -111,6 +115,7 @@ const String kVoiceConfigModelsDir = 'models';
       if (m.defaultLanguage != null) {
         defaultLanguages[alias] = m.defaultLanguage!;
       }
+      warnings.addAll(m.warnings);
     } on VoiceConfigurationError catch (e) {
       warnings.add('Skipped model "$alias": ${e.message}');
     }
@@ -243,6 +248,11 @@ ProviderConfig _parseProviderFile(String path, String name) {
   return ProviderConfig(name: name, settings: settingsOut, models: models);
 }
 
+/// The fields a `voices` entry object may carry. An entry naming no `id` is
+/// read as keyed by its own key, so only an entry made entirely of fields
+/// outside this set is treated as a mistake rather than an annotation.
+const _voiceEntryFields = {'id', 'name', 'gender'};
+
 ({
   TtsModelProfile profile,
   String? defaultVoice,
@@ -250,8 +260,15 @@ ProviderConfig _parseProviderFile(String path, String name) {
   Map<String, Voice> voices,
   Map<String, String> languages,
   String? defaultLanguage,
+  List<String> warnings,
 })
 _parseModelFile(String path, String alias, String provider) {
+  // Per-entry problems are collected rather than thrown: one unusable voice
+  // should not cost the whole model, but it must not vanish silently either.
+  final warnings = <String>[];
+  void skip(String key, String because) => warnings.add(
+    'Voice "$key" in model "$alias" is skipped: $because',
+  );
   final raw = _readJson(path);
   if (raw is! Map<String, dynamic>) {
     throw VoiceConfigurationError('must be a JSON object');
@@ -321,18 +338,44 @@ _parseModelFile(String path, String alias, String provider) {
     }
     voicesRaw.forEach((key, value) {
       if (value is String) {
-        if (value.isNotEmpty) voices[key] = Voice(id: value);
+        if (value.isNotEmpty) {
+          voices[key] = Voice(id: value);
+        } else {
+          skip(key, 'its voice id is empty.');
+        }
         return;
       }
-      if (value is! Map<String, dynamic>) return;
+      if (value is! Map<String, dynamic>) {
+        skip(key, 'it is neither a voice id nor a voice object.');
+        return;
+      }
       // The key is the voice id unless the entry spells one out, so a config can
       // key voices by the id that is unique and name them inside.
+      //
+      // An entry that says nothing about its id keeps the key-as-id reading.
+      // An entry that carries only fields this schema does not know is a config
+      // mistake -- most often a mistyped "id" -- and guessing there would send
+      // the key to the provider as a voice id, narrating in the wrong voice
+      // instead of failing here where the config can name the mistake.
       final rawId = value['id'];
-      final id = rawId is String && rawId.isNotEmpty ? rawId : key;
-      if (id.isEmpty) return;
+      if (rawId != null && (rawId is! String || rawId.isEmpty)) {
+        skip(key, 'its "id" is not a non-empty string.');
+        return;
+      }
+      if (rawId == null &&
+          value.keys.any((k) => !_voiceEntryFields.contains(k))) {
+        skip(
+          key,
+          'it names no "id" and its only '
+              '${value.keys.length == 1 ? 'field is' : 'fields are'} '
+              '${value.keys.map((k) => '"$k"').join(", ")}, which this config '
+              'schema does not define.',
+        );
+        return;
+      }
       final rawName = value['name'];
       voices[key] = Voice(
-        id: id,
+        id: rawId ?? key,
         name: rawName is String && rawName.trim().isNotEmpty
             ? rawName.trim()
             : null,
@@ -394,6 +437,7 @@ _parseModelFile(String path, String alias, String provider) {
     voices: voices,
     languages: languages,
     defaultLanguage: defaultLanguage,
+    warnings: warnings,
   );
 }
 

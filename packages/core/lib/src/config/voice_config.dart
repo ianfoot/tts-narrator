@@ -261,21 +261,35 @@ class VoiceConfig {
     return voice == null ? (value, value) : (voice.id, voice.name ?? value);
   }
 
-  /// The gender for [voiceLabel] under [modelAlias], or null when unknown.
+  /// The gender for [voice] under [modelAlias], or null when unknown.
   ///
   /// A configured entry's own `gender` tag wins. An untagged voice falls back to
   /// the second character of its id — but only for a model that declares
   /// languages, because that declaration is what makes its ids
   /// `<lang><gender>_<name>` and their second character a gender. Without that
   /// evidence a bare id like `nala` would be misread as a neutral voice.
-  /// [voiceLabel] may be a configured name or a raw id.
-  VoiceGender? genderFor(String modelAlias, String voiceLabel) {
-    final voice = voiceFor(modelAlias, voiceLabel);
-    final tagged = voice?.gender;
+  ///
+  /// Takes the entry itself rather than a name to look up: [genderFor] has to go
+  /// through [voiceFor], whose name scan returns the *first* of several voices
+  /// sharing a name, so asking it about the second Santa would answer for the
+  /// first.
+  VoiceGender? genderOfVoice(String modelAlias, Voice voice) {
+    final tagged = voice.gender;
     if (tagged != null) return tagged;
     if (languagesFor(modelAlias).isEmpty) return null;
-    return genderFromVoiceId(voice?.id ?? voiceLabel);
+    return genderFromVoiceId(voice.id);
   }
+
+  /// The gender for [voiceLabel] under [modelAlias], or null when unknown.
+  ///
+  /// [voiceLabel] may be a configured name or a raw id; a value with no config
+  /// entry is read as a bare id. Prefer [genderOfVoice] when the caller already
+  /// holds the voice — see its note on duplicate names.
+  VoiceGender? genderFor(String modelAlias, String voiceLabel) =>
+      genderOfVoice(
+        modelAlias,
+        voiceFor(modelAlias, voiceLabel) ?? Voice(id: voiceLabel),
+      );
 
   bool get isEmpty =>
       providers.isEmpty &&

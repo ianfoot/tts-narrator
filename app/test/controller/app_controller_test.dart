@@ -811,7 +811,7 @@ void main() {
         },
       });
       final c = makeController();
-      c.applyVoiceLabel('Narrator'); // fish alias -> hex123, label Narrator.
+      c.applyVoiceId('hex123', label: 'Narrator'); // id hex123, label Narrator.
       expect(c.voice, 'hex123');
       expect(c.voiceLabel, 'Narrator');
       // gemini's default differs, so the raw voice survives; the fish label
@@ -822,7 +822,7 @@ void main() {
       expect(c.voiceLabel, isNull);
     });
 
-    test('resolveVoice wires a friendly alias to its raw id', () {
+    test('applyVoiceId wires a picked voice to its raw id and label', () {
       writeConfig({
         'models': {
           'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
@@ -832,7 +832,7 @@ void main() {
         },
       });
       final c = makeController();
-      c.applyVoiceLabel('Narrator');
+      c.applyVoiceId('hex123', label: 'Narrator');
       expect(c.voice, 'hex123');
       expect(c.voiceLabel, 'Narrator');
     });
@@ -930,18 +930,21 @@ void main() {
       c.applyVoiceLanguage('j');
       expect(c.voiceItems.map((e) => e.$2), ['Kumo (m)']);
       c.voiceGenderFilter = VoiceGender.male;
-      expect(c.voiceItems.map((e) => e.$1), ['Kumo']);
+      expect(c.voiceItems.map((e) => e.$1), ['jm_kumo']);
       expect(c.voiceLabel, 'Kumo');
     });
 
     test('the gender filter narrows voiceItems and appends shorthand', () {
       writeKokoro();
       final c = makeController()..changeModel('kokoro');
-      expect(c.voiceItems.map((e) => e.$1), containsAll(['Emma', 'Daniel']));
+      expect(
+        c.voiceItems.map((e) => e.$1),
+        containsAll(['bf_emma', 'bm_daniel']),
+      );
       c.voiceGenderFilter = VoiceGender.male;
       expect(
         c.voiceItems.map((e) => e.$1),
-        unorderedEquals(['Daniel', 'Fable']),
+        unorderedEquals(['bm_daniel', 'bm_fable']),
       );
       expect(
         c.voiceItems.map((e) => e.$2),
@@ -1030,7 +1033,7 @@ void main() {
       // No male voices: rather than leave a voice hidden behind an empty
       // filter, the pick reverts to "any" and the full list stays available.
       expect(c.voiceGenderFilter, VoiceGender.neutral);
-      expect(c.voiceItems.map((e) => e.$1), unorderedEquals(['Alice', 'Beth']));
+      expect(c.voiceItems.map((e) => e.$1), unorderedEquals(['a', 'b']));
       expect(c.voiceLabel, 'Alice');
     });
 
@@ -1124,12 +1127,16 @@ void main() {
       final c = makeController()..changeModel('kokoro');
       // The model's `default_language` (b) filters the list from the start, so
       // the Japanese Kumo is out of the box.
-      expect(c.voiceItems.map((e) => e.$1), ['Alice', 'Daniel', 'Emma']);
+      expect(c.voiceItems.map((e) => e.$1), [
+        'bf_alice',
+        'bm_daniel',
+        'bf_emma',
+      ]);
       c.applyVoiceLanguage('j');
-      expect(c.voiceItems.map((e) => e.$1), ['Kumo']);
+      expect(c.voiceItems.map((e) => e.$1), ['jm_kumo']);
       expect(c.voiceLabel, 'Kumo'); // auto-selected to stay visible
       c.applyVoiceLanguage('a');
-      expect(c.voiceItems.map((e) => e.$1), ['Aria']);
+      expect(c.voiceItems.map((e) => e.$1), ['af_heart']);
       expect(c.voiceLabel, 'Aria');
     });
 
@@ -1139,7 +1146,7 @@ void main() {
       c.applyVoiceLanguage('j');
       c.applyVoiceLanguage('z'); // not in the table
       expect(c.voiceLanguage, 'j');
-      expect(c.voiceItems.map((e) => e.$1), ['Kumo']);
+      expect(c.voiceItems.map((e) => e.$1), ['jm_kumo']);
     });
 
     test('changing model resets the language to the new default', () {
@@ -1171,6 +1178,126 @@ void main() {
       c.changeModel('local');
       expect(c.voiceLanguage, 'a');
       expect(c.languageItems.map((e) => e.$1), ['a', 'b']);
+    });
+
+    test('a voice typed in moves the list with the dropdown', () {
+      writeConfig(kokoroBody);
+      final c = makeController()..changeModel('kokoro');
+      expect(c.voiceItems.map((e) => e.$1), isNot(contains('jm_kumo')));
+      // Advanced Voice ID writes the raw id straight in. The dropdown follows the
+      // id, so the list has to follow too: filtering on the separately-held
+      // choice left the picker claiming Japanese over a British list with nothing
+      // selected, and re-picking the displayed Japanese could not undo it.
+      c.setVoice('jm_kumo', label: 'Kumo');
+      expect(c.voiceLanguage, 'j');
+      expect(c.voiceItems.map((e) => e.$1), ['jm_kumo']);
+    });
+
+    test('a language the gender filter empties clears the gender', () {
+      writeConfig({
+        'models': {
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'format': 'mp3',
+            'sends_language': true,
+            'default_language': 'b',
+            'languages': {'b': 'British English', 'f': 'French'},
+          },
+        },
+        'defaults': {'kokoro': 'bf_emma'},
+        'voices': {
+          'kokoro': {
+            'Emma': {'id': 'bf_emma'},
+            'George': {'id': 'bm_george'},
+            'Siwis': {'id': 'ff_siwis'}, // the only French voice, and female
+          },
+        },
+      });
+      final c = makeController()..changeModel('kokoro');
+      c.voiceGenderFilter = VoiceGender.male;
+      expect(c.voiceItems.map((e) => e.$1), ['bm_george']);
+      c.applyVoiceLanguage('f');
+      // Male + French has no voice behind it, and the reader's language pick is
+      // the one that gets honoured: the gender constraint drops instead.
+      expect(c.voiceLanguage, 'f');
+      expect(c.voiceGenderFilter, VoiceGender.neutral);
+      expect(c.voiceItems.map((e) => e.$1), ['ff_siwis']);
+    });
+
+    test('a language with no voice at all is ignored', () {
+      writeConfig({
+        'models': {
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'format': 'mp3',
+            'sends_language': true,
+            'default_language': 'b',
+            'languages': {'b': 'British English', 'p': 'Polish'},
+          },
+        },
+        'defaults': {'kokoro': 'bf_emma'},
+        'voices': {
+          'kokoro': {'Emma': {'id': 'bf_emma'}},
+        },
+      });
+      final c = makeController()..changeModel('kokoro');
+      c.applyVoiceLanguage('p'); // declared, but no voice speaks it
+      expect(c.voiceLanguage, 'b');
+    });
+
+    test('a language table with no default still narrows the list', () {
+      writeConfig({
+        'models': {
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'format': 'mp3',
+            'sends_language': true,
+            'languages': {'b': 'British English', 'j': 'Japanese'},
+          },
+        },
+        'voices': {
+          'kokoro': {
+            'Emma': {'id': 'bf_emma'},
+            'Kumo': {'id': 'jm_kumo'},
+          },
+        },
+      });
+      final c = makeController()..changeModel('kokoro');
+      // The dropdown names the first declared code, so the list must be narrowed
+      // to it rather than showing every voice under a filter that reads as on.
+      expect(c.voiceLanguage, 'b');
+      expect(c.voiceItems.map((e) => e.$1), ['bf_emma']);
+    });
+
+    test('voices sharing a name are told apart by id', () {
+      writeConfig({
+        'models': {
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'format': 'mp3',
+            'sends_language': true,
+            'default_language': 'b',
+            'languages': {'b': 'British English'},
+          },
+        },
+        'defaults': {'kokoro': 'Santa'},
+        'voices': {
+          'kokoro': {
+            'Santa': {'id': 'bm_george', 'name': 'Santa'},
+            'Santa 2': {'id': 'bm_santa_2', 'name': 'Santa'},
+          },
+        },
+      });
+      final c = makeController()..changeModel('kokoro');
+      // Both are offered under the same label, each with its own id: the
+      // dropdown value used to be the label, so the second could never be picked.
+      expect(
+        c.voiceItems.map((e) => e.$1),
+        unorderedEquals(['bm_george', 'bm_santa_2']),
+      );
+      expect(c.voiceItems.map((e) => e.$2), ['Santa (m)', 'Santa (m)']);
+      c.applyVoiceId('bm_santa_2', label: 'Santa');
+      expect(c.voice, 'bm_santa_2');
     });
   });
 

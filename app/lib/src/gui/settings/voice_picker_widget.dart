@@ -60,27 +60,27 @@ class VoicePickerWidget extends StatelessWidget {
         AppDropdown<String>(
           key: const Key('voiceDropdown'),
           tooltip: l10n.gui_settings_voiceDropdownTooltip,
-          value: _selectedVoiceLabel,
+          value: _selectedVoiceId,
           items: controller.voiceItems,
           hint: l10n.gui_settings_selectVoiceHint,
-          onChanged: (label) => controller.applyVoiceLabel(label),
+          onChanged: (id) => controller.applyVoiceId(id),
         ),
       ],
     );
   }
 
-  /// The voice entry currently selected in the picker. Matches the controller's
-  /// friendly label first (an alias pick or a config default), then falls back
-  /// to a label equal to the raw voice id so free-form passthrough entries
-  /// (e.g. the default voice without an alias) still highlight.
-  String? get _selectedVoiceLabel {
-    final label = controller.voiceLabel;
-    for (final entry in controller.voiceItems) {
-      if (entry.$1 == label) return entry.$1;
-    }
+  /// The voice entry currently selected in the picker, as the id the dropdown
+  /// carries it under.
+  ///
+  /// Matched on the id alone. The label used to be the dropdown value, which made
+  /// a model with two voices of one name (Kokoro has three Santas) select the
+  /// first of them however the reader clicked, and left the picker unable to show
+  /// a selection at all when a voice id was typed in directly.
+  String? get _selectedVoiceId {
     final voice = controller.voice;
+    if (voice.isEmpty) return null;
     for (final entry in controller.voiceItems) {
-      if (entry.$1 == voice) return entry.$1;
+      if (entry.$1 == voice) return voice;
     }
     return null;
   }
