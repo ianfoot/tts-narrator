@@ -42,7 +42,11 @@ void main() {
       List<String> models = const [],
       String settings = '{"base_url":"$testBaseUrl"}',
     }) {
-      writeRegistry(jsonEncode({'providers': [name]}));
+      writeRegistry(
+        jsonEncode({
+          'providers': [name],
+        }),
+      );
       writeProvider(
         name,
         jsonEncode({'models': models, 'settings': jsonDecode(settings)}),
@@ -64,7 +68,7 @@ void main() {
       writeModel(
         'gemini',
         '{"id":"google/gemini-3.1-flash-tts-preview","format":"pcm",'
-        '"sample_rate":24000,"prompt_style":true}',
+            '"sample_rate":24000,"prompt_style":true}',
       );
       final (cfg, warnings) = load();
       expect(cfg.models.containsKey('gemini'), isTrue);
@@ -84,10 +88,7 @@ void main() {
       });
 
       test('reads the opt-in flag', () {
-        expect(
-          loadProfile('{"id":"x/y","speed":true}').supportsSpeed,
-          isTrue,
-        );
+        expect(loadProfile('{"id":"x/y","speed":true}').supportsSpeed, isTrue);
         expect(
           loadProfile('{"id":"x/y","speed":false}').supportsSpeed,
           isFalse,
@@ -99,6 +100,59 @@ void main() {
         writeModel('m', '{"id":"x/y","speed":"yes"}');
         final (_, warnings) = load();
         expect(warnings.first, contains('"speed" must be a bool'));
+      });
+    });
+
+    group('language table', () {
+      const kokoroJson =
+          '{"id":"hexgrad/kokoro-82m","sends_language":true,'
+          '"default_language":"b","languages":{"b":"British English",'
+          '"j":"Japanese"}}';
+
+      VoiceConfig loadConfig(String json) {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', json);
+        final (cfg, warnings) = load();
+        expect(warnings, isEmpty);
+        return cfg;
+      }
+
+      test('reads the table, the default and the opt-in flag', () {
+        final cfg = loadConfig(kokoroJson);
+        expect(cfg.models['m']!.sendsLanguageField, isTrue);
+        expect(cfg.languagesFor('m'), {
+          'b': 'British English',
+          'j': 'Japanese',
+        });
+        expect(cfg.defaultLanguageFor('m'), 'b');
+      });
+
+      test('a model with no languages reads as none', () {
+        final cfg = loadConfig('{"id":"x/y"}');
+        expect(cfg.models['m']!.sendsLanguageField, isFalse);
+        expect(cfg.languagesFor('m'), isEmpty);
+        expect(cfg.defaultLanguageFor('m'), isNull);
+      });
+
+      test('rejects a non-bool sends_language', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id":"x/y","sends_language":"yes"}');
+        expect(load().$2.first, contains('"sends_language" must be a bool'));
+      });
+
+      test('rejects a default_language the table does not declare', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel(
+          'm',
+          '{"id":"x/y","languages":{"b":"British"},"default_language":"z"}',
+        );
+        expect(load().$2.first, contains('"default_language" is "z"'));
+      });
+
+      test('rejects a blank language label', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id":"x/y","languages":{"b":""}}');
+        expect(load().$2.first, contains('"languages"'));
       });
     });
 
@@ -156,7 +210,10 @@ void main() {
         writeRegistry('{"providers":["alpha"]}');
         writeProvider('alpha', '{"models":[],"settings":{"base_url":1}}');
         final (_, warnings) = load();
-        expect(warnings.join('\n'), contains('"settings.base_url" must be a string'));
+        expect(
+          warnings.join('\n'),
+          contains('"settings.base_url" must be a string'),
+        );
       });
 
       test('rejects a non-list models entry', () {
@@ -253,10 +310,10 @@ void main() {
           },
         ),
       );
-      final raw =
-          jsonDecode(File('${dir.path}${Platform.pathSeparator}config.json')
-                  .readAsStringSync())
-              as Map<String, dynamic>;
+      final raw = jsonDecode(
+        File('${dir.path}${Platform.pathSeparator}config.json')
+            .readAsStringSync(),
+      ) as Map<String, dynamic>;
       expect(raw['providers'], ['zeta', 'alpha']);
     });
 
@@ -287,10 +344,9 @@ void main() {
         ),
       );
 
-      final raw =
-          jsonDecode(File(at(kVoiceConfigModelsDir, 'fast.json'))
-                  .readAsStringSync())
-              as Map<String, dynamic>;
+      final raw = jsonDecode(
+        File(at(kVoiceConfigModelsDir, 'fast.json')).readAsStringSync(),
+      ) as Map<String, dynamic>;
       expect(raw['speed'], isTrue);
       expect(raw.containsKey('provider'), isFalse);
 
@@ -299,6 +355,77 @@ void main() {
       expect(cfg.models['fast']!.supportsSpeed, isTrue);
       expect(cfg.models['plain']!.supportsSpeed, isFalse);
       expect(cfg.models['fast']!.provider, testProvider);
+    });
+
+    test('round-trips the language table through a model file', () {
+      writeVoiceConfig(
+        dir.path,
+        VoiceConfig(
+          providers: {
+            testProvider: ProviderConfig(
+              name: testProvider,
+              settings: {'base_url': testBaseUrl},
+              models: const ['kokoro'],
+            ),
+          },
+          models: {
+            'kokoro': const TtsModelProfile(
+              alias: 'kokoro',
+              id: 'hexgrad/kokoro-82m',
+              sendsLanguageField: true,
+              provider: testProvider,
+            ),
+          },
+          languages: {
+            'kokoro': {'b': 'British English', 'j': 'Japanese'},
+          },
+          defaultLanguages: {'kokoro': 'b'},
+        ),
+      );
+
+      final raw = jsonDecode(
+        File(at(kVoiceConfigModelsDir, 'kokoro.json')).readAsStringSync(),
+      ) as Map<String, dynamic>;
+      expect(raw['sends_language'], isTrue);
+      expect(raw['default_language'], 'b');
+      expect(raw['languages'], {'b': 'British English', 'j': 'Japanese'});
+
+      final (cfg, warnings) = loadVoiceConfig(dir.path);
+      expect(warnings, isEmpty);
+      expect(cfg.models['kokoro']!.sendsLanguageField, isTrue);
+      expect(cfg.languagesFor('kokoro'), {
+        'b': 'British English',
+        'j': 'Japanese',
+      });
+      expect(cfg.defaultLanguageFor('kokoro'), 'b');
+    });
+
+    test('a model with no languages emits no language keys', () {
+      writeVoiceConfig(
+        dir.path,
+        VoiceConfig(
+          providers: {
+            testProvider: const ProviderConfig(
+              name: testProvider,
+              models: ['one'],
+            ),
+          },
+          models: {
+            'one': const TtsModelProfile(
+              alias: 'one',
+              id: 'x/one',
+              provider: testProvider,
+            ),
+          },
+        ),
+      );
+
+      final raw = jsonDecode(
+        File(at(kVoiceConfigModelsDir, 'one.json')).readAsStringSync(),
+      ) as Map<String, dynamic>;
+      expect(raw.containsKey('sends_language'), isFalse);
+      expect(raw.containsKey('default_language'), isFalse);
+      expect(raw.containsKey('languages'), isFalse);
     });
 
     test('round-trips the whole tree back into an equal config', () {
@@ -337,10 +464,7 @@ void main() {
         dir.path,
         VoiceConfig(
           providers: {
-            testProvider: const ProviderConfig(
-              name: testProvider,
-              models: [],
-            ),
+            testProvider: const ProviderConfig(name: testProvider, models: []),
           },
           models: {
             'stray': const TtsModelProfile(

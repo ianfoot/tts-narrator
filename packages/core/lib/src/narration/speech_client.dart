@@ -34,7 +34,10 @@ class GeneratedAudio {
 /// the caller, which is the only layer that can reach the OS keychain. [voice]
 /// and [speed] are capability-gated by the model profile and are null when the
 /// model does not take them: [speed] is a speech-rate multiplier (1.0 = normal),
-/// sent only for a model that declares `"speed": true`. [abort] is checked
+/// sent only for a model that declares `"speed": true`. [language] is likewise
+/// null unless the model declares `"sends_language": true`, and is the short
+/// code the provider expects (Kokoro: `lang_code`, the first character of its
+/// voice ids). [abort] is checked
 /// before the first attempt and between retries — an already-cancelled token
 /// throws [AbortException] without calling the API.
 ///
@@ -48,6 +51,7 @@ typedef SpeechClient = Future<GeneratedAudio> Function({
   required String responseFormat,
   required Map<String, String> settings,
   required double? speed,
+  String? language,
   String? apiKey,
   AbortToken? abort,
 });

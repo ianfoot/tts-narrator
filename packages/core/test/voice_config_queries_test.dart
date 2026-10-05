@@ -31,6 +31,8 @@ VoiceConfig _cfg({
   Map<String, TtsModelProfile> models = const {},
   Map<String, String> defaults = const {},
   Map<String, AudioPricing> pricing = const {},
+  Map<String, Map<String, String>> languages = const {},
+  Map<String, String> defaultLanguages = const {},
   Map<String, Map<String, Voice>> voices = const {},
 }) => VoiceConfig(
   providers: providers,
@@ -38,7 +40,32 @@ VoiceConfig _cfg({
   defaults: defaults,
   pricing: pricing,
   voices: voices,
+  languages: languages,
+  defaultLanguages: defaultLanguages,
 );
+
+/// A Kokoro-shaped config: two languages, voices whose ids name them.
+VoiceConfig _kokoroCfg({Map<String, Map<String, Voice>>? voices}) => _cfg(
+  voices:
+      voices ??
+      const {
+        'kokoro': {
+          'bf_emma': Voice(id: 'bf_emma', gender: VoiceGender.female),
+          'jm_kumo': Voice(id: 'jm_kumo', gender: VoiceGender.male),
+        },
+      },
+  models: {'kokoro': _model(alias: 'kokoro', id: 'hexgrad/kokoro-82m')},
+  languages: const {
+    'kokoro': {
+      'a': 'American English',
+      'b': 'British English',
+      'j': 'Japanese',
+    },
+  },
+  defaultLanguages: const {'kokoro': 'b'},
+);
+
+TtsModelProfile _kokoroModel(VoiceConfig cfg) => profileFor('kokoro', cfg)!;
 
 void main() {
   group('effectiveModels', () {
@@ -105,7 +132,9 @@ void main() {
 
     test('provider order decides, not model alias order', () {
       final cfg = _cfg(
-        providers: {'beta': provider('beta', ['fish'])},
+        providers: {
+          'beta': provider('beta', ['fish']),
+        },
         models: {
           'gemini': _model(alias: 'gemini', id: 'google/gemini-tts'),
           'fish': _model(alias: 'fish', id: 'fish-audio/s2.1-pro-free'),
@@ -116,7 +145,9 @@ void main() {
 
     test('resolves a provider entry naming a full id', () {
       final cfg = _cfg(
-        providers: {'alpha': provider('alpha', ['google/gemini-tts'])},
+        providers: {
+          'alpha': provider('alpha', ['google/gemini-tts']),
+        },
         models: {'gemini': _model(alias: 'gemini', id: 'google/gemini-tts')},
       );
       expect(defaultModelFor(cfg)!.alias, 'gemini');
@@ -124,7 +155,9 @@ void main() {
 
     test('a provider entry that resolves to no model yields no default', () {
       final cfg = _cfg(
-        providers: {'alpha': provider('alpha', ['unknown'])},
+        providers: {
+          'alpha': provider('alpha', ['unknown']),
+        },
         models: {'gemini': _model(alias: 'gemini', id: 'google/gemini-tts')},
       );
       expect(defaultModelFor(cfg), isNull);
@@ -220,6 +253,47 @@ void main() {
       expect(genderFor(cfg, 'kokoro', 'Emma'), VoiceGender.female);
       expect(genderFor(cfg, 'kokoro', 'Daniel'), isNull);
       expect(genderFor(cfg, 'gemini', 'Emma'), isNull);
+    });
+  });
+
+  group('genderFromVoiceId', () {
+    test('reads the second character of a <lang><gender>_<name> id', () {
+      expect(genderFromVoiceId('bf_emma'), VoiceGender.female);
+      expect(genderFromVoiceId('jm_kumo'), VoiceGender.male);
+      expect(genderFromVoiceId('xn_something'), VoiceGender.neutral);
+    });
+
+    test('is null for an id that names no gender', () {
+      expect(genderFromVoiceId('b'), isNull);
+      expect(genderFromVoiceId(''), isNull);
+      expect(genderFromVoiceId('bzy_thing'), isNull);
+    });
+  });
+
+  group('genderFor from the voice id', () {
+    final cfg = _kokoroCfg(
+      voices: const {
+        'kokoro': {'Emma': Voice(id: 'bf_emma'), 'Kumo': Voice(id: 'jm_kumo')},
+      },
+    );
+
+    test('reads the gender off an untagged voice id', () {
+      expect(genderFor(cfg, 'kokoro', 'Emma'), VoiceGender.female);
+      expect(genderFor(cfg, 'kokoro', 'Kumo'), VoiceGender.male);
+    });
+
+    test('reads it off a raw id that is not a configured entry', () {
+      expect(genderFor(cfg, 'kokoro', 'zf_xiaoxiao'), VoiceGender.female);
+    });
+
+    test('leaves a model that declares no languages untagged', () {
+      final plain = _cfg(
+        voices: const {
+          'gemini': {'Nala': Voice(id: 'nala')},
+        },
+      );
+      expect(genderFor(plain, 'gemini', 'Nala'), isNull);
+      expect(genderFor(plain, 'gemini', 'nala'), isNull);
     });
   });
 
@@ -385,6 +459,83 @@ void main() {
       final daniel = entries.firstWhere((e) => e.label == 'Daniel');
       expect(emma.gender, VoiceGender.female);
       expect(daniel.gender, VoiceGender.male);
+    });
+
+    test(
+      'tags entries with the gender their id names when none is declared',
+      () {
+        final cfg = _kokoroCfg(
+          voices: const {
+            'kokoro': {
+              'Emma': Voice(id: 'bf_emma'),
+              'Daniel': Voice(id: 'bm_daniel'),
+            },
+          },
+        );
+        final entries = voiceEntries(config: cfg, model: _kokoroModel(cfg));
+        expect(
+          entries.firstWhere((e) => e.label == 'Emma').gender,
+          VoiceGender.female,
+        );
+        expect(
+          entries.firstWhere((e) => e.label == 'Daniel').gender,
+          VoiceGender.male,
+        );
+      },
+    );
+
+    test('tags entries with the language their id names', () {
+      final cfg = _kokoroCfg();
+      final entries = voiceEntries(config: cfg, model: _kokoroModel(cfg));
+      expect(entries.firstWhere((e) => e.id == 'bf_emma').language, 'b');
+      expect(entries.firstWhere((e) => e.id == 'jm_kumo').language, 'j');
+    });
+
+    test('a language filter keeps only that language\'s voices', () {
+      final cfg = _kokoroCfg();
+      final entries = voiceEntries(
+        config: cfg,
+        model: _kokoroModel(cfg),
+        language: 'j',
+      );
+      expect(entries.map((e) => e.id).toSet(), {'jm_kumo'});
+    });
+
+    test('a language filter keeps untagged voices (free-form passthrough)', () {
+      final cfg = _cfg(
+        voices: const {
+          'kokoro': {'Custom': Voice(id: 'brand_new_voice')},
+        },
+        languages: const {
+          'kokoro': {'b': 'British English'},
+        },
+        models: {'kokoro': _model(alias: 'kokoro', id: 'hexgrad/kokoro-82m')},
+      );
+      final entries = voiceEntries(
+        config: cfg,
+        model: profileFor('kokoro', cfg)!,
+        language: 'b',
+      );
+      expect(entries.map((e) => e.id).toSet(), {'brand_new_voice'});
+    });
+  });
+
+  group('languageFor', () {
+    final cfg = _kokoroCfg();
+
+    test('reads the language off the voice id', () {
+      expect(languageFor(cfg, 'kokoro', 'bf_emma'), 'b');
+      expect(languageFor(cfg, 'kokoro', 'af_bella'), 'a');
+    });
+
+    test('null when the id carries no declared language', () {
+      expect(languageFor(cfg, 'kokoro', 'custom_voice'), isNull);
+      expect(languageFor(cfg, 'kokoro', ''), isNull);
+      expect(languageFor(cfg, 'kokoro', 'b'), isNull);
+    });
+
+    test('null for a model that declares no languages', () {
+      expect(languageFor(cfg, 'fish', 'bf_emma'), isNull);
     });
   });
 }

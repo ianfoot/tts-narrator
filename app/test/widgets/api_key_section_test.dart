@@ -88,7 +88,10 @@ void main() {
         'local': {'base_url': 'http://localhost:8000/v1'},
       },
       'models': {
-        'kokoro_local': {'id': 'mlx-community/Kokoro-82M-bf16', 'format': 'wav'},
+        'kokoro_local': {
+          'id': 'mlx-community/Kokoro-82M-bf16',
+          'format': 'wav',
+        },
       },
       'defaults': {'kokoro_local': 'George'},
       'voices': {

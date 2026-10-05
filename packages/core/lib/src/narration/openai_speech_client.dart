@@ -50,6 +50,7 @@ class OpenAiSpeechClient {
     required String responseFormat,
     required Map<String, String> settings,
     required double? speed,
+    String? language,
     String? apiKey,
     AbortToken? abort,
   }) async {
@@ -71,6 +72,13 @@ class OpenAiSpeechClient {
     // capable model never has to infer "unset" from a missing key.
     if (speed != null) {
       body['speed'] = speed;
+    }
+    // Kokoro's language selector. The voice id already names the language (its
+    // first character), so this is redundant data by design — but the field is
+    // what the API documents, and sending it keeps a request self-describing.
+    // Gated like `speed`: a null language means the field is omitted.
+    if (language != null && language.isNotEmpty) {
+      body['lang_code'] = language;
     }
 
     var attempt = 0;

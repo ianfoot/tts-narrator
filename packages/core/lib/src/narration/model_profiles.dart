@@ -18,6 +18,7 @@ class TtsModelProfile {
     this.promptStyle = false,
     this.sendsVoiceField = true,
     this.supportsSpeed = false,
+    this.sendsLanguageField = false,
     this.sampleRate,
     required this.provider,
     this.displayName,
@@ -51,6 +52,15 @@ class TtsModelProfile {
   /// default, and the GUI hides the speed slider.
   final bool supportsSpeed;
 
+  /// Whether the model accepts a `lang_code` field in the request body.
+  ///
+  /// Kokoro ships one multi-language voice set, where the language is named by
+  /// the voice id's first character and the API also takes it as an explicit
+  /// `lang_code`. It is opt-in per model (`"sends_language": true`) for the same
+  /// reason as [supportsSpeed]: the field only exists on some vendors, and is
+  /// omitted entirely otherwise.
+  final bool sendsLanguageField;
+
   /// PCM sample rate used for the WAV header and duration; null for MP3.
   final int? sampleRate;
 
@@ -66,6 +76,7 @@ class TtsModelProfile {
     promptStyle: promptStyle,
     sendsVoiceField: sendsVoiceField,
     supportsSpeed: supportsSpeed,
+    sendsLanguageField: sendsLanguageField,
     sampleRate: sampleRate,
     provider: provider ?? this.provider,
     displayName: displayName,

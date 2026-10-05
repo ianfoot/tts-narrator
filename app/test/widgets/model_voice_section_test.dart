@@ -248,5 +248,139 @@ void main() {
       // surfaces under Model options instead, covered by its own section test).
       expect(find.byKey(const Key('genderControl')), findsNothing);
     });
+
+    testWidgets(
+      'language dropdown filters the voices for a multilingual model',
+      (tester) async {
+        writeConfig(configDir, {
+          'models': {
+            'kokoro': {
+              'id': 'hexgrad/kokoro-82m',
+              'format': 'mp3',
+              'sends_language': true,
+              'default_language': 'b',
+              'languages': {
+                'a': 'American English',
+                'b': 'British English',
+                'j': 'Japanese',
+              },
+            },
+          },
+          'defaults': {'kokoro': 'Emma'},
+          'voices': {
+            'kokoro': {
+              'Aria': {'id': 'af_heart', 'gender': 'female'},
+              'Alice': {'id': 'bf_alice', 'gender': 'female'},
+              'Emma': {'id': 'bf_emma', 'gender': 'female'},
+              'Kumo': {'id': 'jm_kumo', 'gender': 'male'},
+            },
+          },
+        });
+        final c = makeController(configDir);
+        c.changeModel('kokoro');
+        await pumpSection(tester, c);
+
+        // The model's `default_language` preselects British English, and the
+        // voice list starts narrowed to it.
+        expect(find.byKey(const Key('languageDropdown')), findsOneWidget);
+        expect(c.voiceLanguage, 'b');
+        await tester.tap(find.byKey(const Key('voiceDropdown')));
+        await tester.pumpAndSettle();
+        expect(find.text('Emma (f)').last, findsOneWidget);
+        expect(find.text('Kumo (m)'), findsNothing);
+        await tester.tapAt(const Offset(600, 100));
+        await tester.pumpAndSettle();
+
+        // Switching to Japanese narrows the voices and re-picks one.
+        await tester.tap(find.byKey(const Key('languageDropdown')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Japanese').last);
+        await tester.pumpAndSettle();
+
+        expect(c.voiceLanguage, 'j');
+        expect(c.voiceLabel, 'Kumo');
+        await tester.tap(find.byKey(const Key('voiceDropdown')));
+        await tester.pumpAndSettle();
+        expect(find.text('Kumo (m)').last, findsOneWidget);
+        expect(find.text('Emma (f)'), findsNothing);
+      },
+    );
+
+    testWidgets('a single-language model shows no language dropdown', (
+      tester,
+    ) async {
+      writeConfig(configDir, {
+        'models': {
+          'gemini': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'format': 'pcm',
+          },
+        },
+        'defaults': {'gemini': 'Charon'},
+        'voices': {
+          'gemini': {'Charon': 'Charon'},
+        },
+      });
+      final c = makeController(configDir);
+      c.changeModel('gemini');
+      await pumpSection(tester, c);
+
+      expect(find.byKey(const Key('languageDropdown')), findsNothing);
+    });
+
+    testWidgets('voices keyed by id show their names and send their own id', (
+      tester,
+    ) async {
+      writeConfig(configDir, {
+        'models': {
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'format': 'mp3',
+            'sends_language': true,
+            'default_language': 'b',
+            'languages': {
+              'b': 'British English',
+              'e': 'Spanish',
+              'p': 'Brazilian Portuguese',
+            },
+          },
+        },
+        'defaults': {'kokoro': 'bf_emma'},
+        'voices': {
+          'kokoro': {
+            'bf_emma': {'name': 'Emma'},
+            'em_santa': {'name': 'Santa'},
+            'pm_santa': {'name': 'Santa'},
+          },
+        },
+      });
+      final c = makeController(configDir);
+      c.changeModel('kokoro');
+      await pumpSection(tester, c);
+
+      // The picker shows each voice's `name`, never its `voices` key.
+      await tester.tap(find.byKey(const Key('voiceDropdown')));
+      await tester.pumpAndSettle();
+      expect(find.text('Emma (f)').last, findsOneWidget);
+      await tester.tapAt(const Offset(600, 100));
+      await tester.pumpAndSettle();
+
+      // Two voices may share a name, so the id is what has to disambiguate:
+      // Spanish's Santa sends em_santa...
+      await tester.tap(find.byKey(const Key('languageDropdown')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Spanish').last);
+      await tester.pumpAndSettle();
+      expect(c.voiceLabel, 'Santa');
+      expect(c.voice, 'em_santa');
+
+      // ...and Brazilian Portuguese's sends pm_santa, same label and all.
+      await tester.tap(find.byKey(const Key('languageDropdown')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Brazilian Portuguese').last);
+      await tester.pumpAndSettle();
+      expect(c.voiceLabel, 'Santa');
+      expect(c.voice, 'pm_santa');
+    });
   });
 }

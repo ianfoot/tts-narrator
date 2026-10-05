@@ -173,15 +173,24 @@ void main() {
   "voices": {"A": "id1", "B": 42, "C": ""}
 }
 ''');
-      final (cfg, _) = load();
+      final (cfg, warnings) = load();
       expect(cfg.voices['x']?['A']?.id, 'id1');
       expect(cfg.voices['x']?['A']?.gender, isNull);
-      // Malformed entries are skipped.
+      // Malformed entries are skipped, and reported.
       expect(cfg.voices['x']?.containsKey('B'), isFalse);
       expect(cfg.voices['x']?.containsKey('C'), isFalse);
+      expect(
+        warnings.singleWhere((w) => w.contains('"B"')),
+        'Voice "B" in model "x" is skipped: it is neither a voice id nor a '
+        'voice object.',
+      );
+      expect(
+        warnings.singleWhere((w) => w.contains('"C"')),
+        'Voice "C" in model "x" is skipped: its voice id is empty.',
+      );
     });
 
-    test('skips malformed voice-object entries and bad genders quietly', () {
+    test('skips an entry whose id is unusable, and says so', () {
       writeModel('x', '''
 {
   "id": "a/b",
@@ -191,21 +200,78 @@ void main() {
     "C": {"gender": "male"},
     "D": {"id": 42},
     "E": {"id": "ok2", "gender": "soprano"},
-    "F": {"id": "ok3", "gender": "Male"}
+    "F": {"id": "ok3", "gender": "Male"},
+    "G": {"iid": "ok4"},
+    "H": {"iid": "ok5", "jawn": true}
   }
 }
 ''');
       final (cfg, warnings) = load();
-      expect(cfg.voices['x']?['A']?.gender, VoiceGender.female);
-      expect(cfg.voices['x']?.containsKey('B'), isFalse);
-      expect(cfg.voices['x']?.containsKey('C'), isFalse);
-      expect(cfg.voices['x']?.containsKey('D'), isFalse);
+      final voices = cfg.voices['x']!;
+      expect(voices['A']?.gender, VoiceGender.female);
+      // An entry keyed by its own id and only annotated stays a voice.
+      expect(voices['C']?.id, 'C');
+      expect(voices['C']?.gender, VoiceGender.male);
+      // An unusable id is dropped: the key would then be an alias sent to the
+      // provider as a voice id, narrating in the wrong voice instead of here.
+      expect(voices.containsKey('B'), isFalse);
+      expect(voices.containsKey('D'), isFalse);
+      // So is an entry made only of fields this schema does not define, which is
+      // what a mistyped id looks like.
+      expect(voices.containsKey('G'), isFalse);
+      expect(voices.containsKey('H'), isFalse);
+      expect(
+        warnings.singleWhere((w) => w.contains('"G"')),
+        'Voice "G" in model "x" is skipped: it names no "id" and its only field '
+        'is "iid", which this config schema does not define.',
+      );
+      expect(
+        warnings.singleWhere((w) => w.contains('"H"')),
+        'Voice "H" in model "x" is skipped: it names no "id" and its only '
+        'fields are "iid", "jawn", which this config schema does not define.',
+      );
+      for (final key in ['B', 'D']) {
+        expect(
+          warnings.singleWhere((w) => w.contains('"$key"')),
+          'Voice "$key" in model "x" is skipped: its "id" is not a non-empty '
+          'string.',
+        );
+      }
       // Unrecognized gender strings are dropped, the voice kept.
-      expect(cfg.voices['x']?['E']?.id, 'ok2');
-      expect(cfg.voices['x']?['E']?.gender, isNull);
+      expect(voices['E']?.id, 'ok2');
+      expect(voices['E']?.gender, isNull);
       // Case-insensitive gender parsing.
-      expect(cfg.voices['x']?['F']?.gender, VoiceGender.male);
-      expect(warnings, isEmpty);
+      expect(voices['F']?.gender, VoiceGender.male);
+      // Only the four unusable entries are reported.
+      expect(warnings, hasLength(4));
+    });
+
+    test('reads a voice name and keeps it out of the id', () {
+      writeModel('x', '''
+{
+  "id": "a/b",
+  "voices": {
+    "bf_emma": {"name": "Emma"},
+    "am_santa": {"name": "Santa"},
+    "em_santa": {"name": "Santa"},
+    "plain": {},
+    "blank": {"name": "   "},
+    "wrong": {"name": 42}
+  }
+}
+''');
+      final (cfg, _) = load();
+      final voices = cfg.voices['x']!;
+      expect(voices['bf_emma']?.id, 'bf_emma');
+      expect(voices['bf_emma']?.name, 'Emma');
+      // Duplicate names are fine; the keys are what must be unique.
+      expect(voices['am_santa']?.name, 'Santa');
+      expect(voices['em_santa']?.name, 'Santa');
+      // A voice with no annotations is an empty entry, keyed by its own id.
+      expect(voices['plain']?.id, 'plain');
+      expect(voices['plain']?.name, isNull);
+      expect(voices['blank']?.name, isNull);
+      expect(voices['wrong']?.name, isNull);
     });
 
     test('rejects a non-object voices block', () {

@@ -225,3 +225,10 @@ do not include that part. No API key is needed for the local server. The starter
 config already ships this block, so if
 `~/Library/Application Support/com.wyrdness.tts-narrator/providers/local.json`
 contains it you can skip this step.
+
+`kokoro_local` speaks all 54 Kokoro-82M voices across 9 languages. Pick one in the
+settings rail's **Language** dropdown (British English by default) and then a
+voice by name from the list below it — the dropdown shows names like `Emma`,
+and the id behind the name is what gets sent. The app adds the matching
+`lang_code` to the request. See [docs/KOKORO.md](docs/KOKORO.md) for the full
+voice table.

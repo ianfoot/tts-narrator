@@ -60,9 +60,12 @@ so in practice the tests and any non-GUI front end. The GUI always injects one.
 - `providers/<name>.json` — one file per provider: a `models` list naming the
   models that provider serves, and a `settings` block (secrets).
 - `models/<alias>.json` — one file per model: `id`, `format`, `sample_rate`,
-  `prompt_style`, `speed`, `default_voice`, `pricing`, and `voices` (friendly
-  aliases). The `voices` values may be plain strings or objects with `id` and
-  an optional `gender` (`male`/`female`/`neutral`).
+  `prompt_style`, `speed`, `sends_language`, `default_voice`,
+  `default_language`, `pricing`, `languages`, and `voices`. A `voices` entry is
+  keyed by the voice id and may carry a `name` and an optional `gender`
+  (`male`/`female`/`neutral`); `id` may also be spelled out explicitly when it
+  differs from the key, and the value may be a plain string (`"Charon":
+  "Charon"`).
 
 So the directory holds three kinds of file:
 
@@ -348,6 +351,37 @@ title.
   model declaring neither shows no model-options section at all. Both are
   computed by `ModelUiSpec.forProfile`, so adding a vendor can never strand the
   settings rail.
+- Multilingual models opt in with `sends_language: true`, which is what puts
+  `lang_code` in the request body — the same gating shape as `speed`. The codes
+  themselves are data: `languages` is a `{code: label}` table (its declaration
+  order is the dropdown order) and `default_language` preselects one (and is
+  validated against the table at load time). No voice carries its own `lang`
+  tag — the code is read off the voice id's first character via
+  `languageFromVoiceId`, which returns null when that character is not a declared
+  code, so a free-form id falls back to the selected/default language instead of
+  inventing one. The language lives on `VoiceConfig` (alias-keyed `languages` /
+  `defaultLanguages`, read through `languagesFor` / `defaultLanguageFor` /
+  `languageFor`) rather than on `TtsModelProfile`, because the GUI needs the
+  labels while `narrate` needs only the code — and a profile is the shared
+  request shape, not a UI concern.
+- A `voices` key is the voice id and the entry's `name` is what the GUI shows.
+  Keying by name was tried and does not work for Kokoro: `Santa`, `Dora`,
+  `Alex` and `Alpha` each exist in two or three languages, so a name key can
+  only be made unique by bolting a language onto it. Ids are unique, and the
+  name is a display detail that may legitimately repeat — so both the key and
+  the name resolve to the same voice (`VoiceConfig.voiceFor` looks the map up
+  by key, then scans `.values` for a matching name), the picker labels by name,
+  and `default_voice` is written as the id. `_modelJson` writes `id` back only
+  when it differs from the key, so a round trip reproduces each file's own
+  style. The same reasoning drives `genderFromVoiceId`: a model that declares
+  `languages` is declaring that its ids are `<lang><gender>_<name>`, so gender
+  is read off the second character and needs no per-voice tag. Without that
+  declaration the derivation stays off — a bare id like `nala` would otherwise
+  be misread as neutral.
+- Re-picking a voice after a filter change must compare **ids**, not labels.
+  Two entries can share a label, and matching on it makes a language switch
+  look like a no-op, leaving the previous language's voice selected while a
+  same-named voice from the new language is the one on screen.
 - The run view displays an estimated cost + duration. Estimates
   are approximate: pricing comes from each model's OpenRouter page (gemini
   `$1/$20` per 1M text/audio tokens, kokoro `$0.62/M` chars, fish free);

@@ -8,9 +8,9 @@ import '../widgets/app_dropdown.dart';
 import '../widgets/segmented_control.dart';
 import 'settings_labels.dart';
 
-/// The voice half of the settings rail: an optional narrator-gender filter
-/// (only when the active model's voice list is gender-tagged) above the voice
-/// alias picker. Extracted from the model section so per-model panels can
+/// The voice half of the settings rail: an optional language dropdown and
+/// narrator-gender filter (only when the active model declares them) above the
+/// voice alias picker. Extracted from the model section so per-model panels can
 /// compose it independently of the model picker.
 ///
 /// Every control writes straight to [AppController], which notifies the editor
@@ -30,6 +30,18 @@ class VoicePickerWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         settingsFieldLabel(tokens, l10n.gui_settings_voiceAliasLabel),
+        if (controller.hasLanguages) ...[
+          const SizedBox(height: 12),
+          AppDropdown<String>(
+            key: const Key('languageDropdown'),
+            tooltip: l10n.gui_settings_languageDropdownTooltip,
+            value: controller.voiceLanguage,
+            items: controller.languageItems,
+            hint: l10n.gui_settings_selectLanguageHint,
+            onChanged: (code) => controller.applyVoiceLanguage(code),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (controller.hasGenderTags) ...[
           const SizedBox(height: 12),
           SegmentedControl<VoiceGender>(
@@ -48,27 +60,27 @@ class VoicePickerWidget extends StatelessWidget {
         AppDropdown<String>(
           key: const Key('voiceDropdown'),
           tooltip: l10n.gui_settings_voiceDropdownTooltip,
-          value: _selectedVoiceLabel,
+          value: _selectedVoiceId,
           items: controller.voiceItems,
           hint: l10n.gui_settings_selectVoiceHint,
-          onChanged: (label) => controller.applyVoiceLabel(label),
+          onChanged: (id) => controller.applyVoiceId(id),
         ),
       ],
     );
   }
 
-  /// The voice entry currently selected in the picker. Matches the controller's
-  /// friendly label first (an alias pick or a config default), then falls back
-  /// to a label equal to the raw voice id so free-form passthrough entries
-  /// (e.g. the default voice without an alias) still highlight.
-  String? get _selectedVoiceLabel {
-    final label = controller.voiceLabel;
-    for (final entry in controller.voiceItems) {
-      if (entry.$1 == label) return entry.$1;
-    }
+  /// The voice entry currently selected in the picker, as the id the dropdown
+  /// carries it under.
+  ///
+  /// Matched on the id alone. The label used to be the dropdown value, which made
+  /// a model with two voices of one name (Kokoro has three Santas) select the
+  /// first of them however the reader clicked, and left the picker unable to show
+  /// a selection at all when a voice id was typed in directly.
+  String? get _selectedVoiceId {
     final voice = controller.voice;
+    if (voice.isEmpty) return null;
     for (final entry in controller.voiceItems) {
-      if (entry.$1 == voice) return entry.$1;
+      if (entry.$1 == voice) return voice;
     }
     return null;
   }

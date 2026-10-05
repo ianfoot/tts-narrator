@@ -418,6 +418,7 @@ class SettingsController extends ChangeNotifier {
       profile: p,
       voice: voiceId,
       voiceLabel: label,
+      language: _model.language,
       accent: accent,
       style: style,
       passagePrefix: passagePrefix,

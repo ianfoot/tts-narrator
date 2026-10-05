@@ -327,6 +327,18 @@ abstract class AppLocalizations {
   /// **'Select a Voice...'**
   String get gui_settings_selectVoiceHint;
 
+  /// No description provided for @gui_settings_languageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get gui_settings_languageLabel;
+
+  /// No description provided for @gui_settings_selectLanguageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a Language...'**
+  String get gui_settings_selectLanguageHint;
+
   /// No description provided for @gui_settings_genderAny.
   ///
   /// In en, this message translates to:
@@ -548,6 +560,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Filter voices by gender'**
   String get gui_settings_genderControlTooltip;
+
+  /// No description provided for @gui_settings_languageDropdownTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Language sent to the model (lang_code)'**
+  String get gui_settings_languageDropdownTooltip;
 
   /// No description provided for @gui_settings_advancedVoiceIdTooltip.
   ///

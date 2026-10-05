@@ -132,10 +132,10 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Applies a friendly voice alias; resolves it to the provider raw id.
+  /// Applies a voice picked from the list, by id; [label] is display-only.
   /// Returns false (leaving the selection unchanged) when no model is active.
-  bool applyVoiceLabel(String label) {
-    final applied = _model.applyVoiceLabel(label);
+  bool applyVoiceId(String id, {String? label}) {
+    final applied = _model.applyVoiceId(id, label: label);
     notifyListeners();
     return applied;
   }
@@ -162,10 +162,44 @@ class AppController extends ChangeNotifier {
   /// voice-picker gender control in "Model & voice").
   bool get hasGenderTags => _model.hasGenderTags;
 
-  /// Selectable voices for the active model, narrowed to [voiceGenderFilter].
-  /// Each entry is `(value, displayLabel)`: tagged voices get a compact
-  /// ` (m)`/` (f)`/` (n)` suffix so gender is visible in the dropdown.
+  /// Selectable voices for the active model, narrowed to [voiceLanguage] and
+  /// [voiceGenderFilter]. Each entry is `(id, displayLabel)`: the id is the
+  /// dropdown's value because it is the only thing that tells two same-named
+  /// voices apart, and tagged voices get a compact ` (m)`/` (f)`/` (n)` suffix
+  /// so gender is visible in the dropdown.
   List<(String, String)> get voiceItems => _model.voiceItems;
+
+  // --- Voice language ------------------------------------------------
+
+  /// The active model's language code (e.g. `b` for British English); null
+  /// when the model declares no languages.
+  String? get voiceLanguage => _model.language;
+
+  /// Whether the active model declares a language list (drives the
+  /// voice-picker language dropdown).
+  bool get hasLanguages => _model.hasLanguages;
+
+  /// Selectable languages for the active model, in declaration order. Each
+  /// entry is `(code, label)`.
+  List<(String, String)> get languageItems => _model.languageItems;
+
+  /// Applies a language code, narrowing [voiceItems] to that language and
+  /// re-picking a visible voice when the current one filters away. Codes the
+  /// model does not declare are ignored.
+  ///
+  /// A code the active gender filter would leave without any voice clears that
+  /// filter instead — the reader's language choice wins — so the prefix rewrite
+  /// keyed on the gender has to be re-applied here, the same way the
+  /// [voiceGenderFilter] setter does it.
+  void applyVoiceLanguage(String code) {
+    if (code == _model.language) return;
+    final gender = _model.voiceGenderFilter;
+    _model.applyLanguage(code);
+    if (_model.voiceGenderFilter != gender) {
+      _settings.applyNarratorGender(_model.voiceGenderFilter);
+    }
+    notifyListeners();
+  }
 
   // --- Appearance ----------------------------------------------------
 

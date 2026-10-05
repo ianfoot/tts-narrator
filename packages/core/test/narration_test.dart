@@ -42,6 +42,8 @@ void main() {
     bool sendsVoiceField = true,
     bool supportsSpeed = false,
     double speed = 1.0,
+    bool sendsLanguageField = false,
+    String? language,
     Map<String, String> providerSettings = const {'api_key': 'sk-test'},
   }) {
     return NarrationConfig(
@@ -53,11 +55,13 @@ void main() {
         promptStyle: promptStyle,
         sendsVoiceField: sendsVoiceField,
         supportsSpeed: supportsSpeed,
+        sendsLanguageField: sendsLanguageField,
         sampleRate: sampleRate,
         provider: testProvider,
       ),
       voice: 'VoiceOne',
       voiceLabel: 'Voice One',
+      language: language,
       speed: speed,
       // `narrate` validates the block before the first segment, so every test
       // needs a base URL; a test may still override or extend the map.
@@ -192,6 +196,48 @@ void main() {
     final input = writeInput();
     await narrate(config(input, supportsSpeed: true), client: provider.client);
     expect(provider.calls.single.speed, 1.0);
+  });
+
+  test('passes the language for a model that sends one', () async {
+    final input = writeInput();
+    await narrate(
+      config(input, sendsLanguageField: true, language: 'j'),
+      client: provider.client,
+    );
+    expect(provider.calls.single.language, 'j');
+  });
+
+  test('omits the language for a model that does not take one', () async {
+    final input = writeInput();
+    await narrate(config(input, language: 'j'), client: provider.client);
+    expect(provider.calls.single.language, isNull);
+  });
+
+  test('records the language in the manifest only when it is sent', () async {
+    final input = writeInput();
+
+    await narrate(
+      config(input, sendsLanguageField: true, language: 'b'),
+      client: provider.client,
+    );
+    final sent = jsonDecode(
+      File('${dir.path}/out/story/manifest.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
+    expect(sent['language'], 'b');
+
+    final plain = NarrationConfig(
+      inputPath: input,
+      profile: config(input).profile,
+      voice: 'VoiceOne',
+      language: 'b',
+      providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
+      outDir: '${dir.path}/out2',
+    );
+    await narrate(plain, client: provider.client);
+    final other = jsonDecode(
+      File('${dir.path}/out2/story/manifest.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
+    expect(other.containsKey('language'), isFalse);
   });
 
   test('passes the resolved provider settings through untouched', () async {
@@ -417,7 +463,10 @@ void main() {
             provider: provider.id,
           ),
           voice: 'VoiceOne',
-          providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
+          providerSettings: const {
+            'base_url': testBaseUrl,
+            'api_key': 'sk-test',
+          },
           outDir: '${dir.path}/out',
           sendWholeFile: true,
         );
