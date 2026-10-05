@@ -22,6 +22,7 @@ class TtsModelProfile {
     this.sampleRate,
     required this.provider,
     this.displayName,
+    this.voicesEditable = false,
   });
 
   /// Short CLI name used for `--model <alias>`.
@@ -69,6 +70,20 @@ class TtsModelProfile {
   /// config, never a vendor the code knows about.
   final String provider;
 
+  /// Whether the user may edit this model's voice list from the app.
+  ///
+  /// Some models have a closed set of voices the provider itself defines
+  /// (Gemini's 30 named voices, Kokoro's 54 language-prefixed ids). Others are
+  /// open-ended: Fish accepts any id, so the useful thing is for the user to
+  /// curate their own list. That is opt-in per model
+  /// (`"voices_editable": true` in the model file) and defaults to false, so a
+  /// model that says nothing is read-only in the UI.
+  ///
+  /// This gates the *UI affordance* only. The capability is always there: a
+  /// hand-written overlay file can change any model's voices, and the loader
+  /// honours it regardless of this flag.
+  final bool voicesEditable;
+
   TtsModelProfile copyWith({String? id, String? provider}) => TtsModelProfile(
     alias: alias,
     id: id ?? this.id,
@@ -80,5 +95,6 @@ class TtsModelProfile {
     sampleRate: sampleRate,
     provider: provider ?? this.provider,
     displayName: displayName,
+    voicesEditable: voicesEditable,
   );
 }

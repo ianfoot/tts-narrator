@@ -110,11 +110,23 @@ class AppController extends ChangeNotifier {
   /// The active model alias, or null when no model is configured.
   String? get modelAlias => _model.modelAlias;
 
+  /// The app's writer for the config directory. The preferences screen goes
+  /// through it, so every save lands in the `user/` overlay and the downloaded
+  /// files stay as they shipped.
+  VoiceConfigStore get voiceConfigStore => _model.voiceConfigStore;
+
   /// Raw provider voice id; an empty string means "use the model default".
   String get voice => _model.voice;
 
   /// Friendly voice label when one was picked; null means the raw id.
   String? get voiceLabel => _model.voiceLabel;
+
+  /// Re-reads the config directory after the preferences screen wrote to it,
+  /// keeping the selected model and voice.
+  void reloadConfig() {
+    _model.reloadConfig();
+    notifyListeners();
+  }
 
   /// Switches the active model, preserving a user-set raw voice and resetting
   /// to the new model's default voice only when the current raw voice was

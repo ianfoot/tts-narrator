@@ -57,6 +57,66 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   String? get modelAlias => _modelAlias;
 
+  /// The app's only writer for the config directory. Reads resolve through it so
+  /// an overlay file the user authored is what the editor shows, and every write
+  /// lands in the overlay — the downloaded files are never rewritten, so a
+  /// re-download can restore them without losing anything.
+  VoiceConfigStore get voiceConfigStore => _store;
+  late final VoiceConfigStore _store = VoiceConfigStore(_loader.configDir);
+
+  /// Re-reads the config directory, keeping the selected model and voice.
+  ///
+  /// Called after the preferences screen writes an overlay file, so the picker
+  /// shows what was just saved without an app restart. The model alias is
+  /// re-resolved against the new config and falls back to the default model if
+  /// the file it named is gone; the voice is then re-picked by **id** from
+  /// whatever is still visible, which keeps the reader on the same voice when a
+  /// label was renamed and moves them to the default only when their id is
+  /// genuinely gone. Either way the friendly label is re-read off the surviving
+  /// id, so a rename in preferences stops showing the old name.
+  ///
+  /// The chosen language and gender filter are kept, because editing a voice
+  /// changes neither. They are reset only when the model itself changed or is
+  /// gone, the one case where the old choice cannot be honoured. The gender
+  /// filter is re-validated against the new list in every case: delete the last
+  /// voice matching it and the picker would keep filtering to a list that no
+  /// longer holds the selected voice, so nothing would be highlighted while the
+  /// run config still sent the hidden id.
+  void reloadConfig() {
+    _voiceConfig = _loader.load();
+    final alias = _modelAlias;
+    final stillThere = alias != null && profileFor(alias, _voiceConfig) != null;
+    if (!stillThere) {
+      _modelAlias = defaultModelFor(_voiceConfig)?.alias;
+      _voiceGender = VoiceGender.neutral;
+      _language = _voiceConfig.defaultLanguageFor(_modelAlias ?? '');
+    }
+    final p = profile;
+    if (p == null) {
+      notifyListeners();
+      return;
+    }
+    // Re-validate the filter against the new list, the same way the setter does:
+    // keep the full list rather than an empty one. A voice edit does not change
+    // the filter, but it can empty it.
+    if (_voiceGender != VoiceGender.neutral &&
+        !_hasVisible(p, gender: _voiceGender)) {
+      _voiceGender = VoiceGender.neutral;
+    }
+    final visible = _visibleEntries(p);
+    _keepVisibleVoice(p, visible);
+    if (_voice.isNotEmpty) {
+      for (final e in visible) {
+        if (e.id != _voice) continue;
+        // Null when the entry's label is its bare id, which is what the picker
+        // itself displays — same rule as setVoice/applyVoiceId.
+        _voiceLabel = e.label != _voice ? e.label : null;
+        break;
+      }
+    }
+    notifyListeners();
+  }
+
   /// Raw provider voice id; an empty string means "use the model default".
   String _voice = '';
 

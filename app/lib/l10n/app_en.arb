@@ -256,5 +256,57 @@
   "gui_bootstrap_notNow": "Not Now",
   "gui_bootstrap_download": "Download",
   "gui_bootstrap_downloading": "Downloading voice configurations...",
-  "gui_bootstrap_initializing": "Initializing..."
+  "gui_bootstrap_initializing": "Initializing...",
+
+  "gui_config_title": "Providers & Voices",
+  "gui_config_close": "Close",
+  "gui_config_revealFolder": "Reveal Config Folder",
+  "gui_config_revealFolderTooltip": "Open the voice config directory in the file manager",
+  "gui_config_warningsTitle": "Config warnings",
+  "gui_config_noModels": "No models configured. Download the starter configurations to begin.",
+  "gui_config_modelsTitle": "Models",
+  "gui_config_editedBadgeTooltip": "This model has a local override in the user folder",
+  "gui_config_fieldModelId": "Model ID",
+  "gui_config_fieldProvider": "Provider",
+  "gui_config_fieldFormat": "Format",
+  "gui_config_voicesUnreadableTitle": "Cannot read the voice list for {alias}",
+  "@gui_config_voicesUnreadableTitle": {
+    "description": "Title shown in place of a model's voice table when its config file does not parse.",
+    "placeholders": {
+      "alias": { "type": "String", "example": "fish" }
+    }
+  },
+  "gui_config_voicesUnreadableRevert": "Revert to Downloaded discards this file and restores the downloaded one.",
+  "@gui_config_voicesUnreadableRevert": {
+    "description": "Hint under an unreadable voice table, when a local override can be discarded."
+  },
+  "gui_config_voicesLockedCaption": "This model's voice list is fixed. Add a models/{alias}.json file in the user folder to override it.",
+  "@gui_config_voicesLockedCaption": {
+    "description": "Caption shown under a locked model's read-only voice table.",
+    "placeholders": {
+      "alias": { "type": "String", "example": "kokoro" }
+    }
+  },
+  "gui_config_columnLabel": "Label",
+  "gui_config_columnId": "Voice ID",
+  "gui_config_columnGender": "Gender",
+  "gui_config_addVoice": "Add Voice",
+  "gui_config_editVoice": "Edit Voice",
+  "gui_config_removeVoice": "Remove",
+  "gui_config_setDefault": "Set as default",
+  "gui_config_isDefault": "Default",
+  "gui_config_revert": "Revert to Downloaded",
+  "gui_config_revertTooltip": "Discard the local override for this model",
+  "gui_config_genderAny": "Not set",
+  "gui_config_genderMale": "Male",
+  "gui_config_genderFemale": "Female",
+  "gui_config_genderNeutral": "Neutral",
+  "gui_config_voiceDialogAddTitle": "Add voice",
+  "gui_config_voiceDialogEditTitle": "Edit voice",
+  "gui_config_voiceDialogLabel": "Label",
+  "gui_config_voiceDialogLabelHint": "Shown in the voice picker",
+  "gui_config_voiceDialogId": "Voice ID",
+  "gui_config_voiceDialogIdHint": "Sent to the provider, e.g. a 32-character id",
+  "gui_config_voiceDialogSave": "Save",
+  "gui_config_voiceDialogCancel": "Cancel"
 }

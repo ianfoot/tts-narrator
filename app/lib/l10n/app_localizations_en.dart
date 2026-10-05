@@ -524,4 +524,122 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gui_bootstrap_initializing => 'Initializing...';
+
+  @override
+  String get gui_config_title => 'Providers & Voices';
+
+  @override
+  String get gui_config_close => 'Close';
+
+  @override
+  String get gui_config_revealFolder => 'Reveal Config Folder';
+
+  @override
+  String get gui_config_revealFolderTooltip =>
+      'Open the voice config directory in the file manager';
+
+  @override
+  String get gui_config_warningsTitle => 'Config warnings';
+
+  @override
+  String get gui_config_noModels =>
+      'No models configured. Download the starter configurations to begin.';
+
+  @override
+  String get gui_config_modelsTitle => 'Models';
+
+  @override
+  String get gui_config_editedBadgeTooltip =>
+      'This model has a local override in the user folder';
+
+  @override
+  String get gui_config_fieldModelId => 'Model ID';
+
+  @override
+  String get gui_config_fieldProvider => 'Provider';
+
+  @override
+  String get gui_config_fieldFormat => 'Format';
+
+  @override
+  String gui_config_voicesUnreadableTitle(String alias) {
+    return 'Cannot read the voice list for $alias';
+  }
+
+  @override
+  String get gui_config_voicesUnreadableRevert =>
+      'Revert to Downloaded discards this file and restores the downloaded one.';
+
+  @override
+  String gui_config_voicesLockedCaption(String alias) {
+    return 'This model\'s voice list is fixed. Add a models/$alias.json file in the user folder to override it.';
+  }
+
+  @override
+  String get gui_config_columnLabel => 'Label';
+
+  @override
+  String get gui_config_columnId => 'Voice ID';
+
+  @override
+  String get gui_config_columnGender => 'Gender';
+
+  @override
+  String get gui_config_addVoice => 'Add Voice';
+
+  @override
+  String get gui_config_editVoice => 'Edit Voice';
+
+  @override
+  String get gui_config_removeVoice => 'Remove';
+
+  @override
+  String get gui_config_setDefault => 'Set as default';
+
+  @override
+  String get gui_config_isDefault => 'Default';
+
+  @override
+  String get gui_config_revert => 'Revert to Downloaded';
+
+  @override
+  String get gui_config_revertTooltip =>
+      'Discard the local override for this model';
+
+  @override
+  String get gui_config_genderAny => 'Not set';
+
+  @override
+  String get gui_config_genderMale => 'Male';
+
+  @override
+  String get gui_config_genderFemale => 'Female';
+
+  @override
+  String get gui_config_genderNeutral => 'Neutral';
+
+  @override
+  String get gui_config_voiceDialogAddTitle => 'Add voice';
+
+  @override
+  String get gui_config_voiceDialogEditTitle => 'Edit voice';
+
+  @override
+  String get gui_config_voiceDialogLabel => 'Label';
+
+  @override
+  String get gui_config_voiceDialogLabelHint => 'Shown in the voice picker';
+
+  @override
+  String get gui_config_voiceDialogId => 'Voice ID';
+
+  @override
+  String get gui_config_voiceDialogIdHint =>
+      'Sent to the provider, e.g. a 32-character id';
+
+  @override
+  String get gui_config_voiceDialogSave => 'Save';
+
+  @override
+  String get gui_config_voiceDialogCancel => 'Cancel';
 }

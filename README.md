@@ -55,6 +55,11 @@ The config directory, per platform:
 Both sit inside a hidden folder, so reveal it first with `Cmd+Shift+.` on macOS,
 or `Ctrl+H` in most Linux file managers. Windows is not supported yet.
 
+The files directly in that directory are the ones the app downloaded, and the app
+never rewrites them. Your own changes live in a `user/` subdirectory alongside
+them, and shadow their counterparts by name — see
+[Your own overrides](#your-own-overrides) below.
+
 `<config_dir>/config.json`:
 
 ```json
@@ -222,6 +227,97 @@ Voices are free-form 32-hex fish.audio ids (the default is
 `89f41ea230034706881f85a8227d6ab9`, "British Female Narrator"). Any id is
 accepted; a curated British voice list lives on the "Text to Speech" Logseq
 page and in `voice-config/models/fish.json`.
+
+Fish is the model to reach for when you want more voices than ship by default:
+they are just ids, so any the service accepts can be added — from the
+preferences screen, or by hand in `user/models/fish.json` (copy the downloaded
+file first; see [Your own overrides](#your-own-overrides)). The curated 27 are
+an example set, not a limit. An unlisted id also still works via the raw-id
+field in the settings rail.
+
+## Your own overrides
+
+The starter configuration is downloaded from the project's repository, so the app
+treats the files it downloaded as read-only: editing one in place would be undone
+the next time a missing file is re-fetched. Instead, put your changes in a `user/`
+directory inside the same config directory:
+
+```
+<config_dir>/
+├── config.json              ← downloaded
+├── manifest.json            ← downloaded
+├── providers/               ← downloaded
+├── models/                  ← downloaded
+└── user/                    ← yours
+    ├── config.json              (optional)
+    ├── providers/               (optional)
+    └── models/                  (optional)
+```
+
+A file in `user/` **shadows** the downloaded file of the same name. To change one
+model's voices, `user/models/fish.json` is the only file you need to add — but it
+becomes the *whole* model file, so start by copying the downloaded one and editing
+the copy.
+
+- **Model and provider files replace, they do not merge.** A `user/models/fish.json`
+  is read as the entire `fish` model; nothing is carried over from the downloaded
+  copy. That is deliberate: a voice list is easier to reason about when the file
+  you edit says everything about the model than when two half-files have to agree.
+- **Registries add up.** A `user/config.json` is merged with the downloaded one, so
+  listing a provider name there registers it without dropping the others. The
+  first provider listed wins, so an override you add there takes precedence — and
+  that is also how you *reorder* providers, since overriding a provider file alone
+  deliberately does not move it.
+- **You do not need to re-list a provider you are only overriding.** Dropping
+  `user/providers/openrouter.json` next to the downloaded one is enough. Re-listing
+  a name the downloaded registry already has is harmless too; it just adds nothing.
+- A model still has to be claimed by some provider's `models` list, or it is
+  ignored. Overriding an existing model needs no change there; adding a brand new
+  one does.
+- Anything a hand-written file gets wrong is reported in the app's **Config
+  warnings** banner rather than failing the launch, and a malformed override
+  falls back to the downloaded file.
+
+### Editing voices in the app
+
+**TTS Narrator → Preferences…** (`Cmd+,` on macOS, `Ctrl+,` elsewhere) opens a
+providers and voices screen: a model list on the left, and for the selected model
+its id, provider and format, plus a table of voices you can add, rename, re-gender,
+remove, and choose a default from.
+
+Only models whose file sets `"voices_editable": true` can be edited — of the
+shipped models that is `fish`, whose voices are free-form ids. The others
+(`gemini`, `kokoro`, `kokoro_local`) have a fixed voice set, so their table is
+read-only; to change one, copy its downloaded `models/<alias>.json` into
+`user/models/`, add `"voices_editable": true` to your copy, and edit it there.
+The screen has a **Reveal Config Folder** button for finding the directory.
+
+Every save goes to `user/models/<alias>.json`. Your downloaded files are never
+touched, and **Revert to Downloaded** deletes the override so the shipped file
+shows through again. A model you have overridden is marked with a dot in the
+list.
+
+Two things the editor refuses rather than guessing:
+
+- **Removing the model's default voice.** Point the default somewhere else first —
+  a model with no default cannot be narrated with at all.
+- **Two voices with the same id**, or the same label, since only one of each would
+  ever reach the picker.
+
+The editor writes one voice shape — the key is the label, the id is always stated
+explicitly, and `gender` appears when tagged:
+
+```json
+"voices": {
+  "British Female Narrator": { "id": "89f41ea230034706881f85a8227d6ab9" },
+  "Alice": { "id": "c536c6cdbe8e4d9484232e78ab80020f", "gender": "female" }
+}
+```
+
+It normalises your file to that shape on the first save, so an entry written as
+`{"name": "Emma"}` against a `bf_emma` key becomes `{"id": "bf_emma"}` keyed
+`Emma`. Nothing is lost: Kokoro-style language prefixes are read off the **id**,
+not the key, so such a model keeps working.
 
 ## Output
 

@@ -927,6 +927,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Initializing...'**
   String get gui_bootstrap_initializing;
+
+  /// No description provided for @gui_config_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Providers & Voices'**
+  String get gui_config_title;
+
+  /// No description provided for @gui_config_close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get gui_config_close;
+
+  /// No description provided for @gui_config_revealFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Reveal Config Folder'**
+  String get gui_config_revealFolder;
+
+  /// No description provided for @gui_config_revealFolderTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the voice config directory in the file manager'**
+  String get gui_config_revealFolderTooltip;
+
+  /// No description provided for @gui_config_warningsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Config warnings'**
+  String get gui_config_warningsTitle;
+
+  /// No description provided for @gui_config_noModels.
+  ///
+  /// In en, this message translates to:
+  /// **'No models configured. Download the starter configurations to begin.'**
+  String get gui_config_noModels;
+
+  /// No description provided for @gui_config_modelsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Models'**
+  String get gui_config_modelsTitle;
+
+  /// No description provided for @gui_config_editedBadgeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'This model has a local override in the user folder'**
+  String get gui_config_editedBadgeTooltip;
+
+  /// No description provided for @gui_config_fieldModelId.
+  ///
+  /// In en, this message translates to:
+  /// **'Model ID'**
+  String get gui_config_fieldModelId;
+
+  /// No description provided for @gui_config_fieldProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider'**
+  String get gui_config_fieldProvider;
+
+  /// No description provided for @gui_config_fieldFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Format'**
+  String get gui_config_fieldFormat;
+
+  /// Title shown in place of a model's voice table when its config file does not parse.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot read the voice list for {alias}'**
+  String gui_config_voicesUnreadableTitle(String alias);
+
+  /// Hint under an unreadable voice table, when a local override can be discarded.
+  ///
+  /// In en, this message translates to:
+  /// **'Revert to Downloaded discards this file and restores the downloaded one.'**
+  String get gui_config_voicesUnreadableRevert;
+
+  /// Caption shown under a locked model's read-only voice table.
+  ///
+  /// In en, this message translates to:
+  /// **'This model\'s voice list is fixed. Add a models/{alias}.json file in the user folder to override it.'**
+  String gui_config_voicesLockedCaption(String alias);
+
+  /// No description provided for @gui_config_columnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Label'**
+  String get gui_config_columnLabel;
+
+  /// No description provided for @gui_config_columnId.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice ID'**
+  String get gui_config_columnId;
+
+  /// No description provided for @gui_config_columnGender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get gui_config_columnGender;
+
+  /// No description provided for @gui_config_addVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Voice'**
+  String get gui_config_addVoice;
+
+  /// No description provided for @gui_config_editVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Voice'**
+  String get gui_config_editVoice;
+
+  /// No description provided for @gui_config_removeVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get gui_config_removeVoice;
+
+  /// No description provided for @gui_config_setDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Set as default'**
+  String get gui_config_setDefault;
+
+  /// No description provided for @gui_config_isDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get gui_config_isDefault;
+
+  /// No description provided for @gui_config_revert.
+  ///
+  /// In en, this message translates to:
+  /// **'Revert to Downloaded'**
+  String get gui_config_revert;
+
+  /// No description provided for @gui_config_revertTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard the local override for this model'**
+  String get gui_config_revertTooltip;
+
+  /// No description provided for @gui_config_genderAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get gui_config_genderAny;
+
+  /// No description provided for @gui_config_genderMale.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get gui_config_genderMale;
+
+  /// No description provided for @gui_config_genderFemale.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get gui_config_genderFemale;
+
+  /// No description provided for @gui_config_genderNeutral.
+  ///
+  /// In en, this message translates to:
+  /// **'Neutral'**
+  String get gui_config_genderNeutral;
+
+  /// No description provided for @gui_config_voiceDialogAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add voice'**
+  String get gui_config_voiceDialogAddTitle;
+
+  /// No description provided for @gui_config_voiceDialogEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit voice'**
+  String get gui_config_voiceDialogEditTitle;
+
+  /// No description provided for @gui_config_voiceDialogLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Label'**
+  String get gui_config_voiceDialogLabel;
+
+  /// No description provided for @gui_config_voiceDialogLabelHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Shown in the voice picker'**
+  String get gui_config_voiceDialogLabelHint;
+
+  /// No description provided for @gui_config_voiceDialogId.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice ID'**
+  String get gui_config_voiceDialogId;
+
+  /// No description provided for @gui_config_voiceDialogIdHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to the provider, e.g. a 32-character id'**
+  String get gui_config_voiceDialogIdHint;
+
+  /// No description provided for @gui_config_voiceDialogSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get gui_config_voiceDialogSave;
+
+  /// No description provided for @gui_config_voiceDialogCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get gui_config_voiceDialogCancel;
 }
 
 class _AppLocalizationsDelegate

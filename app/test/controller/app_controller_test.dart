@@ -838,6 +838,137 @@ void main() {
     });
   });
 
+  group('reloadConfig', () {
+    // The preferences screen writes to the `user/` overlay and then calls
+    // reloadConfig(); these cases cover what the reader keeps across that
+    // re-read, since a save must not silently move them off their voice.
+    void writeOverlayModel(String alias, Map<String, Object?> body) {
+      File('$configDir/user/models/$alias.json')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync(jsonEncode(body));
+    }
+
+    test('a voice added in the overlay shows up without a restart', () {
+      writeFishConfig();
+      final c = makeController();
+      expect(c.voiceItems.where((i) => i.$1 == 'deadbeef'), isEmpty);
+
+      writeOverlayModel('fish', {
+        'id': 'fish-audio/s2.1-pro-free:free',
+        'voices_editable': true,
+        'default_voice': 'British Female Narrator',
+        'voices': {
+          'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          'Newcomer': 'deadbeef',
+        },
+      });
+      c.reloadConfig();
+
+      expect(c.voiceItems.where((i) => i.$1 == 'deadbeef'), hasLength(1));
+    });
+
+    test('a renamed label keeps the reader on the same voice id', () {
+      writeFishConfig();
+      final c = makeController();
+      expect(c.voice, '89f41ea230034706881f85a8227d6ab9');
+      expect(c.voiceLabel, 'British Female Narrator');
+
+      writeOverlayModel('fish', {
+        'id': 'fish-audio/s2.1-pro-free:free',
+        'voices_editable': true,
+        'default_voice': 'Renamed Narrator',
+        'voices': {
+          'Renamed Narrator': '89f41ea230034706881f85a8227d6ab9',
+        },
+      });
+      c.reloadConfig();
+
+      // Same id, new label: the selection is by id, so it survives and picks
+      // up the new friendly name.
+      expect(c.voice, '89f41ea230034706881f85a8227d6ab9');
+      expect(c.voiceLabel, 'Renamed Narrator');
+    });
+
+    test('a voice whose id is gone falls back to the model default', () {
+      writeFishConfig();
+      final c = makeController();
+      c.setVoice('some_other_voice');
+      expect(c.voice, 'some_other_voice');
+
+      writeOverlayModel('fish', {
+        'id': 'fish-audio/s2.1-pro-free:free',
+        'voices_editable': true,
+        'default_voice': 'Replacement',
+        'voices': {'Replacement': 'cafebabe'},
+      });
+      c.reloadConfig();
+
+      expect(c.voice, 'cafebabe');
+      expect(c.voiceLabel, 'Replacement');
+    });
+
+    test('a model that disappears falls back to the default model', () {
+      writeConfig({
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'gemini': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'format': 'pcm',
+            'sample_rate': 24000,
+          },
+        },
+        'defaults': {
+          'fish': 'British Female Narrator',
+          'gemini': 'Charon',
+        },
+        'voices': {
+          'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+          'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
+        },
+      });
+      final c = makeController();
+      c.changeModel('gemini');
+      expect(c.modelAlias, 'gemini');
+
+      // Re-point the registry at fish only, the way a user narrowing their
+      // config would.
+      fixtures.writeConfig(configDir, {
+        'models': {
+          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+        },
+        'defaults': {'fish': 'British Female Narrator'},
+        'voices': {
+          'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+        },
+      });
+      c.reloadConfig();
+
+      expect(c.modelAlias, 'fish');
+      expect(c.voice, '89f41ea230034706881f85a8227d6ab9');
+    });
+
+    test('an emptied config leaves nothing selected rather than throwing', () {
+      writeFishConfig();
+      final c = makeController();
+      expect(c.modelAlias, 'fish');
+
+      fixtures.writeConfig(configDir, {'models': <String, Object?>{}});
+      c.reloadConfig();
+
+      expect(c.modelAlias, isNull);
+      expect(c.profile, isNull);
+    });
+
+    test('reloadConfig notifies listeners', () {
+      writeFishConfig();
+      final c = makeController();
+      var notified = 0;
+      c.addListener(() => notified++);
+      c.reloadConfig();
+      expect(notified, 1);
+    });
+  });
+
   group('voice gender', () {
     // A provider's `models` list is what claims a model file, so a body
     // naming only one of the two would leave the other orphaned and unread.
