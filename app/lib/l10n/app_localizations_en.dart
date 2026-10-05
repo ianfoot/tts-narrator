@@ -111,6 +111,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_editor_toolbar_showHideRunSetup => 'Show / hide run setup';
 
   @override
+  String get gui_editor_toolbar_settings => 'Settings';
+
+  @override
   String get gui_editor_toolbar_setOutputFolder => 'Set output folder';
 
   @override

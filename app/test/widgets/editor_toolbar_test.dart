@@ -144,6 +144,50 @@ void main() {
     });
   });
 
+  group('settings button', () {
+    testWidgets('settingsButton invokes controller.onSettings', (tester) async {
+      final controller = makeController();
+      var opened = false;
+      controller.commands.onSettings = () => opened = true;
+      await pumpToolbar(tester, controller);
+      await tester.tap(find.byKey(const Key('settingsButton')));
+      expect(opened, isTrue);
+    });
+
+    testWidgets('shows the Settings tooltip with its accelerator', (
+      tester,
+    ) async {
+      final controller = makeController();
+      await pumpToolbar(tester, controller);
+      expect(find.byKey(const Key('settingsButton')), findsOneWidget);
+      expect(
+        find.byTooltip(
+          '${testL10n.gui_editor_toolbar_settings} '
+          '(${acceleratorLabel(',')})',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a tap is a harmless no-op when onSettings is unwired', (
+      tester,
+    ) async {
+      final controller = makeController();
+      expect(controller.commands.onSettings, isNull);
+      await pumpToolbar(tester, controller);
+      // The button always hands CupertinoButton a closure, so it stays enabled
+      // (unlike the save button, which greys out); the unwired slot just
+      // swallows the call.
+      final button = tester.widget<AppIconButton>(
+        find.byKey(const Key('settingsButton')),
+      );
+      expect(button.onPressed, isNotNull);
+      await tester.tap(find.byKey(const Key('settingsButton')));
+      await tester.pump();
+      expect(find.byKey(const Key('settingsButton')), findsOneWidget);
+    });
+  });
+
   group('document title', () {
     testWidgets('shows filename and dirty dot state', (tester) async {
       final controller = makeController();

@@ -255,6 +255,14 @@ class _EditorToolbarState extends State<EditorToolbar> {
                 onPressed: widget.onToggleRunSetupPanel,
               ),
               const SizedBox(width: 6),
+              AppIconButton(
+                key: const Key('settingsButton'),
+                tooltip:
+                    '${_l10n.gui_editor_toolbar_settings} (${acceleratorLabel(',')})',
+                icon: const Icon(CupertinoIcons.gear_alt),
+                onPressed: () => controller.commands.onSettings?.call(),
+              ),
+              const SizedBox(width: 6),
               _buildAppearanceButton(tokens),
               const SizedBox(width: 6),
               AppIconButton(

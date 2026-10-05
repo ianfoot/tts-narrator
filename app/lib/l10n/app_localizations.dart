@@ -202,6 +202,12 @@ abstract class AppLocalizations {
   /// **'Show / hide run setup'**
   String get gui_editor_toolbar_showHideRunSetup;
 
+  /// No description provided for @gui_editor_toolbar_settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get gui_editor_toolbar_settings;
+
   /// No description provided for @gui_editor_toolbar_setOutputFolder.
   ///
   /// In en, this message translates to:

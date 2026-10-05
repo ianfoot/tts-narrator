@@ -51,6 +51,7 @@
     "placeholders": { "mode": { "type": "String", "example": "System" } }
   },
   "gui_editor_toolbar_showHideRunSetup": "Show / hide run setup",
+  "gui_editor_toolbar_settings": "Settings",
   "gui_editor_toolbar_setOutputFolder": "Set output folder",
   "gui_editor_toolbar_openTextFile": "Open text file",
   "gui_editor_toolbar_save": "Save",
