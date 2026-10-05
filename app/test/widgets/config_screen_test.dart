@@ -327,5 +327,90 @@ void main() {
       );
       expect(c.voiceItems.where((i) => i.$1 == 'deadbeef'), isEmpty);
     });
+
+    testWidgets('an unreadable overlay shows the store error and keeps revert', (
+      tester,
+    ) async {
+      writeEditableConfig();
+      // The documented hand-edit workflow: a syntax error left in the overlay.
+      // The loader downgrades it to a warning and falls back to the downloaded
+      // model, so the model is still listed and still selected — which is
+      // exactly the case that used to throw out of build and take the pane, and
+      // the Revert button inside it, down with it.
+      File('$configDir/user/models/fish.json')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('{"id": "fish-audio/s2.1-pro-free:free", ');
+
+      final store = VoiceConfigStore(configDir);
+      final String storeMessage;
+      try {
+        store.voicesFor('fish');
+        fail('a truncated JSON file is not readable');
+      } on VoiceConfigurationError catch (e) {
+        storeMessage = e.message;
+      }
+
+      await pumpConfigScreen(tester, makeController());
+
+      // The store's own words, not a paraphrase: it names the file and the
+      // syntax error, which is what the user has to go and fix.
+      expect(find.byKey(const Key('voiceTableError')), findsOneWidget);
+      expect(find.text(storeMessage), findsOneWidget);
+      expect(find.textContaining('fish.json', findRichText: true), findsWidgets);
+      // The escape hatch is still on screen and still pressable.
+      expect(find.byKey(const Key('revertModelButton')), findsOneWidget);
+      expect(find.byKey(const Key('addVoiceButton')), findsNothing);
+
+      // And pressing it really does recover: the downloaded file is back.
+      await tester.tap(find.byKey(const Key('revertModelButton')));
+      await tester.pumpAndSettle();
+
+      expect(store.hasOverlayModel('fish'), isFalse);
+      expect(find.byKey(const Key('voiceTableError')), findsNothing);
+      expect(find.text('British Female Narrator'), findsOneWidget);
+    });
+
+    testWidgets('a rejection on one model is gone after switching models', (
+      tester,
+    ) async {
+      fixtures.writeConfig(configDir, {
+        'models': {
+          'fish': {
+            'id': 'fish-audio/s2.1-pro-free:free',
+            'format': 'mp3',
+            'display_name': 'Fish',
+            'voices_editable': true,
+          },
+          'gemini': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'format': 'pcm',
+            'display_name': 'Gemini',
+            'voices_editable': true,
+          },
+        },
+        'defaults': {'fish': 'British Female Narrator', 'gemini': 'Charon'},
+        'voices': {
+          'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+          'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
+        },
+      });
+      await pumpConfigScreen(tester, makeController());
+
+      // Refused on fish, so the message belongs to fish.
+      await tester.tap(
+        find.byKey(
+          const Key('removeVoice_89f41ea230034706881f85a8227d6ab9'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('voiceTableError')), findsOneWidget);
+
+      await tester.tap(find.text('Gemini · gemini'));
+      await tester.pumpAndSettle();
+
+      // Gemini's own table, and none of fish's state on screen.
+      expect(find.byKey(const Key('voiceTableError')), findsNothing);
+      expect(find.text('CN2pVME9cDEeMRXJzcMPYj0p'), findsOneWidget);
+    });
   });
 }

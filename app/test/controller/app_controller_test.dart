@@ -967,6 +967,101 @@ void main() {
       c.reloadConfig();
       expect(notified, 1);
     });
+
+    test('the chosen language survives a voice edit on the same model', () {
+      // Voice ids that are not language-prefixed, so the chosen language is only
+      // held in state. A voice save cannot change it — resetting to the model's
+      // `default_language` on every edit would undo the reader's pick each time
+      // they touched a voice in preferences.
+      writeConfig({
+        'providers': {
+          'alpha': {
+            'base_url': 'https://vendor.example/api/v1',
+            'api_key': 'sk-test',
+          },
+        },
+        'models': {
+          'teller': {
+            'id': 'vendor/teller',
+            'format': 'mp3',
+            'sends_language': true,
+            'default_language': 'en',
+            'languages': {'en': 'English', 'fr': 'French'},
+          },
+        },
+        'defaults': {'teller': 'Ada'},
+        'voices': {
+          'teller': {
+            'Ada': {'id': 'ada'},
+            'Amelie': {'id': 'amelie'},
+          },
+        },
+      });
+      final c = makeController();
+      expect(c.voiceLanguage, 'en');
+      c.applyVoiceLanguage('fr');
+      expect(c.voiceLanguage, 'fr');
+
+      writeOverlayModel('teller', {
+        'id': 'vendor/teller',
+        'format': 'mp3',
+        'voices_editable': true,
+        'sends_language': true,
+        'default_language': 'en',
+        'languages': {'en': 'English', 'fr': 'French'},
+        'voices': {
+          'Ada': {'id': 'ada'},
+          'Amelie': {'id': 'amelie'},
+          'Renard': {'id': 'renard'},
+        },
+      });
+      c.reloadConfig();
+
+      expect(c.modelAlias, 'teller');
+      expect(c.voiceLanguage, 'fr');
+    });
+
+    test('a gender filter left with no voice resets rather than hiding it', () {
+      writeConfig({
+        'providers': {
+          'alpha': {
+            'base_url': 'https://vendor.example/api/v1',
+            'api_key': 'sk-test',
+          },
+        },
+        'models': {
+          'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+        },
+        'defaults': {'kokoro': 'Emma'},
+        'voices': {
+          'kokoro': {
+            'Emma': {'id': 'bf_emma', 'gender': 'female'},
+            'Daniel': {'id': 'bm_daniel', 'gender': 'male'},
+          },
+        },
+      });
+      final c = makeController();
+      c.voiceGenderFilter = VoiceGender.male;
+      expect(c.voiceGenderFilter, VoiceGender.male);
+      expect(c.voice, 'bm_daniel');
+
+      // Delete the last male voice in preferences.
+      writeOverlayModel('kokoro', {
+        'id': 'hexgrad/kokoro-82m',
+        'format': 'mp3',
+        'voices_editable': true,
+        'voices': {
+          'Emma': {'id': 'bf_emma', 'gender': 'female'},
+        },
+      });
+      c.reloadConfig();
+
+      // The filter would have narrowed the list to nothing, leaving the picker
+      // empty with the run config still sending the deleted id.
+      expect(c.voiceGenderFilter, VoiceGender.neutral);
+      expect(c.voice, 'bf_emma');
+      expect(c.voiceItems.map((e) => e.$1), ['bf_emma']);
+    });
   });
 
   group('voice gender', () {

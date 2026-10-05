@@ -126,13 +126,29 @@ Merge rules, in the order they matter:
   the failure mode is a voice that silently vanishes from the picker.
 - **Registries accumulate.** `user/config.json` is merged with the downloaded
   one rather than replacing it, so naming one new provider there does not silently
-  drop the shipped ones. Overlay entries come first, and first means default.
+  drop the shipped ones. A provider named there moves to the front of the merged
+  list, and first means default — reordering the shipped order is a deliberate
+  thing for a user to do in writing, not a side effect of editing a file.
 - **A layer inherits the registry of the layer it shadows.** `_loadProviderLayer`
   takes an `alsoRegistered` set, and the overlay passes the base's provider names,
   so `user/providers/openrouter.json` overrides without needing a
   `user/config.json` repeating the name. An inherited name is only *loaded* if
   its file is actually present — otherwise every provider the overlay chose not
   to override would produce a bogus "missing provider file" warning.
+- **Inheriting is not the same as promoting.** An inherited name that happens to
+  have an overlay file keeps its position in the *base* registry, because
+  `_ProviderLayer.promoted` holds only the names the layer's own `config.json`
+  listed. Otherwise `user/providers/local.json` — the documented way to change one
+  `base_url` — would promote `local` above `openrouter` and flip
+  `defaultModelFor`, so editing a URL would change which model the app starts on.
+  The corollary: a promotion naming a provider with no overlay file is dropped,
+  since there is nothing of the user's to promote.
+- **A redundant re-listing is not an error.** A name in the overlay's own
+  registry that is *also* in the base registry is served by the downloaded file
+  and must not warn, even though no `user/providers/<name>.json` exists. Copying
+  the shipped registry into `user/config.json` to append one entry is the natural
+  way to use it, and it would otherwise produce a warning about a file the user
+  never intended to override.
 - **Claims accumulate.** `claimedBy = {...base, ...overlay}`, so an overlay
   provider that drops a model from its `models` list does not un-claim it: the
   downloaded provider file still claims it. Changing who serves an alias needs a
@@ -152,11 +168,20 @@ makes the downloaded copy show through again.
 
 `VoiceConfigStore` (`packages/core/lib/src/config/voice_config_store.dart`) is the
 app's only writer, and the only reason a write is safe: it never writes outside
-`user/`, it writes through a temp file and `renameSync` (POSIX rename replaces in
-one step; Windows refuses, which surfaces as a clear error rather than a
-half-written file), and it preserves every key it does not own — including keys a
-future schema version adds, which a round-trip through `TtsModelProfile` would
-drop.
+`user/`, it writes through a temp file and `renameSync` (a rename removes an
+existing destination as part of the same call, so the previous file survives
+right up until the new one takes its place), and it preserves every key it does
+not own — including keys a future schema version adds, which a round-trip
+through `TtsModelProfile` would drop.
+
+"Preserves every key it does not own" covers `default_voice` too, in both
+directions. A rename has to carry it across, because it is a key into the same
+map being rewritten and `defaultVoiceFor` throws when it stops resolving. And a
+`default_voice` that names *nothing* in the list — an id not in `voices`, which
+`resolveVoice` still honours by falling back to the raw string — is left exactly
+as found, because no edit to an unrelated voice has standing to remove it. The
+store can set a default; nothing in it can clear one, which is the right shape
+for a key whose absence would make the model unselectable.
 
 Do not reach for `writeVoiceConfig` from app code. It is the CLI's
 round-trip-the-whole-tree writer: it emits a fixed key set through

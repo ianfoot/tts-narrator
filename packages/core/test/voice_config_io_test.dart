@@ -646,6 +646,107 @@ void main() {
       );
     });
 
+    test('an inherited provider file override does not reorder the list', () {
+      // The documented way to change one setting is to drop a same-named file
+      // into the overlay with no registry entry beside it. That is an edit to a
+      // provider already in use, so it must not move that provider to the front:
+      // being first decides the default model, and editing a base_url should
+      // never change which model the app launches on.
+      writeBase(provider: 'alpha', providerOrder: const [testProvider]);
+      writeProvider(
+        base,
+        testProvider,
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      writeModel(base, 'two', modelJson('two-base'));
+      writeProvider(
+        overlay,
+        testProvider,
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"https://overlay.example/v1"}'),
+        }),
+      );
+
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      expect(cfg.providers.keys, ['alpha', testProvider]);
+      // The override itself still lands; only its position is left alone.
+      expect(
+        cfg.providers[testProvider]!.settings['base_url'],
+        'https://overlay.example/v1',
+      );
+      expect(defaultModelFor(cfg)?.alias, 'one');
+    });
+
+    test('a provider the overlay registry names does move to the front', () {
+      writeBase(provider: 'alpha', providerOrder: const [testProvider]);
+      writeProvider(
+        base,
+        testProvider,
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      writeModel(base, 'two', modelJson('two-base'));
+      writeProvider(
+        overlay,
+        testProvider,
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      // Re-listing a provider the baseline already serves is what the README
+      // tells a user to do, so it has to be the way to promote one.
+      writeOverlayRegistry(jsonEncode({'providers': [testProvider]}));
+
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      expect(cfg.providers.keys, [testProvider, 'alpha']);
+      expect(defaultModelFor(cfg)?.alias, 'two');
+    });
+
+    test('re-listing a downloaded provider warns about nothing', () {
+      writeBase(provider: 'alpha', providerOrder: const [testProvider]);
+      writeProvider(
+        base,
+        testProvider,
+        jsonEncode({
+          'models': ['two'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      writeModel(base, 'two', modelJson('two-base'));
+      // The registry copied wholesale, with one new name appended -- no overlay
+      // file for the re-listed provider, because the downloaded one serves it.
+      writeOverlayRegistry(
+        jsonEncode({
+          'providers': ['alpha', testProvider, 'brand_new'],
+        }),
+      );
+      writeProvider(
+        overlay,
+        'brand_new',
+        jsonEncode({
+          'models': ['three'],
+          'settings': jsonDecode('{"base_url":"$testBaseUrl"}'),
+        }),
+      );
+      writeModel(overlay, 'three', modelJson('three-overlay'));
+
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      // Only the genuinely new name is promoted; the two re-listed ones keep the
+      // baseline's order, which is the point of separating the two lists.
+      expect(cfg.providers.keys, ['brand_new', 'alpha', testProvider]);
+      expect(cfg.models.keys, containsAll(['one', 'two', 'three']));
+    });
+
     test('an overlay provider registers ahead of the downloaded ones', () {
       writeBase(provider: 'beta', providerOrder: const ['beta']);
       writeRegistry(jsonEncode({'providers': ['beta']}));

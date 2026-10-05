@@ -41,6 +41,11 @@ class ModelEditor extends StatelessWidget {
         _Metadata(model: model),
         const SizedBox(height: AppMetrics.segmentGap),
         VoiceTable(
+          // Keyed by alias so switching models in the list discards the
+          // previous table's state, its last rejection message included. Without
+          // it the same state object is reused across models and fish's error
+          // would sit under gemini's table until the next edit replaced it.
+          key: ValueKey('voiceTable_${model.alias}'),
           alias: model.alias,
           store: store,
           editable: model.voicesEditable,
@@ -51,6 +56,7 @@ class ModelEditor extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: _RevertButton(
+              key: ValueKey('revertButton_${model.alias}'),
               alias: model.alias,
               store: store,
               onChanged: onChanged,
@@ -139,9 +145,12 @@ class _Metadata extends StatelessWidget {
 /// is why it lives outside [VoiceTable] rather than inside it: the pane that
 /// fails to read is replaced by a message, not by a lost button. The delete can
 /// itself fail — a file the user has open, a read-only volume — so that is
-/// reported inline too instead of thrown out of the button's callback.
+/// reported inline too instead of thrown out of the button's callback. Keyed by
+/// alias like [VoiceTable], for the same reason: a delete error belongs to the
+/// model it happened on.
 class _RevertButton extends StatefulWidget {
   const _RevertButton({
+    super.key,
     required this.alias,
     required this.store,
     required this.onChanged,

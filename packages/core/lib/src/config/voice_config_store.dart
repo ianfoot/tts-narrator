@@ -112,9 +112,11 @@ class VoiceConfigStore {
         const JsonEncoder.withIndent('  ').convert(json),
         flush: true,
       );
-      // A rename onto an existing path replaces it in one step on POSIX, which
-      // is what makes the write atomic. Windows refuses to rename onto an
-      // existing file, and says so here rather than corrupting anything.
+      // A rename replaces an existing target in one step, so the previous file
+      // stays intact right up to the moment the new one takes its place. That
+      // holds on Windows too: dart:io documents that an existing file at the
+      // destination "is removed first", and removes it as part of the same call
+      // rather than refusing the rename.
       temp.renameSync(file.path);
     } on FileSystemException catch (e) {
       if (temp.existsSync()) {
@@ -287,6 +289,10 @@ class VoiceConfigStore {
   /// `default_voice` is a key into the same map being rewritten, and
   /// [defaultVoiceFor] throws when it stops resolving, so a rename has to bring
   /// it along or the model becomes unselectable.
+  ///
+  /// Null means the file's `default_voice` should be left as it stands -- either
+  /// there is none, or it names something no row matches and the write has no
+  /// opinion about it. See [_writeVoices].
   String? _carriedDefaultLabel(
     Map<String, dynamic> json,
     List<EditableVoice> rows,
@@ -303,8 +309,11 @@ class VoiceConfigStore {
   ///
   /// The list is normalised to the one shape the app writes -- key is the label,
   /// id always explicit, no `name` -- so a file the user hand-edited and one the
-  /// app wrote read the same way after a save. [defaultLabel] becomes the
-  /// `default_voice` value, or the key is dropped when there is none.
+  /// app wrote read the same way after a save. [defaultLabel], when given,
+  /// becomes the `default_voice` value.
+  ///
+  /// A `default_voice` this call does not set is carried through verbatim rather
+  /// than dropped, including one that matches no row -- see below.
   ///
   /// Everything else in [json] is left exactly as it was found, including keys
   /// this schema does not define: the file is the user's to hold vendor quirks
@@ -335,25 +344,34 @@ class VoiceConfigStore {
       for (final r in rows)
         r.label: io.canonicalVoiceEntryJson(Voice(id: r.id, gender: r.gender)),
     };
-    if (defaultLabel == null) {
-      json.remove('default_voice');
-    } else {
-      json['default_voice'] = defaultLabel;
-    }
+    // Only ever set, never cleared. A null [defaultLabel] means "this call has
+    // no opinion", not "there is no default": it covers both a file that
+    // configures none and a `default_voice` naming something no row matches --
+    // an id that is not in `voices`, which [VoiceConfig.resolveVoice] still
+    // honours by falling back to the raw string, and which the Fish config's own
+    // README documents. Removing it in either case would let an edit to an
+    // unrelated voice un-default the model, after which [defaultVoiceFor] throws
+    // and the model cannot be selected at all.
+    if (defaultLabel != null) json['default_voice'] = defaultLabel;
 
     writeModelJson(alias, json);
     return const VoiceEdit.written();
   }
 
   /// The key `default_voice` currently points at, resolving the label a
-  /// name-keyed entry is filed under, or null when it points at nothing.
+  /// name-keyed entry is filed under, or null when it points at nothing in the
+  /// list.
   ///
   /// [VoiceConfig.resolveVoice] resolves a key first, then names, then the bare
   /// id, so a config may legitimately name any of the three; once the list is
   /// normalised the names are gone, so this has to be resolved before the write,
-  /// not after. Not matching the id here would make an unrelated edit delete a
-  /// `default_voice` the loader still honours, which un-defaults the model and
-  /// makes [defaultVoiceFor] throw.
+  /// not after.
+  ///
+  /// Matching the id as well as the key and label is what stops an unrelated
+  /// edit from deleting a `default_voice` the loader still honours, which
+  /// un-defaults the model and makes [defaultVoiceFor] throw. A null from here
+  /// means the value names nothing at all -- a caller must then leave the file's
+  /// own `default_voice` alone rather than treat the model as having none.
   String? _configuredDefaultKey(
     Map<String, dynamic> json,
     List<EditableVoice> rows,

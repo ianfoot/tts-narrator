@@ -252,6 +252,21 @@ void main() {
       expect(voices.keys, ['Alice']);
     });
 
+    test('refuses a removal that would collapse a duplicate label', () {
+      f.writeModel('kokoro', const {
+        'id': 'hexgrad/kokoro-82m',
+        'voices': {
+          'Emma': {'id': 'bf_emma'},
+          'bm_santa': {'name': 'Santa', 'id': 'bm_santa'},
+          'am_santa': {'name': 'Santa', 'id': 'am_santa'},
+        },
+      });
+      final edit = f.store.removeVoice('kokoro', 'Emma');
+      expect(edit.ok, isFalse);
+      expect(edit.error, contains('Santa'));
+      expect(f.store.hasOverlayModel('kokoro'), isFalse);
+    });
+
     test('refuses to remove the default voice', () {
       final edit = f.store.removeVoice('fish', 'Alice');
       expect(edit.ok, isFalse);
@@ -269,6 +284,138 @@ void main() {
 
     test('rejects an unknown key', () {
       expect(f.store.setDefaultVoice('fish', 'Nobody').ok, isFalse);
+    });
+
+    test('refuses a write that would file two voices under one label', () {
+      // The write keys the block by label, so letting this through would drop
+      // bm_santa from the file over an edit that never mentioned it. Kokoro
+      // ships three "Santa"s and the README tells users to copy that model into
+      // their overlay, so this is reachable on a shipped file.
+      f.writeModel('kokoro', const {
+        'id': 'hexgrad/kokoro-82m',
+        'voices': {
+          'Emma': {'id': 'bf_emma'},
+          'bm_santa': {'name': 'Santa', 'id': 'bm_santa'},
+          'am_santa': {'name': 'Santa', 'id': 'am_santa'},
+        },
+      });
+      final edit = f.store.setDefaultVoice('kokoro', 'bm_santa');
+      expect(edit.ok, isFalse);
+      expect(edit.error, contains('Santa'));
+      expect(f.store.hasOverlayModel('kokoro'), isFalse);
+    });
+
+    test('renaming one of the duplicates is what unblocks the edit', () {
+      f.writeModel('kokoro', const {
+        'id': 'hexgrad/kokoro-82m',
+        'voices': {
+          'Emma': {'id': 'bf_emma'},
+          'bm_santa': {'name': 'Santa', 'id': 'bm_santa'},
+          'am_santa': {'name': 'Santa', 'id': 'am_santa'},
+        },
+      });
+      expect(f.store.setDefaultVoice('kokoro', 'bm_santa').ok, isFalse);
+
+      final rename = f.store.saveVoice(
+        'kokoro',
+        key: 'am_santa',
+        label: 'Santa (male)',
+        id: 'am_santa',
+      );
+      expect(rename.ok, isTrue);
+
+      // The write keys the block by label, so the row is now filed under its
+      // name rather than its id -- which is the whole point of normalising.
+      final voices = f.readOverlay('kokoro')['voices'] as Map<String, dynamic>;
+      expect(voices.keys, ['Emma', 'Santa', 'Santa (male)']);
+      expect(f.store.setDefaultVoice('kokoro', 'Santa').ok, isTrue);
+      expect(f.readOverlay('kokoro')['default_voice'], 'Santa');
+    });
+  });
+
+  group('default_voice is carried, never dropped', () {
+    // `default_voice` is a key into the same map a write rewrites, and
+    // VoiceConfig.resolveVoice also accepts a bare id. An edit to an unrelated
+    // voice must therefore never remove a value it could not resolve: losing it
+    // un-defaults the model, after which defaultVoiceFor throws and the model
+    // cannot be selected at all.
+
+    test('survives a removal of an unrelated voice', () {
+      expect(f.store.removeVoice('fish', 'Bob').ok, isTrue);
+      expect(f.readOverlay('fish')['default_voice'], 'Alice');
+    });
+
+    test('survives an edit to an unrelated voice', () {
+      expect(
+        f.store.saveVoice('fish', key: 'Bob', label: 'Robert', id: 'bbb').ok,
+        isTrue,
+      );
+      expect(f.readOverlay('fish')['default_voice'], 'Alice');
+    });
+
+    test('a default named by id is carried even when it is not a file key', () {
+      f.writeModel('kokoro', const {
+        'id': 'hexgrad/kokoro-82m',
+        'default_voice': 'bf_emma',
+        'voices': {
+          'bf_emma': {'name': 'Emma'},
+          'bm_george': {'name': 'George'},
+        },
+      });
+      expect(f.store.defaultVoiceKey('kokoro'), 'bf_emma');
+      expect(f.store.removeVoice('kokoro', 'bm_george').ok, isTrue);
+      // Normalised to the label the write files it under, which still resolves.
+      expect(f.readOverlay('kokoro')['default_voice'], 'Emma');
+    });
+
+    test('a default naming nothing in the list is left exactly as found', () {
+      // resolveVoice falls back to the raw string when the id is absent from
+      // `voices`, so this value still works and the Fish README documents it.
+      f.writeModel('fish', const {
+        'id': 'fish-audio/s2.1',
+        'default_voice': '89f41ea230034706881f85a8227d6ab9',
+        'voices': {
+          'Alice': {'id': 'aaa'},
+          'Bob': {'id': 'bbb'},
+        },
+      });
+      expect(f.store.defaultVoiceKey('fish'), isNull);
+      expect(f.store.removeVoice('fish', 'Bob').ok, isTrue);
+      expect(
+        f.readOverlay('fish')['default_voice'],
+        '89f41ea230034706881f85a8227d6ab9',
+      );
+    });
+
+    test('a default naming a skipped entry is still carried', () {
+      // An unusable entry never becomes a row, so the default cannot resolve
+      // against it -- but the loader may still honour the raw string, and a
+      // write has no standing to delete it either way.
+      f.writeModel('fish', const {
+        'id': 'fish-audio/s2.1',
+        'default_voice': 'Ghost',
+        'voices': {
+          'Alice': {'id': 'aaa'},
+          'Broken': {'id': ''},
+        },
+      });
+      expect(f.store.removeVoice('fish', 'Alice').ok, isTrue);
+      expect(f.readOverlay('fish')['default_voice'], 'Ghost');
+    });
+
+    test('a blank default is carried too, rather than tidied away', () {
+      // Nothing here claims to understand the value, so the store leaves it
+      // alone -- the same rule it follows for keys it does not own.
+      f.writeModel('fish', const {
+        'id': 'fish-audio/s2.1',
+        'default_voice': '',
+        'voices': {
+          'Alice': {'id': 'aaa'},
+          'Bob': {'id': 'bbb'},
+        },
+      });
+      expect(f.store.removeVoice('fish', 'Bob').ok, isTrue);
+      expect(f.readOverlay('fish')['default_voice'], '');
     });
   });
 
