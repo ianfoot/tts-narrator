@@ -110,7 +110,25 @@ install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
 install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   COMPONENT Runtime)
 
+# The window and launcher icon. It goes under an hicolor theme path so that a
+# lookup by name resolves it, which is how the .desktop file finds it and how
+# my_application.cc sets it on the window. The name is derived from
+# APPLICATION_ID rather than hardcoded so the icon and the application id — the
+# name GTK uses to match a running window to its desktop entry — cannot drift.
+install(FILES "${PROJECT_SOURCE_DIR}/runner/resources/app_icon.png"
+  DESTINATION "${INSTALL_BUNDLE_DATA_DIR}/icons/hicolor/512x512/apps"
+  RENAME "${APPLICATION_ID}.png"
+  COMPONENT Runtime)
+
 install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
+
+# The launcher entry, so the app appears in the desktop's application menu.
+# The Icon= value matches the hicolor path installed above, and Exec= resolves
+# the binary in the bundle root. Both are relative to the bundle rather than an
+# absolute prefix so a built bundle stays relocatable.
+install(FILES "${PROJECT_SOURCE_DIR}/runner/${APPLICATION_ID}.desktop"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/applications"
   COMPONENT Runtime)
 
 foreach(bundled_library ${PLUGIN_BUNDLED_LIBRARIES})
