@@ -74,6 +74,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get core_costFree => '(free)';
+
+  @override
   String get gui_controller_errors_noModelConfigured =>
       'No voice model is configured. Download the starter configs, or add model files to the voice config directory.';
 

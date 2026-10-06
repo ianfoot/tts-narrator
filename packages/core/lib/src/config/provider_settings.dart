@@ -1,9 +1,14 @@
 /// Helpers for reading a provider block's settings out of voice config.
 ///
 /// A provider block is an opaque `Map<String, String>` of settings
-/// (`base_url`, `api_key`, `default_voice`, ...). Nothing here knows what any
-/// particular key means — only how to resolve `${ENV_VAR}` secret references
-/// and how to read the one credential setting, `api_key`.
+/// (`base_url`, `api_key`, `default_voice`, ...). Settings are resolved without
+/// interpreting them -- how a `${ENV_VAR}` reference is expanded, and whether
+/// an unresolvable one is fatal, is what [resolveSettings] decides.
+///
+/// Only the three keys the clients themselves need are named here: the
+/// credential [resolveProviderApiKey] reads (`api_key`) and the two spellings
+/// of an endpoint [providerBaseUrl] accepts (`base_url`, `endpoint`). Everything
+/// else stays opaque.
 library;
 
 /// Matches a `${ENV_NAME}` secret reference in a provider settings value.

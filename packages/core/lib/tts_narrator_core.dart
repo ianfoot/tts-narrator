@@ -15,6 +15,7 @@ export 'src/narration/audio_format.dart';
 export 'src/narration/config.dart';
 export 'src/narration/concat.dart';
 export 'src/narration/cost.dart';
+export 'src/narration/manifest.dart';
 export 'src/narration/model_profiles.dart';
 export 'src/narration/model_ui.dart';
 export 'src/narration/narration.dart';

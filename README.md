@@ -397,7 +397,7 @@ picked up without re-generating completed paragraphs.
 Manifest contents:
 - `model`, `voice`, optional `voice_label` (friendly alias if used), optional
   `language` (only when the model sends one), and `format`
-- per-segment `wav`, `bytes`, `fingerprint`, `excerpt`, and the exact
+- per-segment `wav`, `bytes`, `excerpt`, and the exact
   `input`/`prompt` that produced it (for reproducibility)
 
 Playback (macOS): `afplay output/story/story_1.mp3` or

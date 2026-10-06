@@ -10,6 +10,8 @@
 // to add a getter to a controller that returns a `String` for display, add an
 // extension here instead.
 
+import 'package:tts_narrator_core/tts_narrator_core.dart';
+
 import '../../../l10n/app_localizations.dart';
 import 'controller_errors.dart';
 import 'document_controller.dart';
@@ -61,4 +63,26 @@ extension ControllerErrorMessage on Object {
     CannotOpenTextFile() => l10n.gui_controller_errors_cannotOpenTextFile,
     _ => toString(),
   };
+}
+
+/// A cost estimate as the status bar and the narration summary show it.
+///
+/// Core formats the number (see `formatCostUsd`) and stops there. Announcing
+/// that a model costs nothing is this layer's word, not the number's, so the
+/// annotation is localized here and appended to a zero estimate.
+///
+/// Whether this is zero is asked of the *rendered* amount rather than of [this],
+/// so a sub-cent estimate that core rounds down to "$0.00" is annotated as free
+/// too. Comparing against a zero estimate rather than reimplementing core's
+/// rounding keeps the two from disagreeing about what counts as nothing.
+///
+/// Both callers interpolate the result as a pre-built `{cost}` placeholder in an
+/// l10n template, so the whole fragment has to exist before the template call.
+extension CostUsdX on double {
+  String costLabel(AppLocalizations l10n) {
+    final formatted = formatCostUsd(this);
+    return formatted == formatCostUsd(0)
+        ? '$formatted ${l10n.core_costFree}'
+        : formatted;
+  }
 }

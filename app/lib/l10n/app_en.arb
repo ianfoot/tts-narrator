@@ -30,6 +30,10 @@
     "description": "File count noun; used in the segment-cleanup confirmation.",
     "placeholders": { "count": { "type": "int" } }
   },
+  "core_costFree": "(free)",
+  "@core_costFree": {
+    "description": "Annotation appended to a zero cost estimate; used in the editor status bar and the narration summary."
+  },
 
   "gui_controller_errors_noModelConfigured": "No voice model is configured. Download the starter configs, or add model files to the voice config directory.",
   "gui_controller_errors_noVoiceSelected": "No voice selected for \"{modelAlias}\" — pick an alias or set a default in the voice config.",

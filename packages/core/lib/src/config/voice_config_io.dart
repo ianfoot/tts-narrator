@@ -5,7 +5,6 @@ import '../narration/audio_format.dart';
 import '../narration/cost.dart';
 import '../narration/model_profiles.dart';
 import 'voice_config.dart';
-import 'voice_config_download.dart';
 
 /// Default config directory, shared by the CLI and GUI.
 String defaultConfigDir() {
@@ -64,7 +63,9 @@ const String kVoiceConfigOverlayDirName = 'user';
 /// entry is skipped on its own -- reported as a warning like any other -- rather
 /// than costing the whole model.
 ///
-/// If files don't exist, [downloadVoiceConfigFiles] fetches them from GitHub.
+/// If the config directory is missing, this returns an empty config. Fetching
+/// defaults is the caller's decision: await `downloadVoiceConfigFiles()`
+/// explicitly first if you want them.
 ///
 /// Returns the loaded config plus warnings for anything skipped or broken.
 (VoiceConfig, List<String>) loadVoiceConfig(String configDir) {

@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show NumberFormat;
 
 import '../controller/app_controller.dart';
+import '../controller/l10n_labels.dart';
 import '../../../l10n/app_localizations.dart';
-
-import 'package:tts_narrator_core/tts_narrator_core.dart' show formatCostUsd;
 
 import '../theme/app_tokens.dart';
 
@@ -66,7 +65,7 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
     final chars = countFormat.format(controller.charCount);
     final segments = controller.plannedSegments.length;
     final minutes = controller.estimatedMinutes.round();
-    final cost = formatCostUsd(controller.estimatedCostUsd);
+    final cost = controller.estimatedCostUsd.costLabel(l10n);
     final segmentLabel = l10n.core_plurals_segment(segments);
     return Container(
       key: const Key('statusBar'),

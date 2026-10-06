@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
@@ -148,19 +147,6 @@ void main() {
     });
   });
 
-  group('fingerprintOf', () {
-    test('is deterministic and stable for known bytes', () {
-      expect(fingerprintOf([1, 2, 3, 4]), fingerprintOf([1, 2, 3, 4]));
-      // Regression lock for the exact hash of an empty byte list.
-      expect(fingerprintOf(<int>[]), '811c9dc501000193');
-    });
-
-    test('differs for different bytes', () {
-      expect(fingerprintOf([1]), isNot(fingerprintOf([2])));
-      expect(fingerprintOf([1, 2]), isNot(fingerprintOf([2, 1])));
-    });
-  });
-
   group('resumeMatch', () {
     late Directory dir;
 
@@ -208,39 +194,6 @@ void main() {
 
     test('empty existing list yields null', () {
       expect(resumeMatch(const [], 1, 'Hello.', dir.path, 'mp3'), isNull);
-    });
-  });
-
-  group('readManifestRecords', () {
-    late Directory dir;
-
-    setUp(
-      () => dir = Directory.systemTemp.createTempSync('tts_narrator_manifest_'),
-    );
-    tearDown(() => dir.deleteSync(recursive: true));
-
-    test('returns empty when no manifest exists', () {
-      expect(readManifestRecords(dir), isEmpty);
-    });
-
-    test('returns empty on malformed JSON', () {
-      File('${dir.path}/manifest.json').writeAsStringSync('not json{{');
-      expect(readManifestRecords(dir), isEmpty);
-    });
-
-    test('parses records from a valid manifest', () {
-      File('${dir.path}/manifest.json').writeAsStringSync(
-        jsonEncode({
-          'paragraphs': [
-            {'index': 1, 'prompt': 'A.', 'wav': 'story_1.mp3'},
-            {'index': 2, 'prompt': 'B.', 'wav': 'story_2.mp3'},
-          ],
-        }),
-      );
-      final records = readManifestRecords(dir);
-      expect(records, hasLength(2));
-      expect(records.first['index'], 1);
-      expect(records.last['prompt'], 'B.');
     });
   });
 }

@@ -64,8 +64,8 @@ void main() {
   });
 
   group('formatCostUsd', () {
-    test(r'free reads $0.00 (free)', () {
-      expect(formatCostUsd(0), r'$0.00 (free)');
+    test('a free model reads as zero, with no word attached', () {
+      expect(formatCostUsd(0), r'$0.00');
     });
 
     test('formats small costs to two decimals', () {

@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:tts_narrator_core/tts_narrator_core.dart' show formatCostUsd;
 
 import '../../../l10n/app_localizations.dart';
 import '../controller/app_controller.dart';
@@ -232,7 +231,7 @@ class _NarrationScreenState extends State<NarrationScreen> {
     final voice = config.voiceLabel ?? config.voice;
     final segments = controller.totalSegments;
     final minutes = controller.runEstimatedMinutes.round();
-    final cost = formatCostUsd(controller.runEstimatedCostUsd);
+    final cost = controller.runEstimatedCostUsd.costLabel(_l10n);
     final segmentLabel = _l10n.core_plurals_segment(segments);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),

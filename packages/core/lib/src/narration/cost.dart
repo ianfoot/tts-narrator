@@ -84,7 +84,9 @@ double estimateCostUsd(AudioPricing pricing, List<String> segments) {
   return inputCost + outputCost;
 }
 
-/// Short, human-friendly currency string (e.g. "$0.00", "$2.41"). Free
-/// models read "$0.00 (free)".
-String formatCostUsd(double usd) =>
-    usd == 0 ? r'$0.00 (free)' : '\$${usd.toStringAsFixed(2)}';
+/// Short, human-friendly currency string (e.g. "$0.00", "$2.41").
+///
+/// A free model reads "$0.00" here. Saying so is the caller's business: "(free)"
+/// is a word in the interface's language, not part of the number, so the caller
+/// appends its own localized annotation (see `CostUsdX.costLabel` in the app).
+String formatCostUsd(double usd) => '\$${usd.toStringAsFixed(2)}';

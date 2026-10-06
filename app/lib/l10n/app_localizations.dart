@@ -142,6 +142,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{file} other{files}}'**
   String core_plurals_file(int count);
 
+  /// Annotation appended to a zero cost estimate; used in the editor status bar and the narration summary.
+  ///
+  /// In en, this message translates to:
+  /// **'(free)'**
+  String get core_costFree;
+
   /// No description provided for @gui_controller_errors_noModelConfigured.
   ///
   /// In en, this message translates to:

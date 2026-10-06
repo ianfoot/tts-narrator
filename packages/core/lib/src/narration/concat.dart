@@ -1,8 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
+
 import 'audio_format.dart';
+import 'manifest.dart';
 import 'wav.dart';
 
 /// Concatenates per-segment audio files into a single track written to
@@ -69,35 +71,68 @@ String concatSegments(
 String? combinedFilePath(String outDirPath) {
   final outDir = Directory(outDirPath);
   if (!outDir.existsSync()) return null;
-  final manifest = _readManifest(outDir);
+  final manifest = readManifest(outDir);
   if (manifest == null) return null;
   final combined = manifest['combined_file'];
   if (combined is! String || combined.isEmpty) return null;
-  final path = '${outDir.path}${Platform.pathSeparator}$combined';
+  final path = resolveInManifestDir(outDir, combined);
   return File(path).existsSync() ? path : null;
+}
+
+/// What [cleanupSegmentFiles] needs to act, gathered by one pass over the
+/// guards its predicate and its action would otherwise each repeat.
+class _CleanableRun {
+  _CleanableRun(this.outDir, this.manifest, this.combined, this.paragraphs);
+
+  final Directory outDir;
+
+  /// The whole document, because cleanup writes the flag back and must not
+  /// drop the keys it did not read.
+  final Map<String, dynamic> manifest;
+
+  /// The `combined_file` name, kept for the same reason cleanup must not
+  /// delete the track it is keeping.
+  final String combined;
+  final List<Map<String, dynamic>> paragraphs;
+}
+
+/// The run in [outDir] that [cleanupSegmentFiles] could clean, or null when
+/// there is nothing to do: no directory, no readable manifest, segments
+/// already deleted, no combined track on disk, or no paragraph records.
+///
+/// Both the predicate and the action ask this, so the two cannot drift into
+/// disagreeing about what "already cleaned" means.
+_CleanableRun? _cleanableRun(String outDirPath) {
+  final outDir = Directory(outDirPath);
+  if (!outDir.existsSync()) return null;
+  final manifest = readManifest(outDir);
+  if (manifest == null) return null;
+  if (manifest['segments_deleted'] == true) return null;
+  final combined = manifest['combined_file'];
+  if (combined is! String || combined.isEmpty) return null;
+  if (!File(resolveInManifestDir(outDir, combined)).existsSync()) return null;
+  final paragraphs = manifest['paragraphs'];
+  if (paragraphs is! List) return null;
+  return _CleanableRun(
+    outDir,
+    manifest,
+    combined,
+    paragraphs.whereType<Map<String, dynamic>>().toList(),
+  );
 }
 
 /// Whether [cleanupSegmentFiles] would do anything useful for [outDirPath]: a
 /// manifest with a still-present combined file exists, segments have not been
 /// deleted yet, and at least one per-segment audio file remains on disk.
 bool segmentCleanupAvailable(String outDirPath) {
-  final outDir = Directory(outDirPath);
-  if (!outDir.existsSync()) return false;
-  final manifest = _readManifest(outDir);
-  if (manifest == null) return false;
-  if (manifest['segments_deleted'] == true) return false;
-  final combined = manifest['combined_file'];
-  if (combined is! String || combined.isEmpty) return false;
-  final combinedPath = '${outDir.path}${Platform.pathSeparator}$combined';
-  if (!File(combinedPath).existsSync()) return false;
-  final paragraphs = manifest['paragraphs'];
-  if (paragraphs is! List) return false;
-  return paragraphs.whereType<Map<String, dynamic>>().any((entry) {
+  final run = _cleanableRun(outDirPath);
+  if (run == null) return false;
+  return run.paragraphs.any((entry) {
     final wav = entry['wav'];
     return wav is String &&
         wav.isNotEmpty &&
-        wav != combined &&
-        File('${outDir.path}${Platform.pathSeparator}$wav').existsSync();
+        wav != run.combined &&
+        File(resolveInManifestDir(run.outDir, wav)).existsSync();
   });
 }
 
@@ -108,49 +143,21 @@ bool segmentCleanupAvailable(String outDirPath) {
 /// No-op (returns 0) when [outDirPath] has no cleanable run: missing manifest,
 /// no combined file, or segments already deleted.
 int cleanupSegmentFiles(String outDirPath) {
-  final outDir = Directory(outDirPath);
-  if (!outDir.existsSync()) return 0;
-  final manifest = _readManifest(outDir);
-  if (manifest == null) return 0;
-  if (manifest['segments_deleted'] == true) return 0;
-  final combined = manifest['combined_file'];
-  if (combined is! String || combined.isEmpty) return 0;
-  final combinedPath = '${outDir.path}${Platform.pathSeparator}$combined';
-  if (!File(combinedPath).existsSync()) return 0;
-  final paragraphs = manifest['paragraphs'];
-  if (paragraphs is! List) return 0;
+  final run = _cleanableRun(outDirPath);
+  if (run == null) return 0;
   var deleted = 0;
-  for (final entry in paragraphs.whereType<Map<String, dynamic>>()) {
+  for (final entry in run.paragraphs) {
     final wav = entry['wav'];
-    if (wav is! String || wav.isEmpty || wav == combined) continue;
-    final file = File('${outDir.path}${Platform.pathSeparator}$wav');
+    if (wav is! String || wav.isEmpty || wav == run.combined) continue;
+    final file = File(resolveInManifestDir(run.outDir, wav));
     if (file.existsSync()) {
       file.deleteSync();
       deleted++;
     }
   }
-  manifest['segments_deleted'] = true;
-  final manifestFile = File(
-    '${outDir.path}${Platform.pathSeparator}manifest.json',
-  );
-  manifestFile.writeAsStringSync(
-    const JsonEncoder.withIndent('  ').convert(manifest),
-  );
+  run.manifest['segments_deleted'] = true;
+  writeManifest(run.outDir, run.manifest);
   return deleted;
-}
-
-Map<String, dynamic>? _readManifest(Directory outDir) {
-  final manifestFile = File(
-    '${outDir.path}${Platform.pathSeparator}manifest.json',
-  );
-  if (!manifestFile.existsSync()) return null;
-  try {
-    final raw = jsonDecode(manifestFile.readAsStringSync());
-    return raw is Map<String, dynamic> ? raw : null;
-  } on Exception {
-    // Unreadable/stale manifest is not fatal — treat as no cleanable run.
-    return null;
-  }
 }
 
 Uint8List _readSegment(String path) {
@@ -162,10 +169,17 @@ Uint8List _readSegment(String path) {
 }
 
 /// Whether two `fmt ` chunks declare the same audio layout.
-bool _sameFormatChunk(Uint8List a, Uint8List b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
+///
+/// The counterpart to [WavFile.formatChunk]: a concatenation can copy the first
+/// segment's chunk into the combined header only if every other segment's
+/// samples genuinely belong to that layout, and the bytes themselves are what
+/// say so. Comparing them rather than decoding into fields is what lets an
+/// unmodelled chunk shape (a bit depth above 16, an extensible header) still be
+/// checked for equality.
+///
+/// Private to concatenation because concatenation is the only thing that has to
+/// answer it. [Uint8List] is a view onto bytes, so two chunks holding identical
+/// bytes are still different objects and `==` would compare identity; the
+/// element-wise equality is the whole point.
+bool _sameFormatChunk(Uint8List a, Uint8List b) =>
+    const ListEquality<int>().equals(a, b);

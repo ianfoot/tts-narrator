@@ -119,7 +119,7 @@ class NarrationConfig {
   final bool dryRun;
 
   /// If true, skip segments already produced in a compatible existing manifest
-  /// (matching index + fingerprint) and keep their records.
+  /// (matching index + prompt) and keep their records.
   final bool resume;
 
   /// Cost data (from the voice config) used for the dry-run/estimate.

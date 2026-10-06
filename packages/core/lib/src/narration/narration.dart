@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
@@ -8,6 +7,7 @@ import 'abort.dart';
 import 'concat.dart';
 import 'config.dart';
 import 'audio_format.dart';
+import 'manifest.dart';
 import 'prompt.dart';
 import 'speech_client.dart';
 import 'wav.dart';
@@ -225,7 +225,7 @@ Future<void> narrate(
   final records = <Map<String, Object?>>[];
 
   final existing = config.resume
-      ? readManifestRecords(outDir)
+      ? paragraphRecords(outDir)
       : const <Map<String, Object?>>[];
 
   for (var i = 0; i < count; i++) {
@@ -245,8 +245,7 @@ Future<void> narrate(
         '${outDir.path}${Platform.pathSeparator}$baseName.$extension';
 
     // Resume: reuse an identical prior segment (same index + prompt + format +
-    // file) and carry its fingerprint/bytes across, so a re-run doesn't
-    // re-bill it.
+    // file) and carry its record across, so a re-run doesn't re-bill it.
     final prior = resumeMatch(existing, index, input, dir, extension);
     if (prior != null) {
       records.add(prior);
@@ -290,7 +289,6 @@ Future<void> narrate(
       'index': index,
       'wav': '$baseName.$extension',
       'bytes': bytes.length,
-      'fingerprint': fingerprintOf(bytes),
       'excerpt': paragraph.length > 120
           ? '${paragraph.substring(0, 120)}…'
           : paragraph,
@@ -401,27 +399,6 @@ String _extensionOf(String fileName) {
   return dot < 0 ? '' : fileName.substring(dot + 1);
 }
 
-/// Loads per-segment records from a prior run's manifest, or empty when none.
-List<Map<String, Object?>> readManifestRecords(Directory outDir) {
-  final manifestFile = File(
-    '${outDir.path}${Platform.pathSeparator}manifest.json',
-  );
-  if (!manifestFile.existsSync()) return const [];
-  try {
-    final raw = jsonDecode(manifestFile.readAsStringSync());
-    final paragraphs = (raw as Map<String, dynamic>)['paragraphs'];
-    if (paragraphs is List) {
-      return paragraphs
-          .whereType<Map<String, dynamic>>()
-          .cast<Map<String, Object?>>()
-          .toList();
-    }
-  } on Exception {
-    // Unreadable/stale manifest is not fatal — resume simply re-narrates.
-  }
-  return const [];
-}
-
 void _writeManifest(
   Directory outDir,
   NarrationConfig config,
@@ -452,18 +429,5 @@ void _writeManifest(
     'segments_deleted': false,
     'paragraphs': records,
   };
-  File('${outDir.path}${Platform.pathSeparator}manifest.json')
-      .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(manifest));
-}
-
-/// Lightweight content fingerprint (FNV-1a 64-bit) for manifest bookkeeping.
-String fingerprintOf(List<int> bytes) {
-  var h1 = 0x811c9dc5;
-  var h2 = 0x1000193;
-  for (final b in bytes) {
-    h1 = ((h1 * 0x01000193) ^ b) & 0xFFFFFFFF;
-    h2 = ((h2 * 0x01000193) ^ ~b) & 0xFFFFFFFF;
-  }
-  return '${h1.toRadixString(16).padLeft(8, '0')}'
-      '${h2.toRadixString(16).padLeft(8, '0')}';
+  writeManifest(outDir, manifest);
 }
