@@ -489,6 +489,33 @@ void main() {
       expect(entries.firstWhere((e) => e.id == 'jm_kumo').language, 'j');
     });
 
+    test('tags entries with their explicit language tag', () {
+      // Fish-style: ids are UUIDs, so the tag is the only way to know the
+      // language, and it must be read off the voice rather than the id.
+      final cfg = _cfg(
+        voices: const {
+          'fish': {
+            'Anne': Voice(id: '7da08ad79a8a4492b2c6b54091499922',
+                gender: VoiceGender.female, language: 'en-gb'),
+            'Sarah': Voice(id: '933563129e564b19a115bedd57b7406a',
+                gender: VoiceGender.female, language: 'en-us'),
+          },
+        },
+        models: {
+          'fish': _model(alias: 'fish', id: 'fish-audio/s2.1-pro-free'),
+        },
+        languages: const {
+          'fish': {'en-us': 'US English', 'en-gb': 'British English'},
+        },
+      );
+      final entries = voiceEntries(
+        config: cfg,
+        model: profileFor('fish', cfg)!,
+      );
+      expect(entries.firstWhere((e) => e.id == '7da08ad79a8a4492b2c6b54091499922').language, 'en-gb');
+      expect(entries.firstWhere((e) => e.id == '933563129e564b19a115bedd57b7406a').language, 'en-us');
+    });
+
     test('a language filter keeps only that language\'s voices', () {
       final cfg = _kokoroCfg();
       final entries = voiceEntries(
@@ -534,6 +561,67 @@ void main() {
 
     test('null for a model that declares no languages', () {
       expect(languageFor(cfg, 'fish', 'bf_emma'), isNull);
+    });
+  });
+
+  group('languageFor with an explicit voice tag', () {
+    // Fish-style config: voices keyed by name, ids are UUIDs, so the code
+    // cannot be read off the id and must be tagged per voice.
+    final cfg = _cfg(
+      voices: const {
+        'fish': {
+          'Anne': Voice(id: '7da08ad79a8a4492b2c6b54091499922',
+              gender: VoiceGender.female, language: 'en-gb'),
+          'Sarah': Voice(id: '933563129e564b19a115bedd57b7406a',
+              gender: VoiceGender.female, language: 'en-us'),
+          'Untagged': Voice(id: '00000000000000000000000000000000',
+              gender: VoiceGender.neutral),
+        },
+      },
+      models: {
+        'fish': _model(alias: 'fish', id: 'fish-audio/s2.1-pro-free'),
+      },
+      languages: const {
+        'fish': {'en-us': 'US English', 'en-gb': 'British English'},
+      },
+      defaultLanguages: const {'fish': 'en-gb'},
+    );
+
+    test('reads the tag off the voice, not the id', () {
+      expect(languageFor(cfg, 'fish', 'Anne'), 'en-gb');
+      expect(languageFor(cfg, 'fish', 'Sarah'), 'en-us');
+    });
+
+    test('reads the tag when the id is looked up by name', () {
+      expect(
+        languageFor(cfg, 'fish', '7da08ad79a8a4492b2c6b54091499922'),
+        'en-gb',
+      );
+      expect(
+        languageFor(cfg, 'fish', '933563129e564b19a115bedd57b7406a'),
+        'en-us',
+      );
+    });
+
+    test('falls back to the id-prefix path when the voice has no tag', () {
+      expect(languageFor(cfg, 'fish', 'Untagged'), isNull);
+    });
+
+    test('rejects a tag that is not a declared code', () {
+      final bad = _cfg(
+        voices: const {
+          'fish': {
+            'Bad': Voice(id: 'abc', language: 'xx'),
+          },
+        },
+        models: {
+          'fish': _model(alias: 'fish', id: 'fish-audio/s2.1-pro-free'),
+        },
+        languages: const {
+          'fish': {'en-us': 'US English', 'en-gb': 'British English'},
+        },
+      );
+      expect(languageFor(bad, 'fish', 'Bad'), isNull);
     });
   });
 }

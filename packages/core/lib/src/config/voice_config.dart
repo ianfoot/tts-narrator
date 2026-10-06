@@ -43,7 +43,7 @@ VoiceGender? parseVoiceGender(String? value) {
 /// which is what lets a voice be keyed by something that is always unique: a
 /// name is not (Kokoro has three `Santa`s), an id is.
 class Voice {
-  const Voice({required this.id, this.name, this.gender});
+  const Voice({required this.id, this.name, this.gender, this.language});
 
   /// Provider voice id sent in the request body.
   final String id;
@@ -56,6 +56,15 @@ class Voice {
 
   /// Optional narrator gender tag; null when untagged.
   final VoiceGender? gender;
+
+  /// The language code this voice speaks, when the entry tags it explicitly.
+  ///
+  /// Null to fall back to [languageFromVoiceId], which reads the code off the id
+  /// itself — the `<lang><gender>_<name>` convention Kokoro uses. A UUID like
+  /// Fish Audio's carries no such prefix, so those voices must spell their
+  /// language out here. The tag is only honoured when it names a code the model
+  /// declares; an unknown code is ignored rather than mislabelled.
+  final String? language;
 }
 
 /// The language of [voiceId], when its first character is one of [codes].
@@ -226,12 +235,30 @@ class VoiceConfig {
   String? defaultLanguageFor(String modelAlias) => defaultLanguages[modelAlias];
 
   /// The language [voiceId] speaks under [modelAlias], or null when the model
-  /// declares no languages or the id is not language-prefixed.
+  /// declares no languages.
   ///
-  /// See [languageFromVoiceId]: the id prefix is the source of truth, checked
-  /// against the model's declared codes.
-  String? languageFor(String modelAlias, String voiceId) =>
-      languageFromVoiceId(voiceId, languagesFor(modelAlias).keys);
+  /// The voice entry's own `language` tag wins — that is the only way to name a
+  /// language for a voice whose id is not language-prefixed, like a UUID. When
+  /// the entry tags nothing, the id prefix is read instead (see
+  /// [languageFromVoiceId]), which is what makes Kokoro's `bf_emma` British
+  /// without repeating `b` on every entry. Either way the result is checked
+  /// against the model's declared codes, so an unrecognised tag is null.
+  String? languageFor(String modelAlias, Voice voice) {
+    final codes = languagesFor(modelAlias);
+    if (codes.isEmpty) return null;
+    final tagged = voice.language;
+    if (tagged != null && codes.containsKey(tagged)) return tagged;
+    return languageFromVoiceId(voice.id, codes.keys);
+  }
+
+  /// The language [voiceId] speaks under [modelAlias], looked up from its
+  /// configured entry when one exists, else read off the id prefix.
+  ///
+  /// Takes a raw id rather than a [Voice] because the caller may hold a
+  /// free-form id with no entry behind it — the id-prefix path stays available
+  /// then, so a typed-in id can still narrow the picker.
+  String? languageForId(String modelAlias, String voiceId) =>
+      languageFor(modelAlias, voiceFor(modelAlias, voiceId) ?? Voice(id: voiceId));
 
   /// Pricing for [modelAlias], or free pricing when unconfigured.
   AudioPricing pricingFor(String modelAlias) =>
@@ -249,6 +276,12 @@ class VoiceConfig {
     if (byKey != null) return byKey;
     for (final voice in modelVoices.values) {
       if (voice.name == value) return voice;
+    }
+    // A third match, by id: Fish voices are keyed by name and carry UUID ids,
+    // so a user who pastes an id (or the picker hands one over) still finds the
+    // entry behind it — and with it, its explicit language tag.
+    for (final voice in modelVoices.values) {
+      if (voice.id == value) return voice;
     }
     return null;
   }

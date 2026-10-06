@@ -411,7 +411,7 @@ ProviderConfig _parseProviderFile(String path, String name) {
 /// The fields a `voices` entry object may carry. An entry naming no `id` is
 /// read as keyed by its own key, so only an entry made entirely of fields
 /// outside this set is treated as a mistake rather than an annotation.
-const _voiceEntryFields = {'id', 'name', 'gender'};
+const _voiceEntryFields = {'id', 'name', 'gender', 'language'};
 
 // Note that a whole `voices` block may also be a bare list of ids, which is read
 // in _parseModelFile rather than here: a list entry has no key to be keyed by,
@@ -458,6 +458,7 @@ const _voiceEntryFields = {'id', 'name', 'gender'};
     );
   }
   final rawName = value['name'];
+  final rawLanguage = value['language'];
   return (
     voice: Voice(
       id: rawId ?? key,
@@ -467,6 +468,9 @@ const _voiceEntryFields = {'id', 'name', 'gender'};
       gender: parseVoiceGender(
         value['gender'] is String ? value['gender'] : null,
       ),
+      language: rawLanguage is String && rawLanguage.trim().isNotEmpty
+          ? rawLanguage.trim()
+          : null,
     ),
     problem: null,
   );
@@ -483,6 +487,7 @@ Map<String, Object?> voiceEntryJson(String key, Voice voice) => {
   if (voice.id != key) 'id': voice.id,
   if (voice.name != null) 'name': voice.name,
   if (voice.gender != null) 'gender': voice.gender!.label,
+  if (voice.language != null) 'language': voice.language,
 };
 
 /// The JSON for one `voices` entry as the app writes it.
@@ -491,11 +496,12 @@ Map<String, Object?> voiceEntryJson(String key, Voice voice) => {
 /// read the same way: the key is the display label, so the id is always spelled
 /// out, and a `name` is never written because the label is already the key. This
 /// is safe for models whose voices encode a language in the id, because
-/// [languageFromVoiceId] and [genderFromVoiceId] read the id, not the key.
-Map<String, Object?> canonicalVoiceEntryJson(Voice voice) => {
-  'id': voice.id,
-  if (voice.gender != null) 'gender': voice.gender!.label,
-};
+  /// [languageFromVoiceId] and [genderFromVoiceId] read the id, not the key.
+  Map<String, Object?> canonicalVoiceEntryJson(Voice voice) => {
+    'id': voice.id,
+    if (voice.gender != null) 'gender': voice.gender!.label,
+    if (voice.language != null) 'language': voice.language,
+  };
 
 /// Reads the output formats a model file offers, most-preferred first.
 ///

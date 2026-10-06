@@ -25,10 +25,11 @@ VoiceGender? genderFor(
   String voiceLabel,
 ) => config.genderFor(modelAlias, voiceLabel);
 
-/// The language code [voiceId] speaks under [modelAlias], or null when the model
-/// declares no languages or the id is not language-prefixed.
-String? languageFor(VoiceConfig config, String modelAlias, String voiceId) =>
-    config.languageFor(modelAlias, voiceId);
+/// The language code [voiceId] speaks under [modelAlias], or null when the
+  /// model declares no languages or neither its entry nor its id prefix names a
+  /// declared code.
+  String? languageFor(VoiceConfig config, String modelAlias, String voiceId) =>
+      config.languageForId(modelAlias, voiceId);
 
 /// The configured models, sorted by alias. Models exist only in the config —
 /// there is no compiled fallback — so an empty config yields no models.
@@ -112,7 +113,10 @@ List<VoiceOption> voiceEntries({
     void add(Voice voice, String label, bool isAlias) {
       final id = voice.id;
       if (entries.any((e) => e.model == p.alias && e.id == id)) return;
-      final voiceLanguage = languageFor(config, p.alias, id);
+      // Pass the voice itself, not its id: Fish voices are keyed by name and
+      // carry UUID ids, so `voiceFor` cannot look one up to read its tag, and
+      // the tag is the only way to know its language.
+      final voiceLanguage = config.languageFor(p.alias, voice);
       if (language != null &&
           voiceLanguage != null &&
           voiceLanguage != language) {

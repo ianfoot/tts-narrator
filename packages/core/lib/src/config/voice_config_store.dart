@@ -18,12 +18,20 @@ class EditableVoice {
     required this.label,
     required this.id,
     this.gender,
+    this.language,
   });
 
   final String key;
   final String label;
   final String id;
   final VoiceGender? gender;
+
+  /// Language code this voice speaks, when the entry tags it explicitly.
+  ///
+  /// Null to fall back to reading the code off the id. Only meaningful for a
+  /// model that declares languages; a voice with no tag and no id prefix is
+  /// simply untagged.
+  final String? language;
 }
 
 /// The outcome of an edit: whether the file was written, and why not if it
@@ -180,6 +188,7 @@ class VoiceConfigStore {
     required String label,
     required String id,
     VoiceGender? gender,
+    String? language,
   }) {
     final newLabel = label.trim();
     final newId = id.trim();
@@ -219,6 +228,10 @@ class VoiceConfigStore {
       label: newLabel,
       id: newId,
       gender: gender,
+      // An explicit language survives an edit that never mentions one: dropping
+      // it would re-tag a UUID voice as untagged and lose its language. A new
+      // language replaces the old.
+      language: language ?? existing?.language,
     );
 
     final next = [
@@ -335,7 +348,9 @@ class VoiceConfigStore {
 
     json['voices'] = {
       for (final r in rows)
-        r.label: io.canonicalVoiceEntryJson(Voice(id: r.id, gender: r.gender)),
+        r.label: io.canonicalVoiceEntryJson(
+          Voice(id: r.id, gender: r.gender, language: r.language),
+        ),
     };
     // Only ever set, never cleared. A null [defaultLabel] means "this call has
     // no opinion", not "there is no default": it covers both a file that

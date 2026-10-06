@@ -313,7 +313,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
     if (p == null) return null;
     final codes = _voiceConfig.languagesFor(p.alias);
     if (codes.isEmpty) return null;
-    final fromVoice = _voiceConfig.languageFor(p.alias, _voice);
+    final fromVoice = _voiceConfig.languageForId(p.alias, _voice);
     if (fromVoice != null) return fromVoice;
     final chosen = _language;
     if (chosen != null && codes.containsKey(chosen)) return chosen;
