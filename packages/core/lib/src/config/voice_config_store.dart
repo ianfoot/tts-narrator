@@ -395,16 +395,26 @@ class VoiceConfigStore {
   /// Entries the loader would reject are left out, matching what the app can
   /// actually use; [loadVoiceConfig] reports them as warnings.
   List<EditableVoice> _rowsOf(Map<String, dynamic> json) {
+    // Both shapes the loader accepts are read here, so a model whose voices
+    // arrived as a bare id list is as editable as one keyed by label: returning
+    // an empty list for the list form would show the user no voices at all
+    // rather than the ones their model file declares.
     final raw = json['voices'];
-    if (raw is! Map<String, dynamic>) return const [];
+    final entries = switch (raw) {
+      final Map<String, dynamic> map => map.entries.map(
+        (e) => (e.key, e.value),
+      ),
+      final List<Object?> list => list.map((id) => ('$id', id)),
+      _ => const <(String, Object?)>[],
+    };
     final rows = <EditableVoice>[];
-    for (final entry in raw.entries) {
-      final voice = io.voiceFromEntry(entry.key, entry.value).voice;
+    for (final (key, value) in entries) {
+      final voice = io.voiceFromEntry(key, value).voice;
       if (voice == null) continue;
       rows.add(
         EditableVoice(
-          key: entry.key,
-          label: voice.name ?? entry.key,
+          key: key,
+          label: voice.name ?? key,
           id: voice.id,
           gender: voice.gender,
         ),

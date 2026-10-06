@@ -208,18 +208,31 @@ it declares `"sends_voice": false` and describes the narrator in prose instead
 
 Gender tags drive a narrator-gender filter (and, for prompt-driven models, may
 rewrite the "narrator" phrase in the passage prefix). Tagging is per-voice and
-inline: each voice in a model's `voices` block is keyed by its id and may carry a
-`name` and an optional `gender` (`male`/`female`/`neutral`) — one entry per voice,
-so nothing is repeated across blocks (`"bf_alice": {"name": "Alice", "gender":
-"female"}`). Both the id and the name resolve to the same voice, and the plain
-string shorthand from older configs (`"Charon": "Charon"`) still loads. Configs
-ship with fish tagged (from its curated list) and gemini untagged — gemini's
-named voices carry no published gender signal, so instead a model that sets
-`"prompt_style": true` gets a "Narrator gender" control in the Run Setup panel's Model
-options, which gemini does. The two Kokoro files declare no gender tags at all:
-they set `languages`, and that declaration is the evidence that their ids follow
-the `<lang><gender>_<name>` convention, so gender is read off the second
-character (see [docs/KOKORO.md](docs/KOKORO.md)).
+inline: a voice may carry an optional `gender` (`male`/`female`/`neutral`) in its
+own entry, and either the id or the name you know it by resolves to the same
+voice. Fish shows the tagged form, keyed by the label it displays and spelling
+out the provider's own id: `"Alice": {"id": "c536c6cdbe8e4d9484232e78ab80020f",
+"gender": "female"}`.
+
+A model whose ids are already display labels can skip the object entirely and
+list them bare — which is what `gemini.json` does, since Gemini's thirty voice
+names are themselves the provider ids:
+
+```json
+"voices": ["Achernar", "Charon", "Zephyr"]
+```
+
+Each entry there is its own key, id and label, so there is nothing to repeat. A
+voice needing a name or gender uses the object form instead. Plain-string entries
+(`"Charon": "Charon"`) load too.
+
+Configs ship with fish tagged (from its curated list) and gemini untagged —
+gemini's named voices carry no published gender signal, so instead a model that
+sets `"prompt_style": true` gets a "Narrator gender" control in the Run Setup
+panel's Model options, which gemini does. The two Kokoro files declare no gender
+tags at all: they set `languages`, and that declaration is the evidence that their
+ids follow the `<lang><gender>_<name>` convention, so gender is read off the
+second character (see [docs/KOKORO.md](docs/KOKORO.md)).
 
 A model that declares a `languages` table gets a Language dropdown above the
 voice picker, which narrows the list to that language and re-picks a voice when

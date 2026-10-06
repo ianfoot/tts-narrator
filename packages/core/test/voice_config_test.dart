@@ -177,7 +177,7 @@ void main() {
       expect(cfg.voices.containsKey('gemini'), isFalse);
     });
 
-    test('accepts the legacy string shorthand for voices', () {
+    test('accepts a voice entry written as a string shorthand', () {
       writeModel('x', '''
 {
   "id": "a/b",
@@ -288,14 +288,79 @@ void main() {
       expect(voices['wrong']?.name, isNull);
     });
 
-    test('rejects a non-object voices block', () {
-      writeModel(
-        'x',
-        '{"id": "a/b", "formats": ["wav"], "voices": ["female"]}',
-      );
+    test('rejects a voices block that is neither an object nor a list', () {
+      writeModel('x', '{"id": "a/b", "formats": ["wav"], "voices": "female"}');
       final (cfg, warnings) = load();
       expect(cfg.models, isEmpty);
       expect(warnings.first, contains('"voices"'));
+    });
+
+    test('reads a bare list of voice ids, each its own key, id and label', () {
+      writeModel(
+        'x',
+        '{"id": "a/b", "formats": ["wav"],'
+            ' "voices": ["Charon", "Zephyr"]}',
+      );
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      final voices = cfg.voices['x']!;
+      expect(voices.keys, ['Charon', 'Zephyr']);
+      expect(voices['Charon']?.id, 'Charon');
+      // No name and no gender: the list says nothing else about the voice, and
+      // the picker reads `name ?? key`, so the key is the label either way.
+      expect(voices['Charon']?.name, isNull);
+      expect(voices['Zephyr']?.gender, isNull);
+      expect(cfg.resolveVoice('x', 'Zephyr'), ('Zephyr', 'Zephyr'));
+    });
+
+    test('a bare list of ids still resolves a default_voice among them', () {
+      writeModel(
+        'x',
+        '{"id": "a/b", "formats": ["wav"], "default_voice": "Puck",'
+            ' "voices": ["Charon", "Puck"]}',
+      );
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      final model = cfg.models['x']!;
+      expect(defaultVoiceFor(model, cfg), (
+        'Puck',
+        'Puck',
+      ), reason: 'a list entry is key and id at once, so the default resolves');
+    });
+
+    test('rejects an empty list, which would offer no voices at all', () {
+      writeModel('x', '{"id": "a/b", "formats": ["wav"], "voices": []}');
+      final (cfg, warnings) = load();
+      expect(cfg.models, isEmpty);
+      expect(warnings.first, contains('empty list'));
+    });
+
+    test('skips a list entry that is not a non-empty string', () {
+      // One unusable entry must not cost the model, the same as a bad entry in
+      // the object form, so this is a warning rather than a rejected file.
+      writeModel(
+        'x',
+        '{"id": "a/b", "formats": ["wav"],'
+            ' "voices": ["Charon", 42, "", null, "Zephyr"]}',
+      );
+      final (cfg, warnings) = load();
+      expect(cfg.voices['x']?.keys, ['Charon', 'Zephyr']);
+      // Matched on the whole rendered warning rather than a word inside it: a
+      // bare `contains('null')` would settle for any warning merely mentioning
+      // nullability, and pass for the wrong reason. Each is named exactly once
+      // by skip, so a doubled-quoting bug in the name cannot hide here.
+      const because =
+          'is skipped: a voice id in a "voices" list must be a non-empty string.';
+      expect(
+        warnings,
+        containsAll(<Matcher>[
+          startsWith('Voice "42" in model "x" $because'),
+          startsWith('Voice "" in model "x" $because'),
+          startsWith('Voice "null" in model "x" $because'),
+        ]),
+      );
+      expect(warnings, hasLength(3));
+      expect(warnings.every((w) => w.contains('is skipped')), isTrue);
     });
 
     test('skips a model file with no id and reports a warning', () {
