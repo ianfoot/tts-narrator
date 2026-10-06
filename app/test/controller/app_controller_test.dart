@@ -398,6 +398,50 @@ void main() {
       expect(c.instruct, isEmpty);
       expect(c.buildConfig().instruct, isEmpty);
     });
+
+    test('a voice-design model with no prose blocks the run', () {
+      // No `default_instruct` this time: the shipped model always ships one,
+      // but a user overlay can drop it, and VoiceDesign has no voice list to
+      // fall back on. Sending the request anyway leaves the narrator to the
+      // server's guess, so the run is blocked while the box can still be
+      // filled.
+      writeConfig({
+        'models': {
+          'qwen': {
+            'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+            'format': 'wav',
+            'sends_voice': false,
+            'sends_instruct': true,
+          },
+        },
+      });
+      final c = makeController();
+      c.changeModel('qwen');
+      c.setText('A paragraph to narrate.');
+
+      expect(c.narrateBlockReason(), NarrationBlockReason.emptyVoiceDesign);
+
+      c.instruct = 'A calm male narrator.';
+      expect(c.narrateBlockReason(), isNull);
+    });
+
+    test('a model that takes no instruct is never blocked for prose', () {
+      // The guard is the capability, not the emptiness: a plain model with no
+      // voice design box has nothing to fill in, so it must still run.
+      writeConfig({
+        'models': {'gemini': {'id': 'google/gemini-3.1-flash-tts-preview'}},
+        'defaults': {'gemini': 'Charon'},
+        'voices': {
+          'gemini': {'Charon': 'Charon'},
+        },
+      });
+      final c = makeController();
+      c.changeModel('gemini');
+      c.setText('A paragraph to narrate.');
+
+      expect(c.instruct, isEmpty);
+      expect(c.narrateBlockReason(), isNull);
+    });
   });
 
   group('API key secure-store fallback', () {

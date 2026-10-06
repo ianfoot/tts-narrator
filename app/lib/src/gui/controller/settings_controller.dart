@@ -205,9 +205,16 @@ class SettingsController extends ChangeNotifier {
   String get instruct =>
       _instruct ?? _model.profile?.defaultInstruct ?? '';
 
+  /// Records the prose exactly as typed, *including* the empty string.
+  ///
+  /// An empty value is a deliberate choice, not an absent one, so it is stored
+  /// rather than folded back into "use the model's default". Collapsing it would
+  /// make the field impossible to clear: emptying the box would restore the
+  /// default prose and the user could never retype their own description from
+  /// scratch. [resetInstruct] is the only way back to the default.
   set instruct(String value) {
     if (value == _instruct) return;
-    _instruct = value.isEmpty ? null : value;
+    _instruct = value;
     notifyListeners();
   }
 

@@ -33,6 +33,8 @@ extension NarrationBlockReasonX on NarrationBlockReason {
       l10n.gui_controller_errors_noModelConfigured,
     NarrationBlockReason.emptyText =>
       l10n.gui_controller_blockReasons_emptyText,
+    NarrationBlockReason.emptyVoiceDesign =>
+      l10n.gui_controller_blockReasons_emptyVoiceDesign,
     NarrationBlockReason.alreadyRunning =>
       l10n.gui_controller_blockReasons_alreadyRunning,
   };

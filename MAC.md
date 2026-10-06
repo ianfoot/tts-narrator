@@ -243,8 +243,9 @@ weights.
 It works differently from `kokoro_local`: there is no voice dropdown, because
 this model has no voices. It writes the narrator from a description instead,
 which you get as a multiline **Voice design** box in Model options, prefilled
-with a documentary-narrator description. Edit it freely, or paste in one of the
-examples in [docs/QWEN3_VOICEDESIGN.md](docs/QWEN3_VOICEDESIGN.md).
+with a short calm-narrator description. Edit it freely, or paste in one of the
+examples in [docs/QWEN3_VOICEDESIGN.md](docs/QWEN3_VOICEDESIGN.md). You can
+clear it and start over, but the run stays blocked while it is blank.
 
 The **Language** dropdown is still there and still matters — for this model the
 `lang_code` is the language's full name (`English`, `Japanese`, …) rather than a

@@ -166,6 +166,12 @@ abstract class AppLocalizations {
   /// **'Editor text is empty'**
   String get gui_controller_blockReasons_emptyText;
 
+  /// No description provided for @gui_controller_blockReasons_emptyVoiceDesign.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the voice in the Voice design box before narrating'**
+  String get gui_controller_blockReasons_emptyVoiceDesign;
+
   /// No description provided for @gui_controller_blockReasons_alreadyRunning.
   ///
   /// In en, this message translates to:

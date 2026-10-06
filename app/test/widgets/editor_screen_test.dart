@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
@@ -487,6 +488,84 @@ void main() {
       await tester.pump();
 
       expect(controller.outDir, before);
+    });
+  });
+
+  group('editing the document', () {
+    testWidgets('deleting every character leaves the editor empty', (
+      tester,
+    ) async {
+      // Regression: the editor wrote the field's own text back into the
+      // TextEditingController from inside the change listener, so erasing the
+      // document re-materialised the text instead of clearing it.
+      final controller = await makeController();
+      await pumpEditor(tester, controller);
+
+      await tester.enterText(
+        find.byType(AppTextField),
+        'Sample text the user is replacing.',
+      );
+      await tester.pump();
+      expect(controller.text, 'Sample text the user is replacing.');
+
+      await tester.enterText(find.byType(AppTextField), '');
+      await tester.pump();
+
+      expect(controller.text, isEmpty);
+      expect(find.text('Sample text the user is replacing.'), findsNothing);
+    });
+
+    testWidgets('typing stays in step with the field, one character at a time',
+        (tester) async {
+      final controller = await makeController();
+      await pumpEditor(tester, controller);
+
+      final field = find.byType(AppTextField);
+      for (final partial in ['S', 'Sa', 'Sam', 'Samp', 'Sampl']) {
+        await tester.enterText(field, partial);
+        await tester.pump();
+        expect(controller.text, partial);
+      }
+    });
+
+    testWidgets('backspacing the text away does not bring it back', (
+      tester,
+    ) async {
+      // The real gesture, as opposed to enterText: real key events go through
+      // the text input connection, so the change listener fires while the
+      // field is still mid-edit rather than after it has settled.
+      final controller = await makeController();
+      await pumpEditor(tester, controller);
+
+      await tester.enterText(find.byType(AppTextField), 'Sample text.');
+      await tester.pump();
+
+      for (var i = 0; i < 'Sample text.'.length; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+        await tester.pump();
+        expect(
+          controller.text.length,
+          'Sample text.'.length - i - 1,
+          reason: 'after ${i + 1} backspace(s)',
+        );
+      }
+
+      expect(controller.text, isEmpty);
+    });
+
+    testWidgets('a load still replaces the text in the field', (tester) async {
+      // The other direction must keep working: a load is not a keystroke, so
+      // the field has to be told about it.
+      final controller = await makeController();
+      await pumpEditor(tester, controller);
+
+      final file = File('${dir.path}/sample.txt')
+        ..writeAsStringSync('Loaded from disk.');
+      controller.loadFromFile(file.path);
+      await tester.pump();
+
+      expect(controller.text, 'Loaded from disk.');
+      expect(find.text('Loaded from disk.'), findsOneWidget);
     });
   });
 }

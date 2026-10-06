@@ -200,7 +200,9 @@ a multiline **Voice design** box in Model options, prefilled from the model
 file's `default_instruct` and sent as the request body's `instruct` field. Only
 `qwen3_voicedesign` uses it. That prose describes the narrator and is never
 spoken, unlike `accent`/`style`, which are woven into the text the model reads
-aloud.
+aloud. You can clear the box and type a fresh description from scratch; while
+it is blank the run is blocked, because a voice-design model has no voice list
+to fall back on and the server would only be guessing.
 
 Add or swap a model by editing its `models/<alias>.json` file, and adding a new
 one by dropping it in `models/` and listing its alias in some provider's

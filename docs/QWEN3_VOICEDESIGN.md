@@ -17,7 +17,7 @@ The shipped file is `voice-config/models/qwen3_voicedesign.json`:
   "sends_instruct": true,
   "sends_language": true,
   "speed": true,
-  "default_instruct": "An older male narrator with a resonant, warm tone, a low pitch, a measured and deliberate pace, a thoughtful and authoritative emotional baseline, and a polished British accent.",
+  "default_instruct": "A calm male narrator with a low, steady voice and a clear British accent.",
   "default_language": "English",
   "languages": { "English": "English", "...": "..." }
 }
@@ -57,26 +57,38 @@ Five things make a strong description, in roughly this order:
 
 | Slot | Example |
 |------|---------|
-| Persona and age | "an older male narrator" |
-| Timbre and pitch | "a resonant, warm tone, a low pitch" |
-| Pace and rhythm | "a measured and deliberate pace" |
-| Emotional tone | "a thoughtful and authoritative emotional baseline" |
-| Accent | "a polished British accent" |
+| Persona and age | "a calm male narrator" |
+| Timbre and pitch | "a low, steady voice" |
+| Pace and rhythm | "steady" |
+| Emotional tone | "calm" |
+| Accent | "a clear British accent" |
 
 Missing slots are not errors — the model fills them in — but the more you give it
 the closer the result lands.
 
-The field ships with the documentary-narrator description above so the model is
-runnable with no input, and it is editable: Model options shows a multiline
-**Voice design** box prefilled from `default_instruct`. Your edit applies to the
-model you typed it for and is dropped when you switch models, since a voice
-description written for one model means nothing to the next.
+The field ships with the short description above so the model is runnable with no
+input, and it is editable: Model options shows a multiline **Voice design** box
+prefilled from `default_instruct`. Your edit applies to the model you typed it
+for and is dropped when you switch models, since a voice description written for
+one model means nothing to the next.
+
+Clearing the box is a real choice, not a reset: an empty box means "no
+description", and it stays empty so you can type a fresh one from scratch. The
+run is blocked while it is blank — a voice-design model has no voice list to fall
+back on, so the app refuses rather than sending a request the server would have
+to guess at.
 
 ### Starting points
 
-Four descriptions that each steer the same text somewhere different:
+Four descriptions that each steer the same text somewhere different. The first
+is what the box ships with; the rest are richer, and worth copying as a
+template.
 
-**Documentary narrator** (the shipped default)
+**Calm narrator** (the shipped default)
+
+> A calm male narrator with a low, steady voice and a clear British accent.
+
+**Documentary narrator**
 
 > An older male narrator with a resonant, warm tone, a low pitch, a measured and
 > deliberate pace, a thoughtful and authoritative emotional baseline, and a

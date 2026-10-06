@@ -90,6 +90,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_controller_blockReasons_emptyText => 'Editor text is empty';
 
   @override
+  String get gui_controller_blockReasons_emptyVoiceDesign =>
+      'Describe the voice in the Voice design box before narrating';
+
+  @override
   String get gui_controller_blockReasons_alreadyRunning =>
       'Narration is already running.';
 

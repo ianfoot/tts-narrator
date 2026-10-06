@@ -40,6 +40,7 @@
   "gui_controller_errors_cannotOpenTextFile": "Cannot open text file",
 
   "gui_controller_blockReasons_emptyText": "Editor text is empty",
+  "gui_controller_blockReasons_emptyVoiceDesign": "Describe the voice in the Voice design box before narrating",
   "gui_controller_blockReasons_alreadyRunning": "Narration is already running.",
 
   "gui_editor_toolbar_narrate": "Narrate",

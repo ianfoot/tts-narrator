@@ -487,7 +487,11 @@ title.
   (`AppController.takesVoice`). `default_instruct` rides the profile so the GUI
   can prefill the editable box without core knowing any GUI defaults, and the
   language dropdown survives because `lang_code` is a real field for these
-  models too. The one shipped example is `qwen3_voicedesign`; see
+  models too. An empty box is a deliberate choice, not a reset: the `instruct`
+  setter stores the empty string verbatim, and `RunController.narrateBlockReason`
+  returns `NarrationBlockReason.emptyVoiceDesign` while the prose is blank, since
+  `OpenAiSpeechClient` drops an empty `instruct` and the vendor has no voice list
+  to guess from. The one shipped example is `qwen3_voicedesign`; see
   [docs/QWEN3_VOICEDESIGN.md](docs/QWEN3_VOICEDESIGN.md).
 - Multilingual models opt in with `sends_language: true`, which is what puts
   `lang_code` in the request body — the same gating shape as `speed`. The codes
