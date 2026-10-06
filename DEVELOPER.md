@@ -213,6 +213,14 @@ reads `name ?? key` and stating both would be redundant. Folding `name` into the
 key is safe for id-convention models because `languageFromVoiceId` and
 `genderFromVoiceId` read the **id**, not the key.
 
+The whole `voices` block may instead be a bare **list of ids**, for a model whose
+ids are already the labels it wants shown — Gemini's thirty named voices,
+where the object form would write each name twice. Each element is its own key,
+id and label, so a list entry carries no `name` or `gender`; a voice needing
+either belongs in the object form. A list cannot round-trip to a list, since
+`Voice` does not remember the shape it arrived in: `writeVoiceConfig` always
+writes the object form.
+
 Editing has two traps worth knowing before changing the store. `default_voice` is
 resolved by a key-then-name scan (`VoiceConfig.resolveVoice`) and
 `defaultVoiceFor` **throws** when it resolves to nothing, which would break

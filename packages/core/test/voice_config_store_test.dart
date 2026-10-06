@@ -479,6 +479,20 @@ void main() {
       expect(voices['Charon'], {'id': 'Charon'});
     });
 
+    test('reads a model whose voices arrived as a bare id list', () {
+      // The list form is how gemini.json ships, and reading it as no rows at
+      // all would leave an editable model with an empty picker rather than the
+      // voices its file already declares.
+      f.writeModel('gemini', const {
+        'id': 'google/gemini',
+        'voices': ['Charon', 'Zephyr'],
+      });
+      final rows = f.store.voicesFor('gemini');
+      expect(rows.map((r) => r.key), ['Charon', 'Zephyr']);
+      expect(rows.map((r) => r.id), ['Charon', 'Zephyr']);
+      expect(rows.map((r) => r.label), ['Charon', 'Zephyr']);
+    });
+
     test('keeps a language-prefixed id intact so the model still reads it', () {
       f.writeModel('kokoro', const {
         'id': 'hexgrad/kokoro-82m',

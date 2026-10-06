@@ -412,6 +412,10 @@ ProviderConfig _parseProviderFile(String path, String name) {
 /// outside this set is treated as a mistake rather than an annotation.
 const _voiceEntryFields = {'id', 'name', 'gender'};
 
+// Note that a whole `voices` block may also be a bare list of ids, which is read
+// in _parseModelFile rather than here: a list entry has no key to be keyed by,
+// so it cannot come through this per-entry codec at all.
+
 /// Decodes one `voices` entry: the [key] it is filed under and its raw [value].
 ///
 /// On success returns the voice; on failure returns the reason, phrased to read
@@ -655,10 +659,28 @@ _parseModelFile(String path, String alias, String provider) {
 
   final voices = <String, Voice>{};
   final voicesRaw = raw['voices'];
-  if (voicesRaw != null) {
-    if (voicesRaw is! Map<String, dynamic>) {
-      throw VoiceConfigurationError('"voices" must be an object');
+  if (voicesRaw is List) {
+    // A bare list of voice ids, for a model whose ids are already the labels
+    // the picker should show -- Gemini's thirty named voices, where writing
+    // each id twice would say the same thing in two places. An id is its own
+    // key, so it needs no id, name or gender of its own; anything it wanted to
+    // carry would be the object form, which stays available.
+    if (voicesRaw.isEmpty) {
+      throw VoiceConfigurationError(
+        '"voices" is an empty list, so the model would offer no voices',
+      );
     }
+    for (final id in voicesRaw) {
+      if (id is! String || id.isEmpty) {
+        skip(
+          id == null ? 'null' : '"$id"',
+          'a voice id in a "voices" list must be a non-empty string.',
+        );
+        continue;
+      }
+      voices[id] = Voice(id: id);
+    }
+  } else if (voicesRaw is Map<String, dynamic>) {
     voicesRaw.forEach((key, value) {
       final entry = voiceFromEntry(key, value);
       final voice = entry.voice;
@@ -668,6 +690,10 @@ _parseModelFile(String path, String alias, String provider) {
       }
       voices[key] = voice;
     });
+  } else if (voicesRaw != null) {
+    throw VoiceConfigurationError(
+      '"voices" must be an object or a list of voice ids',
+    );
   }
 
   final languages = <String, String>{};
@@ -805,6 +831,10 @@ Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
       if (config.pricing[p.alias]!.outputUsdPerMTokens != null)
         'output_usd_per_m_tokens': config.pricing[p.alias]!.outputUsdPerMTokens,
     },
+  // Always the object form, even for a model that shipped the bare list: the
+  // parser accepts either, and one writer shape keeps this file readable
+  // against the editor's output. A list round-trips to id-keyed entries, so
+  // nothing is lost -- only the brevity.
   if (config.voices[p.alias] != null && config.voices[p.alias]!.isNotEmpty)
     'voices': {
       for (final e in config.voices[p.alias]!.entries)

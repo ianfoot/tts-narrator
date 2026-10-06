@@ -108,11 +108,10 @@ void main() {
         final defaultVoice = json['default_voice'];
         if (defaultVoice == null) continue;
         expect(defaultVoice, isA<String>(), reason: file.path);
-        final voices = json['voices'] as Map<String, dynamic>;
-        final matches = voices.entries.where(
+        final matches = _voiceEntriesOf(json).where(
           (entry) =>
-              entry.key == defaultVoice ||
-              voiceFromEntry(entry.key, entry.value).voice?.id == defaultVoice,
+              entry.$1 == defaultVoice ||
+              voiceFromEntry(entry.$1, entry.$2).voice?.id == defaultVoice,
         );
         expect(
           matches,
@@ -133,25 +132,25 @@ void main() {
       for (final file in shipped.modelFiles) {
         final json =
             jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
-        final voices = json['voices'] as Map<String, dynamic>?;
+        final voices = _voiceEntriesOf(json);
         if (json['sends_voice'] == false) {
           expect(
             voices,
             anyOf(isNull, isEmpty),
             reason:
-                '${file.path} sends no voice id, so its ${voices?.length} '
+                '${file.path} sends no voice id, so its ${voices.length} '
                 'listed voice(s) could never be selected',
           );
           continue;
         }
         expect(voices, isNotEmpty, reason: '${file.path} has no voices');
         final ids = <String>[];
-        for (final entry in voices!.entries) {
-          final decoded = voiceFromEntry(entry.key, entry.value);
+        for (final entry in voices) {
+          final decoded = voiceFromEntry(entry.$1, entry.$2);
           expect(
             decoded.voice,
             isNotNull,
-            reason: '${file.path} voice "${entry.key}": ${decoded.problem}',
+            reason: '${file.path} voice "${entry.$1}": ${decoded.problem}',
           );
           ids.add(decoded.voice!.id);
         }
@@ -161,6 +160,25 @@ void main() {
           reason: '${file.path} repeats an id, so one voice would vanish',
         );
       }
+    });
+
+    test('gemini lists its voices as a bare id list, with no name repeated', () {
+      // The point of the list form is that Gemini's ids are already its display
+      // labels, so writing each one twice in an object says the same thing in
+      // two places. Both the loader and the picker read it as name == id, so
+      // this is a shape assertion, not a behaviour one.
+      final json = jsonDecode(
+        shipped.modelFile('gemini').readAsStringSync(),
+      ) as Map<String, dynamic>;
+      expect(json['voices'], isA<List<Object?>>());
+
+      final (config, warnings) = loadVoiceConfig(shipped.path);
+      expect(warnings, isEmpty);
+      final voices = config.voices['gemini']!;
+      expect(voices['Charon']?.id, 'Charon');
+      expect(voices['Charon']?.name, isNull);
+      expect(config.resolveVoice('gemini', 'Charon'), ('Charon', 'Charon'));
+      expect(voices, hasLength(30));
     });
 
     test('every model declares its formats explicitly, as mp3 or wav', () {
@@ -353,9 +371,9 @@ void main() {
       expect(json['voices_editable'], isNull);
 
       final labels = <String, int>{};
-      for (final entry in (json['voices'] as Map<String, dynamic>).entries) {
-        final decoded = voiceFromEntry(entry.key, entry.value).voice!;
-        final label = decoded.name ?? entry.key;
+      for (final entry in _voiceEntriesOf(json)) {
+        final decoded = voiceFromEntry(entry.$1, entry.$2).voice!;
+        final label = decoded.name ?? entry.$1;
         labels[label] = (labels[label] ?? 0) + 1;
       }
       expect(
@@ -397,6 +415,30 @@ class _ShippedConfig {
 /// The alias a model file is filed under, which is what the loader keys it by.
 String _aliasOf(File file) =>
     file.uri.pathSegments.last.replaceAll('.json', '');
+
+/// One `voices` entry as `(key, raw value)` pairs, from either accepted shape.
+///
+/// Reading the raw JSON rather than the parsed config is the point of these
+/// tests, and a model may write its `voices` as an object keyed by label or as a
+/// bare list of ids. Handing both back as pairs lets one assertion cover both,
+/// instead of every check here silently covering only whichever shape the
+/// shipped files happened to use.
+List<(String, Object?)> _voiceEntriesOf(Map<String, dynamic> json) {
+  final raw = json['voices'];
+  if (raw is Map<String, dynamic>) {
+    return raw.entries.map((e) => (e.key, e.value)).toList();
+  }
+  // A list entry is its own key, so the pair repeats one value twice. A
+  // non-string element keeps its value, so voiceFromEntry can report why the
+  // entry was rejected rather than the test crashing on the cast first.
+  if (raw is List) {
+    return raw
+        .map((id) => (id is String ? id : '$id', id))
+        .cast<(String, Object?)>()
+        .toList();
+  }
+  return const [];
+}
 
 /// Walks up from the package root to the directory holding `voice-config/`.
 ///
