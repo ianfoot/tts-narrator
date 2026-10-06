@@ -3,12 +3,17 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:tts_narrator_core/src/narration/abort.dart';
+import 'package:tts_narrator_core/src/narration/audio_format.dart';
 import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/narration.dart';
 import 'package:tts_narrator_core/src/narration/prompt.dart';
+import 'package:tts_narrator_core/src/narration/speech_client.dart';
+import 'package:tts_narrator_core/src/narration/wav.dart';
 
 import 'support/fake_provider.dart';
+import 'support/wav_bytes.dart';
 
 const _inputText =
     'The rain fell on the quiet street. '
@@ -36,8 +41,7 @@ void main() {
 
   NarrationConfig config(
     String inputPath, {
-    String? format,
-    int? sampleRate,
+    TtsAudioFormat outputFormat = TtsAudioFormat.mp3,
     bool promptStyle = false,
     bool sendsVoiceField = true,
     bool supportsSpeed = false,
@@ -54,16 +58,16 @@ void main() {
       profile: TtsModelProfile(
         alias: 'test',
         id: 'test/model',
-        format: format ?? 'mp3',
+        formats: [outputFormat],
         promptStyle: promptStyle,
         sendsVoiceField: sendsVoiceField,
         supportsSpeed: supportsSpeed,
         sendsLanguageField: sendsLanguageField,
         sendsInstructField: sendsInstructField,
         defaultInstruct: defaultInstruct,
-        sampleRate: sampleRate,
         provider: testProvider,
       ),
+      outputFormat: outputFormat,
       voice: 'VoiceOne',
       voiceLabel: 'Voice One',
       language: language,
@@ -85,7 +89,7 @@ void main() {
       expect(provider.callCount, 1);
       final call = provider.calls.single;
       expect(call.model, 'test/model');
-      expect(call.responseFormat, 'mp3');
+      expect(call.responseFormat, TtsAudioFormat.mp3);
       expect(call.voice, 'VoiceOne');
       expect(call.settings, {'base_url': testBaseUrl, 'api_key': 'sk-test'});
       expect(call.input, _inputText);
@@ -96,27 +100,24 @@ void main() {
     },
   );
 
-  test(
-    'wraps pcm output in a WAV header using the profile sample rate',
-    () async {
-      final input = writeInput();
-      await narrate(
-        config(input, format: 'pcm', sampleRate: 24000),
-        client: provider.client,
-      );
+  test('writes provider wav bytes to disk verbatim', () async {
+    // The provider owns the container: a wav run never rewrites the payload,
+    // so the file on disk is exactly what the client returned.
+    final wav = FakeTtsProvider(bytes: wavFileBytes([1, 2, 3, 4]));
+    final input = writeInput();
+    await narrate(
+      config(input, outputFormat: TtsAudioFormat.wav),
+      client: wav.client,
+    );
 
-      final audioFile = File('${dir.path}/out/story/story_1.wav');
-      expect(audioFile.existsSync(), isTrue);
-      final bytes = audioFile.readAsBytesSync();
-      expect(ascii(bytes.sublist(0, 4)), 'RIFF');
-      expect(ascii(bytes.sublist(8, 12)), 'WAVE');
-      expect(bytes, containsAllInOrder(provider.bytes));
-    },
-  );
+    final audioFile = File('${dir.path}/out/story/story_1.wav');
+    expect(audioFile.existsSync(), isTrue);
+    expect(audioFile.readAsBytesSync(), wav.bytes);
+  });
 
   test('writes a combined track and records it in the manifest', () async {
     final input = writeInput();
-    await narrate(config(input, format: 'mp3'), client: provider.client);
+    await narrate(config(input), client: provider.client);
 
     final combined = File('${dir.path}/out/story/story_full.mp3');
     expect(combined.existsSync(), isTrue);
@@ -136,32 +137,38 @@ void main() {
 
   test('pools every WAV segment into one combined WAV', () async {
     final input = writeInput(text: '$_inputText\n\n$_inputText');
+    // Every segment gets its own payload, so the combined track can only be
+    // right if the payloads really were pooled.
+    final wav = _SequencedWavProvider();
     final cfg = NarrationConfig(
       inputPath: input,
       profile: TtsModelProfile(
         alias: 'test',
         id: 'test/model',
-        format: 'pcm',
-        sampleRate: 24000,
+        formats: const [TtsAudioFormat.wav],
         provider: provider.id,
       ),
+      outputFormat: TtsAudioFormat.wav,
       voice: 'VoiceOne',
       providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
       outDir: '${dir.path}/out',
       minWords: 1,
     );
-    await narrate(cfg, client: provider.client);
+    await narrate(cfg, client: wav.client);
 
-    final pcm1 = _pcmPayload(
+    final first = readWav(
       File('${dir.path}/out/story/story_1.wav').readAsBytesSync(),
-    );
-    final pcm2 = _pcmPayload(
+    ).data;
+    final second = readWav(
       File('${dir.path}/out/story/story_2.wav').readAsBytesSync(),
-    );
-    final combined = _pcmPayload(
+    ).data;
+    final combined = readWav(
       File('${dir.path}/out/story/story_full.wav').readAsBytesSync(),
     );
-    expect(combined, [...pcm1, ...pcm2]);
+    expect(combined.data, [...first, ...second]);
+    // The combined header is copied from the first segment, so the sample
+    // rate survives without core having to invent or be told one.
+    expect(combined.formatChunk, readWav(wav.files.first).formatChunk);
   });
 
   test('omits the voice field when sendsVoiceField is false', () async {
@@ -234,6 +241,7 @@ void main() {
     final plain = NarrationConfig(
       inputPath: input,
       profile: config(input).profile,
+      outputFormat: TtsAudioFormat.mp3,
       voice: 'VoiceOne',
       language: 'b',
       providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
@@ -266,21 +274,24 @@ void main() {
       expect(call.voice, isNull);
     });
 
-    test("falls back to the model's own default when the user wrote nothing", () async {
-      // Otherwise a model declaring the capability would be dispatched a request
-      // describing no voice at all, which the vendor cannot fulfil.
-      final input = writeInput();
-      await narrate(
-        config(
-          input,
-          sendsInstructField: true,
-          defaultInstruct: 'The shipped default.',
-        ),
-        client: provider.client,
-      );
+    test(
+      "falls back to the model's own default when the user wrote nothing",
+      () async {
+        // Otherwise a model declaring the capability would be dispatched a request
+        // describing no voice at all, which the vendor cannot fulfil.
+        final input = writeInput();
+        await narrate(
+          config(
+            input,
+            sendsInstructField: true,
+            defaultInstruct: 'The shipped default.',
+          ),
+          client: provider.client,
+        );
 
-      expect(provider.calls.single.instruct, 'The shipped default.');
-    });
+        expect(provider.calls.single.instruct, 'The shipped default.');
+      },
+    );
 
     test('drops the prose for a model that does not take it', () async {
       // The gate is the capability, not the value: a stray `instruct` on a model
@@ -321,6 +332,7 @@ void main() {
         id: 'test/model',
         provider: testProvider,
       ),
+      outputFormat: TtsAudioFormat.mp3,
       voice: 'VoiceOne',
       providerSettings: providerSettings,
       outDir: '${dir.path}/out',
@@ -385,9 +397,10 @@ void main() {
       profile: TtsModelProfile(
         alias: 'test',
         id: 'test/model',
-        format: 'mp3',
+        formats: const [TtsAudioFormat.mp3],
         provider: provider.id,
       ),
+      outputFormat: TtsAudioFormat.mp3,
       voice: 'VoiceOne',
       providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
       outDir: '${dir.path}/out',
@@ -406,9 +419,10 @@ void main() {
         profile: TtsModelProfile(
           alias: 'test',
           id: 'test/model',
-          format: 'mp3',
+          formats: const [TtsAudioFormat.mp3],
           provider: provider.id,
         ),
+        outputFormat: TtsAudioFormat.mp3,
         voice: 'VoiceOne',
         outDir: '${dir.path}/out',
       );
@@ -423,9 +437,10 @@ void main() {
         profile: TtsModelProfile(
           alias: 'test',
           id: 'test/model',
-          format: 'mp3',
+          formats: const [TtsAudioFormat.mp3],
           provider: provider.id,
         ),
+        outputFormat: TtsAudioFormat.mp3,
         voice: 'VoiceOne',
         outDir: '${dir.path}/out',
         // Segmentation settings are ignored in whole-file mode.
@@ -442,9 +457,10 @@ void main() {
         profile: TtsModelProfile(
           alias: 'test',
           id: 'test/model',
-          format: 'mp3',
+          formats: const [TtsAudioFormat.mp3],
           provider: provider.id,
         ),
+        outputFormat: TtsAudioFormat.mp3,
         voice: 'VoiceOne',
         outDir: '${dir.path}/out',
         sendWholeFile: true,
@@ -459,9 +475,10 @@ void main() {
         profile: TtsModelProfile(
           alias: 'test',
           id: 'test/model',
-          format: 'mp3',
+          formats: const [TtsAudioFormat.mp3],
           provider: provider.id,
         ),
+        outputFormat: TtsAudioFormat.mp3,
         voice: 'VoiceOne',
         outDir: '${dir.path}/out',
         sendWholeFile: true,
@@ -477,9 +494,10 @@ void main() {
         profile: TtsModelProfile(
           alias: 'test',
           id: 'test/model',
-          format: 'mp3',
+          formats: const [TtsAudioFormat.mp3],
           provider: provider.id,
         ),
+        outputFormat: TtsAudioFormat.mp3,
         voice: 'VoiceOne',
         outDir: '${dir.path}/out',
         sendWholeFile: true,
@@ -495,9 +513,10 @@ void main() {
         profile: TtsModelProfile(
           alias: 'test',
           id: 'test/model',
-          format: 'mp3',
+          formats: const [TtsAudioFormat.mp3],
           provider: provider.id,
         ),
+        outputFormat: TtsAudioFormat.mp3,
         voice: 'VoiceOne',
         outDir: '${dir.path}/out',
         sendWholeFile: true,
@@ -514,9 +533,10 @@ void main() {
           profile: TtsModelProfile(
             alias: 'test',
             id: 'test/model',
-            format: 'mp3',
+            formats: const [TtsAudioFormat.mp3],
             provider: provider.id,
           ),
+          outputFormat: TtsAudioFormat.mp3,
           voice: 'VoiceOne',
           providerSettings: const {
             'base_url': testBaseUrl,
@@ -541,9 +561,10 @@ void main() {
         profile: TtsModelProfile(
           alias: 'test',
           id: 'test/model',
-          format: 'mp3',
+          formats: const [TtsAudioFormat.mp3],
           provider: provider.id,
         ),
+        outputFormat: TtsAudioFormat.mp3,
         voice: 'VoiceOne',
         providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
         outDir: '${dir.path}/out',
@@ -584,9 +605,10 @@ void main() {
         profile: TtsModelProfile(
           alias: 'test',
           id: 'test/model',
-          format: 'mp3',
+          formats: const [TtsAudioFormat.mp3],
           provider: provider.id,
         ),
+        outputFormat: TtsAudioFormat.mp3,
         voice: 'VoiceOne',
         providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
         outDir: '${dir.path}/out',
@@ -601,18 +623,30 @@ void main() {
   });
 }
 
-String ascii(List<int> bytes) => String.fromCharCodes(bytes);
+/// A provider that returns a distinct WAV per call, so a pooled track can only
+/// come out right if every segment's payload was actually consumed.
+class _SequencedWavProvider {
+  final List<Uint8List> files = [];
+  int _next = 0;
 
-/// Extracts the `data` chunk payload from a WAV file's bytes.
-List<int> _pcmPayload(Uint8List wav) {
-  var offset = 12;
-  while (offset + 8 <= wav.length) {
-    final id = String.fromCharCodes(wav.sublist(offset, offset + 4));
-    final size = ByteData.sublistView(wav).getUint32(offset + 4, Endian.little);
-    if (id == 'data') {
-      return wav.sublist(offset + 8, offset + 8 + size);
-    }
-    offset += 8 + size.toInt();
+  SpeechClient get client => synthesize;
+
+  Future<GeneratedAudio> synthesize({
+    required String model,
+    required String? voice,
+    required String input,
+    required TtsAudioFormat responseFormat,
+    required Map<String, String> settings,
+    required double? speed,
+    String? language,
+    String? instruct,
+    String? apiKey,
+    AbortToken? abort,
+  }) async {
+    abort?.throwIfCancelled();
+    final bytes = wavFileBytes([_next + 1], sampleRate: 24000);
+    _next++;
+    files.add(bytes);
+    return GeneratedAudio(bytes: bytes);
   }
-  throw StateError('no data chunk');
 }

@@ -255,12 +255,10 @@ class VoiceConfigStore {
         'before removing it.',
       );
     }
-    return _writeVoices(
-      alias,
-      json,
-      [for (final r in rows) if (r.key != key) r],
-      defaultLabel: _carriedDefaultLabel(json, rows, null, null),
-    );
+    return _writeVoices(alias, json, [
+      for (final r in rows)
+        if (r.key != key) r,
+    ], defaultLabel: _carriedDefaultLabel(json, rows, null, null));
   }
 
   /// Makes the voice filed under [key] the default for [alias].
@@ -274,12 +272,7 @@ class VoiceConfigStore {
     if (target == null) {
       return VoiceEdit.rejected('That voice is no longer in "$alias".');
     }
-    return _writeVoices(
-      alias,
-      json,
-      rows,
-      defaultLabel: target.label,
-    );
+    return _writeVoices(alias, json, rows, defaultLabel: target.label);
   }
 
   /// The label the model's `default_voice` should carry forward as, given that

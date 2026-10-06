@@ -383,4 +383,99 @@ void main() {
       expect(c.voice, 'pm_santa');
     });
   });
+
+  group('output format', () {
+    // A model that lists both formats, wav first, the way the local
+    // mlx-audio-backed models ship.
+    const dualFormat = {
+      'id': 'mlx-community/Kokoro-82M-4bit',
+      'formats': ['wav', 'mp3'],
+    };
+
+    testWidgets('a model offering one format shows no format control', (
+      tester,
+    ) async {
+      writeConfig(configDir, {
+        'models': {
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'formats': ['mp3'],
+          },
+        },
+      });
+      final c = makeController(configDir);
+      c.changeModel('kokoro');
+      await pumpSection(tester, c);
+
+      expect(find.byKey(const Key('formatControl')), findsNothing);
+      // The single format is still what the run uses.
+      expect(c.outputFormat, TtsAudioFormat.mp3);
+    });
+
+    testWidgets('a model offering both formats shows them in declared order', (
+      tester,
+    ) async {
+      writeConfig(configDir, {
+        'models': {'local': dualFormat},
+      });
+      final c = makeController(configDir);
+      c.changeModel('local');
+      await pumpSection(tester, c);
+
+      final control = tester.widget<SegmentedControl<TtsAudioFormat>>(
+        find.byKey(const Key('formatControl')),
+      );
+      expect(control.items.map((it) => it.$1), [
+        TtsAudioFormat.wav,
+        TtsAudioFormat.mp3,
+      ]);
+      // The first declared format is the model's own default.
+      expect(control.value, TtsAudioFormat.wav);
+      expect(c.outputFormat, TtsAudioFormat.wav);
+    });
+
+    testWidgets('picking a format updates the controller', (tester) async {
+      writeConfig(configDir, {
+        'models': {'local': dualFormat},
+      });
+      final c = makeController(configDir);
+      c.changeModel('local');
+      await pumpSection(tester, c);
+
+      await tester.tap(find.text('MP3'));
+      await tester.pumpAndSettle();
+
+      expect(c.outputFormat, TtsAudioFormat.mp3);
+
+      final control = tester.widget<SegmentedControl<TtsAudioFormat>>(
+        find.byKey(const Key('formatControl')),
+      );
+      expect(control.value, TtsAudioFormat.mp3);
+    });
+
+    testWidgets('each model keeps its own choice', (tester) async {
+      writeConfig(configDir, {
+        'models': {
+          'local': dualFormat,
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'formats': ['mp3'],
+          },
+        },
+      });
+      final c = makeController(configDir);
+      c.changeModel('local');
+      c.outputFormat = TtsAudioFormat.mp3;
+      await pumpSection(tester, c);
+
+      c.changeModel('kokoro');
+      await tester.pumpAndSettle();
+      // Kokoro only offers mp3, so its choice follows what it can serve.
+      expect(c.outputFormat, TtsAudioFormat.mp3);
+
+      c.changeModel('local');
+      await tester.pumpAndSettle();
+      expect(c.outputFormat, TtsAudioFormat.mp3);
+    });
+  });
 }

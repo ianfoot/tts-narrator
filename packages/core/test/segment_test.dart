@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:tts_narrator_core/src/narration/audio_format.dart';
 import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/narration.dart';
@@ -119,16 +120,16 @@ void main() {
   });
 
   group('output dir helpers', () {
-    const gemini = TtsModelProfile(
-      alias: 'gemini',
-      id: 'google/gemini-3.1-flash-tts-preview',
-      format: 'pcm',
-      sampleRate: 24000,
+    const local = TtsModelProfile(
+      alias: 'kokoro_local',
+      id: 'mlx-community/Kokoro-82M-4bit',
+      formats: [TtsAudioFormat.wav, TtsAudioFormat.mp3],
       provider: testProvider,
     );
     NarrationConfig cfg(String input, String out) => NarrationConfig(
       inputPath: input,
-      profile: gemini,
+      profile: local,
+      outputFormat: TtsAudioFormat.wav,
       voice: 'Callirrhoe',
       outDir: out,
     );

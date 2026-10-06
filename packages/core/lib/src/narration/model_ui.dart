@@ -2,11 +2,11 @@ import 'model_profiles.dart';
 
 /// Declarative UI for a model's adjustable options.
 ///
-  /// [ModelUiSpec.forProfile] derives the controls from the model's own declared
-  /// capabilities ([TtsModelProfile.promptStyle], [TtsModelProfile.supportsSpeed],
-  /// [TtsModelProfile.sendsInstructField]), and the app renders whatever comes
-  /// back generically. Core ships no per-model branches, and the app has none
-  /// either.
+/// [ModelUiSpec.forProfile] derives the controls from the model's own declared
+/// capabilities ([TtsModelProfile.promptStyle], [TtsModelProfile.supportsSpeed],
+/// [TtsModelProfile.sendsInstructField]), and the app renders whatever comes
+/// back generically. Core ships no per-model branches, and the app has none
+/// either.
 ///
 /// Option keys are a convention the app interprets against the model-agnostic
 /// narration settings:

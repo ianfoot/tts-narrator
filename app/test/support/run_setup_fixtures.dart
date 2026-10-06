@@ -140,8 +140,7 @@ void writeVoiceDesignConfig(String configDir) {
         'sends_voice': false,
         'sends_instruct': true,
         'sends_language': true,
-        'default_instruct':
-            'A calm male narrator with a low, steady voice and a clear British accent.',
+        'default_instruct': 'A calm male narrator with a low, steady voice and a clear British accent.',
         'default_language': 'English',
         'languages': {'English': 'English', 'Chinese': 'Chinese'},
       },

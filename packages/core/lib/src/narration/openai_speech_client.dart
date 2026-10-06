@@ -3,6 +3,7 @@ import 'dart:io';
 
 import '../config/provider_settings.dart';
 import 'abort.dart';
+import 'audio_format.dart';
 import 'speech_client.dart';
 
 /// The client for every OpenAI-compatible `/audio/speech` service.
@@ -47,7 +48,7 @@ class OpenAiSpeechClient {
     required String model,
     required String? voice,
     required String input,
-    required String responseFormat,
+    required TtsAudioFormat responseFormat,
     required Map<String, String> settings,
     required double? speed,
     String? language,
@@ -63,7 +64,7 @@ class OpenAiSpeechClient {
     final body = <String, Object?>{
       'model': model,
       'input': input,
-      'response_format': responseFormat,
+      'response_format': responseFormat.wireValue,
     };
     if (resolvedVoice != null && resolvedVoice.isNotEmpty) {
       body['voice'] = resolvedVoice;

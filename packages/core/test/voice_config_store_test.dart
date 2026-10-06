@@ -18,10 +18,7 @@ class _Fixture {
       'id': 'fish-audio/s2.1',
       'default_voice': 'Alice',
       'voices': {
-        'Alice': {
-          'id': 'aaa',
-          'gender': 'female',
-        },
+        'Alice': {'id': 'aaa', 'gender': 'female'},
         'Bob': {'id': 'bbb', 'gender': 'male'},
       },
     });
@@ -31,7 +28,8 @@ class _Fixture {
 
   File baseModel(String alias) => File('${dir.path}/models/$alias.json');
 
-  File overlayModel(String alias) => File('${dir.path}/user/models/$alias.json');
+  File overlayModel(String alias) =>
+      File('${dir.path}/user/models/$alias.json');
 
   /// Writes a model file into the downloaded layer, replacing any earlier one.
   void writeModel(String alias, Map<String, Object?> body) {
@@ -44,7 +42,9 @@ class _Fixture {
   /// so [loadVoiceConfig] keeps the fixtures.
   void writeRegistry(List<String> aliases) {
     File('${dir.path}/$kVoiceConfigRegistryName').writeAsStringSync(
-      jsonEncode({'providers': ['local']}),
+      jsonEncode({
+        'providers': ['local'],
+      }),
     );
     final provider = File('${dir.path}/$kVoiceConfigProvidersDir/local.json');
     provider.parent.createSync(recursive: true);
@@ -92,18 +92,21 @@ void main() {
       expect(row.label, 'Charon');
     });
 
-    test('an id-keyed entry with a name keeps the id separate from the label', () {
-      f.writeModel('kokoro', const {
-        'id': 'hexgrad/kokoro-82m',
-        'voices': {
-          'bf_emma': {'name': 'Emma'},
-        },
-      });
-      final row = f.store.voicesFor('kokoro').single;
-      expect(row.key, 'bf_emma');
-      expect(row.id, 'bf_emma');
-      expect(row.label, 'Emma');
-    });
+    test(
+      'an id-keyed entry with a name keeps the id separate from the label',
+      () {
+        f.writeModel('kokoro', const {
+          'id': 'hexgrad/kokoro-82m',
+          'voices': {
+            'bf_emma': {'name': 'Emma'},
+          },
+        });
+        final row = f.store.voicesFor('kokoro').single;
+        expect(row.key, 'bf_emma');
+        expect(row.id, 'bf_emma');
+        expect(row.label, 'Emma');
+      },
+    );
 
     test('default_voice matching by name resolves after normalisation', () {
       f.writeModel('kokoro', const {
@@ -448,12 +451,7 @@ void main() {
           'bf_emma': {'name': 'Emma'},
         },
       });
-      f.store.saveVoice(
-        'kokoro',
-        key: 'bf_emma',
-        label: 'Emma',
-        id: 'bf_emma',
-      );
+      f.store.saveVoice('kokoro', key: 'bf_emma', label: 'Emma', id: 'bf_emma');
       final json = f.readOverlay('kokoro');
       final voices = json['voices'] as Map<String, dynamic>;
       expect(voices.keys, ['Emma']);
@@ -502,12 +500,7 @@ void main() {
           'bf_emma': {'name': 'Emma'},
         },
       });
-      f.store.saveVoice(
-        'kokoro',
-        key: 'bf_emma',
-        label: 'Emma',
-        id: 'bf_emma',
-      );
+      f.store.saveVoice('kokoro', key: 'bf_emma', label: 'Emma', id: 'bf_emma');
       final json = f.readOverlay('kokoro');
       expect(json['id'], 'hexgrad/kokoro-82m');
       expect(json['display_name'], 'Kokoro 82M');

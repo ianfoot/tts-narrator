@@ -92,7 +92,8 @@ class _ModelRow extends StatelessWidget {
           ),
           if (edited)
             Tooltip(
-              message: AppLocalizations.of(context).gui_settings_editedBadgeTooltip,
+              message: AppLocalizations.of(context)
+                  .gui_settings_editedBadgeTooltip,
               child: Icon(
                 CupertinoIcons.circle_fill,
                 size: 7,
@@ -107,9 +108,7 @@ class _ModelRow extends StatelessWidget {
     // reading as "this one has a local override" instead of competing with it.
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(color: colors.accentPrimary, width: 2),
-        ),
+        border: Border(left: BorderSide(color: colors.accentPrimary, width: 2)),
       ),
       child: row,
     );

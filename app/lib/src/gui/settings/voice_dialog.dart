@@ -77,9 +77,7 @@ class _VoiceDialogState extends State<_VoiceDialog> {
     // A fully blank form is a no-op rather than an error: the store rejects it
     // with a message naming the problem, and there is nothing to report yet.
     if (resolvedLabel.isEmpty) return;
-    Navigator.of(context).pop(
-      (label: resolvedLabel, id: id, gender: _gender),
-    );
+    Navigator.of(context).pop((label: resolvedLabel, id: id, gender: _gender));
   }
 
   @override

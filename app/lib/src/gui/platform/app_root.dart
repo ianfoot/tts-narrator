@@ -142,8 +142,9 @@ class _AppRootState extends State<AppRoot> {
   /// The run view's 250ms cross-fade slide-up from a 20px offset (UI spec §4).
   /// A bare [PageRouteBuilder] so the run view presents identically on every
   /// platform.
-  PageRouteBuilder<void> _runRoute() =>
-      _fadeSlideRoute((context) => NarrationScreen(controller: widget.controller));
+  PageRouteBuilder<void> _runRoute() => _fadeSlideRoute(
+    (context) => NarrationScreen(controller: widget.controller),
+  );
 
   /// The shared full-screen push: a 250ms fade-and-slide from 20px below, so the
   /// narration run view and the settings screen present as one family rather

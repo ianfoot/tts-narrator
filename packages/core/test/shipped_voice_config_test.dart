@@ -51,8 +51,7 @@ void main() {
 
     setUp(() {
       manifest = ManifestVoiceConfig.fromJson(
-        jsonDecode(shipped.manifest.readAsStringSync())
-            as Map<String, dynamic>,
+        jsonDecode(shipped.manifest.readAsStringSync()) as Map<String, dynamic>,
       );
     });
 
@@ -164,6 +163,50 @@ void main() {
       }
     });
 
+    test('every model declares its formats explicitly, as mp3 or wav', () {
+      // The vocabulary the app offers the user is exactly mp3 and wav, so a
+      // shipped file that omits the list falls back to the default and one that
+      // names a retired format is rewritten behind the user's back. Reading the
+      // raw JSON rather than the parsed profile is the point: it also catches a
+      // file still using the retired single "format" key.
+      for (final file in shipped.modelFiles) {
+        final json =
+            jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+        final formats = json['formats'];
+        expect(
+          formats,
+          isA<List<Object?>>(),
+          reason: '${file.path} must list its "formats"',
+        );
+        expect(
+          formats,
+          isNotEmpty,
+          reason: '${file.path} offers no output format at all',
+        );
+        for (final format in formats! as List<Object?>) {
+          expect(
+            format,
+            anyOf('mp3', 'wav'),
+            reason:
+                '${file.path} offers "$format", which is not a user '
+                'selectable format',
+          );
+        }
+        expect(
+          json['format'],
+          isNull,
+          reason: '${file.path} still uses the retired "format" key',
+        );
+        expect(
+          json['sample_rate'],
+          isNull,
+          reason:
+              '${file.path} still sets "sample_rate", which is no longer '
+              'read or honoured',
+        );
+      }
+    });
+
     test('fish is the one shipped model whose voices are editable', () {
       // Fish is where a user adds voices -- it has the long tail of them. The
       // rest describe what the model actually offers, so editing their lists in
@@ -185,8 +228,7 @@ void main() {
       );
     });
 
-    test('kokoro is left locked, because its duplicate labels cannot be saved',
-        () {
+    test('kokoro is left locked, because its duplicate labels cannot be saved', () {
       // Writing any edit keys the voices block by label, and Kokoro ships three
       // voices named "Santa". If it were editable, the first save would be
       // refused with no way for the user to tell why it happened on a file they
@@ -226,12 +268,13 @@ class _ShippedConfig {
 
   List<File> get allConfigFiles => [...modelFiles, ...providerFiles];
 
-  List<File> _filesIn(String subdir) => Directory('$path/$subdir')
-      .listSync()
-      .whereType<File>()
-      .where((f) => f.path.endsWith('.json'))
-      .toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  List<File> _filesIn(String subdir) =>
+      Directory('$path/$subdir')
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.json'))
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
 
   File modelFile(String alias) =>
       File('$path/$kVoiceConfigModelsDir/$alias.json');

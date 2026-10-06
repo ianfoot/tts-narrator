@@ -59,8 +59,8 @@ so in practice the tests and any non-GUI front end. The GUI always injects one.
   else. The first entry is the default provider.
 - `providers/<name>.json` — one file per provider: a `models` list naming the
   models that provider serves, and a `settings` block (secrets).
-- `models/<alias>.json` — one file per model: `id`, `format`, `sample_rate`,
-  `prompt_style`, `speed`, `sends_language`, `sends_instruct`,
+- `models/<alias>.json` — one file per model: `id`, `formats`, `prompt_style`,
+  `speed`, `sends_language`, `sends_instruct`,
   `default_instruct`, `sends_voice`, `default_voice`, `default_language`,
   `pricing`, `languages`, and `voices`. A `voices` entry is
   keyed by the voice id and may carry a `name` and an optional `gender`
@@ -459,11 +459,17 @@ title.
 
 ## Notes / current behaviour
 
-- OpenRouter's Gemini model page lists `response_format: mp3` as supported, but
-  the vendor rejects `mp3` (HTTP 400: *"Gemini TTS only supports
-  response_format=pcm"*). This tool always requests `pcm` for Gemini and wraps
-  it in a WAV container. Kokoro and Fish are requested as `mp3` directly.
-  There is no MP3 encoding or concatenation step — the model emits these formats.
+- The output format is a per-model choice between `mp3` and `wav`, and because
+  both are finished containers by the time they reach us it is *also* the wire
+  `response_format`. A model file declares what it can emit in its `formats`
+  list, so an unsupported value cannot be requested: `SpeechClient.synthesize`
+  takes a `TtsAudioFormat` and sends `wireValue`. The GUI shows a segmented
+  control only when a model lists two formats, remembers the pick in
+  SharedPreferences under `outputFormat.<alias>`, and clamps it to what the
+  current profile supports (`SettingsController.outputFormat`).
+  Concatenation differs by format: MP3 segments are concatenated by appending
+  bytes, WAV segments by stripping each header and rewriting one file with the
+  first segment's `fmt ` chunk preserved verbatim.
 - Transient `502` (empty audio stream) failures are retried up to 3 times,
   matching a documented Gemini TTS quirk. (Fish failures are not billed.)
 - Every model — `fish` included — comes from its own `models/<alias>.json` file

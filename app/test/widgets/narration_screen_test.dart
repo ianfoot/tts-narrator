@@ -24,7 +24,7 @@ class _BlockingClient {
     required String model,
     required String? voice,
     required String input,
-    required String responseFormat,
+    required TtsAudioFormat responseFormat,
     required Map<String, String> settings,
     required double? speed,
     String? language,

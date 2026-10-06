@@ -1,6 +1,6 @@
 {
   "id": "hexgrad/kokoro-82m",
-  "format": "mp3",
+  "formats": ["mp3"],
   "display_name": "Kokoro 82M",
   "speed": true,
   "sends_language": true,

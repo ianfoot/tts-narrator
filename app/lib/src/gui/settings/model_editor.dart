@@ -85,12 +85,7 @@ class _Metadata extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _row(
-            context,
-            labelWidth,
-            l10n.gui_settings_fieldModelId,
-            model.id,
-          ),
+          _row(context, labelWidth, l10n.gui_settings_fieldModelId, model.id),
           _row(
             context,
             labelWidth,
@@ -101,7 +96,10 @@ class _Metadata extends StatelessWidget {
             context,
             labelWidth,
             l10n.gui_settings_fieldFormat,
-            model.format,
+            // Every format the model offers, not just the one in force: this is
+            // the metadata view, so it documents what the model can serve. The
+            // user's current choice lives in the run-setup panel.
+            model.formats.map((f) => f.wireValue).join(', '),
           ),
         ],
       ),

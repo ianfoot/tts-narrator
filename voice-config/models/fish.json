@@ -1,6 +1,6 @@
 {
   "id": "fish-audio/s2.1-pro-free:free",
-  "format": "mp3",
+  "formats": ["mp3"],
   "display_name": "Fish Audio S2.1 (Free)",
   "voices_editable": true,
   "default_voice": "British Female Narrator",

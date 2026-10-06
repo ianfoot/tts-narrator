@@ -92,19 +92,22 @@ void main() {
       expect(spec.options.single.type, ModelUiOptionType.multiline);
     });
 
-    test('instruct comes after the speed slider, and neither implies the other', () {
-      // A voice design model is fast but has no accent/style pair to speak
-      // aloud, so the two option sets must stay independent.
-      final spec = ModelUiSpec.forProfile(
-        const TtsModelProfile(
-          alias: 'designer-fast',
-          id: 'provider/voice-design-fast-tts',
-          sendsInstructField: true,
-          supportsSpeed: true,
-          provider: testProvider,
-        ),
-      );
-      expect(spec.options.map((o) => o.key), ['speed', 'instruct']);
-    });
+    test(
+      'instruct comes after the speed slider, and neither implies the other',
+      () {
+        // A voice design model is fast but has no accent/style pair to speak
+        // aloud, so the two option sets must stay independent.
+        final spec = ModelUiSpec.forProfile(
+          const TtsModelProfile(
+            alias: 'designer-fast',
+            id: 'provider/voice-design-fast-tts',
+            sendsInstructField: true,
+            supportsSpeed: true,
+            provider: testProvider,
+          ),
+        );
+        expect(spec.options.map((o) => o.key), ['speed', 'instruct']);
+      },
+    );
   });
 }

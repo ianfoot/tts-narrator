@@ -251,7 +251,8 @@ The **Language** dropdown is still there and still matters — for this model th
 `lang_code` is the language's full name (`English`, `Japanese`, …) rather than a
 short code, so the app always sends one.
 
-Output is 24 kHz WAV rather than MP3, because mlx-audio needs `ffmpeg` installed
-to encode MP3 and WAV needs nothing extra. If you would rather have MP3 and
-already have `ffmpeg`, change `"format": "wav"` to `"format": "mp3"` in
-`models/qwen3_voicedesign.json`.
+Output defaults to WAV because mlx-audio needs `ffmpeg` installed to encode MP3
+and WAV needs nothing extra. If you have `ffmpeg` and would rather have MP3, the
+**Output format** segmented control under the model dropdown in Run Setup has an
+MP3 button — the same way `kokoro_local` works. The model file declares both
+(`"formats": ["wav", "mp3"]`), and your pick is remembered per model.

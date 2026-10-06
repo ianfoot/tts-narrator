@@ -1,3 +1,4 @@
+import 'audio_format.dart';
 import 'cost.dart';
 import 'model_profiles.dart';
 import 'prompt_strings.dart';
@@ -8,6 +9,7 @@ class NarrationConfig {
     required this.inputPath,
     this.sourceText,
     required this.profile,
+    required this.outputFormat,
     required this.voice,
     this.voiceLabel,
     this.language,
@@ -40,8 +42,21 @@ class NarrationConfig {
   /// this; the GUI sets it for typed/pasted content.
   final String? sourceText;
 
-  /// TTS model profile driving the request body, prompt, and output format.
+  /// TTS model profile driving the request body and prompt.
   final TtsModelProfile profile;
+
+  /// Encoding this run writes, which must be one the model can actually
+  /// produce (`profile.supportsFormat`).
+  ///
+  /// Required rather than defaulted to the model's preference because the
+  /// caller is the layer that knows the user's choice: the GUI remembers a
+  /// per-model selection and passes it in. Core deliberately does not clamp it
+  /// — a format the model does not offer is a caller bug, and the resulting
+  /// provider error says so more clearly than a silent fallback would.
+  ///
+  /// This is also the wire format, since every supported format is a container
+  /// the provider writes itself.
+  final TtsAudioFormat outputFormat;
 
   /// Model-specific voice name or id.
   final String voice;
@@ -133,6 +148,7 @@ class NarrationConfig {
     inputPath: inputPath,
     sourceText: sourceText,
     profile: profile,
+    outputFormat: outputFormat,
     voice: voice,
     voiceLabel: voiceLabel,
     language: language,

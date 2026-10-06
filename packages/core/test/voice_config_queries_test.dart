@@ -10,19 +10,15 @@ TtsModelProfile _model({
   required String alias,
   required String id,
   String provider = testProvider,
-  String format = 'mp3',
   bool promptStyle = false,
   bool sendsVoiceField = true,
-  int? sampleRate,
   String? displayName,
 }) => TtsModelProfile(
   alias: alias,
   id: id,
   provider: provider,
-  format: format,
   promptStyle: promptStyle,
   sendsVoiceField: sendsVoiceField,
-  sampleRate: sampleRate,
   displayName: displayName,
 );
 

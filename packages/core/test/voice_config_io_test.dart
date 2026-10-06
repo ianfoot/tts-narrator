@@ -5,6 +5,7 @@ import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/config/voice_config.dart';
 import 'package:tts_narrator_core/src/config/voice_config_io.dart';
 import 'package:tts_narrator_core/src/config/voice_config_queries.dart';
+import 'package:tts_narrator_core/src/narration/audio_format.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
 import 'support/fake_provider.dart';
@@ -67,13 +68,143 @@ void main() {
       writeClaimingProvider(testProvider, models: ['gemini']);
       writeModel(
         'gemini',
-        '{"id":"google/gemini-3.1-flash-tts-preview","format":"pcm",'
-            '"sample_rate":24000,"prompt_style":true}',
+        '{"id":"google/gemini-3.1-flash-tts-preview","formats":["mp3"],'
+            '"prompt_style":true}',
       );
       final (cfg, warnings) = load();
       expect(cfg.models.containsKey('gemini'), isTrue);
       expect(cfg.models['gemini']!.provider, testProvider);
       expect(warnings, isEmpty);
+    });
+
+    group('output formats', () {
+      TtsModelProfile loadProfile(String json) {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', json);
+        final (cfg, warnings) = load();
+        return cfg.models['m']!;
+      }
+
+      (List<String>, TtsModelProfile) loadWithWarnings(String json) {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', json);
+        final (cfg, warnings) = load();
+        return (warnings, cfg.models['m']!);
+      }
+
+      test('reads the formats list in order, first one the default', () {
+        final m = loadProfile('{"id": "a/b", "formats": ["wav", "mp3"]}');
+        expect(m.formats, const [TtsAudioFormat.wav, TtsAudioFormat.mp3]);
+        expect(m.defaultFormat, TtsAudioFormat.wav);
+        expect(m.supportsFormat(TtsAudioFormat.mp3), isTrue);
+      });
+
+      test('drops a repeated format', () {
+        final m = loadProfile('{"id": "a/b", "formats": ["mp3", "mp3"]}');
+        expect(m.formats, const [TtsAudioFormat.mp3]);
+      });
+
+      test('defaults to mp3 when the key is absent', () {
+        final m = loadProfile('{"id": "a/b"}');
+        expect(m.formats, const [TtsAudioFormat.mp3]);
+      });
+
+      test('reads a legacy single format string', () {
+        final m = loadProfile('{"id": "a/b", "format": "wav"}');
+        expect(m.formats, const [TtsAudioFormat.wav]);
+      });
+
+      test('maps a legacy pcm onto mp3, and says so', () {
+        // PCM is retired. An old config naming it still has to load, but the
+        // substitution is worth surfacing so the file can be brought up to
+        // date rather than silently reinterpreted forever.
+        final (warnings, m) = loadWithWarnings(
+          '{"id": "a/b", "format": "pcm"}',
+        );
+        expect(m.formats, const [TtsAudioFormat.mp3]);
+        expect(warnings, hasLength(1));
+        expect(warnings.single, contains('retired format "pcm"'));
+      });
+
+      test('skips a model naming a format nobody can produce', () {
+        // A model we cannot serve audio for is worse than no model at all, so
+        // it is dropped with a warning rather than quietly falling back.
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id": "a/b", "formats": ["opus"]}');
+        final (cfg, warnings) = load();
+        expect(cfg.models['m'], isNull);
+        expect(warnings.first, contains('"formats"'));
+      });
+
+      test('skips a model with an empty formats list', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id": "a/b", "formats": []}');
+        final (cfg, warnings) = load();
+        expect(cfg.models['m'], isNull);
+        expect(warnings.first, contains('"formats"'));
+      });
+
+      test('skips a model whose formats value is not a list', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id": "a/b", "formats": "mp3"}');
+        final (cfg, warnings) = load();
+        expect(cfg.models['m'], isNull);
+        expect(warnings.first, contains('"formats"'));
+      });
+
+      test('skips a model whose legacy format is not a string', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id": "a/b", "format": 3}');
+        final (cfg, warnings) = load();
+        expect(cfg.models['m'], isNull);
+        expect(warnings.first, contains('"format" must be a string'));
+      });
+
+      test('skips a model naming a retired, unmappable format', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id": "a/b", "format": "opus"}');
+        final (cfg, warnings) = load();
+        expect(cfg.models['m'], isNull);
+        expect(warnings.first, contains('retired format "opus"'));
+      });
+
+      test('writes the formats list back out', () {
+        writeVoiceConfig(
+          dir.path,
+          VoiceConfig(
+            providers: {
+              testProvider: ProviderConfig(
+                name: testProvider,
+                settings: {'base_url': testBaseUrl},
+                models: const ['m'],
+              ),
+            },
+            models: {
+              'm': const TtsModelProfile(
+                alias: 'm',
+                id: 'a/b',
+                formats: [TtsAudioFormat.wav, TtsAudioFormat.mp3],
+                provider: testProvider,
+              ),
+            },
+          ),
+        );
+        final json = jsonDecode(
+          File(at(kVoiceConfigModelsDir, 'm.json')).readAsStringSync(),
+        ) as Map<String, dynamic>;
+        expect(json['formats'], ['wav', 'mp3']);
+        // The retired single-value key must never be written back out, or the
+        // next load would go down the legacy path again.
+        expect(json.containsKey('format'), isFalse);
+        expect(json.containsKey('sample_rate'), isFalse);
+
+        final (cfg, warnings) = load();
+        expect(warnings, isEmpty);
+        expect(cfg.models['m']!.formats, const [
+          TtsAudioFormat.wav,
+          TtsAudioFormat.mp3,
+        ]);
+      });
     });
 
     group('speed capability', () {
@@ -192,7 +323,10 @@ void main() {
       test('rejects a non-string default_instruct', () {
         writeClaimingProvider(testProvider, models: ['m']);
         writeModel('m', '{"id":"x/y","default_instruct":42}');
-        expect(load().$2.first, contains('"default_instruct" must be a string'));
+        expect(
+          load().$2.first,
+          contains('"default_instruct" must be a string'),
+        );
       });
     });
 
@@ -468,53 +602,59 @@ void main() {
       expect(raw.containsKey('languages'), isFalse);
     });
 
-    test('voice design round-trips, and an ordinary model emits no instruct keys', () {
-      writeVoiceConfig(
-        dir.path,
-        VoiceConfig(
-          providers: {
-            testProvider: const ProviderConfig(
-              name: testProvider,
-              models: ['one', 'two'],
-            ),
-          },
-          models: {
-            'one': const TtsModelProfile(
-              alias: 'one',
-              id: 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
-              sendsInstructField: true,
-              defaultInstruct: 'A calm, low British male narrator.',
-              provider: testProvider,
-            ),
-            'two': const TtsModelProfile(
-              alias: 'two',
-              id: 'x/two',
-              provider: testProvider,
-            ),
-          },
-        ),
-      );
+    test(
+      'voice design round-trips, and an ordinary model emits no instruct keys',
+      () {
+        writeVoiceConfig(
+          dir.path,
+          VoiceConfig(
+            providers: {
+              testProvider: const ProviderConfig(
+                name: testProvider,
+                models: ['one', 'two'],
+              ),
+            },
+            models: {
+              'one': const TtsModelProfile(
+                alias: 'one',
+                id: 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+                sendsInstructField: true,
+                defaultInstruct: 'A calm, low British male narrator.',
+                provider: testProvider,
+              ),
+              'two': const TtsModelProfile(
+                alias: 'two',
+                id: 'x/two',
+                provider: testProvider,
+              ),
+            },
+          ),
+        );
 
-      final designed = jsonDecode(
-        File(at(kVoiceConfigModelsDir, 'one.json')).readAsStringSync(),
-      ) as Map<String, dynamic>;
-      expect(designed['sends_instruct'], isTrue);
-      expect(designed['default_instruct'], 'A calm, low British male narrator.');
+        final designed = jsonDecode(
+          File(at(kVoiceConfigModelsDir, 'one.json')).readAsStringSync(),
+        ) as Map<String, dynamic>;
+        expect(designed['sends_instruct'], isTrue);
+        expect(
+          designed['default_instruct'],
+          'A calm, low British male narrator.',
+        );
 
-      final plain = jsonDecode(
-        File(at(kVoiceConfigModelsDir, 'two.json')).readAsStringSync(),
-      ) as Map<String, dynamic>;
-      expect(plain.containsKey('sends_instruct'), isFalse);
-      expect(plain.containsKey('default_instruct'), isFalse);
+        final plain = jsonDecode(
+          File(at(kVoiceConfigModelsDir, 'two.json')).readAsStringSync(),
+        ) as Map<String, dynamic>;
+        expect(plain.containsKey('sends_instruct'), isFalse);
+        expect(plain.containsKey('default_instruct'), isFalse);
 
-      final (cfg, warnings) = loadVoiceConfig(dir.path);
-      expect(warnings, isEmpty);
-      expect(cfg.models['one']!.sendsInstructField, isTrue);
-      expect(
-        cfg.models['one']!.defaultInstruct,
-        'A calm, low British male narrator.',
-      );
-    });
+        final (cfg, warnings) = loadVoiceConfig(dir.path);
+        expect(warnings, isEmpty);
+        expect(cfg.models['one']!.sendsInstructField, isTrue);
+        expect(
+          cfg.models['one']!.defaultInstruct,
+          'A calm, low British male narrator.',
+        );
+      },
+    );
 
     test('round-trips the whole tree back into an equal config', () {
       final original = VoiceConfig(
@@ -613,13 +753,12 @@ void main() {
 
     /// The config root, where the downloaded starter files live.
     const base = '.';
+
     /// The overlay root, where everything the user authors lands.
     const overlay = kVoiceConfigOverlayDirName;
 
-    String modelJson(String id, {String? defaultVoice}) => jsonEncode({
-      'id': id,
-      'default_voice': ?defaultVoice,
-    });
+    String modelJson(String id, {String? defaultVoice}) =>
+        jsonEncode({'id': id, 'default_voice': ?defaultVoice});
 
     /// A base layer claiming [models] for [provider], plus a model file per
     /// alias of the form `<alias>-base`.
@@ -642,8 +781,7 @@ void main() {
         jsonEncode({
           'models': models,
           'settings': jsonDecode(
-            settingsByProvider[provider] ??
-                '{"base_url":"$testBaseUrl"}',
+            settingsByProvider[provider] ?? '{"base_url":"$testBaseUrl"}',
           ),
         }),
       );
@@ -675,17 +813,14 @@ void main() {
       expect(cfg.models['one']!.id, 'one-overlay');
     });
 
-    test(
-      'an overlay model the base provider still claims needs no overlay '
-      'registry',
-      () {
-        writeBase();
-        // The user only ever authored a model file, nothing else.
-        writeModel(overlay, 'one', modelJson('one-overlay'));
-        final (cfg, _) = load();
-        expect(cfg.models['one']!.id, 'one-overlay');
-      },
-    );
+    test('an overlay model the base provider still claims needs no overlay '
+        'registry', () {
+      writeBase();
+      // The user only ever authored a model file, nothing else.
+      writeModel(overlay, 'one', modelJson('one-overlay'));
+      final (cfg, _) = load();
+      expect(cfg.models['one']!.id, 'one-overlay');
+    });
 
     test('an overlay model only loads once some provider claims it', () {
       writeBase();
@@ -708,7 +843,11 @@ void main() {
         }),
       );
       writeModel(overlay, 'two', modelJson('two-overlay'));
-      writeOverlayRegistry(jsonEncode({'providers': ['alpha']}));
+      writeOverlayRegistry(
+        jsonEncode({
+          'providers': ['alpha'],
+        }),
+      );
 
       final (cfg, _) = load();
       expect(cfg.models['two']!.id, 'two-overlay');
@@ -791,7 +930,11 @@ void main() {
       );
       // Re-listing a provider the baseline already serves is what the README
       // tells a user to do, so it has to be the way to promote one.
-      writeOverlayRegistry(jsonEncode({'providers': [testProvider]}));
+      writeOverlayRegistry(
+        jsonEncode({
+          'providers': [testProvider],
+        }),
+      );
 
       final (cfg, warnings) = load();
       expect(warnings, isEmpty);
@@ -837,7 +980,11 @@ void main() {
 
     test('an overlay provider registers ahead of the downloaded ones', () {
       writeBase(provider: 'beta', providerOrder: const ['beta']);
-      writeRegistry(jsonEncode({'providers': ['beta']}));
+      writeRegistry(
+        jsonEncode({
+          'providers': ['beta'],
+        }),
+      );
       writeProvider(
         overlay,
         'alpha',
@@ -847,7 +994,11 @@ void main() {
         }),
       );
       writeModel(overlay, 'two', modelJson('two-overlay'));
-      writeOverlayRegistry(jsonEncode({'providers': ['alpha']}));
+      writeOverlayRegistry(
+        jsonEncode({
+          'providers': ['alpha'],
+        }),
+      );
 
       final (cfg, warnings) = load();
       expect(warnings, isEmpty);
@@ -902,10 +1053,7 @@ void main() {
       final (_, warnings) = load();
       // The overlay file wins, so the base file's absence of the same key is
       // not reported a second time.
-      expect(
-        warnings.where((w) => w.startsWith('Overlay: ')),
-        hasLength(1),
-      );
+      expect(warnings.where((w) => w.startsWith('Overlay: ')), hasLength(1));
       expect(warnings, hasLength(1));
     });
 
@@ -974,10 +1122,7 @@ void main() {
 
       final (cfg, warnings) = load();
       expect(cfg.models['one']!.id, 'one-base');
-      expect(
-        warnings.where((w) => w.startsWith('Overlay: ')),
-        hasLength(1),
-      );
+      expect(warnings.where((w) => w.startsWith('Overlay: ')), hasLength(1));
     });
 
     test('a model no layer resolves is warned once, not once per layer', () {

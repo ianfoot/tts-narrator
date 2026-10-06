@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 
 import '../config/provider_settings.dart';
 import 'abort.dart';
@@ -9,7 +8,6 @@ import 'concat.dart';
 import 'config.dart';
 import 'prompt.dart';
 import 'speech_client.dart';
-import 'wav.dart';
 
 /// Max characters per narration segment. Scenes (blank-line-separated
 /// paragraphs) are kept whole; only a scene longer than this cap is split at
@@ -220,8 +218,7 @@ Future<void> narrate(
   final stem = inputStem(config.inputPath);
   final dir = outputDirPath(config);
   final outDir = Directory(dir)..createSync(recursive: true);
-  final extension = config.profile.format == 'mp3' ? 'mp3' : 'wav';
-  final rate = config.profile.sampleRate;
+  final extension = config.outputFormat.extension;
   final records = <Map<String, Object?>>[];
 
   final existing = config.resume
@@ -255,7 +252,7 @@ Future<void> narrate(
         '$dir${Platform.pathSeparator}${prior['wav']}',
         resumed: true,
       );
-      _writeManifest(outDir, config, records, paragraphs.length, count, rate);
+      _writeManifest(outDir, config, records, paragraphs.length, count);
       continue;
     }
 
@@ -263,7 +260,7 @@ Future<void> narrate(
     final audio = await client(
       model: config.profile.id,
       voice: config.profile.sendsVoiceField ? config.voice : null,
-      responseFormat: config.profile.format,
+      responseFormat: config.outputFormat,
       settings: config.providerSettings,
       apiKey: config.apiKey,
       input: input,
@@ -278,31 +275,22 @@ Future<void> narrate(
       abort: abort,
     );
 
-    if (config.profile.format == 'pcm') {
-      final bytes = BytesBuilder(copy: false);
-      bytes.add(audio.bytes);
-      writeWav(path: audioFile, bytes: bytes, sampleRate: rate ?? 24000);
-    } else {
-      File(audioFile).writeAsBytesSync(audio.bytes, flush: true);
-    }
+    // Every format the app supports arrives as a finished container, so the bytes
+    // go to disk exactly as the provider sent them.
+    File(audioFile).writeAsBytesSync(audio.bytes, flush: true);
 
-    final fingerprint = fingerprintOf(audio.bytes);
-    final duration = (rate != null && config.profile.format == 'pcm')
-        ? audio.bytes.length / (rate * 2)
-        : null;
     records.add({
       'index': index,
       'wav': '$baseName.$extension',
       'bytes': audio.bytes.length,
-      'duration_seconds': duration,
-      'fingerprint': fingerprint,
+      'fingerprint': fingerprintOf(audio.bytes),
       'excerpt': paragraph.length > 120
           ? '${paragraph.substring(0, 120)}…'
           : paragraph,
       'prompt': input,
     });
     onSegmentComplete?.call(i, audioFile);
-    _writeManifest(outDir, config, records, paragraphs.length, count, rate);
+    _writeManifest(outDir, config, records, paragraphs.length, count);
   }
 
   // Every successful run leaves a single combined track next to the segments
@@ -317,8 +305,7 @@ Future<void> narrate(
     concatSegments(
       segmentPaths,
       outputPath: '${outDir.path}${Platform.pathSeparator}$combinedFile',
-      format: config.profile.format,
-      sampleRate: rate ?? 24000,
+      format: config.outputFormat,
     ),
   ).lengthSync();
 
@@ -328,7 +315,6 @@ Future<void> narrate(
     records,
     paragraphs.length,
     count,
-    rate,
     combinedFile: combinedFile,
     combinedBytes: combinedBytes,
   );
@@ -380,8 +366,7 @@ void _writeManifest(
   NarrationConfig config,
   List<Map<String, Object?>> records,
   int paragraphsTotal,
-  int count,
-  int? rate, {
+  int count, {
   String? combinedFile,
   int? combinedBytes,
 }) {
@@ -394,8 +379,7 @@ void _writeManifest(
     // language to record, and an omitted field is what the manifest should say.
     if (config.profile.sendsLanguageField && config.language != null)
       'language': config.language,
-    'format': config.profile.format,
-    'sample_rate': ?rate,
+    'format': config.outputFormat.wireValue,
     'max_segment_length': config.sendWholeFile
         ? maxWholeFileLength
         : _maxSegmentLength,

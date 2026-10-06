@@ -5,6 +5,7 @@ import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/config/voice_config.dart';
 import 'package:tts_narrator_core/src/config/voice_config_io.dart';
 import 'package:tts_narrator_core/src/config/voice_config_queries.dart';
+import 'package:tts_narrator_core/src/narration/audio_format.dart';
 
 void main() {
   group('loadVoiceConfig', () {
@@ -74,20 +75,27 @@ void main() {
     test('parses per-model files into request profiles', () {
       writeModel('gemini', '''{
   "id": "google/gemini-3.1-flash-tts-preview",
-  "format": "pcm",
-  "sample_rate": 24000,
+  "formats": ["mp3"],
   "prompt_style": true
 }''');
-      writeModel('kokoro', '{"id": "hexgrad/kokoro-82m", "format": "mp3"}');
-      writeModel('fish', '{"id": "fish-audio/s2.1-pro-free", "format": "mp3"}');
+      writeModel(
+        'kokoro',
+        '{"id": "hexgrad/kokoro-82m", "formats": ["wav", "mp3"]}',
+      );
+      writeModel(
+        'fish',
+        '{"id": "fish-audio/s2.1-pro-free", "formats": ["mp3"]}',
+      );
       final (cfg, _) = load();
       expect(cfg.models, hasLength(3));
       expect(cfg.models['gemini']?.id, 'google/gemini-3.1-flash-tts-preview');
-      expect(cfg.models['gemini']?.format, 'pcm');
-      expect(cfg.models['gemini']?.sampleRate, 24000);
+      expect(cfg.models['gemini']?.formats, const [TtsAudioFormat.mp3]);
       expect(cfg.models['gemini']?.promptStyle, isTrue);
       expect(cfg.models['gemini']?.sendsVoiceField, isTrue);
-      expect(cfg.models['kokoro']?.format, 'mp3');
+      expect(cfg.models['kokoro']?.formats, const [
+        TtsAudioFormat.wav,
+        TtsAudioFormat.mp3,
+      ]);
       expect(cfg.models['fish']?.id, 'fish-audio/s2.1-pro-free');
     });
 
@@ -95,10 +103,9 @@ void main() {
       writeModel('x', '{"id": "a/b"}');
       final (cfg, _) = load();
       final m = cfg.models['x']!;
-      expect(m.format, 'mp3');
+      expect(m.formats, const [TtsAudioFormat.mp3]);
       expect(m.promptStyle, isFalse);
       expect(m.sendsVoiceField, isTrue);
-      expect(m.sampleRate, isNull);
     });
 
     test('parses an optional display_name into the profile', () {
@@ -336,10 +343,24 @@ void main() {
     });
 
     test('a wrong-typed model field is skipped with a warning', () {
-      writeModel('x', '{"id": "a/b", "sample_rate": "lots"}');
+      writeModel('x', '{"id": "a/b", "formats": "mp3"}');
       final (cfg, warnings) = load();
       expect(cfg.models, isEmpty);
       expect(warnings.first, contains('Skipped model "x"'));
+      expect(warnings.first, contains('"formats"'));
+    });
+
+    test('an unmodelled key such as a stale sample_rate is ignored', () {
+      // Older configs pinned a PCM sample rate. Nothing reads it any more --
+      // the WAV header is carried through from the provider -- so a config
+      // still carrying it must load rather than fail.
+      writeModel(
+        'x',
+        '{"id": "a/b", "formats": ["wav"], "sample_rate": 24000}',
+      );
+      final (cfg, warnings) = load();
+      expect(cfg.models['x']?.formats, const [TtsAudioFormat.wav]);
+      expect(warnings, isEmpty);
     });
 
     test('model files are read in sorted filename order', () {

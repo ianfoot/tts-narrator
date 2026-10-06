@@ -158,8 +158,9 @@ class ProviderConfig {
 ///   config.json                ordered provider registry — `providers`
 ///   providers/`name`.json      per-provider — `models` (aliases, in order) +
 ///                              `settings` (opaque string map)
-///   models/`alias`.json        per-model — id, format, sample_rate,
-///                              prompt_style, sends_voice, sends_language,
+///   models/`alias`.json        per-model — id, formats (mp3 and/or wav, first
+///                              is the default), prompt_style, sends_voice,
+///                              sends_language,
 ///                              default_voice, default_language, languages,
 ///                              pricing, voices (each keyed by its id, with an
 ///                              optional name and gender tag)
@@ -285,11 +286,10 @@ class VoiceConfig {
   /// [voiceLabel] may be a configured name or a raw id; a value with no config
   /// entry is read as a bare id. Prefer [genderOfVoice] when the caller already
   /// holds the voice — see its note on duplicate names.
-  VoiceGender? genderFor(String modelAlias, String voiceLabel) =>
-      genderOfVoice(
-        modelAlias,
-        voiceFor(modelAlias, voiceLabel) ?? Voice(id: voiceLabel),
-      );
+  VoiceGender? genderFor(String modelAlias, String voiceLabel) => genderOfVoice(
+    modelAlias,
+    voiceFor(modelAlias, voiceLabel) ?? Voice(id: voiceLabel),
+  );
 
   bool get isEmpty =>
       providers.isEmpty &&

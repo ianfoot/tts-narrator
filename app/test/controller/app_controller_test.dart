@@ -364,7 +364,10 @@ void main() {
       final cfg = c.buildConfig();
       expect(cfg.voice, isEmpty);
       // The prose the model file defaults to reaches the request instead.
-      expect(cfg.instruct, 'An older male narrator with a resonant, warm tone.');
+      expect(
+        cfg.instruct,
+        'An older male narrator with a resonant, warm tone.',
+      );
     });
 
     test('instruct is the user edit, and a model switch drops a stale one', () {
@@ -389,7 +392,10 @@ void main() {
       expect(c.instruct, 'The shipped default.');
 
       c.instruct = 'A young, bright and energetic presenter.';
-      expect(c.buildConfig().instruct, 'A young, bright and energetic presenter.');
+      expect(
+        c.buildConfig().instruct,
+        'A young, bright and energetic presenter.',
+      );
 
       // Prose written for one model says nothing about the next, so switching
       // goes back to the newly selected model's own default rather than
@@ -429,7 +435,9 @@ void main() {
       // The guard is the capability, not the emptiness: a plain model with no
       // voice design box has nothing to fill in, so it must still run.
       writeConfig({
-        'models': {'gemini': {'id': 'google/gemini-3.1-flash-tts-preview'}},
+        'models': {
+          'gemini': {'id': 'google/gemini-3.1-flash-tts-preview'},
+        },
         'defaults': {'gemini': 'Charon'},
         'voices': {
           'gemini': {'Charon': 'Charon'},
@@ -981,9 +989,7 @@ void main() {
         'id': 'fish-audio/s2.1-pro-free:free',
         'voices_editable': true,
         'default_voice': 'Renamed Narrator',
-        'voices': {
-          'Renamed Narrator': '89f41ea230034706881f85a8227d6ab9',
-        },
+        'voices': {'Renamed Narrator': '89f41ea230034706881f85a8227d6ab9'},
       });
       c.reloadConfig();
 
@@ -1021,12 +1027,11 @@ void main() {
             'sample_rate': 24000,
           },
         },
-        'defaults': {
-          'fish': 'British Female Narrator',
-          'gemini': 'Charon',
-        },
+        'defaults': {'fish': 'British Female Narrator', 'gemini': 'Charon'},
         'voices': {
-          'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+          'fish': {
+            'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          },
           'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
         },
       });
@@ -1042,7 +1047,9 @@ void main() {
         },
         'defaults': {'fish': 'British Female Narrator'},
         'voices': {
-          'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+          'fish': {
+            'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          },
         },
       });
       c.reloadConfig();
@@ -1567,7 +1574,9 @@ void main() {
         },
         'defaults': {'kokoro': 'bf_emma'},
         'voices': {
-          'kokoro': {'Emma': {'id': 'bf_emma'}},
+          'kokoro': {
+            'Emma': {'id': 'bf_emma'},
+          },
         },
       });
       final c = makeController()..changeModel('kokoro');

@@ -309,6 +309,24 @@ abstract class AppLocalizations {
   /// **'Model'**
   String get gui_run_setup_modelLabel;
 
+  /// No description provided for @gui_run_setup_outputFormatLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Output format'**
+  String get gui_run_setup_outputFormatLabel;
+
+  /// No description provided for @gui_format_mp3.
+  ///
+  /// In en, this message translates to:
+  /// **'MP3'**
+  String get gui_format_mp3;
+
+  /// No description provided for @gui_format_wav.
+  ///
+  /// In en, this message translates to:
+  /// **'WAV'**
+  String get gui_format_wav;
+
   /// No description provided for @gui_run_setup_voiceAliasLabel.
   ///
   /// In en, this message translates to:

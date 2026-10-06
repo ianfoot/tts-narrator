@@ -6,6 +6,7 @@ import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_dropdown.dart';
 import '../widgets/app_section.dart';
+import '../widgets/segmented_control.dart';
 import 'advanced_voice_widget.dart';
 import 'run_setup_labels.dart';
 import 'voice_picker_widget.dart';
@@ -67,6 +68,24 @@ class _ModelVoiceSectionState extends State<ModelVoiceSection> {
             items: _modelItems(l10n),
             onChanged: (alias) => _controller.changeModel(alias),
           ),
+          // Only for a model that declares more than one format: a single option
+          // is not a choice, and the format is then part of the model's identity
+          // rather than a run setting.
+          if (_controller.outputFormatChoiceAvailable) ...[
+            const SizedBox(height: 12),
+            runSetupFieldLabel(tokens, l10n.gui_run_setup_outputFormatLabel),
+            const SizedBox(height: 6),
+            SegmentedControl<TtsAudioFormat>(
+              key: const Key('formatControl'),
+              tooltip: l10n.gui_run_setup_outputFormatLabel,
+              value: _controller.outputFormat,
+              items: [
+                for (final format in _controller.outputFormats)
+                  (format, _formatLabel(format, l10n)),
+              ],
+              onChanged: (format) => _controller.outputFormat = format,
+            ),
+          ],
           VoicePickerWidget(controller: _controller),
           // The raw-voice override is a sibling of the picker rather than part
           // of it, so it needs the same gate: a model that sends no voice id has
@@ -77,6 +96,17 @@ class _ModelVoiceSectionState extends State<ModelVoiceSection> {
       ),
     );
   }
+
+  /// The label for a format button.
+  ///
+  /// Switched on the enum rather than derived from [TtsAudioFormat.wireValue] so
+  /// a copy change ("MP3" vs "mp3") is a translation decision, not a consequence
+  /// of the config schema.
+  String _formatLabel(TtsAudioFormat format, AppLocalizations l10n) =>
+      switch (format) {
+        TtsAudioFormat.mp3 => l10n.gui_format_mp3,
+        TtsAudioFormat.wav => l10n.gui_format_wav,
+      };
 
   /// Human-readable model display names, taken from the model's config file
   /// (`display_name`). Unknown/custom aliases without one fall back to the

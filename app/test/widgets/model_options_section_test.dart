@@ -164,9 +164,7 @@ void main() {
   });
 
   group('voice design', () {
-    testWidgets('renders the prose the model file defaults to', (
-      tester,
-    ) async {
+    testWidgets('renders the prose the model file defaults to', (tester) async {
       writeVoiceDesignConfig(configDir);
       final c = makeController(configDir);
       await pumpSection(tester, c);

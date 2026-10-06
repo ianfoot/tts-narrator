@@ -1,4 +1,5 @@
 import 'abort.dart';
+import 'audio_format.dart';
 
 /// Audio bytes returned by a [SpeechClient].
 class GeneratedAudio {
@@ -46,11 +47,16 @@ class GeneratedAudio {
 /// [apiKey] is null when no key is configured; the request then carries no
 /// `Authorization` header. Whether one was *needed* is the server's judgement,
 /// not the client's, so a null key is not an error here.
+///
+/// [responseFormat] is a [TtsAudioFormat] rather than a string so an
+/// unsupported value cannot reach the wire: providers disagree about which
+/// formats they speak, and that disagreement is resolved once when the model
+/// file is parsed instead of at request time.
 typedef SpeechClient = Future<GeneratedAudio> Function({
   required String model,
   required String? voice,
   required String input,
-  required String responseFormat,
+  required TtsAudioFormat responseFormat,
   required Map<String, String> settings,
   required double? speed,
   String? language,

@@ -7,11 +7,9 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 /// the default voice, pricing, and the provider settings block with `${ENV}`
 /// references expanded from the runtime environment.
 class UserVoiceConfigLoader {
-  UserVoiceConfigLoader({
-    String? configDir,
-    Map<String, String>? environment,
-  }) : configDir = configDir ?? defaultConfigDir(),
-       environment = environment ?? Platform.environment;
+  UserVoiceConfigLoader({String? configDir, Map<String, String>? environment})
+    : configDir = configDir ?? defaultConfigDir(),
+      environment = environment ?? Platform.environment;
 
   /// Absolute path of the config directory (defaults to the platform path).
   final String configDir;

@@ -11,6 +11,7 @@ export 'src/config/voice_config_io.dart';
 export 'src/config/voice_config_queries.dart';
 export 'src/config/voice_config_store.dart';
 export 'src/narration/abort.dart';
+export 'src/narration/audio_format.dart';
 export 'src/narration/config.dart';
 export 'src/narration/concat.dart';
 export 'src/narration/cost.dart';

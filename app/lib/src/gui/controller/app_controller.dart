@@ -386,6 +386,20 @@ class AppController extends ChangeNotifier {
     _settings.resume = value;
   }
 
+  /// The output formats the active model declares, in its own order.
+  List<TtsAudioFormat> get outputFormats => _settings.outputFormats;
+
+  /// Whether the active model offers more than one output format, i.e. whether
+  /// the run-setup panel shows the format choice at all.
+  bool get outputFormatChoiceAvailable => _settings.outputFormatChoiceAvailable;
+
+  /// The format the next run writes, for the active model.
+  TtsAudioFormat get outputFormat => _settings.outputFormat;
+
+  set outputFormat(TtsAudioFormat value) {
+    _settings.outputFormat = value;
+  }
+
   /// Cost data for the active model (free until the config sets pricing).
   AudioPricing get pricing => _model.pricing;
 
