@@ -177,6 +177,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_run_setup_modelLabel => 'Model';
 
   @override
+  String get gui_run_setup_outputFormatLabel => 'Output format';
+
+  @override
+  String get gui_format_mp3 => 'MP3';
+
+  @override
+  String get gui_format_wav => 'WAV';
+
+  @override
   String get gui_run_setup_voiceAliasLabel => 'Voice alias';
 
   @override

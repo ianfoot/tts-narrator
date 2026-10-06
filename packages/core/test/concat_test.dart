@@ -3,7 +3,11 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:tts_narrator_core/src/narration/audio_format.dart';
 import 'package:tts_narrator_core/src/narration/concat.dart';
+import 'package:tts_narrator_core/src/narration/wav.dart';
+
+import 'support/wav_bytes.dart';
 
 void main() {
   late Directory dir;
@@ -24,8 +28,8 @@ void main() {
   }
 
   /// Minimal WAV: RIFF header wrapper around a raw PCM payload.
-  String writeWavBytes(String name, List<int> pcm) =>
-      write(name, wavFileBytes(pcm, sampleRate: 24000));
+  String writeWavBytes(String name, List<int> pcm, {int sampleRate = 24000}) =>
+      write(name, wavFileBytes(pcm, sampleRate: sampleRate));
 
   group('concatSegments', () {
     test('joins mp3 files byte-for-byte in order', () {
@@ -33,22 +37,56 @@ void main() {
       final b = write('b.mp3', [4, 5, 6, 7]);
       final out = '${dir.path}/joined.mp3';
 
-      final result = concatSegments([a, b], outputPath: out, format: 'mp3');
+      final result = concatSegments(
+        [a, b],
+        outputPath: out,
+        format: TtsAudioFormat.mp3,
+      );
 
       expect(result, out);
       expect(File(out).readAsBytesSync(), [1, 2, 3, 4, 5, 6, 7]);
     });
 
-    test('pcm strips each RIFF header and writes one WAV', () {
+    test('wav strips each RIFF header and writes one WAV', () {
       final a = writeWavBytes('a.wav', [1, 2, 3]);
       final b = writeWavBytes('b.wav', [4, 5]);
       final out = '${dir.path}/joined.wav';
 
-      concatSegments([a, b], outputPath: out, format: 'pcm');
+      concatSegments([a, b], outputPath: out, format: TtsAudioFormat.wav);
 
       final joined = File(out).readAsBytesSync();
-      final pcm = pcmPayload(joined);
-      expect(pcm, [1, 2, 3, 4, 5]);
+      expect(wavDataPayload(joined), [1, 2, 3, 4, 5]);
+    });
+
+    test('wav reuses the first segment header, rate included', () {
+      // The pooled track has a different length than any single segment, so a
+      // stale header would misreport its duration. Copying the `fmt ` chunk is
+      // what keeps the sample rate correct without core knowing the rate.
+      final a = writeWavBytes('a.wav', [1, 2, 3], sampleRate: 44100);
+      final b = writeWavBytes('b.wav', [4, 5], sampleRate: 44100);
+      final out = '${dir.path}/joined.wav';
+
+      concatSegments([a, b], outputPath: out, format: TtsAudioFormat.wav);
+
+      final joined = File(out).readAsBytesSync();
+      expect(wavDataPayload(joined), [1, 2, 3, 4, 5]);
+      expect(
+        readWav(joined).formatChunk,
+        readWav(File(a).readAsBytesSync()).formatChunk,
+      );
+    });
+
+    test('wav rejects a segment whose audio layout differs', () {
+      final a = writeWavBytes('a.wav', [1, 2, 3], sampleRate: 44100);
+      final b = writeWavBytes('b.wav', [4, 5], sampleRate: 16000);
+      expect(
+        () => concatSegments(
+          [a, b],
+          outputPath: '${dir.path}/joined.wav',
+          format: TtsAudioFormat.wav,
+        ),
+        throwsA(isA<FileSystemException>()),
+      );
     });
 
     test('throws when a segment file is missing', () {
@@ -56,7 +94,7 @@ void main() {
         () => concatSegments(
           ['${dir.path}/nope.mp3'],
           outputPath: '${dir.path}/out.mp3',
-          format: 'mp3',
+          format: TtsAudioFormat.mp3,
         ),
         throwsA(isA<FileSystemException>()),
       );
@@ -67,19 +105,19 @@ void main() {
         () => concatSegments(
           const [],
           outputPath: '${dir.path}/out.mp3',
-          format: 'mp3',
+          format: TtsAudioFormat.mp3,
         ),
         throwsA(isA<FileSystemException>()),
       );
     });
 
-    test('throws when a pcm segment is not a WAV container', () {
+    test('throws when a wav segment is not a WAV container', () {
       final notWav = write('bad.bin', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
       expect(
         () => concatSegments(
           [notWav],
           outputPath: '${dir.path}/out.wav',
-          format: 'pcm',
+          format: TtsAudioFormat.wav,
         ),
         throwsA(isA<FileSystemException>()),
       );
@@ -226,46 +264,6 @@ void main() {
   });
 }
 
-/// Builds a full WAV file's bytes for [pcm] at [sampleRate] — a RIFF header
-/// wrapping the raw PCM payload, mirroring wav.dart's layout.
-Uint8List wavFileBytes(List<int> pcm, {int sampleRate = 24000}) {
-  final bytes = BytesBuilder(copy: false);
-  void ascii(String s) => bytes.add(s.codeUnits);
-  void u32(int v) => bytes.add(
-    (ByteData(4)..setUint32(0, v, Endian.little)).buffer.asUint8List(),
-  );
-  void u16(int v) => bytes.add(
-    (ByteData(2)..setUint16(0, v, Endian.little)).buffer.asUint8List(),
-  );
-
-  final byteRate = sampleRate * 2;
-  ascii('RIFF');
-  u32(36 + pcm.length);
-  ascii('WAVE');
-  ascii('fmt ');
-  u32(16);
-  u16(1);
-  u16(1);
-  u32(sampleRate);
-  u32(byteRate);
-  u16(2);
-  u16(16);
-  ascii('data');
-  u32(pcm.length);
-  bytes.add(pcm);
-  return bytes.takeBytes();
-}
-
-/// Extracts the `data` payload from a WAV file's bytes (concat helper).
-List<int> pcmPayload(Uint8List wav) {
-  var offset = 12;
-  while (offset + 8 <= wav.length) {
-    final id = String.fromCharCodes(wav.sublist(offset, offset + 4));
-    final size = ByteData.sublistView(wav).getUint32(offset + 4, Endian.little);
-    if (id == 'data') {
-      return wav.sublist(offset + 8, offset + 8 + size);
-    }
-    offset += 8 + size;
-  }
-  throw StateError('no data chunk');
-}
+/// Extracts the `data` payload from a WAV file's bytes.
+Uint8List wavDataPayload(List<int> wav) =>
+    readWav(Uint8List.fromList(wav)).data;

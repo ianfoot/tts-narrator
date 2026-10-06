@@ -1,5 +1,5 @@
-import 'package:tts_narrator_core/tts_narrator_core.dart' show TtsModelProfile,
-    VoiceGender;
+import 'package:tts_narrator_core/tts_narrator_core.dart'
+    show TtsModelProfile, VoiceGender;
 
 import '../../../l10n/app_localizations.dart';
 
@@ -37,8 +37,5 @@ extension SettingsVoiceGenderX on VoiceGender? {
 /// one click rather than a scroll away.
 List<(VoiceGender?, String)> settingsGenderItems(AppLocalizations l10n) => [
   (null, l10n.gui_settings_genderAny),
-  for (final gender in VoiceGender.values) (
-    gender,
-    gender.settingsLabel(l10n),
-  ),
+  for (final gender in VoiceGender.values) (gender, gender.settingsLabel(l10n)),
 ];

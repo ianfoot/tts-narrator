@@ -81,7 +81,10 @@ void main() {
         },
       },
       'models': {
-        'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+        'fish': {
+          'id': 'fish-audio/s2.1-pro-free:free',
+          'formats': ['mp3'],
+        },
       },
       'defaults': {'fish': 'British Female Narrator'},
       'voices': {
@@ -103,7 +106,7 @@ void main() {
       'models': {
         'fish': {
           'id': 'fish-audio/s2.1-pro-free:free',
-          'format': 'mp3',
+          'formats': ['mp3'],
           'prompt_style': true,
         },
       },
@@ -327,7 +330,7 @@ void main() {
         'models': {
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
             'sample_rate': 24000,
             'prompt_style': true,
           },
@@ -348,7 +351,7 @@ void main() {
         'models': {
           'qwen': {
             'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
-            'format': 'wav',
+            'formats': ['wav'],
             'sample_rate': 24000,
             'sends_voice': false,
             'sends_instruct': true,
@@ -364,7 +367,10 @@ void main() {
       final cfg = c.buildConfig();
       expect(cfg.voice, isEmpty);
       // The prose the model file defaults to reaches the request instead.
-      expect(cfg.instruct, 'An older male narrator with a resonant, warm tone.');
+      expect(
+        cfg.instruct,
+        'An older male narrator with a resonant, warm tone.',
+      );
     });
 
     test('instruct is the user edit, and a model switch drops a stale one', () {
@@ -372,12 +378,15 @@ void main() {
         'models': {
           'qwen': {
             'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
-            'format': 'wav',
+            'formats': ['wav'],
             'sends_voice': false,
             'sends_instruct': true,
             'default_instruct': 'The shipped default.',
           },
-          'gemini': {'id': 'google/gemini-3.1-flash-tts-preview'},
+          'gemini': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'formats': ['wav'],
+          },
         },
         'defaults': {'gemini': 'Charon'},
         'voices': {
@@ -389,7 +398,10 @@ void main() {
       expect(c.instruct, 'The shipped default.');
 
       c.instruct = 'A young, bright and energetic presenter.';
-      expect(c.buildConfig().instruct, 'A young, bright and energetic presenter.');
+      expect(
+        c.buildConfig().instruct,
+        'A young, bright and energetic presenter.',
+      );
 
       // Prose written for one model says nothing about the next, so switching
       // goes back to the newly selected model's own default rather than
@@ -409,7 +421,7 @@ void main() {
         'models': {
           'qwen': {
             'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
-            'format': 'wav',
+            'formats': ['wav'],
             'sends_voice': false,
             'sends_instruct': true,
           },
@@ -429,7 +441,12 @@ void main() {
       // The guard is the capability, not the emptiness: a plain model with no
       // voice design box has nothing to fill in, so it must still run.
       writeConfig({
-        'models': {'gemini': {'id': 'google/gemini-3.1-flash-tts-preview'}},
+        'models': {
+          'gemini': {
+            'id': 'google/gemini-3.1-flash-tts-preview',
+            'formats': ['wav'],
+          },
+        },
         'defaults': {'gemini': 'Charon'},
         'voices': {
           'gemini': {'Charon': 'Charon'},
@@ -461,7 +478,10 @@ void main() {
           'alpha': {'api_key': ref},
         },
         'models': {
-          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'fish': {
+            'id': 'fish-audio/s2.1-pro-free:free',
+            'formats': ['mp3'],
+          },
         },
         'defaults': {'fish': 'British Female Narrator'},
         'voices': {
@@ -631,10 +651,13 @@ void main() {
           },
         },
         'models': {
-          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'fish': {
+            'id': 'fish-audio/s2.1-pro-free:free',
+            'formats': ['mp3'],
+          },
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
             'sample_rate': 24000,
           },
         },
@@ -736,7 +759,10 @@ void main() {
           providerName: {...settings},
         },
         'models': {
-          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'fish': {
+            'id': 'fish-audio/s2.1-pro-free:free',
+            'formats': ['mp3'],
+          },
         },
         'defaults': {'fish': 'British Female Narrator'},
         'voices': {
@@ -859,7 +885,7 @@ void main() {
         'models': {
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
             'sample_rate': 24000,
             'prompt_style': true,
           },
@@ -881,7 +907,7 @@ void main() {
         'models': {
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
             'sample_rate': 24000,
             'prompt_style': true,
           },
@@ -900,10 +926,13 @@ void main() {
     test('a preserved raw voice drops the previous model label on switch', () {
       writeConfig({
         'models': {
-          'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
+          'fish': {
+            'id': 'fish-audio/s2.1-pro-free',
+            'formats': ['mp3'],
+          },
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
             'sample_rate': 24000,
             'prompt_style': true,
           },
@@ -929,7 +958,10 @@ void main() {
     test('applyVoiceId wires a picked voice to its raw id and label', () {
       writeConfig({
         'models': {
-          'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
+          'fish': {
+            'id': 'fish-audio/s2.1-pro-free',
+            'formats': ['mp3'],
+          },
         },
         'voices': {
           'fish': {'Narrator': 'hex123'},
@@ -946,10 +978,18 @@ void main() {
     // The settings screen writes to the `user/` overlay and then calls
     // reloadConfig(); these cases cover what the reader keeps across that
     // re-read, since a save must not silently move them off their voice.
+    // `formats` is required by the schema, but these cases are about voices
+    // surviving a re-read rather than about formats, so the declaration is
+    // merged in here instead of being restated by every caller.
     void writeOverlayModel(String alias, Map<String, Object?> body) {
       File('$configDir/user/models/$alias.json')
         ..parent.createSync(recursive: true)
-        ..writeAsStringSync(jsonEncode(body));
+        ..writeAsStringSync(
+          jsonEncode({
+            'formats': ['mp3'],
+            ...body,
+          }),
+        );
     }
 
     test('a voice added in the overlay shows up without a restart', () {
@@ -981,9 +1021,7 @@ void main() {
         'id': 'fish-audio/s2.1-pro-free:free',
         'voices_editable': true,
         'default_voice': 'Renamed Narrator',
-        'voices': {
-          'Renamed Narrator': '89f41ea230034706881f85a8227d6ab9',
-        },
+        'voices': {'Renamed Narrator': '89f41ea230034706881f85a8227d6ab9'},
       });
       c.reloadConfig();
 
@@ -1014,19 +1052,21 @@ void main() {
     test('a model that disappears falls back to the default model', () {
       writeConfig({
         'models': {
-          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'fish': {
+            'id': 'fish-audio/s2.1-pro-free:free',
+            'formats': ['mp3'],
+          },
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
             'sample_rate': 24000,
           },
         },
-        'defaults': {
-          'fish': 'British Female Narrator',
-          'gemini': 'Charon',
-        },
+        'defaults': {'fish': 'British Female Narrator', 'gemini': 'Charon'},
         'voices': {
-          'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+          'fish': {
+            'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          },
           'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
         },
       });
@@ -1038,11 +1078,16 @@ void main() {
       // config would.
       fixtures.writeConfig(configDir, {
         'models': {
-          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'fish': {
+            'id': 'fish-audio/s2.1-pro-free:free',
+            'formats': ['mp3'],
+          },
         },
         'defaults': {'fish': 'British Female Narrator'},
         'voices': {
-          'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+          'fish': {
+            'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          },
         },
       });
       c.reloadConfig();
@@ -1087,7 +1132,7 @@ void main() {
         'models': {
           'teller': {
             'id': 'vendor/teller',
-            'format': 'mp3',
+            'formats': ['mp3'],
             'sends_language': true,
             'default_language': 'en',
             'languages': {'en': 'English', 'fr': 'French'},
@@ -1108,7 +1153,7 @@ void main() {
 
       writeOverlayModel('teller', {
         'id': 'vendor/teller',
-        'format': 'mp3',
+        'formats': ['mp3'],
         'voices_editable': true,
         'sends_language': true,
         'default_language': 'en',
@@ -1134,7 +1179,10 @@ void main() {
           },
         },
         'models': {
-          'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'formats': ['mp3'],
+          },
         },
         'defaults': {'kokoro': 'Emma'},
         'voices': {
@@ -1152,7 +1200,7 @@ void main() {
       // Delete the last male voice in settings.
       writeOverlayModel('kokoro', {
         'id': 'hexgrad/kokoro-82m',
-        'format': 'mp3',
+        'formats': ['mp3'],
         'voices_editable': true,
         'voices': {
           'Emma': {'id': 'bf_emma', 'gender': 'female'},
@@ -1174,7 +1222,10 @@ void main() {
     // The combined writer is how a test that needs both declares them.
     final kokoroBody = <String, Object?>{
       'models': {
-        'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+        'kokoro': {
+          'id': 'hexgrad/kokoro-82m',
+          'formats': ['mp3'],
+        },
       },
       'defaults': {'kokoro': 'Emma'},
       'voices': {
@@ -1191,7 +1242,7 @@ void main() {
       'models': {
         'gemini': {
           'id': 'google/gemini-3.1-flash-tts-preview',
-          'format': 'pcm',
+          'formats': ['wav'],
           'sample_rate': 24000,
           'prompt_style': true,
         },
@@ -1238,7 +1289,7 @@ void main() {
         'models': {
           'kokoro': {
             'id': 'hexgrad/kokoro-82m',
-            'format': 'mp3',
+            'formats': ['mp3'],
             'sends_language': true,
             'default_language': 'b',
             'languages': {'b': 'British English', 'j': 'Japanese'},
@@ -1347,7 +1398,10 @@ void main() {
     test('a gender with no matching voices reverts the filter to any', () {
       writeConfig({
         'models': {
-          'single': {'id': 'example/single', 'format': 'mp3'},
+          'single': {
+            'id': 'example/single',
+            'formats': ['mp3'],
+          },
         },
         'defaults': {'single': 'Alice'},
         'voices': {
@@ -1382,7 +1436,7 @@ void main() {
       'models': {
         'kokoro': {
           'id': 'hexgrad/kokoro-82m',
-          'format': 'mp3',
+          'formats': ['mp3'],
           'sends_language': true,
           'default_language': 'b',
           'languages': {
@@ -1408,7 +1462,7 @@ void main() {
       'models': {
         'gemini': {
           'id': 'google/gemini-3.1-flash-tts-preview',
-          'format': 'pcm',
+          'formats': ['wav'],
         },
       },
       'defaults': {'gemini': 'Charon'},
@@ -1485,7 +1539,7 @@ void main() {
           ...kokoroBody['models']! as Map<String, Object?>,
           'local': {
             'id': 'mlx-community/Kokoro-82M-bf16',
-            'format': 'wav',
+            'formats': ['wav'],
             'sends_language': true,
             'default_language': 'a',
             'languages': {'a': 'American English', 'b': 'British English'},
@@ -1528,7 +1582,7 @@ void main() {
         'models': {
           'kokoro': {
             'id': 'hexgrad/kokoro-82m',
-            'format': 'mp3',
+            'formats': ['mp3'],
             'sends_language': true,
             'default_language': 'b',
             'languages': {'b': 'British English', 'f': 'French'},
@@ -1559,7 +1613,7 @@ void main() {
         'models': {
           'kokoro': {
             'id': 'hexgrad/kokoro-82m',
-            'format': 'mp3',
+            'formats': ['mp3'],
             'sends_language': true,
             'default_language': 'b',
             'languages': {'b': 'British English', 'p': 'Polish'},
@@ -1567,7 +1621,9 @@ void main() {
         },
         'defaults': {'kokoro': 'bf_emma'},
         'voices': {
-          'kokoro': {'Emma': {'id': 'bf_emma'}},
+          'kokoro': {
+            'Emma': {'id': 'bf_emma'},
+          },
         },
       });
       final c = makeController()..changeModel('kokoro');
@@ -1583,7 +1639,7 @@ void main() {
         'models': {
           'qwen': {
             'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
-            'format': 'wav',
+            'formats': ['wav'],
             'sends_voice': false,
             'sends_instruct': true,
             'sends_language': true,
@@ -1610,7 +1666,7 @@ void main() {
         'models': {
           'kokoro': {
             'id': 'hexgrad/kokoro-82m',
-            'format': 'mp3',
+            'formats': ['mp3'],
             'sends_language': true,
             'languages': {'b': 'British English', 'j': 'Japanese'},
           },
@@ -1634,7 +1690,7 @@ void main() {
         'models': {
           'kokoro': {
             'id': 'hexgrad/kokoro-82m',
-            'format': 'mp3',
+            'formats': ['mp3'],
             'sends_language': true,
             'default_language': 'b',
             'languages': {'b': 'British English'},
@@ -1963,7 +2019,7 @@ void main() {
         'models': {
           'fast': {
             'id': 'openai/gpt-4o-mini-tts',
-            'format': 'mp3',
+            'formats': ['mp3'],
             'speed': true,
           },
         },
@@ -1982,10 +2038,13 @@ void main() {
           },
         },
         'models': {
-          'plain': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'plain': {
+            'id': 'fish-audio/s2.1-pro-free:free',
+            'formats': ['mp3'],
+          },
           'styled': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
             'sample_rate': 24000,
             'prompt_style': true,
           },

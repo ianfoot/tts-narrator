@@ -113,7 +113,10 @@ AppController makeController(
 void writeFishConfig(String configDir) {
   writeConfig(configDir, {
     'models': {
-      'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+      'fish': {
+        'id': 'fish-audio/s2.1-pro-free:free',
+        'formats': ['mp3'],
+      },
     },
     'defaults': {'fish': 'British Female Narrator'},
     'voices': {
@@ -135,13 +138,12 @@ void writeVoiceDesignConfig(String configDir) {
     'models': {
       'qwen': {
         'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
-        'format': 'wav',
+        'formats': ['wav'],
         'sample_rate': 24000,
         'sends_voice': false,
         'sends_instruct': true,
         'sends_language': true,
-        'default_instruct':
-            'A calm male narrator with a low, steady voice and a clear British accent.',
+        'default_instruct': 'A calm male narrator with a low, steady voice and a clear British accent.',
         'default_language': 'English',
         'languages': {'English': 'English', 'Chinese': 'Chinese'},
       },

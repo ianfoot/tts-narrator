@@ -59,10 +59,20 @@ so in practice the tests and any non-GUI front end. The GUI always injects one.
   else. The first entry is the default provider.
 - `providers/<name>.json` — one file per provider: a `models` list naming the
   models that provider serves, and a `settings` block (secrets).
-- `models/<alias>.json` — one file per model: `id`, `format`, `sample_rate`,
-  `prompt_style`, `speed`, `sends_language`, `sends_instruct`,
+- `models/<alias>.json` — one file per model: `id`, `formats`,
+  `wav_response_format`, `prompt_style`,
+  `speed`, `sends_language`, `sends_instruct`,
   `default_instruct`, `sends_voice`, `default_voice`, `default_language`,
-  `pricing`, `languages`, and `voices`. A `voices` entry is
+  `pricing`, `languages`, and `voices`. `formats` is required — a model file that
+  names none is skipped with a warning, because what a backend can produce is a
+  property of the backend and there is no safe default to assume. It is an
+  ordered list of `mp3`/`wav`, most-preferred first, and every name in it must
+  be one the backend has actually been observed to serve. `wav_response_format`
+  is the `response_format` to send when the run's output format is `wav`: absent
+  means the backend returns a finished WAV container, `"pcm"` means it returns
+  headerless samples and the app writes the header itself. Declaring it on a
+  model whose `formats` lacks `wav` is rejected as self-contradictory.
+  A `voices` entry is
   keyed by the voice id and may carry a `name` and an optional `gender`
   (`male`/`female`/`neutral`); `id` may also be spelled out explicitly when it
   differs from the key, and the value may be a plain string (`"Charon":
@@ -459,11 +469,27 @@ title.
 
 ## Notes / current behaviour
 
-- OpenRouter's Gemini model page lists `response_format: mp3` as supported, but
-  the vendor rejects `mp3` (HTTP 400: *"Gemini TTS only supports
-  response_format=pcm"*). This tool always requests `pcm` for Gemini and wraps
-  it in a WAV container. Kokoro and Fish are requested as `mp3` directly.
-  There is no MP3 encoding or concatenation step — the model emits these formats.
+- The output format is a per-model choice between `mp3` and `wav`. A model file
+  declares what it can emit in its `formats` list, so an unsupported value
+  cannot be requested: `SpeechClient.synthesize` takes a `TtsAudioFormat` and
+  sends `wireValue`. The wire value for `wav` is *not* always `wav` — the
+  profile's `wavResponseFormat` says whether to ask for a finished container or
+  for headerless samples, and in the latter case `narration.dart` prefixes a
+  header built from the sample rate the response reported in its `Content-Type`.
+  That split exists because the backends disagree and their schemas do not
+  settle it: OpenRouter's request validator accepts only `mp3`/`pcm`, so it
+  serves no WAV container for any model, and Gemini additionally rejects `mp3`,
+  while the local mlx-audio server returns a real `RIFF`/`WAVE`. The GUI shows a
+  segmented control only when a model lists two formats, remembers the pick in
+  SharedPreferences under `outputFormat.<alias>`, and clamps it to what the
+  current profile supports (`SettingsController.outputFormat`).
+  Concatenation differs by format: MP3 segments are concatenated by appending
+  bytes, WAV segments by stripping each header and rewriting one file with the
+  first segment's `fmt ` chunk preserved verbatim.
+- Which containers a backend serves is settled by calling it, not by reading its
+  schema: the published schemas advertise values their own providers reject.
+  `packages/core/test/shipped_voice_config_test.dart` pins the observed result
+  for every shipped model with the probe date and commands in its doc comment.
 - Transient `502` (empty audio stream) failures are retried up to 3 times,
   matching a documented Gemini TTS quirk. (Fish failures are not billed.)
 - Every model — `fish` included — comes from its own `models/<alias>.json` file

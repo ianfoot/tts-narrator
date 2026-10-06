@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:tts_narrator_core/src/narration/audio_format.dart';
 import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/narration.dart';
@@ -119,16 +120,16 @@ void main() {
   });
 
   group('output dir helpers', () {
-    const gemini = TtsModelProfile(
-      alias: 'gemini',
-      id: 'google/gemini-3.1-flash-tts-preview',
-      format: 'pcm',
-      sampleRate: 24000,
+    const local = TtsModelProfile(
+      alias: 'kokoro_local',
+      id: 'mlx-community/Kokoro-82M-4bit',
+      formats: [TtsAudioFormat.wav, TtsAudioFormat.mp3],
       provider: testProvider,
     );
     NarrationConfig cfg(String input, String out) => NarrationConfig(
       inputPath: input,
-      profile: gemini,
+      profile: local,
+      outputFormat: TtsAudioFormat.wav,
       voice: 'Callirrhoe',
       outDir: out,
     );
@@ -174,28 +175,39 @@ void main() {
       'wav': wav,
     };
 
-    test('matches on index+prompt when the file exists', () {
+    test('matches on index+prompt+format when the file exists', () {
       File('${dir.path}/story_1.mp3').writeAsStringSync('x');
       final existing = [record(1, 'Hello.', 'story_1.mp3')];
-      final m = resumeMatch(existing, 1, 'Hello.', dir.path);
+      final m = resumeMatch(existing, 1, 'Hello.', dir.path, 'mp3');
       expect(m, isNotNull);
       expect(m!['wav'], 'story_1.mp3');
     });
 
     test('no match when the file is missing', () {
       final existing = [record(1, 'Hello.', 'story_1.mp3')];
-      expect(resumeMatch(existing, 1, 'Hello.', dir.path), isNull);
+      expect(resumeMatch(existing, 1, 'Hello.', dir.path, 'mp3'), isNull);
     });
 
     test('no match on different index or prompt', () {
       File('${dir.path}/story_1.mp3').writeAsStringSync('x');
       final existing = [record(1, 'Hello.', 'story_1.mp3')];
-      expect(resumeMatch(existing, 2, 'Hello.', dir.path), isNull);
-      expect(resumeMatch(existing, 1, 'Different.', dir.path), isNull);
+      expect(resumeMatch(existing, 2, 'Hello.', dir.path, 'mp3'), isNull);
+      expect(resumeMatch(existing, 1, 'Different.', dir.path, 'mp3'), isNull);
+    });
+
+    test('no match when the prior segment is another format', () {
+      // Switching format mid-project is the reason the format is part of the
+      // match: reusing these bytes would hand WAV segments to the MP3 concat
+      // path, or MP3 segments to the WAV path, and either way the combined
+      // track is broken rather than merely mistyped.
+      File('${dir.path}/story_1.wav').writeAsStringSync('x');
+      final existing = [record(1, 'Hello.', 'story_1.wav')];
+      expect(resumeMatch(existing, 1, 'Hello.', dir.path, 'mp3'), isNull);
+      expect(resumeMatch(existing, 1, 'Hello.', dir.path, 'wav'), isNotNull);
     });
 
     test('empty existing list yields null', () {
-      expect(resumeMatch(const [], 1, 'Hello.', dir.path), isNull);
+      expect(resumeMatch(const [], 1, 'Hello.', dir.path, 'mp3'), isNull);
     });
   });
 

@@ -55,6 +55,12 @@ class SettingsController extends ChangeNotifier {
     if (savedLocale != null && savedLocale.trim().isNotEmpty) {
       _locale = _parseLocale(savedLocale);
     }
+    for (final key in prefs?.getKeys() ?? const <String>{}) {
+      if (!key.startsWith(_outputFormatPrefsPrefix)) continue;
+      final saved = TtsAudioFormat.tryParse(prefs?.getString(key) ?? '');
+      if (saved == null) continue;
+      _outputFormats[key.substring(_outputFormatPrefsPrefix.length)] = saved;
+    }
   }
 
   /// Preferences key holding the last output folder the user picked.
@@ -62,6 +68,9 @@ class SettingsController extends ChangeNotifier {
 
   /// Preferences key holding the language tag the user last selected.
   static const _localePrefsKey = 'locale';
+
+  /// Preferences key prefix holding each model's chosen output format.
+  static const _outputFormatPrefsPrefix = 'outputFormat.';
 
   /// Parses a stored language tag into a [Locale], or null when it is not one
   /// this build supports (a tag left behind by a removed translation).
@@ -150,6 +159,14 @@ class SettingsController extends ChangeNotifier {
   /// the wrong narrator.
   String? _instruct;
 
+  /// The user's output-format choice per model alias.
+  ///
+  /// Keyed by alias rather than held as one value so switching models and coming
+  /// back keeps each model's own choice, and so a model that offers only one
+  /// format simply has nothing recorded. Read through [outputFormat], which
+  /// clamps to what the active model declares.
+  final Map<String, TtsAudioFormat> _outputFormats = {};
+
   /// Selected UI locale, or null to follow the platform's resolution against
   /// [AppLocalizations.supportedLocales].
   ///
@@ -202,8 +219,7 @@ class SettingsController extends ChangeNotifier {
   /// [TtsModelProfile.defaultInstruct], so a freshly selected voice-design model
   /// is runnable with no input while remaining editable. Empty for any other
   /// model, and dropped from the request by the capability gate either way.
-  String get instruct =>
-      _instruct ?? _model.profile?.defaultInstruct ?? '';
+  String get instruct => _instruct ?? _model.profile?.defaultInstruct ?? '';
 
   /// Records the prose exactly as typed, *including* the empty string.
   ///
@@ -295,6 +311,43 @@ class SettingsController extends ChangeNotifier {
     if (value == _resume) return;
     _resume = value;
     notifyListeners();
+  }
+
+  /// The output formats the active model declares, in its own order.
+  ///
+  /// Empty when no model is selected, which is also what hides the control.
+  List<TtsAudioFormat> get outputFormats => _model.profile?.formats ?? const [];
+
+  /// Whether the run-setup panel should offer a format choice: only when the
+  /// active model declares more than one, since a single option is not a choice.
+  bool get outputFormatChoiceAvailable => outputFormats.length > 1;
+
+  /// The format the next run writes, for the active model.
+  ///
+  /// The user's stored choice when the model still declares it, else the model's
+  /// own first format. Clamping here rather than at write time means a model that
+  /// dropped a format in an updated config file cannot be run in one it no
+  /// longer serves.
+  TtsAudioFormat get outputFormat {
+    final profile = _model.profile;
+    if (profile == null || profile.formats.isEmpty) {
+      return TtsAudioFormat.mp3;
+    }
+    final stored = _outputFormats[profile.alias];
+    if (stored != null && profile.supportsFormat(stored)) return stored;
+    return profile.defaultFormat;
+  }
+
+  set outputFormat(TtsAudioFormat value) {
+    final profile = _model.profile;
+    if (profile == null || !profile.supportsFormat(value)) return;
+    if (_outputFormats[profile.alias] == value) return;
+    _outputFormats[profile.alias] = value;
+    notifyListeners();
+    _prefs?.setString(
+      '$_outputFormatPrefsPrefix${profile.alias}',
+      value.wireValue,
+    );
   }
 
   /// Re-checks the whole-file cap on a document change: a document that grows
@@ -412,7 +465,9 @@ class SettingsController extends ChangeNotifier {
     final value = raw['api_key']?.trim();
     if (value == null || value.isEmpty) return ApiKeySource.missing;
     if (isEnvReference(value)) {
-      return _envRefResolves(value) ? ApiKeySource.environment : ApiKeySource.missing;
+      return _envRefResolves(value)
+          ? ApiKeySource.environment
+          : ApiKeySource.missing;
     }
     return ApiKeySource.config;
   }
@@ -463,6 +518,7 @@ class SettingsController extends ChangeNotifier {
       inputPath: _document.documentPath ?? untitledDocumentName,
       sourceText: _document.text,
       profile: p,
+      outputFormat: outputFormat,
       voice: voiceId,
       voiceLabel: label,
       language: _model.language,

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/narration/abort.dart';
+import 'package:tts_narrator_core/src/narration/audio_format.dart';
 import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/narration.dart';
@@ -98,8 +99,10 @@ void main() {
           profile: const TtsModelProfile(
             alias: 'test',
             id: 'test/model',
+            formats: [TtsAudioFormat.mp3],
             provider: testProvider,
           ),
+          outputFormat: TtsAudioFormat.mp3,
           voice: 'v',
           providerSettings: const {'base_url': testBaseUrl},
         );

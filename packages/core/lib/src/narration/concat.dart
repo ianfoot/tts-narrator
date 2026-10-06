@@ -2,27 +2,30 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'audio_format.dart';
 import 'wav.dart';
 
 /// Concatenates per-segment audio files into a single track written to
 /// [outputPath]. Segments are joined in list order, so pass them in narration
 /// (index) order.
 ///
-/// - `format != 'mp3'` (`wav` or `pcm`): each input must be a WAV; the PCM
-///   payload of its `data` chunk is extracted and all payloads are written as
-///   one fresh WAV. All segments share the profile sample rate, so the frame
-///   layout stays valid and [sampleRate] drives the combined header.
-/// - otherwise (MP3): files are appended byte-for-byte. Same-codec, same-
-///   encoder MP3s splice cleanly; a brief silence may be audible at each
+/// - [TtsAudioFormat.wav]: each input must be a WAV; its `data` chunk is
+///   extracted and all the samples are written as one fresh WAV. The combined
+///   header is copied from the first segment, which is what makes this safe
+///   without knowing the sample rate up front — every segment comes from one
+///   run of one model, so they agree, and a mismatch is rejected rather than
+///   silently producing a file whose header lies about its samples.
+/// - [TtsAudioFormat.mp3]: files are appended byte-for-byte. Same-codec,
+///   same-encoder MP3s splice cleanly; a brief silence may be audible at each
 ///   boundary since there is no re-encoding step.
 ///
 /// Returns [outputPath]. Throws a [FileSystemException] when a segment is
-/// missing or not the expected container.
+/// missing, not the expected container, or does not match the first segment's
+/// audio layout.
 String concatSegments(
   List<String> audioPaths, {
   required String outputPath,
-  required String format,
-  int sampleRate = 24000,
+  required TtsAudioFormat format,
 }) {
   if (audioPaths.isEmpty) {
     throw FileSystemException(
@@ -30,12 +33,23 @@ String concatSegments(
       outputPath,
     );
   }
-  if (format != 'mp3') {
+  if (format == .wav) {
+    final first = readWav(_readSegment(audioPaths.first));
     final merged = BytesBuilder(copy: false);
     for (final path in audioPaths) {
-      merged.add(_pcmPayload(_readSegment(path)));
+      // The first segment was already parsed to learn the layout.
+      final segment = path == audioPaths.first
+          ? first
+          : readWav(_readSegment(path));
+      if (!_sameFormatChunk(segment.formatChunk, first.formatChunk)) {
+        throw FileSystemException(
+          'Segment audio layout does not match the first segment.',
+          path,
+        );
+      }
+      merged.add(segment.data);
     }
-    writeWav(path: outputPath, bytes: merged, sampleRate: sampleRate);
+    writeWav(path: outputPath, audio: merged, formatChunk: first.formatChunk);
   } else {
     final bytes = BytesBuilder(copy: false);
     for (final path in audioPaths) {
@@ -147,30 +161,11 @@ Uint8List _readSegment(String path) {
   return file.readAsBytesSync();
 }
 
-/// Extracts the PCM payload of the `data` chunk from a WAV file, validating
-/// the RIFF/WAVE container so non-audio bytes are never spliced into the job.
-Uint8List _pcmPayload(Uint8List wav) {
-  if (wav.length < 12 ||
-      _ascii(wav.sublist(0, 4)) != 'RIFF' ||
-      _ascii(wav.sublist(8, 12)) != 'WAVE') {
-    throw FileSystemException('Not a WAV file (bad header).');
+/// Whether two `fmt ` chunks declare the same audio layout.
+bool _sameFormatChunk(Uint8List a, Uint8List b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
   }
-  final data = ByteData.sublistView(wav);
-  var offset = 12;
-  while (offset + 8 <= wav.length) {
-    final id = _ascii(wav.sublist(offset, offset + 4));
-    final size = data.getUint32(offset + 4, Endian.little);
-    final payloadStart = offset + 8;
-    final payloadEnd = payloadStart + size;
-    if (payloadEnd > wav.length) {
-      throw FileSystemException('Not a WAV file (truncated chunk).');
-    }
-    if (id == 'data') {
-      return Uint8List.sublistView(wav, payloadStart, payloadEnd);
-    }
-    offset = payloadEnd;
-  }
-  throw FileSystemException('Not a WAV file (no data chunk).');
+  return true;
 }
-
-String _ascii(List<int> bytes) => String.fromCharCodes(bytes);

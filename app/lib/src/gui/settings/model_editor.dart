@@ -1,6 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart'
-    show TtsModelProfile, VoiceConfigStore, VoiceConfigurationError;
+    show
+        TtsModelProfile,
+        TtsWavResponseFormat,
+        VoiceConfigStore,
+        VoiceConfigurationError;
 
 import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
@@ -85,12 +89,7 @@ class _Metadata extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _row(
-            context,
-            labelWidth,
-            l10n.gui_settings_fieldModelId,
-            model.id,
-          ),
+          _row(context, labelWidth, l10n.gui_settings_fieldModelId, model.id),
           _row(
             context,
             labelWidth,
@@ -101,7 +100,17 @@ class _Metadata extends StatelessWidget {
             context,
             labelWidth,
             l10n.gui_settings_fieldFormat,
-            model.format,
+            // Every format the model offers, not just the one in force: this is
+            // the metadata view, so it documents what the model can serve. The
+            // user's current choice lives in the run-setup panel.
+            //
+            // A model that serves wav from headerless samples says so here,
+            // because that is the part a reader cannot infer from the format
+            // list — "wav" looks identical either way.
+            model.wavResponseFormat == TtsWavResponseFormat.pcm
+                ? '${model.formats.map((f) => f.wireValue).join(', ')} '
+                      '(wav via ${model.wavResponseFormat.wireValue})'
+                : model.formats.map((f) => f.wireValue).join(', '),
           ),
         ],
       ),

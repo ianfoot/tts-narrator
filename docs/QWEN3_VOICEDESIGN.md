@@ -11,8 +11,7 @@ The shipped file is `voice-config/models/qwen3_voicedesign.json`:
 {
   "id": "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",
   "display_name": "Qwen3 TTS 1.7B Voice Design (Local)",
-  "format": "wav",
-  "sample_rate": 24000,
+  "formats": ["wav", "mp3"],
   "sends_voice": false,
   "sends_instruct": true,
   "sends_language": true,
@@ -43,9 +42,10 @@ The model then appears under the `local` provider and is selectable in the model
 dropdown. Apple Silicon only, which is why the file is in the macOS list of
 `manifest.json` and not the Linux or Windows ones.
 
-Output is **24 kHz WAV, not MP3**. mlx-audio needs `ffmpeg` on the path to encode
-MP3; WAV needs nothing extra. The file therefore declares `"format": "wav"`, and
-the app writes `.wav` segments.
+Output is **WAV by default**. mlx-audio needs `ffmpeg` on the path to encode MP3;
+WAV needs nothing extra, so the file declares `"formats": ["wav", "mp3"]` with WAV
+first — the model writes `.wav` segments unless you tap MP3 in the **Output
+format** control under the model dropdown, which needs `ffmpeg` present.
 
 ## Writing the voice description
 

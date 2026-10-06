@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/config/voice_config.dart';
 import 'package:tts_narrator_core/src/config/voice_config_queries.dart';
+import 'package:tts_narrator_core/src/narration/audio_format.dart';
 import 'package:tts_narrator_core/src/narration/cost.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
@@ -10,19 +11,16 @@ TtsModelProfile _model({
   required String alias,
   required String id,
   String provider = testProvider,
-  String format = 'mp3',
   bool promptStyle = false,
   bool sendsVoiceField = true,
-  int? sampleRate,
   String? displayName,
 }) => TtsModelProfile(
   alias: alias,
   id: id,
+  formats: const [TtsAudioFormat.wav],
   provider: provider,
-  format: format,
   promptStyle: promptStyle,
   sendsVoiceField: sendsVoiceField,
-  sampleRate: sampleRate,
   displayName: displayName,
 );
 

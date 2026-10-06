@@ -42,7 +42,10 @@ void main() {
         },
       },
       'models': {
-        'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+        'fish': {
+          'id': 'fish-audio/s2.1-pro-free:free',
+          'formats': ['mp3'],
+        },
       },
       'defaults': {'fish': 'British Female Narrator'},
       'voices': {
@@ -515,18 +518,20 @@ void main() {
       expect(find.text('Sample text the user is replacing.'), findsNothing);
     });
 
-    testWidgets('typing stays in step with the field, one character at a time',
-        (tester) async {
-      final controller = await makeController();
-      await pumpEditor(tester, controller);
+    testWidgets(
+      'typing stays in step with the field, one character at a time',
+      (tester) async {
+        final controller = await makeController();
+        await pumpEditor(tester, controller);
 
-      final field = find.byType(AppTextField);
-      for (final partial in ['S', 'Sa', 'Sam', 'Samp', 'Sampl']) {
-        await tester.enterText(field, partial);
-        await tester.pump();
-        expect(controller.text, partial);
-      }
-    });
+        final field = find.byType(AppTextField);
+        for (final partial in ['S', 'Sa', 'Sam', 'Samp', 'Sampl']) {
+          await tester.enterText(field, partial);
+          await tester.pump();
+          expect(controller.text, partial);
+        }
+      },
+    );
 
     testWidgets('backspacing the text away does not bring it back', (
       tester,

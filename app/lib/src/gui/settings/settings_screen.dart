@@ -103,7 +103,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       models: models,
                       selectedAlias: selected,
                       hasOverlay: store.hasOverlayModel,
-                      onSelect: (alias) => setState(() => _selectedAlias = alias),
+                      onSelect: (alias) =>
+                          setState(() => _selectedAlias = alias),
                     ),
                   ),
                   Expanded(

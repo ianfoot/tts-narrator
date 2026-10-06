@@ -10,17 +10,21 @@
 /// model id (e.g. swap the gemini preview for a GA id) without a rebuild.
 /// Voices and pricing are also user data and live in the per-model files (see
 /// `voice_config.dart`).
+library;
+
+import 'audio_format.dart';
+
 class TtsModelProfile {
   const TtsModelProfile({
     required this.alias,
     required this.id,
-    this.format = 'mp3',
+    required this.formats,
+    this.wavResponseFormat = TtsWavResponseFormat.wav,
     this.promptStyle = false,
     this.sendsVoiceField = true,
     this.supportsSpeed = false,
     this.sendsLanguageField = false,
     this.sendsInstructField = false,
-    this.sampleRate,
     required this.provider,
     this.displayName,
     this.defaultInstruct,
@@ -37,8 +41,33 @@ class TtsModelProfile {
   /// (Free)"). Null falls back to the `alias — id` pairing in UI labels.
   final String? displayName;
 
-  /// Output encoding: `'pcm'` (wrapped in a WAV header) or `'mp3'` (raw).
-  final String format;
+  /// Output formats this model can produce, most-preferred first.
+  ///
+  /// Required, and never empty: a model file that does not say what it can
+  /// produce is a file the app cannot act on, so the parser rejects it rather
+  /// than assuming. The first entry is the model's default and the one a fresh
+  /// run uses. A single-entry list means the user has no choice to make, so the
+  /// GUI hides the format picker rather than showing a one-option control.
+  ///
+  /// Recorded here, in the model file, because core has no compiled-in list of
+  /// models and cannot probe a provider. Each name becomes the file extension,
+  /// so a format listed here is a promise the backend keeps.
+  final List<TtsAudioFormat> formats;
+
+  /// The format a run uses unless the user picks another one.
+  TtsAudioFormat get defaultFormat => formats.first;
+
+  /// What to ask this model for when the run's output format is WAV.
+  ///
+  /// Only consulted for a wav run, and only because no single value works
+  /// everywhere: some backends return a finished WAV container and some return
+  /// headerless samples that need a header the app writes. Defaults to `wav`,
+  /// which writes the provider's bytes through untouched — the path that cannot
+  /// mislabel anything. A model that needs `pcm` says so.
+  final TtsWavResponseFormat wavResponseFormat;
+
+  /// Whether [format] is one this model can produce.
+  bool supportsFormat(TtsAudioFormat format) => formats.contains(format);
 
   /// Whether accent/style/[calm] directives are woven into the input text.
   /// Gemini understands these; models like Kokoro would read them aloud.
@@ -76,9 +105,6 @@ class TtsModelProfile {
   /// is described, not selected.
   final bool sendsInstructField;
 
-  /// PCM sample rate used for the WAV header and duration; null for MP3.
-  final int? sampleRate;
-
   /// Name of the `providers.<name>` block that serves this model. Required in
   /// the model config file, and opaque to core: it is a lookup key into user
   /// config, never a vendor the code knows about.
@@ -108,16 +134,21 @@ class TtsModelProfile {
   /// honours it regardless of this flag.
   final bool voicesEditable;
 
-  TtsModelProfile copyWith({String? id, String? provider}) => TtsModelProfile(
+  TtsModelProfile copyWith({
+    String? id,
+    String? provider,
+    List<TtsAudioFormat>? formats,
+    TtsWavResponseFormat? wavResponseFormat,
+  }) => TtsModelProfile(
     alias: alias,
     id: id ?? this.id,
-    format: format,
+    formats: formats ?? this.formats,
+    wavResponseFormat: wavResponseFormat ?? this.wavResponseFormat,
     promptStyle: promptStyle,
     sendsVoiceField: sendsVoiceField,
     supportsSpeed: supportsSpeed,
     sendsLanguageField: sendsLanguageField,
     sendsInstructField: sendsInstructField,
-    sampleRate: sampleRate,
     provider: provider ?? this.provider,
     displayName: displayName,
     defaultInstruct: defaultInstruct,

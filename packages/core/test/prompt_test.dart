@@ -1,4 +1,5 @@
 import 'package:test/test.dart';
+import 'package:tts_narrator_core/src/narration/audio_format.dart';
 import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/prompt.dart';
@@ -8,8 +9,7 @@ import 'support/fake_provider.dart';
 const _gemini = TtsModelProfile(
   alias: 'gemini',
   id: 'google/gemini-3.1-flash-tts-preview',
-  format: 'pcm',
-  sampleRate: 24000,
+  formats: [TtsAudioFormat.mp3],
   promptStyle: true,
   provider: testProvider,
 );
@@ -25,6 +25,7 @@ void main() {
   }) => NarrationConfig(
     inputPath: 'story.txt',
     profile: _gemini,
+    outputFormat: TtsAudioFormat.mp3,
     voice: 'Callirrhoe',
     accent: accent,
     style: style,
@@ -50,6 +51,7 @@ void main() {
       NarrationConfig(
         inputPath: 's',
         profile: _gemini,
+        outputFormat: TtsAudioFormat.mp3,
         voice: 'v',
         passagePrefix: '  Loop.  ',
         accent: '  RP  ',

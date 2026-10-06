@@ -33,7 +33,7 @@ void main() {
       'models': {
         'fish': {
           'id': 'fish-audio/s2.1-pro-free:free',
-          'format': 'mp3',
+          'formats': ['mp3'],
           ...extra,
         },
       },
@@ -137,7 +137,7 @@ void main() {
       'models': {
         'gemini': {
           'id': 'google/gemini-3.1-flash-tts-preview',
-          'format': 'pcm',
+          'formats': ['wav'],
           'sample_rate': 24000,
           'prompt_style': true,
           'display_name': 'Gemini 3.1 Flash TTS',
@@ -164,9 +164,7 @@ void main() {
   });
 
   group('voice design', () {
-    testWidgets('renders the prose the model file defaults to', (
-      tester,
-    ) async {
+    testWidgets('renders the prose the model file defaults to', (tester) async {
       writeVoiceDesignConfig(configDir);
       final c = makeController(configDir);
       await pumpSection(tester, c);

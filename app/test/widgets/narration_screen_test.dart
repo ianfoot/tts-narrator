@@ -24,7 +24,8 @@ class _BlockingClient {
     required String model,
     required String? voice,
     required String input,
-    required String responseFormat,
+    required TtsAudioFormat responseFormat,
+    required TtsWavResponseFormat wavResponseFormat,
     required Map<String, String> settings,
     required double? speed,
     String? language,
@@ -67,7 +68,10 @@ void main() {
         },
       },
       'models': {
-        'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+        'fish': {
+          'id': 'fish-audio/s2.1-pro-free:free',
+          'formats': ['mp3'],
+        },
       },
       'defaults': {'fish': 'British Female Narrator'},
       'voices': {

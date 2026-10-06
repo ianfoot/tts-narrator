@@ -35,7 +35,7 @@ void main() {
       'models': {
         'fish': {
           'id': 'fish-audio/s2.1-pro-free:free',
-          'format': 'mp3',
+          'formats': ['mp3'],
           'display_name': 'Fish Audio S2.1 (Free)',
           'voices_editable': true,
         },
@@ -55,7 +55,10 @@ void main() {
   void writeLockedConfig() {
     fixtures.writeConfig(configDir, {
       'models': {
-        'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+        'kokoro': {
+          'id': 'hexgrad/kokoro-82m',
+          'formats': ['mp3'],
+        },
       },
       'defaults': {'kokoro': 'bf_emma'},
       'voices': {
@@ -69,9 +72,7 @@ void main() {
   Future<void> pumpSettingsScreen(WidgetTester tester, AppController c) async {
     await tester.binding.setSurfaceSize(const Size(1200, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      testApp(home: SettingsScreen(controller: c)),
-    );
+    await tester.pumpWidget(testApp(home: SettingsScreen(controller: c)));
     await tester.pumpAndSettle();
   }
 
@@ -105,18 +106,13 @@ void main() {
     testWidgets('an empty config says so instead of rendering an empty pane', (
       tester,
     ) async {
-      fixtures.writeConfig(configDir, {
-        'models': <String, Object?>{},
-      });
+      fixtures.writeConfig(configDir, {'models': <String, Object?>{}});
       await pumpSettingsScreen(tester, makeController());
 
       // Both panes say it: the list has nothing to list, and the editor pane
       // has no model to show. Two is the point — one message in a pane that
       // otherwise renders blank reads as a broken layout.
-      expect(
-        find.textContaining('No models configured'),
-        findsNWidgets(2),
-      );
+      expect(find.textContaining('No models configured'), findsNWidgets(2));
     });
   });
 
@@ -183,7 +179,9 @@ void main() {
       expect(VoiceConfigStore(configDir).hasOverlayModel('fish'), isFalse);
     });
 
-    testWidgets('a blank row is refused and no file is written', (tester) async {
+    testWidgets('a blank row is refused and no file is written', (
+      tester,
+    ) async {
       writeEditableConfig();
       await pumpSettingsScreen(tester, makeController());
 
@@ -204,9 +202,7 @@ void main() {
       await pumpSettingsScreen(tester, makeController());
 
       await tester.tap(
-        find.byKey(
-          const Key('removeVoice_89f41ea230034706881f85a8227d6ab9'),
-        ),
+        find.byKey(const Key('removeVoice_89f41ea230034706881f85a8227d6ab9')),
       );
       await tester.pumpAndSettle();
 
@@ -225,9 +221,7 @@ void main() {
       await pumpSettingsScreen(tester, makeController());
 
       await tester.tap(
-        find.byKey(
-          const Key('removeVoice_c536c6cdbe8e4d9484232e78ab80020f'),
-        ),
+        find.byKey(const Key('removeVoice_c536c6cdbe8e4d9484232e78ab80020f')),
       );
       await tester.pumpAndSettle();
 
@@ -238,9 +232,7 @@ void main() {
       );
       // The default the removed row was not is untouched.
       expect(
-        VoiceConfigStore(
-          configDir,
-        ).readModelJson('fish')!['default_voice'],
+        VoiceConfigStore(configDir).readModelJson('fish')!['default_voice'],
         'British Female Narrator',
       );
     });
@@ -250,9 +242,7 @@ void main() {
       await pumpSettingsScreen(tester, makeController());
 
       await tester.tap(
-        find.byKey(
-          const Key('editVoice_89f41ea230034706881f85a8227d6ab9'),
-        ),
+        find.byKey(const Key('editVoice_89f41ea230034706881f85a8227d6ab9')),
       );
       await tester.pumpAndSettle();
       await tester.enterText(
@@ -321,10 +311,7 @@ void main() {
       expect(find.byKey(const Key('revertModelButton')), findsNothing);
       expect(find.text('Custom'), findsNothing);
       expect(find.text('Alice'), findsOneWidget);
-      expect(
-        VoiceConfigStore(configDir).hasOverlayModel('fish'),
-        isFalse,
-      );
+      expect(VoiceConfigStore(configDir).hasOverlayModel('fish'), isFalse);
       expect(c.voiceItems.where((i) => i.$1 == 'deadbeef'), isEmpty);
     });
 
@@ -356,7 +343,10 @@ void main() {
       // syntax error, which is what the user has to go and fix.
       expect(find.byKey(const Key('voiceTableError')), findsOneWidget);
       expect(find.text(storeMessage), findsOneWidget);
-      expect(find.textContaining('fish.json', findRichText: true), findsWidgets);
+      expect(
+        find.textContaining('fish.json', findRichText: true),
+        findsWidgets,
+      );
       // The escape hatch is still on screen and still pressable.
       expect(find.byKey(const Key('revertModelButton')), findsOneWidget);
       expect(find.byKey(const Key('addVoiceButton')), findsNothing);
@@ -377,20 +367,22 @@ void main() {
         'models': {
           'fish': {
             'id': 'fish-audio/s2.1-pro-free:free',
-            'format': 'mp3',
+            'formats': ['mp3'],
             'display_name': 'Fish',
             'voices_editable': true,
           },
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
             'display_name': 'Gemini',
             'voices_editable': true,
           },
         },
         'defaults': {'fish': 'British Female Narrator', 'gemini': 'Charon'},
         'voices': {
-          'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+          'fish': {
+            'British Female Narrator': '89f41ea230034706881f85a8227d6ab9',
+          },
           'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
         },
       });
@@ -398,9 +390,7 @@ void main() {
 
       // Refused on fish, so the message belongs to fish.
       await tester.tap(
-        find.byKey(
-          const Key('removeVoice_89f41ea230034706881f85a8227d6ab9'),
-        ),
+        find.byKey(const Key('removeVoice_89f41ea230034706881f85a8227d6ab9')),
       );
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('voiceTableError')), findsOneWidget);

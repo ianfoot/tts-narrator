@@ -24,17 +24,20 @@ void main() {
     const plain = TtsModelProfile(
       alias: 'plain',
       id: 'provider/plain-tts',
+      formats: [TtsAudioFormat.wav],
       provider: testProvider,
     );
     const styled = TtsModelProfile(
       alias: 'fancy',
       id: 'provider/styled-tts',
+      formats: [TtsAudioFormat.wav],
       promptStyle: true,
       provider: testProvider,
     );
     const fast = TtsModelProfile(
       alias: 'fast',
       id: 'provider/fast-tts',
+      formats: [TtsAudioFormat.wav],
       supportsSpeed: true,
       provider: testProvider,
     );
@@ -65,6 +68,7 @@ void main() {
         const TtsModelProfile(
           alias: 'fancy-fast',
           id: 'provider/fancy-fast-tts',
+          formats: [TtsAudioFormat.wav],
           promptStyle: true,
           supportsSpeed: true,
           provider: testProvider,
@@ -84,6 +88,7 @@ void main() {
         const TtsModelProfile(
           alias: 'designer',
           id: 'provider/voice-design-tts',
+          formats: [TtsAudioFormat.wav],
           sendsInstructField: true,
           provider: testProvider,
         ),
@@ -92,19 +97,23 @@ void main() {
       expect(spec.options.single.type, ModelUiOptionType.multiline);
     });
 
-    test('instruct comes after the speed slider, and neither implies the other', () {
-      // A voice design model is fast but has no accent/style pair to speak
-      // aloud, so the two option sets must stay independent.
-      final spec = ModelUiSpec.forProfile(
-        const TtsModelProfile(
-          alias: 'designer-fast',
-          id: 'provider/voice-design-fast-tts',
-          sendsInstructField: true,
-          supportsSpeed: true,
-          provider: testProvider,
-        ),
-      );
-      expect(spec.options.map((o) => o.key), ['speed', 'instruct']);
-    });
+    test(
+      'instruct comes after the speed slider, and neither implies the other',
+      () {
+        // A voice design model is fast but has no accent/style pair to speak
+        // aloud, so the two option sets must stay independent.
+        final spec = ModelUiSpec.forProfile(
+          const TtsModelProfile(
+            alias: 'designer-fast',
+            id: 'provider/voice-design-fast-tts',
+            formats: [TtsAudioFormat.wav],
+            sendsInstructField: true,
+            supportsSpeed: true,
+            provider: testProvider,
+          ),
+        );
+        expect(spec.options.map((o) => o.key), ['speed', 'instruct']);
+      },
+    );
   });
 }

@@ -1,6 +1,6 @@
 {
   "id": "mlx-community/Kokoro-82M-bf16",
-  "format": "wav",
+  "formats": ["wav", "mp3"],
   "display_name": "Kokoro Local 82M",
   "speed": true,
   "sends_language": true,

@@ -77,7 +77,8 @@ void main() {
         model: 'm',
         voice: null,
         input: 'hi',
-        responseFormat: 'mp3',
+        responseFormat: TtsAudioFormat.mp3,
+        wavResponseFormat: TtsWavResponseFormat.wav,
         settings: {...server.block, 'base_url': '${server.root}/'},
         speed: 1.0,
       );
@@ -93,7 +94,8 @@ void main() {
         model: 'm',
         voice: null,
         input: 'hi',
-        responseFormat: 'mp3',
+        responseFormat: TtsAudioFormat.mp3,
+        wavResponseFormat: TtsWavResponseFormat.wav,
         settings: {'endpoint': server.root},
         speed: 1.0,
       );
@@ -107,7 +109,8 @@ void main() {
           model: 'm',
           voice: null,
           input: 'hi',
-          responseFormat: 'mp3',
+          responseFormat: TtsAudioFormat.mp3,
+          wavResponseFormat: TtsWavResponseFormat.wav,
           settings: const {},
           speed: 1.0,
         ),
@@ -133,7 +136,8 @@ void main() {
           model: 'hexgrad/kokoro-82m',
           voice: 'bf_emma',
           input: 'The quick brown fox.',
-          responseFormat: 'mp3',
+          responseFormat: TtsAudioFormat.mp3,
+          wavResponseFormat: TtsWavResponseFormat.wav,
           settings: server.block,
           speed: 0.75,
         );
@@ -156,7 +160,8 @@ void main() {
         model: 'm',
         voice: 'v',
         input: 'hi',
-        responseFormat: 'mp3',
+        responseFormat: TtsAudioFormat.mp3,
+        wavResponseFormat: TtsWavResponseFormat.wav,
         settings: server.block,
         speed: null,
       );
@@ -172,7 +177,8 @@ void main() {
         model: 'm',
         voice: 'v',
         input: 'hi',
-        responseFormat: 'mp3',
+        responseFormat: TtsAudioFormat.mp3,
+        wavResponseFormat: TtsWavResponseFormat.wav,
         settings: server.block,
         speed: 1.0,
       );
@@ -190,7 +196,8 @@ void main() {
           model: 'm',
           voice: voice,
           input: 'hi',
-          responseFormat: 'mp3',
+          responseFormat: TtsAudioFormat.mp3,
+          wavResponseFormat: TtsWavResponseFormat.wav,
           settings: block,
           speed: 1.0,
         );
@@ -208,7 +215,8 @@ void main() {
         model: 'hexgrad/kokoro-82m',
         voice: 'jm_kumo',
         input: 'hi',
-        responseFormat: 'mp3',
+        responseFormat: TtsAudioFormat.mp3,
+        wavResponseFormat: TtsWavResponseFormat.wav,
         settings: server.block,
         speed: 1.0,
         language: 'j',
@@ -226,7 +234,8 @@ void main() {
           model: 'm',
           voice: 'v',
           input: 'hi',
-          responseFormat: 'mp3',
+          responseFormat: TtsAudioFormat.mp3,
+          wavResponseFormat: TtsWavResponseFormat.wav,
           settings: server.block,
           speed: 1.0,
           language: language,
@@ -238,22 +247,29 @@ void main() {
       }
     });
 
-    test('carries instruct when a voice design describes the narrator', () async {
-      final server = await _serve(_audio);
-      addTearDown(server.close);
+    test(
+      'carries instruct when a voice design describes the narrator',
+      () async {
+        final server = await _serve(_audio);
+        addTearDown(server.close);
 
-      await OpenAiSpeechClient().synthesize(
-        model: 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
-        voice: null,
-        input: 'hi',
-        responseFormat: 'wav',
-        settings: server.block,
-        speed: 1.0,
-        instruct: '  A calm, low British male narrator.  ',
-      );
+        await OpenAiSpeechClient().synthesize(
+          model: 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+          voice: null,
+          input: 'hi',
+          responseFormat: TtsAudioFormat.wav,
+          wavResponseFormat: TtsWavResponseFormat.wav,
+          settings: server.block,
+          speed: 1.0,
+          instruct: '  A calm, low British male narrator.  ',
+        );
 
-      expect(server.requests.single.body['instruct'], 'A calm, low British male narrator.');
-    });
+        expect(
+          server.requests.single.body['instruct'],
+          'A calm, low British male narrator.',
+        );
+      },
+    );
 
     test('omits instruct for a null, empty or whitespace-only value', () async {
       // An empty instruct is not a request for the vendor's default voice: it
@@ -266,7 +282,8 @@ void main() {
           model: 'm',
           voice: 'v',
           input: 'hi',
-          responseFormat: 'mp3',
+          responseFormat: TtsAudioFormat.mp3,
+          wavResponseFormat: TtsWavResponseFormat.wav,
           settings: server.block,
           speed: 1.0,
           instruct: instruct,
@@ -290,7 +307,8 @@ void main() {
         model: 'm',
         voice: null,
         input: 'hi',
-        responseFormat: 'mp3',
+        responseFormat: TtsAudioFormat.mp3,
+        wavResponseFormat: TtsWavResponseFormat.wav,
         settings: server.block,
         speed: 1.0,
       );
@@ -314,7 +332,8 @@ void main() {
         model: 'm',
         voice: null,
         input: 'hi',
-        responseFormat: 'mp3',
+        responseFormat: TtsAudioFormat.mp3,
+        wavResponseFormat: TtsWavResponseFormat.wav,
         settings: server.block,
         speed: 1.0,
         apiKey: 'sk-test',
@@ -331,7 +350,8 @@ void main() {
         model: 'm',
         voice: null,
         input: 'hi',
-        responseFormat: 'mp3',
+        responseFormat: TtsAudioFormat.mp3,
+        wavResponseFormat: TtsWavResponseFormat.wav,
         settings: server.block,
         speed: 1.0,
       );
@@ -349,7 +369,8 @@ void main() {
         model: 'm',
         voice: null,
         input: 'hi',
-        responseFormat: 'mp3',
+        responseFormat: TtsAudioFormat.mp3,
+        wavResponseFormat: TtsWavResponseFormat.wav,
         settings: {...server.block, 'api_key': 'sk-leaked'},
         speed: 1.0,
       );
@@ -373,7 +394,8 @@ void main() {
           model: 'm',
           voice: null,
           input: 'hi',
-          responseFormat: 'mp3',
+          responseFormat: TtsAudioFormat.mp3,
+          wavResponseFormat: TtsWavResponseFormat.wav,
           settings: server.block,
           speed: 1.0,
           apiKey: withKey ? 'sk-rejected' : null,
@@ -412,7 +434,8 @@ void main() {
           model: 'm',
           voice: null,
           input: 'hi',
-          responseFormat: 'mp3',
+          responseFormat: TtsAudioFormat.mp3,
+          wavResponseFormat: TtsWavResponseFormat.wav,
           settings: server.block,
           speed: 1.0,
           apiKey: 'sk-test',
@@ -441,7 +464,8 @@ void main() {
         model: 'm',
         voice: null,
         input: 'hi',
-        responseFormat: 'mp3',
+        responseFormat: TtsAudioFormat.mp3,
+        wavResponseFormat: TtsWavResponseFormat.wav,
         settings: server.block,
         speed: 1.0,
       );
@@ -462,7 +486,8 @@ void main() {
           model: 'm',
           voice: null,
           input: 'hi',
-          responseFormat: 'mp3',
+          responseFormat: TtsAudioFormat.mp3,
+          wavResponseFormat: TtsWavResponseFormat.wav,
           settings: server.block,
           speed: 1.0,
         ),
@@ -485,7 +510,8 @@ void main() {
           model: 'm',
           voice: null,
           input: 'hi',
-          responseFormat: 'mp3',
+          responseFormat: TtsAudioFormat.mp3,
+          wavResponseFormat: TtsWavResponseFormat.wav,
           settings: const {'base_url': 'http://localhost:1'},
           speed: 1.0,
           abort: AbortToken()..cancel(),
@@ -503,7 +529,8 @@ void main() {
         model: 'm',
         voice: null,
         input: 'hi',
-        responseFormat: 'mp3',
+        responseFormat: TtsAudioFormat.mp3,
+        wavResponseFormat: TtsWavResponseFormat.wav,
         settings: server.block,
         speed: 1.0,
         abort: token,

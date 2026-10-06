@@ -253,8 +253,7 @@ PlatformMenu _viewMenu(AppController controller, AppLocalizations l10n) {
               LogicalKeyboardKey.backslash,
               meta: true,
             ),
-            onSelected: () =>
-                controller.commands.onToggleRunSetupPanel?.call(),
+            onSelected: () => controller.commands.onToggleRunSetupPanel?.call(),
           ),
         ],
       ),

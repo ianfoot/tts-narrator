@@ -5,6 +5,7 @@ import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/config/voice_config.dart';
 import 'package:tts_narrator_core/src/config/voice_config_io.dart';
 import 'package:tts_narrator_core/src/config/voice_config_queries.dart';
+import 'package:tts_narrator_core/src/narration/audio_format.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
 import 'support/fake_provider.dart';
@@ -67,13 +68,215 @@ void main() {
       writeClaimingProvider(testProvider, models: ['gemini']);
       writeModel(
         'gemini',
-        '{"id":"google/gemini-3.1-flash-tts-preview","format":"pcm",'
-            '"sample_rate":24000,"prompt_style":true}',
+        '{"id":"google/gemini-3.1-flash-tts-preview","formats":["wav","mp3"],'
+            '"prompt_style":true}',
       );
       final (cfg, warnings) = load();
       expect(cfg.models.containsKey('gemini'), isTrue);
       expect(cfg.models['gemini']!.provider, testProvider);
       expect(warnings, isEmpty);
+    });
+
+    group('output formats', () {
+      TtsModelProfile loadProfile(String json) {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', json);
+        final (cfg, warnings) = load();
+        return cfg.models['m']!;
+      }
+
+      test('reads the formats list in order, first one the default', () {
+        final m = loadProfile('{"id": "a/b", "formats": ["wav", "mp3"]}');
+        expect(m.formats, const [TtsAudioFormat.wav, TtsAudioFormat.mp3]);
+        expect(m.defaultFormat, TtsAudioFormat.wav);
+        expect(m.supportsFormat(TtsAudioFormat.mp3), isTrue);
+      });
+
+      test('drops a repeated format', () {
+        final m = loadProfile('{"id": "a/b", "formats": ["mp3", "mp3"]}');
+        expect(m.formats, const [TtsAudioFormat.mp3]);
+      });
+
+      test('accepts a model that serves mp3 only', () {
+        // No shipped model has this shape -- Gemini is the only single-format
+        // one and it is wav-only -- but a third-party endpoint that encodes mp3
+        // and nothing else is a real possibility, so the shape stays legal.
+        // Note there is no `wav_response_format` here: it would have nothing to
+        // apply to, which is why declaring it without a wav format is rejected.
+        final m = loadProfile('{"id": "a/b", "formats": ["mp3"]}');
+        expect(m.formats, const [TtsAudioFormat.mp3]);
+        expect(m.defaultFormat, TtsAudioFormat.mp3);
+        expect(m.wavResponseFormat, TtsWavResponseFormat.wav);
+      });
+
+      test('skips a model that names no formats', () {
+        // There is no default container. What a model can produce is a property
+        // of its backend, so a file that stays silent about it is missing
+        // information the app cannot invent.
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id": "a/b"}');
+        final (cfg, warnings) = load();
+        expect(cfg.models['m'], isNull);
+        expect(warnings.first, contains('needs a "formats" list'));
+      });
+
+      test('skips a model naming a format nobody can produce', () {
+        // A model we cannot serve audio for is worse than no model at all, so
+        // it is dropped with a warning rather than quietly falling back.
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id": "a/b", "formats": ["opus"]}');
+        final (cfg, warnings) = load();
+        expect(cfg.models['m'], isNull);
+        expect(warnings.first, contains('"formats"'));
+      });
+
+      test('skips a model with an empty formats list', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id": "a/b", "formats": []}');
+        final (cfg, warnings) = load();
+        expect(cfg.models['m'], isNull);
+        expect(warnings.first, contains('"formats"'));
+      });
+
+      test('skips a model whose formats value is not a list', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id": "a/b", "formats": "mp3"}');
+        final (cfg, warnings) = load();
+        expect(cfg.models['m'], isNull);
+        expect(warnings.first, contains('"formats"'));
+      });
+
+      test('writes the formats list back out', () {
+        writeVoiceConfig(
+          dir.path,
+          VoiceConfig(
+            providers: {
+              testProvider: ProviderConfig(
+                name: testProvider,
+                settings: {'base_url': testBaseUrl},
+                models: const ['m'],
+              ),
+            },
+            models: {
+              'm': const TtsModelProfile(
+                alias: 'm',
+                id: 'a/b',
+                formats: [TtsAudioFormat.wav, TtsAudioFormat.mp3],
+                provider: testProvider,
+              ),
+            },
+          ),
+        );
+        final json = jsonDecode(
+          File(at(kVoiceConfigModelsDir, 'm.json')).readAsStringSync(),
+        ) as Map<String, dynamic>;
+        expect(json['formats'], ['wav', 'mp3']);
+        // `wav_response_format` defaults to `wav`, so it stays out of the file
+        // rather than being written as redundant as an explicit `pcm` would be.
+        expect(json.containsKey('wav_response_format'), isFalse);
+
+        final (cfg, warnings) = load();
+        expect(warnings, isEmpty);
+        expect(cfg.models['m']!.formats, const [
+          TtsAudioFormat.wav,
+          TtsAudioFormat.mp3,
+        ]);
+      });
+
+      test('writes an explicit wav_response_format back out', () {
+        writeVoiceConfig(
+          dir.path,
+          VoiceConfig(
+            providers: {
+              testProvider: ProviderConfig(
+                name: testProvider,
+                settings: {'base_url': testBaseUrl},
+                models: const ['m'],
+              ),
+            },
+            models: {
+              'm': const TtsModelProfile(
+                alias: 'm',
+                id: 'a/b',
+                formats: [TtsAudioFormat.wav],
+                wavResponseFormat: TtsWavResponseFormat.pcm,
+                provider: testProvider,
+              ),
+            },
+          ),
+        );
+        final json = jsonDecode(
+          File(at(kVoiceConfigModelsDir, 'm.json')).readAsStringSync(),
+        ) as Map<String, dynamic>;
+        expect(json['wav_response_format'], 'pcm');
+        expect(
+          load().$1.models['m']!.wavResponseFormat,
+          TtsWavResponseFormat.pcm,
+        );
+      });
+    });
+
+    group('wav_response_format', () {
+      TtsModelProfile loadProfile(String json) {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', json);
+        return load().$1.models['m']!;
+      }
+
+      test('defaults to a wav container when the key is absent', () {
+        expect(
+          loadProfile('{"id":"a/b","formats":["wav"]}').wavResponseFormat,
+          TtsWavResponseFormat.wav,
+        );
+      });
+
+      test('reads pcm as the wav wire value', () {
+        expect(
+          loadProfile(
+            '{"id":"a/b","formats":["wav"],"wav_response_format":"pcm"}',
+          ).wavResponseFormat,
+          TtsWavResponseFormat.pcm,
+        );
+      });
+
+      test('rejects a non-string', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel(
+          'm',
+          '{"id":"a/b","formats":["wav"],"wav_response_format":3}',
+        );
+        final (cfg, warnings) = load();
+        expect(cfg.models['m'], isNull);
+        expect(
+          warnings.first,
+          contains('"wav_response_format" must be a string'),
+        );
+      });
+
+      test('rejects an unknown wire value', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel(
+          'm',
+          '{"id":"a/b","formats":["wav"],"wav_response_format":"flac"}',
+        );
+        final (cfg, warnings) = load();
+        expect(cfg.models['m'], isNull);
+        expect(warnings.first, contains('"wav_response_format"'));
+      });
+
+      test('rejects declaring it for a model that cannot produce wav', () {
+        // Self-contradictory: the key only names the wire value used for a wav
+        // request, so a model that never gets asked for one would carry a
+        // setting that can never be used.
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel(
+          'm',
+          '{"id":"a/b","formats":["mp3"],"wav_response_format":"pcm"}',
+        );
+        final (cfg, warnings) = load();
+        expect(cfg.models['m'], isNull);
+        expect(warnings.first, contains('does not include "wav"'));
+      });
     });
 
     group('speed capability', () {
@@ -84,20 +287,28 @@ void main() {
       }
 
       test('defaults to unsupported when the key is absent', () {
-        expect(loadProfile('{"id":"x/y"}').supportsSpeed, isFalse);
+        expect(
+          loadProfile('{"id":"x/y","formats":["wav"]}').supportsSpeed,
+          isFalse,
+        );
       });
 
       test('reads the opt-in flag', () {
-        expect(loadProfile('{"id":"x/y","speed":true}').supportsSpeed, isTrue);
         expect(
-          loadProfile('{"id":"x/y","speed":false}').supportsSpeed,
+          loadProfile('{"id":"x/y","formats":["wav"],"speed":true}')
+              .supportsSpeed,
+          isTrue,
+        );
+        expect(
+          loadProfile('{"id":"x/y","formats":["wav"],"speed":false}')
+              .supportsSpeed,
           isFalse,
         );
       });
 
       test('rejects a non-bool', () {
         writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', '{"id":"x/y","speed":"yes"}');
+        writeModel('m', '{"id":"x/y","formats":["wav"],"speed":"yes"}');
         final (_, warnings) = load();
         expect(warnings.first, contains('"speed" must be a bool'));
       });
@@ -105,7 +316,7 @@ void main() {
 
     group('language table', () {
       const kokoroJson =
-          '{"id":"hexgrad/kokoro-82m","sends_language":true,'
+          '{"id":"hexgrad/kokoro-82m","formats":["wav"],"sends_language":true,'
           '"default_language":"b","languages":{"b":"British English",'
           '"j":"Japanese"}}';
 
@@ -128,7 +339,7 @@ void main() {
       });
 
       test('a model with no languages reads as none', () {
-        final cfg = loadConfig('{"id":"x/y"}');
+        final cfg = loadConfig('{"id":"x/y","formats":["wav"]}');
         expect(cfg.models['m']!.sendsLanguageField, isFalse);
         expect(cfg.languagesFor('m'), isEmpty);
         expect(cfg.defaultLanguageFor('m'), isNull);
@@ -136,7 +347,10 @@ void main() {
 
       test('rejects a non-bool sends_language', () {
         writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', '{"id":"x/y","sends_language":"yes"}');
+        writeModel(
+          'm',
+          '{"id":"x/y","formats":["wav"],"sends_language":"yes"}',
+        );
         expect(load().$2.first, contains('"sends_language" must be a bool'));
       });
 
@@ -144,14 +358,15 @@ void main() {
         writeClaimingProvider(testProvider, models: ['m']);
         writeModel(
           'm',
-          '{"id":"x/y","languages":{"b":"British"},"default_language":"z"}',
+          '{"id":"x/y","formats":["wav"],"languages":{"b":"British"},'
+              '"default_language":"z"}',
         );
         expect(load().$2.first, contains('"default_language" is "z"'));
       });
 
       test('rejects a blank language label', () {
         writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', '{"id":"x/y","languages":{"b":""}}');
+        writeModel('m', '{"id":"x/y","formats":["wav"],"languages":{"b":""}}');
         expect(load().$2.first, contains('"languages"'));
       });
     });
@@ -159,7 +374,7 @@ void main() {
     group('voice design', () {
       const json =
           '{"id":"mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",'
-          '"sends_instruct":true,"sends_voice":false,'
+          '"formats":["wav"],"sends_instruct":true,"sends_voice":false,'
           '"default_instruct":"A calm, low British male narrator."}';
 
       TtsModelProfile loadProfile(String modelJson) {
@@ -178,21 +393,27 @@ void main() {
       });
 
       test('a model with neither key reads as absent, not empty', () {
-        final profile = loadProfile('{"id":"x/y"}');
+        final profile = loadProfile('{"id":"x/y","formats":["wav"]}');
         expect(profile.sendsInstructField, isFalse);
         expect(profile.defaultInstruct, isNull);
       });
 
       test('rejects a non-bool sends_instruct', () {
         writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', '{"id":"x/y","sends_instruct":"yes"}');
+        writeModel(
+          'm',
+          '{"id":"x/y","formats":["wav"],"sends_instruct":"yes"}',
+        );
         expect(load().$2.first, contains('"sends_instruct" must be a bool'));
       });
 
       test('rejects a non-string default_instruct', () {
         writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', '{"id":"x/y","default_instruct":42}');
-        expect(load().$2.first, contains('"default_instruct" must be a string'));
+        writeModel('m', '{"id":"x/y","formats":["wav"],"default_instruct":42}');
+        expect(
+          load().$2.first,
+          contains('"default_instruct" must be a string'),
+        );
       });
     });
 
@@ -215,8 +436,8 @@ void main() {
               r'"api_key":"${A_KEY}"}}',
         );
         writeProvider('beta', '{"models":[],"settings":{}}');
-        writeModel('one', '{"id":"x/one"}');
-        writeModel('two', '{"id":"x/two"}');
+        writeModel('one', '{"id":"x/one","formats":["wav"]}');
+        writeModel('two', '{"id":"x/two","formats":["wav"]}');
 
         final (cfg, warnings) = load();
         expect(warnings, isEmpty);
@@ -269,8 +490,8 @@ void main() {
         writeRegistry('{"providers":["alpha","beta"]}');
         writeProvider('alpha', '{"models":["one"],"settings":{}}');
         writeProvider('beta', '{"models":["two"],"settings":{}}');
-        writeModel('one', '{"id":"x/one"}');
-        writeModel('two', '{"id":"x/two"}');
+        writeModel('one', '{"id":"x/one","formats":["wav"]}');
+        writeModel('two', '{"id":"x/two","formats":["wav"]}');
 
         final (cfg, warnings) = load();
         expect(warnings, isEmpty);
@@ -281,8 +502,8 @@ void main() {
       test('a model no provider claims is skipped without a warning', () {
         writeRegistry('{"providers":["alpha"]}');
         writeProvider('alpha', '{"models":["one"],"settings":{}}');
-        writeModel('one', '{"id":"x/one"}');
-        writeModel('orphan', '{"id":"x/orphan"}');
+        writeModel('one', '{"id":"x/one","formats":["wav"]}');
+        writeModel('orphan', '{"id":"x/orphan","formats":["wav"]}');
 
         final (cfg, warnings) = load();
         expect(cfg.models.containsKey('one'), isTrue);
@@ -304,9 +525,9 @@ void main() {
         writeRegistry('{"providers":["alpha","beta"]}');
         writeProvider('alpha', '{"models":["one","two"],"settings":{}}');
         writeProvider('beta', '{"models":["three"],"settings":{}}');
-        writeModel('one', '{"id":"x/one"}');
-        writeModel('two', '{"id":"x/two"}');
-        writeModel('three', '{"id":"x/three"}');
+        writeModel('one', '{"id":"x/one","formats":["wav"]}');
+        writeModel('two', '{"id":"x/two","formats":["wav"]}');
+        writeModel('three', '{"id":"x/three","formats":["wav"]}');
 
         expect(defaultModelFor(load().$1)?.alias, 'one');
       });
@@ -372,12 +593,14 @@ void main() {
             'fast': const TtsModelProfile(
               alias: 'fast',
               id: 'x/y',
+              formats: [TtsAudioFormat.wav],
               supportsSpeed: true,
               provider: testProvider,
             ),
             'plain': const TtsModelProfile(
               alias: 'plain',
               id: 'x/z',
+              formats: [TtsAudioFormat.wav],
               provider: testProvider,
             ),
           },
@@ -412,6 +635,7 @@ void main() {
             'kokoro': const TtsModelProfile(
               alias: 'kokoro',
               id: 'hexgrad/kokoro-82m',
+              formats: [TtsAudioFormat.wav],
               sendsLanguageField: true,
               provider: testProvider,
             ),
@@ -454,6 +678,7 @@ void main() {
             'one': const TtsModelProfile(
               alias: 'one',
               id: 'x/one',
+              formats: [TtsAudioFormat.wav],
               provider: testProvider,
             ),
           },
@@ -468,53 +693,61 @@ void main() {
       expect(raw.containsKey('languages'), isFalse);
     });
 
-    test('voice design round-trips, and an ordinary model emits no instruct keys', () {
-      writeVoiceConfig(
-        dir.path,
-        VoiceConfig(
-          providers: {
-            testProvider: const ProviderConfig(
-              name: testProvider,
-              models: ['one', 'two'],
-            ),
-          },
-          models: {
-            'one': const TtsModelProfile(
-              alias: 'one',
-              id: 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
-              sendsInstructField: true,
-              defaultInstruct: 'A calm, low British male narrator.',
-              provider: testProvider,
-            ),
-            'two': const TtsModelProfile(
-              alias: 'two',
-              id: 'x/two',
-              provider: testProvider,
-            ),
-          },
-        ),
-      );
+    test(
+      'voice design round-trips, and an ordinary model emits no instruct keys',
+      () {
+        writeVoiceConfig(
+          dir.path,
+          VoiceConfig(
+            providers: {
+              testProvider: const ProviderConfig(
+                name: testProvider,
+                models: ['one', 'two'],
+              ),
+            },
+            models: {
+              'one': const TtsModelProfile(
+                alias: 'one',
+                id: 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+                formats: [TtsAudioFormat.wav],
+                sendsInstructField: true,
+                defaultInstruct: 'A calm, low British male narrator.',
+                provider: testProvider,
+              ),
+              'two': const TtsModelProfile(
+                alias: 'two',
+                id: 'x/two',
+                formats: [TtsAudioFormat.wav],
+                provider: testProvider,
+              ),
+            },
+          ),
+        );
 
-      final designed = jsonDecode(
-        File(at(kVoiceConfigModelsDir, 'one.json')).readAsStringSync(),
-      ) as Map<String, dynamic>;
-      expect(designed['sends_instruct'], isTrue);
-      expect(designed['default_instruct'], 'A calm, low British male narrator.');
+        final designed = jsonDecode(
+          File(at(kVoiceConfigModelsDir, 'one.json')).readAsStringSync(),
+        ) as Map<String, dynamic>;
+        expect(designed['sends_instruct'], isTrue);
+        expect(
+          designed['default_instruct'],
+          'A calm, low British male narrator.',
+        );
 
-      final plain = jsonDecode(
-        File(at(kVoiceConfigModelsDir, 'two.json')).readAsStringSync(),
-      ) as Map<String, dynamic>;
-      expect(plain.containsKey('sends_instruct'), isFalse);
-      expect(plain.containsKey('default_instruct'), isFalse);
+        final plain = jsonDecode(
+          File(at(kVoiceConfigModelsDir, 'two.json')).readAsStringSync(),
+        ) as Map<String, dynamic>;
+        expect(plain.containsKey('sends_instruct'), isFalse);
+        expect(plain.containsKey('default_instruct'), isFalse);
 
-      final (cfg, warnings) = loadVoiceConfig(dir.path);
-      expect(warnings, isEmpty);
-      expect(cfg.models['one']!.sendsInstructField, isTrue);
-      expect(
-        cfg.models['one']!.defaultInstruct,
-        'A calm, low British male narrator.',
-      );
-    });
+        final (cfg, warnings) = loadVoiceConfig(dir.path);
+        expect(warnings, isEmpty);
+        expect(cfg.models['one']!.sendsInstructField, isTrue);
+        expect(
+          cfg.models['one']!.defaultInstruct,
+          'A calm, low British male narrator.',
+        );
+      },
+    );
 
     test('round-trips the whole tree back into an equal config', () {
       final original = VoiceConfig(
@@ -529,6 +762,7 @@ void main() {
           'one': const TtsModelProfile(
             alias: 'one',
             id: 'x/one',
+            formats: [TtsAudioFormat.wav],
             provider: testProvider,
           ),
         },
@@ -558,6 +792,7 @@ void main() {
             'stray': const TtsModelProfile(
               alias: 'stray',
               id: 'x/stray',
+              formats: [TtsAudioFormat.wav],
               provider: testProvider,
             ),
           },
@@ -613,11 +848,13 @@ void main() {
 
     /// The config root, where the downloaded starter files live.
     const base = '.';
+
     /// The overlay root, where everything the user authors lands.
     const overlay = kVoiceConfigOverlayDirName;
 
     String modelJson(String id, {String? defaultVoice}) => jsonEncode({
       'id': id,
+      'formats': ['wav'],
       'default_voice': ?defaultVoice,
     });
 
@@ -642,8 +879,7 @@ void main() {
         jsonEncode({
           'models': models,
           'settings': jsonDecode(
-            settingsByProvider[provider] ??
-                '{"base_url":"$testBaseUrl"}',
+            settingsByProvider[provider] ?? '{"base_url":"$testBaseUrl"}',
           ),
         }),
       );
@@ -675,17 +911,14 @@ void main() {
       expect(cfg.models['one']!.id, 'one-overlay');
     });
 
-    test(
-      'an overlay model the base provider still claims needs no overlay '
-      'registry',
-      () {
-        writeBase();
-        // The user only ever authored a model file, nothing else.
-        writeModel(overlay, 'one', modelJson('one-overlay'));
-        final (cfg, _) = load();
-        expect(cfg.models['one']!.id, 'one-overlay');
-      },
-    );
+    test('an overlay model the base provider still claims needs no overlay '
+        'registry', () {
+      writeBase();
+      // The user only ever authored a model file, nothing else.
+      writeModel(overlay, 'one', modelJson('one-overlay'));
+      final (cfg, _) = load();
+      expect(cfg.models['one']!.id, 'one-overlay');
+    });
 
     test('an overlay model only loads once some provider claims it', () {
       writeBase();
@@ -708,7 +941,11 @@ void main() {
         }),
       );
       writeModel(overlay, 'two', modelJson('two-overlay'));
-      writeOverlayRegistry(jsonEncode({'providers': ['alpha']}));
+      writeOverlayRegistry(
+        jsonEncode({
+          'providers': ['alpha'],
+        }),
+      );
 
       final (cfg, _) = load();
       expect(cfg.models['two']!.id, 'two-overlay');
@@ -791,7 +1028,11 @@ void main() {
       );
       // Re-listing a provider the baseline already serves is what the README
       // tells a user to do, so it has to be the way to promote one.
-      writeOverlayRegistry(jsonEncode({'providers': [testProvider]}));
+      writeOverlayRegistry(
+        jsonEncode({
+          'providers': [testProvider],
+        }),
+      );
 
       final (cfg, warnings) = load();
       expect(warnings, isEmpty);
@@ -837,7 +1078,11 @@ void main() {
 
     test('an overlay provider registers ahead of the downloaded ones', () {
       writeBase(provider: 'beta', providerOrder: const ['beta']);
-      writeRegistry(jsonEncode({'providers': ['beta']}));
+      writeRegistry(
+        jsonEncode({
+          'providers': ['beta'],
+        }),
+      );
       writeProvider(
         overlay,
         'alpha',
@@ -847,7 +1092,11 @@ void main() {
         }),
       );
       writeModel(overlay, 'two', modelJson('two-overlay'));
-      writeOverlayRegistry(jsonEncode({'providers': ['alpha']}));
+      writeOverlayRegistry(
+        jsonEncode({
+          'providers': ['alpha'],
+        }),
+      );
 
       final (cfg, warnings) = load();
       expect(warnings, isEmpty);
@@ -902,10 +1151,7 @@ void main() {
       final (_, warnings) = load();
       // The overlay file wins, so the base file's absence of the same key is
       // not reported a second time.
-      expect(
-        warnings.where((w) => w.startsWith('Overlay: ')),
-        hasLength(1),
-      );
+      expect(warnings.where((w) => w.startsWith('Overlay: ')), hasLength(1));
       expect(warnings, hasLength(1));
     });
 
@@ -914,7 +1160,11 @@ void main() {
       writeModel(
         base,
         'one',
-        jsonEncode({'id': 'one-base', 'voices_editable': true}),
+        jsonEncode({
+          'id': 'one-base',
+          'formats': ['wav'],
+          'voices_editable': true,
+        }),
       );
 
       final (cfg, _) = load();
@@ -932,7 +1182,11 @@ void main() {
       writeModel(
         base,
         'one',
-        jsonEncode({'id': 'one-base', 'voices_editable': 'yes'}),
+        jsonEncode({
+          'id': 'one-base',
+          'formats': ['wav'],
+          'voices_editable': 'yes',
+        }),
       );
 
       final (cfg, warnings) = load();
@@ -974,10 +1228,7 @@ void main() {
 
       final (cfg, warnings) = load();
       expect(cfg.models['one']!.id, 'one-base');
-      expect(
-        warnings.where((w) => w.startsWith('Overlay: ')),
-        hasLength(1),
-      );
+      expect(warnings.where((w) => w.startsWith('Overlay: ')), hasLength(1));
     });
 
     test('a model no layer resolves is warned once, not once per layer', () {

@@ -18,12 +18,11 @@ import 'src/gui/platform/platform_detection.dart';
 /// [providers] is the manifest's provider file list: a model file is
 /// meaningless without the block that names it, so provider files travel with
 /// the models rather than in a separate download.
-typedef VoiceConfigDownloader =
-    Future<void> Function(
-      String configDir,
-      List<String> files, {
-      List<String> providers,
-    });
+typedef VoiceConfigDownloader = Future<void> Function(
+  String configDir,
+  List<String> files, {
+  List<String> providers,
+});
 
 class BootstrapApp extends StatelessWidget {
   const BootstrapApp({
@@ -186,9 +185,8 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
 
   void _checkConfig() async {
     _starterFiles = await _loadStarterFiles();
-    final registry = File(
-      '${widget.configDir}/$kVoiceConfigRegistryName',
-    ).existsSync();
+    final registry = File('${widget.configDir}/$kVoiceConfigRegistryName')
+        .existsSync();
     // A config is complete only when the registry, every provider it needs, and
     // every starter model are on disk: the loader reaches models through
     // providers, so a missing provider file makes a downloaded model unusable.
@@ -239,12 +237,15 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   Future<void> _downloadWithSpinner() async {
     final downloader =
         widget.downloader ??
-        (String configDir, List<String> files, {List<String> providers = const []}) =>
-            downloadVoiceConfigFiles(
-              configDir,
-              files: files,
-              providers: providers,
-            );
+        (
+          String configDir,
+          List<String> files, {
+          List<String> providers = const [],
+        }) => downloadVoiceConfigFiles(
+          configDir,
+          files: files,
+          providers: providers,
+        );
     if (mounted) setState(() => _downloading = true);
     try {
       await downloader(

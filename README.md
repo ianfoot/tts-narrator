@@ -112,7 +112,8 @@ header and the server decides whether it needed one.
 ```json
 {
   "id": "fish-audio/s2.1-pro-free",
-  "format": "mp3",
+  "formats": ["wav", "mp3"],
+  "wav_response_format": "pcm",
   "default_voice": "British Female Narrator",
   "voices": {
     "British Female Narrator": "89f41ea230034706881f85a8227d6ab9",
@@ -126,8 +127,8 @@ header and the server decides whether it needed one.
 ```json
 {
   "id": "google/gemini-3.1-flash-tts-preview",
-  "format": "pcm",
-  "sample_rate": 24000,
+  "formats": ["wav"],
+  "wav_response_format": "pcm",
   "prompt_style": true,
   "default_voice": "Charon",
   "pricing": {
@@ -143,7 +144,8 @@ header and the server decides whether it needed one.
 ```json
 {
   "id": "hexgrad/kokoro-82m",
-  "format": "mp3",
+  "formats": ["wav", "mp3"],
+  "wav_response_format": "pcm",
   "sends_language": true,
   "default_voice": "bf_emma",
   "default_language": "b",
@@ -159,11 +161,43 @@ Model differences drive how requests are built:
 
 | Alias | Voice format | Prompt styling | Output |
 | --- | --- | --- | --- |
-| `fish` (default) | free-form 32-hex fish.audio id | ✗ (read aloud — prompt styling disabled) | `.mp3` (free) |
-| `gemini` | named voices (rated on the OpenRouter page) | ✓ (accent/style/`[calm]`) | 24 kHz PCM `.wav` |
-| `kokoro` | Kokoro-82M voices (54 voices, 9 languages, keyed by id) | ✗ (read aloud — prompt styling disabled) | `.mp3` |
-| `kokoro_local` | same Kokoro-82M voices | ✗ (read aloud — prompt styling disabled) | `.wav` (local, free) |
-| `qwen3_voicedesign` | ✗ (none — the voice is described, not chosen) | ✗ (prose voice design instead) | 24 kHz `.wav` (local, free) |
+| `fish` (default) | free-form 32-hex fish.audio id | ✗ (read aloud — prompt styling disabled) | `.wav` or `.mp3` (free) |
+| `gemini` | named voices (rated on the OpenRouter page) | ✓ (accent/style/`[calm]`) | `.wav` |
+| `kokoro` | Kokoro-82M voices (54 voices, 9 languages, keyed by id) | ✗ (read aloud — prompt styling disabled) | `.wav` or `.mp3` |
+| `kokoro_local` | same Kokoro-82M voices | ✗ (read aloud — prompt styling disabled) | `.wav` or `.mp3` (local, free) |
+| `qwen3_voicedesign` | ✗ (none — the voice is described, not chosen) | ✗ (prose voice design instead) | `.wav` or `.mp3` (local, free) |
+
+A model's `formats` list is a promise its backend keeps: the first entry is the
+default, and a model offering both gets an **Output format** segmented control
+under the model dropdown in the Run Setup panel, with your pick remembered per
+model across restarts. A model declaring one format shows no control. Every
+shipped model leads with `"wav"` — the container that plays everywhere without a
+decoder dependency.
+
+What a run asks for and what it writes are two different things, and the model
+file says how they relate. `"formats"` names the containers you can choose from.
+`"wav_response_format"` names the wire value used when you chose `wav`: absent
+means the backend returns a finished WAV container, while `"pcm"` means it
+returns headerless samples and the app writes the WAV header itself, using the
+sample rate the response reports. That second key is needed because the two
+backends disagree, and neither could be guessed from their published schemas:
+
+- OpenRouter's `response_format` accepts `mp3` and `pcm` only. Requesting `wav`
+  is rejected by OpenRouter's own request validator before a model is even
+  chosen, so it serves no WAV container for any model. Its `pcm` responses carry
+  `audio/pcm;rate=24000;channels=1`, so the rate to write is in the response.
+- The local mlx-audio server returns a real `RIFF`/`WAVE` container for `wav`,
+  which is why its model files omit `wav_response_format`. Its `mp3` needs
+  `ffmpeg` on the path for mlx-audio to encode, so a local model's MP3 option
+  depends on your machine rather than on the model.
+- Gemini is the one model with no MP3: OpenRouter routes it to a provider that
+  rejects `response_format=mp3` outright. Its file declares `"formats": ["wav"]`
+  and `"wav_response_format": "pcm"`.
+
+These were checked by calling each endpoint, not by reading its schema — the
+schemas advertise values their providers reject. `packages/core/test/shipped_voice_config_test.dart`
+pins the result, so a model file that drifts from what its backend serves fails
+the tests rather than the first run.
 
 Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
 Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma` ("Emma"),
@@ -294,7 +328,7 @@ the copy.
 
 **TTS Narrator → Settings…** (`Cmd+,` on macOS, `Ctrl+,` elsewhere) opens a
 providers and voices screen: a model list on the left, and for the selected model
-its id, provider and format, plus a table of voices you can add, rename, re-gender,
+its id, provider and offered output formats, plus a table of voices you can add, rename, re-gender,
 remove, and choose a default from.
 
 Only models whose file sets `"voices_editable": true` can be edited — of the
@@ -335,28 +369,26 @@ not the key, so such a model keeps working.
 
 Each segment is written to an output folder you choose (default `output/`), as
 `<input-stem>/<input-stem>_<nn>.<ext>` (padded to the width of the segment
-count, so files sort numerically), plus a `manifest.json` describing the run:
+count, so files sort numerically), plus a `manifest.json` describing the run.
 
-- `gemini` → 24 kHz mono 16-bit PCM `.wav`
-- `kokoro` → `.mp3` (raw provider bytes)
-- `fish` → `.mp3` (raw provider bytes)
-- `kokoro_local` → `.wav` (raw provider bytes)
-
-So `story.txt` → `output/story/story_01.mp3` … `story_16.mp3`
+The extension comes from the format you picked in the Run Setup panel, so
+`story.txt` on a `.mp3` model → `output/story/story_01.mp3` … `story_16.mp3`; the
+same story on a `.wav` model → `story_01.wav` … `story_16.wav`. The bytes are
+what the provider returned, except where the model file's
+`"wav_response_format": "pcm"` says the backend sends headerless samples, in
+which case the app writes the WAV header itself before the first sample.
 
 The manifest is rewritten after every segment, so an interrupted run can be
 picked up without re-generating completed paragraphs.
 
 Manifest contents:
 - `model`, `voice`, optional `voice_label` (friendly alias if used), optional
-  `language` (only when the model sends one), `format`,
-  `sample_rate` (`sample_rate` is omitted for MP3)
-- per-segment `wav`, `bytes`, `duration_seconds` (null for MP3), `fingerprint`,
-  `excerpt`, and the exact `input`/`prompt` that produced it (for
-  reproducibility)
+  `language` (only when the model sends one), and `format`
+- per-segment `wav`, `bytes`, `fingerprint`, `excerpt`, and the exact
+  `input`/`prompt` that produced it (for reproducibility)
 
-Playback (macOS): `afplay output/story/story_1.wav` (Gemini),
-`afplay output/story/story_1.mp3` (Kokoro/Fish).
+Playback (macOS): `afplay output/story/story_1.mp3` or
+`afplay output/story/story_1.wav`, whichever the run produced.
 
 ## How narration text is segmented
 
@@ -411,11 +443,15 @@ fvm flutter build macos --release
 
 ## Notes / current behaviour
 
-- OpenRouter's Gemini model page lists `response_format: mp3` as supported, but
-  the provider rejects `mp3` (HTTP 400: *"Gemini TTS only supports
-  response_format=pcm"*). This tool always requests `pcm` for Gemini and wraps
-  it in a WAV container. Kokoro and Fish are requested as `mp3` directly.
-  There is no MP3 encoding or concatenation step — the model emits these formats.
+- Output format is `mp3` or `wav`, chosen per model, and a model file must declare
+  what it can emit in its `formats` list — a file naming no formats is skipped with
+  a warning rather than guessed at, because what a backend can produce is a
+  property of the backend. Where the wire value differs from the container you
+  asked for, `"wav_response_format"` says so (see [Models](#models)). There is no
+  transcoding: MP3 segments are concatenated by appending bytes, while WAV
+  segments have their headers stripped and merged. A model offering both formats
+  gets a segmented control in the Run Setup panel; the choice is remembered per
+  model between runs.
 - Transient `502` (empty audio stream) failures are retried up to 3 times,
   matching a documented Gemini TTS quirk. (Fish failures are not billed.)
 - The run view displays an estimated cost + duration. Estimates

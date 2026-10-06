@@ -384,12 +384,15 @@ class ModelProfileVoiceController extends ChangeNotifier {
   /// Whether the active model would show any voice under the given filters.
   /// Unset arguments fall back to the active [_activeLanguage] /
   /// [voiceGenderFilter].
-  bool _hasVisible(TtsModelProfile p, {String? language, VoiceGender? gender}) =>
-      _filteredEntries(
-        p,
-        language: language ?? _activeLanguage,
-        gender: gender ?? _voiceGender,
-      ).isNotEmpty;
+  bool _hasVisible(
+    TtsModelProfile p, {
+    String? language,
+    VoiceGender? gender,
+  }) => _filteredEntries(
+    p,
+    language: language ?? _activeLanguage,
+    gender: gender ?? _voiceGender,
+  ).isNotEmpty;
 
   /// Voices the picker shows for the active model under the active filters.
   List<VoiceOption> _visibleEntries(TtsModelProfile p) =>
@@ -458,8 +461,9 @@ class ModelProfileVoiceController extends ChangeNotifier {
         : matches.any((e) => e.label == _voiceLabel);
     if (stillVisible) return;
     final def = _defaultVoiceFor(p);
-    final defEntries =
-        def == null ? const <VoiceOption>[] : matches.where((e) => e.id == def.$1);
+    final defEntries = def == null
+        ? const <VoiceOption>[]
+        : matches.where((e) => e.id == def.$1);
     final pick = defEntries.isNotEmpty ? defEntries.first : matches.first;
     _voice = pick.id;
     _voiceLabel = pick.label;
