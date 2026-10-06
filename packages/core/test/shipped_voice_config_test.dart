@@ -207,6 +207,120 @@ void main() {
       }
     });
 
+    test('every model defaults to wav', () {
+      // WAV is the container that plays everywhere without pulling in a decoder,
+      // so it is what a model should hand a user who never touches the control.
+      // The first entry is the default, which means this pins ordering too: a
+      // model reordering its list to lead with mp3 changes what a fresh run
+      // produces, and that is a decision rather than an edit.
+      for (final file in shipped.modelFiles) {
+        final json =
+            jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+        expect(
+          (json['formats']! as List<Object?>).first,
+          'wav',
+          reason:
+              '${file.path} defaults to "${(json['formats']! as List<Object?>).first}", '
+              'but a shipped model should produce wav unless the user says '
+              'otherwise',
+        );
+      }
+    });
+
+    test('every model declares exactly what its backend was observed to serve', () {
+      // Probed 2026-10-06 by POSTing to each backend's `/audio/speech` with each
+      // candidate `response_format` and running `file(1)` on the response:
+      //
+      //   curl -sS -X POST https://openrouter.ai/api/v1/audio/speech \
+      //     -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+      //     -H 'Content-Type: application/json' \
+      //     -d '{"model":"fish-audio/s2.1-pro-free:free","input":"Hello.",
+      //          "voice":"af_heart","response_format":"pcm"}' \
+      //     -o /tmp/probe.bin -D /tmp/probe.headers
+      //
+      //   curl -sS -X POST http://localhost:8000/v1/audio/speech \
+      //     -H 'Content-Type: application/json' \
+      //     -d '{"model":"mlx-community/Kokoro-82M-bf16","input":"Hello.",
+      //          "response_format":"wav"}' -o /tmp/probe-local.bin
+      //
+      //   file /tmp/probe.bin
+      //
+      // What that settled, per model:
+      //
+      //   fish      mp3 -> 200 audio/mpeg   wav -> 400   pcm -> 200 rate=44100
+      //   kokoro    mp3 -> 200 audio/mpeg   wav -> 400   pcm -> 200 rate=24000
+      //   gemini    mp3 -> 400 provider     wav -> 400   pcm -> 200 rate=24000
+      //   local     mp3 -> 200 audio/mp3    wav -> 200 RIFF/WAVE  pcm -> 200,
+      //            with no rate in the content type
+      //
+      // The three OpenRouter 400s on `wav` come from OpenRouter's own request
+      // validator, before any model is chosen, so it serves a WAV container for
+      // nothing. Gemini's 400 on `mp3` is a different layer: the routed provider
+      // speaking after validation passed, so it takes pcm only. That is why the
+      // hosted models name `wav_response_format: pcm` and have the app write the
+      // header, and why Gemini offers no mp3 at all.
+      //
+      // This test exists because the previous round got it wrong twice. A
+      // three-hundred-and-sixty-one-test green suite did not stop a config that
+      // 400s on the first segment, because the suite asserted the files this
+      // project wrote rather than what the vendors serve. A shipped config now
+      // has to agree with a recorded probe or this fails in CI instead.
+      const verified = <String, (List<String>, String?)>{
+        'fish': (['wav', 'mp3'], 'pcm'),
+        'kokoro': (['wav', 'mp3'], 'pcm'),
+        'gemini': (['wav'], 'pcm'),
+        'kokoro_local': (['wav', 'mp3'], null),
+        'qwen3_voicedesign': (['wav', 'mp3'], null),
+      };
+
+      final (config, warnings) = loadVoiceConfig(shipped.path);
+      expect(config.models.keys, containsAll(verified.keys));
+
+      for (final entry in verified.entries) {
+        final profile = profileFor(entry.key, config);
+        expect(
+          profile,
+          isNotNull,
+          reason: '${entry.key} was probed and must stay selectable',
+        );
+        expect(
+          profile!.formats.map((f) => f.wireValue).toList(),
+          entry.value.$1,
+          reason:
+              '${entry.key} does not match the 2026-10-06 probe. Re-probe '
+              'before changing this: the vendor answer, not this table, is '
+              'the truth.',
+        );
+        expect(
+          profile.wavResponseFormat.wireValue,
+          entry.value.$2 ?? 'wav',
+          reason:
+              '${entry.key} asks for the wrong wire format when the run wants '
+              'a wav file',
+        );
+      }
+    });
+
+    test('a local model offering mp3 depends on ffmpeg being installed', () {
+      // mlx-audio encodes mp3 by shelling out to ffmpeg, so the local mp3 that
+      // probed 200 above is a property of this machine, not of the model. The
+      // config can only honestly offer it, and the docs have to say so; nothing
+      // in the code can detect the missing encoder before the request fails.
+      for (final alias in const ['kokoro_local', 'qwen3_voicedesign']) {
+        final json = jsonDecode(
+          shipped.modelFile(alias).readAsStringSync(),
+        ) as Map<String, dynamic>;
+        expect(
+          json['formats'],
+          contains('mp3'),
+          reason:
+              '$alias serves mp3 through mlx-audio, which needs ffmpeg. If '
+              'that ever changes, drop it here and in the docs rather than '
+              'leaving a format that can fail at request time',
+        );
+      }
+    });
+
     test('fish is the one shipped model whose voices are editable', () {
       // Fish is where a user adds voices -- it has the long tail of them. The
       // rest describe what the model actually offers, so editing their lists in

@@ -60,6 +60,40 @@ WavFile readWav(Uint8List bytes) {
   return WavFile(formatChunk: formatChunk, data: samples);
 }
 
+/// Builds a 44-byte WAV header for [dataBytes] of headerless samples.
+///
+/// The counterpart to [writeWav] for the case where a provider returns raw
+/// samples instead of a container. The result is the same canonical layout every
+/// probed backend serves natively — 16-bit linear PCM — so a pcm-sourced file and
+/// a natively-served one are indistinguishable to a player.
+///
+/// [sampleRate] and [channels] come from the response rather than from config,
+/// because only the response knows them. 16-bit is the one thing assumed, and it
+/// is what every backend probed actually returns.
+Uint8List wavHeader({
+  required int sampleRate,
+  required int channels,
+  required int dataBytes,
+}) {
+  const bytesPerSample = 2;
+  final byteRate = sampleRate * channels * bytesPerSample;
+  final header = BytesBuilder(copy: false);
+  header.add(_asciiEncode('RIFF'));
+  header.add(_u32le(36 + dataBytes));
+  header.add(_asciiEncode('WAVE'));
+  header.add(_asciiEncode('fmt '));
+  header.add(_u32le(16)); // Size of the format chunk that follows.
+  header.add(_u16le(1)); // Format tag: linear PCM.
+  header.add(_u16le(channels));
+  header.add(_u32le(sampleRate));
+  header.add(_u32le(byteRate));
+  header.add(_u16le(channels * bytesPerSample)); // Block align.
+  header.add(_u16le(8 * bytesPerSample)); // Bits per sample.
+  header.add(_asciiEncode('data'));
+  header.add(_u32le(dataBytes));
+  return header.takeBytes();
+}
+
 /// Writes [audio] as a WAV file at [path], declaring [formatChunk] verbatim as
 /// its layout.
 void writeWav({
@@ -91,5 +125,11 @@ String _ascii(List<int> bytes) => String.fromCharCodes(bytes);
 List<int> _u32le(int value) {
   final b = ByteData(4);
   b.setUint32(0, value, Endian.little);
+  return b.buffer.asUint8List();
+}
+
+List<int> _u16le(int value) {
+  final b = ByteData(2);
+  b.setUint16(0, value, Endian.little);
   return b.buffer.asUint8List();
 }

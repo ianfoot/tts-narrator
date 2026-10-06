@@ -494,69 +494,81 @@ Map<String, Object?> canonicalVoiceEntryJson(Voice voice) => {
 
 /// Reads the output formats a model file offers, most-preferred first.
 ///
-/// Accepts the current `"formats": ["wav", "mp3"]` list and, for model files
-/// written before formats were a list, the single `"format": "mp3"` string. The
-/// legacy value `pcm` is mapped to MP3 with a warning: it meant headerless
-/// samples the app used to wrap in a WAV container, a step that no longer
-/// exists, so the model is left with the one compressed format these providers
-/// can actually serve.
+/// Required. A model that does not declare what it can produce is a model the
+/// app cannot configure a run for, so it is rejected rather than given a
+/// default: guessing would hand the user a container the backend never produces
+/// and fail on the first segment.
 ///
-/// A model file that says nothing at all gets MP3 alone — the only format every
-/// supported provider can produce, so it is the one safe assumption.
-///
-/// `sample_rate` is deliberately not read. It only ever fed the WAV header of
-/// the retired PCM path; files that still carry the key load unchanged and the
-/// key is ignored like any other the app does not model.
-List<TtsAudioFormat> _parseFormats(
-  Map<String, dynamic> raw,
-  String alias,
-  List<String> warnings,
-) {
+/// `sample_rate` is deliberately not read. The rate is either inside the WAV the
+/// provider returns or stated in its response's content type, so a config key
+/// for it has nothing left to configure. Files that still carry it load
+/// unchanged, and the key is ignored like any other the app does not model.
+List<TtsAudioFormat> _parseFormats(Map<String, dynamic> raw, String alias) {
   final declared = raw['formats'];
-  if (declared != null) {
-    if (declared is! List || declared.isEmpty) {
+  if (declared == null) {
+    throw VoiceConfigurationError(
+      'Model "$alias" needs a "formats" list naming what it can produce '
+      '(expected ${TtsAudioFormat.values.map((f) => '"${f.wireValue}"').join(' or ')})',
+    );
+  }
+  if (declared is! List || declared.isEmpty) {
+    throw VoiceConfigurationError(
+      '"formats" must be a non-empty list of format names '
+      '(${TtsAudioFormat.values.map((f) => '"${f.wireValue}"').join(' or ')})',
+    );
+  }
+  final formats = <TtsAudioFormat>[];
+  for (final entry in declared) {
+    if (entry is! String) {
+      throw VoiceConfigurationError('"formats" entries must be strings');
+    }
+    final format = TtsAudioFormat.tryParse(entry);
+    if (format == null) {
       throw VoiceConfigurationError(
-        '"formats" must be a non-empty list of format names '
-        '(${TtsAudioFormat.values.map((f) => '"${f.wireValue}"').join(' or ')})',
+        '"formats" entry "$entry" is not a supported format '
+        '(expected ${TtsAudioFormat.values.map((f) => '"${f.wireValue}"').join(' or ')})',
       );
     }
-    final formats = <TtsAudioFormat>[];
-    for (final entry in declared) {
-      if (entry is! String) {
-        throw VoiceConfigurationError('"formats" entries must be strings');
-      }
-      final format = TtsAudioFormat.tryParse(entry);
-      if (format == null) {
-        throw VoiceConfigurationError(
-          '"formats" entry "$entry" is not a supported format '
-          '(expected ${TtsAudioFormat.values.map((f) => '"${f.wireValue}"').join(' or ')})',
-        );
-      }
-      // Repeats would show a duplicated button in the format picker.
-      if (!formats.contains(format)) formats.add(format);
-    }
-    return formats;
+    // Repeats would show a duplicated button in the format picker.
+    if (!formats.contains(format)) formats.add(format);
   }
+  return formats;
+}
 
-  final legacy = raw['format'];
-  if (legacy == null) return const [TtsAudioFormat.mp3];
-  if (legacy is! String) {
-    throw VoiceConfigurationError('"format" must be a string');
+/// Reads the `response_format` to send when a run's output format is wav.
+///
+/// Optional and defaults to `wav`: writing the provider's finished container
+/// through untouched is the path that cannot mislabel anything. A backend that
+/// serves only headerless samples declares `pcm` instead.
+///
+/// Declaring it on a model with no wav format is rejected rather than ignored,
+/// since it describes a wav request that would never be made — almost always a
+/// copy-paste left over from a model that did offer wav.
+TtsWavResponseFormat _parseWavResponseFormat(
+  Map<String, dynamic> raw,
+  String alias,
+  List<TtsAudioFormat> formats,
+) {
+  final declared = raw['wav_response_format'];
+  if (declared == null) return TtsWavResponseFormat.wav;
+  if (declared is! String) {
+    throw VoiceConfigurationError('"wav_response_format" must be a string');
   }
-  final format = TtsAudioFormat.fromLegacy(legacy);
+  final format = TtsWavResponseFormat.tryParse(declared);
   if (format == null) {
     throw VoiceConfigurationError(
-      'Model "$alias" declares retired format "$legacy"; use "formats" with '
-      '"mp3" or "wav"',
+      'Model "$alias" declares an unsupported "wav_response_format" '
+      '"$declared" (expected '
+      '${TtsWavResponseFormat.values.map((f) => '"${f.wireValue}"').join(' or ')})',
     );
   }
-  if (legacy != format.wireValue) {
-    warnings.add(
-      'Model "$alias" declares the retired format "$legacy"; using '
-      '"${format.wireValue}" instead. Replace "format" with a "formats" list.',
+  if (!formats.contains(TtsAudioFormat.wav)) {
+    throw VoiceConfigurationError(
+      'Model "$alias" declares "wav_response_format" but its "formats" list '
+      'does not include "wav", so no wav request would ever be made',
     );
   }
-  return [format];
+  return format;
 }
 
 ({
@@ -582,7 +594,8 @@ _parseModelFile(String path, String alias, String provider) {
   if (id is! String || id.isEmpty) {
     throw VoiceConfigurationError('needs a non-empty "id"');
   }
-  final formats = _parseFormats(raw, alias, warnings);
+  final formats = _parseFormats(raw, alias);
+  final wavResponseFormat = _parseWavResponseFormat(raw, alias, formats);
   final promptStyle = raw['prompt_style'];
   if (promptStyle != null && promptStyle is! bool) {
     throw VoiceConfigurationError('"prompt_style" must be a bool');
@@ -695,6 +708,7 @@ _parseModelFile(String path, String alias, String provider) {
       alias: alias,
       id: id,
       formats: formats,
+      wavResponseFormat: wavResponseFormat,
       promptStyle: promptStyle ?? false,
       sendsVoiceField: sendsVoice ?? true,
       supportsSpeed: supportsSpeed ?? false,
@@ -765,6 +779,8 @@ Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
   'id': p.id,
   if (p.displayName != null) 'display_name': p.displayName,
   'formats': [for (final f in p.formats) f.wireValue],
+  if (p.wavResponseFormat != TtsWavResponseFormat.wav)
+    'wav_response_format': p.wavResponseFormat.wireValue,
   if (p.promptStyle) 'prompt_style': p.promptStyle,
   if (!p.sendsVoiceField) 'sends_voice': p.sendsVoiceField,
   if (p.supportsSpeed) 'speed': p.supportsSpeed,

@@ -49,6 +49,7 @@ class OpenAiSpeechClient {
     required String? voice,
     required String input,
     required TtsAudioFormat responseFormat,
+    required TtsWavResponseFormat wavResponseFormat,
     required Map<String, String> settings,
     required double? speed,
     String? language,
@@ -64,7 +65,11 @@ class OpenAiSpeechClient {
     final body = <String, Object?>{
       'model': model,
       'input': input,
-      'response_format': responseFormat.wireValue,
+      // A wav run asks for whatever this model serves WAV as. Everything else
+      // is asked for by its own name.
+      'response_format': responseFormat == TtsAudioFormat.wav
+          ? wavResponseFormat.wireValue
+          : responseFormat.wireValue,
     };
     if (resolvedVoice != null && resolvedVoice.isNotEmpty) {
       body['voice'] = resolvedVoice;
@@ -94,7 +99,7 @@ class OpenAiSpeechClient {
     while (true) {
       abort?.throwIfCancelled();
       attempt++;
-      final (statusCode, bytes, generationId) = await _runAttempt(
+      final (statusCode, bytes, generationId, contentType) = await _runAttempt(
         jsonEncode(body),
         uri,
         apiKey,
@@ -110,7 +115,12 @@ class OpenAiSpeechClient {
           }
           throw HttpException('Empty audio stream after $attempt attempts.');
         }
-        return GeneratedAudio(bytes: bytes, generationId: generationId);
+        return GeneratedAudio(
+          bytes: bytes,
+          generationId: generationId,
+          sampleRate: _parameter(contentType, 'rate'),
+          channels: _parameter(contentType, 'channels'),
+        );
       }
       // Non-2xx: fail fast unless retryable.
       if (_isRetryable(statusCode) && attempt <= _retries) {
@@ -182,7 +192,7 @@ class OpenAiSpeechClient {
   /// A genuine [AbortException] (from a pre-cancelled token) passes through;
   /// any I/O error raised by the force-close on cancel is reported as an abort
   /// rather than a connection failure.
-  Future<(int, List<int>, String?)> _runAttempt(
+  Future<(int, List<int>, String?, String?)> _runAttempt(
     String body,
     Uri uri,
     String? key, {
@@ -198,7 +208,7 @@ class OpenAiSpeechClient {
     }
   }
 
-  Future<(int, List<int>, String?)> _post(
+  Future<(int, List<int>, String?, String?)> _post(
     String body,
     Uri uri,
     String? key, {
@@ -226,11 +236,31 @@ class OpenAiSpeechClient {
         response.statusCode,
         bytes,
         response.headers.value('X-Generation-Id'),
+        response.headers.value(HttpHeaders.contentTypeHeader),
       );
     } finally {
       unsubscribe?.call();
       client.close(force: true);
     }
+  }
+
+  /// Reads a numeric parameter out of a `Content-Type` header.
+  ///
+  /// A provider states the audio's shape in its response type — `audio/pcm;rate=
+  /// 24000;channels=1` is what OpenRouter sends for headerless samples. That is
+  /// the only place the rate is knowable for bytes that arrive with no header of
+  /// their own, so it is parsed here rather than configured. Returns null when the
+  /// header is absent or carries no such parameter, which leaves [sampleRate]
+  /// unset rather than guessing.
+  int? _parameter(String? contentType, String name) {
+    if (contentType == null) return null;
+    for (final part in contentType.split(';').skip(1)) {
+      final pieces = part.trim().split('=');
+      if (pieces.length != 2) continue;
+      if (pieces.first.trim() != name) continue;
+      return int.tryParse(pieces.last.trim());
+    }
+    return null;
   }
 
   /// A client whose retries do not wait, for tests.

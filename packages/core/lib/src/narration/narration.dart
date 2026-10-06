@@ -1,13 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import '../config/provider_settings.dart';
 import 'abort.dart';
 import 'concat.dart';
 import 'config.dart';
+import 'audio_format.dart';
 import 'prompt.dart';
 import 'speech_client.dart';
+import 'wav.dart';
 
 /// Max characters per narration segment. Scenes (blank-line-separated
 /// paragraphs) are kept whole; only a scene longer than this cap is split at
@@ -241,9 +244,10 @@ Future<void> narrate(
     final audioFile =
         '${outDir.path}${Platform.pathSeparator}$baseName.$extension';
 
-    // Resume: reuse an identical prior segment (same index + prompt + file) and
-    // carry its fingerprint/bytes across, so a re-run doesn't re-bill it.
-    final prior = resumeMatch(existing, index, input, dir);
+    // Resume: reuse an identical prior segment (same index + prompt + format +
+    // file) and carry its fingerprint/bytes across, so a re-run doesn't
+    // re-bill it.
+    final prior = resumeMatch(existing, index, input, dir, extension);
     if (prior != null) {
       records.add(prior);
       onProgress?.call(i, count, paragraph, resumed: true);
@@ -261,6 +265,7 @@ Future<void> narrate(
       model: config.profile.id,
       voice: config.profile.sendsVoiceField ? config.voice : null,
       responseFormat: config.outputFormat,
+      wavResponseFormat: config.profile.wavResponseFormat,
       settings: config.providerSettings,
       apiKey: config.apiKey,
       input: input,
@@ -275,15 +280,17 @@ Future<void> narrate(
       abort: abort,
     );
 
-    // Every format the app supports arrives as a finished container, so the bytes
-    // go to disk exactly as the provider sent them.
-    File(audioFile).writeAsBytesSync(audio.bytes, flush: true);
+    // Every format arrives as a finished container except a wav run against a
+    // model that serves headerless samples, where the app writes the header it
+    // is missing so the file on disk is a real WAV.
+    final bytes = _asWav(config, audio);
+    File(audioFile).writeAsBytesSync(bytes, flush: true);
 
     records.add({
       'index': index,
       'wav': '$baseName.$extension',
-      'bytes': audio.bytes.length,
-      'fingerprint': fingerprintOf(audio.bytes),
+      'bytes': bytes.length,
+      'fingerprint': fingerprintOf(bytes),
       'excerpt': paragraph.length > 120
           ? '${paragraph.substring(0, 120)}…'
           : paragraph,
@@ -321,23 +328,77 @@ Future<void> narrate(
 }
 
 /// Returns the prior record for [index] from [existing] when `--resume` can
-/// reuse it: same index, same [input] prompt, and the audio file still exists.
+/// reuse it: same index, same [input] prompt, the audio file still exists, and
+/// it is in [extension].
+///
+/// The format check is load-bearing rather than cosmetic. A run records each
+/// segment's filename, and the combined track is assembled from those recorded
+/// names using the *current* output format. Reusing segments written in the
+/// other format therefore has two bad outcomes: WAV segments handed to the MP3
+/// path are silently concatenated into an unplayable header-then-MP3 file, and
+/// MP3 segments handed to the WAV path throw once the whole run has already
+/// been billed. Refusing the match makes a format switch re-narrate instead,
+/// which costs money but never produces a broken file.
 Map<String, Object?>? resumeMatch(
   List<Map<String, Object?>> existing,
   int index,
   String input,
   String dir,
+  String extension,
 ) {
   for (final r in existing) {
     if (r['index'] == index && r['prompt'] == input) {
       final wav = r['wav'];
       if (wav is String &&
+          _extensionOf(wav) == extension &&
           File('$dir${Platform.pathSeparator}$wav').existsSync()) {
         return r;
       }
     }
   }
   return null;
+}
+
+/// [audio] as the bytes to write for this segment's output format.
+///
+/// A wav run against a model that serves headerless samples is the one case where
+/// the provider's bytes are not yet a file: they need a header saying what rate
+/// and channel layout they have, or nothing will play them. Everything else — mp3
+/// and natively-served wav — is already a finished container and is written
+/// through untouched.
+///
+/// The rate comes from the response rather than from config. A response that
+/// omits it is a hard error naming the model, because a header with an invented
+/// rate would produce a file that plays at the wrong pitch, which is worse than
+/// no file.
+Uint8List _asWav(NarrationConfig config, GeneratedAudio audio) {
+  final pcmSourced =
+      config.outputFormat == TtsAudioFormat.wav &&
+      config.profile.wavResponseFormat == TtsWavResponseFormat.pcm;
+  if (!pcmSourced) return Uint8List.fromList(audio.bytes);
+
+  final rate = audio.sampleRate;
+  if (rate == null) {
+    throw StateError(
+      'Model "${config.profile.id}" returned raw samples without a sample '
+      'rate, so a WAV header cannot be written. Set "wav_response_format" to '
+      '"wav" if the provider serves WAV containers directly.',
+    );
+  }
+  return Uint8List.fromList([
+    ...wavHeader(
+      sampleRate: rate,
+      channels: audio.channels ?? 1,
+      dataBytes: audio.bytes.length,
+    ),
+    ...audio.bytes,
+  ]);
+}
+
+/// The trailing extension of a recorded segment filename, without the dot.
+String _extensionOf(String fileName) {
+  final dot = fileName.lastIndexOf('.');
+  return dot < 0 ? '' : fileName.substring(dot + 1);
 }
 
 /// Loads per-segment records from a prior run's manifest, or empty when none.

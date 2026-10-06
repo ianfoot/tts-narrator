@@ -35,7 +35,7 @@ void main() {
       'models': {
         'fish': {
           'id': 'fish-audio/s2.1-pro-free:free',
-          'format': 'mp3',
+          'formats': ['mp3'],
           'display_name': 'Fish Audio S2.1 (Free)',
           'voices_editable': true,
         },
@@ -55,7 +55,10 @@ void main() {
   void writeLockedConfig() {
     fixtures.writeConfig(configDir, {
       'models': {
-        'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+        'kokoro': {
+          'id': 'hexgrad/kokoro-82m',
+          'formats': ['mp3'],
+        },
       },
       'defaults': {'kokoro': 'bf_emma'},
       'voices': {
@@ -364,13 +367,13 @@ void main() {
         'models': {
           'fish': {
             'id': 'fish-audio/s2.1-pro-free:free',
-            'format': 'mp3',
+            'formats': ['mp3'],
             'display_name': 'Fish',
             'voices_editable': true,
           },
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
             'display_name': 'Gemini',
             'voices_editable': true,
           },

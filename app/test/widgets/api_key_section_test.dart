@@ -90,7 +90,7 @@ void main() {
       'models': {
         'kokoro_local': {
           'id': 'mlx-community/Kokoro-82M-bf16',
-          'format': 'wav',
+          'formats': ['wav'],
         },
       },
       'defaults': {'kokoro_local': 'George'},
@@ -195,7 +195,10 @@ void main() {
         'alpha': {'api_key': r'${TTS_NARRATOR_NOT_SET}'},
       },
       'models': {
-        'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+        'fish': {
+          'id': 'fish-audio/s2.1-pro-free:free',
+          'formats': ['mp3'],
+        },
       },
       'defaults': {'fish': 'British Female Narrator'},
       'voices': {

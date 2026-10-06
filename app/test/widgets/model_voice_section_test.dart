@@ -45,7 +45,7 @@ void main() {
   group('model & voice', () {
     const gemini = {
       'id': 'google/gemini-3.1-flash-tts-preview',
-      'format': 'pcm',
+      'formats': ['wav'],
       'sample_rate': 24000,
       'prompt_style': true,
       'display_name': 'Gemini 3.1 Flash TTS',
@@ -104,7 +104,10 @@ void main() {
     testWidgets('picking a voice alias resolves to its raw id', (tester) async {
       writeConfig(configDir, {
         'models': {
-          'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
+          'fish': {
+            'id': 'fish-audio/s2.1-pro-free',
+            'formats': ['mp3'],
+          },
         },
         'voices': {
           'fish': {'Narrator': 'hex123'},
@@ -166,7 +169,10 @@ void main() {
     ) async {
       writeConfig(configDir, {
         'models': {
-          'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'formats': ['mp3'],
+          },
         },
         'defaults': {'kokoro': 'Emma'},
         'voices': {
@@ -229,7 +235,7 @@ void main() {
         'models': {
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
             'sample_rate': 24000,
             'prompt_style': true,
             'display_name': 'Gemini 3.1 Flash TTS',
@@ -256,7 +262,7 @@ void main() {
           'models': {
             'kokoro': {
               'id': 'hexgrad/kokoro-82m',
-              'format': 'mp3',
+              'formats': ['mp3'],
               'sends_language': true,
               'default_language': 'b',
               'languages': {
@@ -313,7 +319,7 @@ void main() {
         'models': {
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
           },
         },
         'defaults': {'gemini': 'Charon'},
@@ -335,7 +341,7 @@ void main() {
         'models': {
           'kokoro': {
             'id': 'hexgrad/kokoro-82m',
-            'format': 'mp3',
+            'formats': ['mp3'],
             'sends_language': true,
             'default_language': 'b',
             'languages': {

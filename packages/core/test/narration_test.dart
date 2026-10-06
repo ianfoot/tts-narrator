@@ -80,6 +80,25 @@ void main() {
     );
   }
 
+  /// A wav run for a model that declares `wav_response_format: pcm`.
+  ///
+  /// Separate from [config] because the declaration belongs in the profile, not
+  /// in the run: it is what the model file says its backend can serve.
+  NarrationConfig pcmSourcedConfig(String inputPath) => NarrationConfig(
+    inputPath: inputPath,
+    profile: TtsModelProfile(
+      alias: 'test',
+      id: 'test/model',
+      formats: const [TtsAudioFormat.wav],
+      wavResponseFormat: TtsWavResponseFormat.pcm,
+      provider: testProvider,
+    ),
+    outputFormat: TtsAudioFormat.wav,
+    voice: 'VoiceOne',
+    providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
+    outDir: '${dir.path}/out',
+  );
+
   test(
     'dispatches through the registered provider and writes mp3 bytes',
     () async {
@@ -113,6 +132,72 @@ void main() {
     final audioFile = File('${dir.path}/out/story/story_1.wav');
     expect(audioFile.existsSync(), isTrue);
     expect(audioFile.readAsBytesSync(), wav.bytes);
+  });
+
+  group('a wav run whose backend serves raw samples', () {
+    // A model that declares `wav_response_format: pcm` is a promise that the
+    // backend hands back bare samples and expects the app to write the header.
+    // No OpenRouter model serves a WAV container -- its own validator rejects
+    // `wav` -- so this is the path the three hosted models take, including
+    // Gemini, whose only accepted wire format is pcm.
+    test('writes a header at the rate the response reported', () async {
+      final raw = FakeTtsProvider(
+        bytes: [1, 2, 3, 4, 5, 6, 7, 8],
+        sampleRate: 44100,
+        channels: 1,
+      );
+      final input = writeInput();
+      await narrate(pcmSourcedConfig(input), client: raw.client);
+
+      final onDisk = File('${dir.path}/out/story/story_1.wav')
+          .readAsBytesSync();
+      final written = readWav(Uint8List.fromList(onDisk));
+      // The samples are untouched and the rate is the one the backend said,
+      // not one core invented: a wrong rate here plays at the wrong pitch.
+      expect(written.data, [1, 2, 3, 4, 5, 6, 7, 8]);
+      expect(
+        written.formatChunk,
+        wavHeader(sampleRate: 44100, channels: 1, dataBytes: 8).sublist(12, 36),
+        reason: 'the fmt chunk must carry the rate the response reported',
+      );
+      expect(onDisk.length, 44 + 8, reason: 'a canonical 44-byte header');
+    });
+
+    test('a native wav backend has its own header passed through', () async {
+      // The mirror image: the model file leaves `wav_response_format` alone, so
+      // the bytes already are a container and core must not prepend a second
+      // header to them.
+      final wav = FakeTtsProvider(
+        bytes: wavFileBytes([9, 8, 7], sampleRate: 24000),
+      );
+      final input = writeInput();
+      await narrate(
+        config(input, outputFormat: TtsAudioFormat.wav),
+        client: wav.client,
+      );
+
+      final onDisk = File('${dir.path}/out/story/story_1.wav')
+          .readAsBytesSync();
+      expect(onDisk, wavFileBytes([9, 8, 7], sampleRate: 24000));
+      expect(onDisk.length, wavFileBytes([9, 8, 7]).length);
+    });
+
+    test('a response with no rate fails loudly rather than guessing', () async {
+      // A header built from an invented rate is a file that plays, at the wrong
+      // pitch, so a response that omits the rate is refused instead.
+      final raw = FakeTtsProvider(bytes: [1, 2, 3, 4]);
+      final input = writeInput();
+      await expectLater(
+        narrate(pcmSourcedConfig(input), client: raw.client),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('test/model'), contains('wav_response_format')),
+          ),
+        ),
+      );
+    });
   });
 
   test('writes a combined track and records it in the manifest', () async {
@@ -330,6 +415,7 @@ void main() {
       profile: const TtsModelProfile(
         alias: 'test',
         id: 'test/model',
+        formats: [TtsAudioFormat.mp3],
         provider: testProvider,
       ),
       outputFormat: TtsAudioFormat.mp3,
@@ -636,6 +722,7 @@ class _SequencedWavProvider {
     required String? voice,
     required String input,
     required TtsAudioFormat responseFormat,
+    required TtsWavResponseFormat wavResponseFormat,
     required Map<String, String> settings,
     required double? speed,
     String? language,

@@ -99,6 +99,7 @@ void main() {
           profile: const TtsModelProfile(
             alias: 'test',
             id: 'test/model',
+            formats: [TtsAudioFormat.mp3],
             provider: testProvider,
           ),
           outputFormat: TtsAudioFormat.mp3,

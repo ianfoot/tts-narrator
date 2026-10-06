@@ -32,10 +32,20 @@ class _Fixture {
       File('${dir.path}/user/models/$alias.json');
 
   /// Writes a model file into the downloaded layer, replacing any earlier one.
+  ///
+  /// Supplies a `formats` list when the body omits one. `formats` is required by
+  /// the schema, and these fixtures are about voice editing rather than formats,
+  /// so having each of them restate the same one-line declaration would be noise
+  /// rather than documentation.
   void writeModel(String alias, Map<String, Object?> body) {
     final file = baseModel(alias);
     file.parent.createSync(recursive: true);
-    file.writeAsStringSync(jsonEncode(body));
+    file.writeAsStringSync(
+      jsonEncode({
+        'formats': const ['wav'],
+        ...body,
+      }),
+    );
   }
 
   /// Writes the provider registry plus a `local` provider claiming [aliases],

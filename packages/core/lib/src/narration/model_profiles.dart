@@ -18,7 +18,8 @@ class TtsModelProfile {
   const TtsModelProfile({
     required this.alias,
     required this.id,
-    this.formats = const [.mp3],
+    required this.formats,
+    this.wavResponseFormat = TtsWavResponseFormat.wav,
     this.promptStyle = false,
     this.sendsVoiceField = true,
     this.supportsSpeed = false,
@@ -40,19 +41,30 @@ class TtsModelProfile {
   /// (Free)"). Null falls back to the `alias — id` pairing in UI labels.
   final String? displayName;
 
-  /// Output encodings this model can produce, most-preferred first.
+  /// Output formats this model can produce, most-preferred first.
   ///
-  /// The first entry is the model's default and the one a fresh run uses. A
-  /// single-entry list means the user has no choice to make, so the GUI hides
-  /// the format picker entirely rather than showing a one-option control.
+  /// Required, and never empty: a model file that does not say what it can
+  /// produce is a file the app cannot act on, so the parser rejects it rather
+  /// than assuming. The first entry is the model's default and the one a fresh
+  /// run uses. A single-entry list means the user has no choice to make, so the
+  /// GUI hides the format picker rather than showing a one-option control.
   ///
-  /// A hosted provider serves MP3 only, while a local server can usually write
-  /// a native WAV container; the model file is where that difference is
-  /// recorded, since core has no compiled-in list of models.
+  /// Recorded here, in the model file, because core has no compiled-in list of
+  /// models and cannot probe a provider. Each name becomes the file extension,
+  /// so a format listed here is a promise the backend keeps.
   final List<TtsAudioFormat> formats;
 
   /// The format a run uses unless the user picks another one.
   TtsAudioFormat get defaultFormat => formats.first;
+
+  /// What to ask this model for when the run's output format is WAV.
+  ///
+  /// Only consulted for a wav run, and only because no single value works
+  /// everywhere: some backends return a finished WAV container and some return
+  /// headerless samples that need a header the app writes. Defaults to `wav`,
+  /// which writes the provider's bytes through untouched — the path that cannot
+  /// mislabel anything. A model that needs `pcm` says so.
+  final TtsWavResponseFormat wavResponseFormat;
 
   /// Whether [format] is one this model can produce.
   bool supportsFormat(TtsAudioFormat format) => formats.contains(format);
@@ -126,10 +138,12 @@ class TtsModelProfile {
     String? id,
     String? provider,
     List<TtsAudioFormat>? formats,
+    TtsWavResponseFormat? wavResponseFormat,
   }) => TtsModelProfile(
     alias: alias,
     id: id ?? this.id,
     formats: formats ?? this.formats,
+    wavResponseFormat: wavResponseFormat ?? this.wavResponseFormat,
     promptStyle: promptStyle,
     sendsVoiceField: sendsVoiceField,
     supportsSpeed: supportsSpeed,

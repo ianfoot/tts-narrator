@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import 'package:tts_narrator_core/src/config/voice_config.dart';
 import 'package:tts_narrator_core/src/config/voice_config_queries.dart';
+import 'package:tts_narrator_core/src/narration/audio_format.dart';
 import 'package:tts_narrator_core/src/narration/cost.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
@@ -16,6 +17,7 @@ TtsModelProfile _model({
 }) => TtsModelProfile(
   alias: alias,
   id: id,
+  formats: const [TtsAudioFormat.wav],
   provider: provider,
   promptStyle: promptStyle,
   sendsVoiceField: sendsVoiceField,

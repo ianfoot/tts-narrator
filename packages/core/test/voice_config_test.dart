@@ -100,10 +100,10 @@ void main() {
     });
 
     test('defaults model fields apply when omitted', () {
-      writeModel('x', '{"id": "a/b"}');
+      writeModel('x', '{"id": "a/b", "formats": ["wav"]}');
       final (cfg, _) = load();
       final m = cfg.models['x']!;
-      expect(m.formats, const [TtsAudioFormat.mp3]);
+      expect(m.formats, const [TtsAudioFormat.wav]);
       expect(m.promptStyle, isFalse);
       expect(m.sendsVoiceField, isTrue);
     });
@@ -111,7 +111,8 @@ void main() {
     test('parses an optional display_name into the profile', () {
       writeModel(
         'gemini',
-        '{"id": "google/gemini-3.1-flash-tts-preview", "display_name": "Gemini 3.1 Flash TTS"}',
+        '{"id": "google/gemini-3.1-flash-tts-preview", "formats": ["wav"],'
+            ' "display_name": "Gemini 3.1 Flash TTS"}',
       );
       final (cfg, _) = load();
       final m = cfg.models['gemini']!;
@@ -119,13 +120,13 @@ void main() {
     });
 
     test('display_name defaults to null when omitted', () {
-      writeModel('x', '{"id": "a/b"}');
+      writeModel('x', '{"id": "a/b", "formats": ["wav"]}');
       final (cfg, _) = load();
       expect(cfg.models['x']!.displayName, isNull);
     });
 
     test('a non-string display_name skips the model with a warning', () {
-      writeModel('x', '{"id": "a/b", "display_name": 7}');
+      writeModel('x', '{"id": "a/b", "formats": ["wav"], "display_name": 7}');
       final (cfg, warnings) = load();
       expect(cfg.models.containsKey('x'), isFalse);
       expect(warnings.join('\n'), contains('display_name'));
@@ -135,13 +136,15 @@ void main() {
       writeModel('fish', '''
 {
   "id": "fish-audio/s2.1-pro-free",
+  "formats": ["mp3"],
   "default_voice": "Narrator",
   "pricing": {"usd_per_m_chars": 0.62},
   "voices": {"Narrator": "hex1", "Emma": "bf_emma"}
 }''');
       writeModel(
         'kokoro',
-        '{"id": "hexgrad/kokoro-82m", "voices": {"Emma": "bf_emma"}}',
+        '{"id": "hexgrad/kokoro-82m", "formats": ["wav"],'
+            ' "voices": {"Emma": "bf_emma"}}',
       );
       final (cfg, _) = load();
       expect(cfg.defaults['fish'], 'Narrator');
@@ -155,6 +158,7 @@ void main() {
       writeModel('kokoro', '''
 {
   "id": "a/b",
+  "formats": ["wav"],
   "voices": {
     "Emma": {"id": "bf_emma", "gender": "female"},
     "Daniel": {"id": "bm_daniel", "gender": "male"},
@@ -162,7 +166,7 @@ void main() {
   }
 }
 ''');
-      writeModel('gemini', '{"id": "a/b"}');
+      writeModel('gemini', '{"id": "a/b", "formats": ["wav"]}');
       final (cfg, _) = load();
       expect(cfg.voices['kokoro']?['Emma']?.id, 'bf_emma');
       expect(cfg.voices['kokoro']?['Emma']?.gender, VoiceGender.female);
@@ -177,6 +181,7 @@ void main() {
       writeModel('x', '''
 {
   "id": "a/b",
+  "formats": ["wav"],
   "voices": {"A": "id1", "B": 42, "C": ""}
 }
 ''');
@@ -201,6 +206,7 @@ void main() {
       writeModel('x', '''
 {
   "id": "a/b",
+  "formats": ["wav"],
   "voices": {
     "A": {"id": "ok1", "gender": "female"},
     "B": {"id": ""},
@@ -257,6 +263,7 @@ void main() {
       writeModel('x', '''
 {
   "id": "a/b",
+  "formats": ["wav"],
   "voices": {
     "bf_emma": {"name": "Emma"},
     "am_santa": {"name": "Santa"},
@@ -282,21 +289,24 @@ void main() {
     });
 
     test('rejects a non-object voices block', () {
-      writeModel('x', '{"id": "a/b", "voices": ["female"]}');
+      writeModel(
+        'x',
+        '{"id": "a/b", "formats": ["wav"], "voices": ["female"]}',
+      );
       final (cfg, warnings) = load();
       expect(cfg.models, isEmpty);
       expect(warnings.first, contains('"voices"'));
     });
 
     test('skips a model file with no id and reports a warning', () {
-      writeModel('x', '{"format": "mp3"}');
+      writeModel('x', '{}');
       final (cfg, warnings) = load();
       expect(cfg.models, isEmpty);
       expect(warnings.first, contains('Skipped model "x"'));
     });
 
     test('skips a malformed model file and keeps the rest loading', () {
-      writeModel('good', '{"id": "a/b"}');
+      writeModel('good', '{"id": "a/b", "formats": ["wav"]}');
       writeModel('bad', '{not json');
       final (cfg, warnings) = load();
       expect(cfg.models.keys, ['good']);
@@ -307,7 +317,7 @@ void main() {
       // The GUI config dir is also its application-support dir, so on Linux
       // `shared_preferences.json` lands beside the config. No provider names
       // it, so it must not raise a warning.
-      writeModel('fish', '{"id": "a/b"}');
+      writeModel('fish', '{"id": "a/b", "formats": ["wav"]}');
       writeModel(
         'shared_preferences',
         '{"flutter.appearance": "system"}',
@@ -335,7 +345,7 @@ void main() {
     });
 
     test('a model file missing only its id still warns', () {
-      writeModel('x', '{"format": "mp3"}');
+      writeModel('x', '{}');
       final (cfg, warnings) = load();
       expect(cfg.models, isEmpty);
       expect(warnings.first, contains('Skipped model "x"'));
@@ -351,9 +361,9 @@ void main() {
     });
 
     test('an unmodelled key such as a stale sample_rate is ignored', () {
-      // Older configs pinned a PCM sample rate. Nothing reads it any more --
-      // the WAV header is carried through from the provider -- so a config
-      // still carrying it must load rather than fail.
+      // The rate is a property of the WAV the provider returns and the app
+      // carries that container through untouched, so the key has nothing left
+      // to configure and a config still carrying it must load rather than fail.
       writeModel(
         'x',
         '{"id": "a/b", "formats": ["wav"], "sample_rate": 24000}',
@@ -364,8 +374,8 @@ void main() {
     });
 
     test('model files are read in sorted filename order', () {
-      writeModel('zebra', '{"id": "z/a"}');
-      writeModel('alph', '{"id": "a/b"}');
+      writeModel('zebra', '{"id": "z/a", "formats": ["wav"]}');
+      writeModel('alph', '{"id": "a/b", "formats": ["wav"]}');
       final (cfg, _) = load();
       expect(cfg.models.keys.toList(), ['alph', 'zebra']);
     });
@@ -438,8 +448,16 @@ void main() {
 
     group('the model to provider relation', () {
       test('stamps the claiming provider onto each profile', () {
-        writeModel('gemini', '{"id": "a/b"}', claimedByProvider: false);
-        writeModel('fish', '{"id": "c/d"}', claimedByProvider: false);
+        writeModel(
+          'gemini',
+          '{"id": "a/b", "formats": ["wav"]}',
+          claimedByProvider: false,
+        );
+        writeModel(
+          'fish',
+          '{"id": "c/d", "formats": ["wav"]}',
+          claimedByProvider: false,
+        );
         writeRegistry('{"providers": ["google", "alpha"]}');
         writeProvider('google', '{"models": ["gemini"], "settings": {}}');
         writeProvider('alpha', '{"models": ["fish"], "settings": {}}');
@@ -451,7 +469,11 @@ void main() {
       });
 
       test('a model no provider names is skipped without a warning', () {
-        writeModel('x', '{"id": "a/b"}', claimedByProvider: false);
+        writeModel(
+          'x',
+          '{"id": "a/b", "formats": ["wav"]}',
+          claimedByProvider: false,
+        );
         writeRegistry('{"providers": ["alpha"]}');
         writeProvider('alpha', '{"models": [], "settings": {}}');
 
@@ -491,8 +513,16 @@ void main() {
 
     group('the default model', () {
       test('is the first model of the first registered provider', () {
-        writeModel('kokoro', '{"id": "a/b"}', claimedByProvider: false);
-        writeModel('fish', '{"id": "c/d"}', claimedByProvider: false);
+        writeModel(
+          'kokoro',
+          '{"id": "a/b", "formats": ["wav"]}',
+          claimedByProvider: false,
+        );
+        writeModel(
+          'fish',
+          '{"id": "c/d", "formats": ["wav"]}',
+          claimedByProvider: false,
+        );
         writeRegistry('{"providers": ["alpha", "google"]}');
         writeProvider('alpha', '{"models": ["kokoro"], "settings": {}}');
         writeProvider('google', '{"models": ["fish"], "settings": {}}');

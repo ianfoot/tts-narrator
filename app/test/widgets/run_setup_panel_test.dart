@@ -57,7 +57,10 @@ void main() {
   void writeFishConfig() {
     writeConfig({
       'models': {
-        'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+        'fish': {
+          'id': 'fish-audio/s2.1-pro-free:free',
+          'formats': ['mp3'],
+        },
       },
       'defaults': {'fish': 'British Female Narrator'},
       'voices': {
@@ -74,7 +77,7 @@ void main() {
       'models': {
         'fish': {
           'id': 'fish-audio/s2.1-pro-free:free',
-          'format': 'mp3',
+          'formats': ['mp3'],
           ...modelFlags,
         },
       },
@@ -152,7 +155,7 @@ void main() {
   group('model & voice', () {
     const gemini = {
       'id': 'google/gemini-3.1-flash-tts-preview',
-      'format': 'pcm',
+      'formats': ['wav'],
       'sample_rate': 24000,
       'prompt_style': true,
       'display_name': 'Gemini 3.1 Flash TTS',
@@ -211,7 +214,10 @@ void main() {
     testWidgets('picking a voice alias resolves to its raw id', (tester) async {
       writeConfig({
         'models': {
-          'fish': {'id': 'fish-audio/s2.1-pro-free', 'format': 'mp3'},
+          'fish': {
+            'id': 'fish-audio/s2.1-pro-free',
+            'formats': ['mp3'],
+          },
         },
         'voices': {
           'fish': {'Narrator': 'hex123'},
@@ -273,7 +279,10 @@ void main() {
     ) async {
       writeConfig({
         'models': {
-          'kokoro': {'id': 'hexgrad/kokoro-82m', 'format': 'mp3'},
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'formats': ['mp3'],
+          },
         },
         'defaults': {'kokoro': 'Emma'},
         'voices': {
@@ -336,10 +345,13 @@ void main() {
     ) async {
       writeConfig({
         'models': {
-          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'fish': {
+            'id': 'fish-audio/s2.1-pro-free:free',
+            'formats': ['mp3'],
+          },
           'kokoro': {
             'id': 'hexgrad/kokoro-82m',
-            'format': 'mp3',
+            'formats': ['mp3'],
             'display_name': 'Kokoro 82M',
             'speed': true,
           },
@@ -386,7 +398,7 @@ void main() {
         'models': {
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
             'sample_rate': 24000,
             'prompt_style': true,
             'display_name': 'Gemini 3.1 Flash TTS',
@@ -766,7 +778,10 @@ void main() {
           'alpha': {'api_key': r'${TTS_NARRATOR_NOT_SET}'},
         },
         'models': {
-          'fish': {'id': 'fish-audio/s2.1-pro-free:free', 'format': 'mp3'},
+          'fish': {
+            'id': 'fish-audio/s2.1-pro-free:free',
+            'formats': ['mp3'],
+          },
         },
         'defaults': {'fish': 'British Female Narrator'},
         'voices': {
@@ -801,7 +816,7 @@ void main() {
         'models': {
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
-            'format': 'pcm',
+            'formats': ['wav'],
             'sample_rate': 24000,
             'prompt_style': true,
             'display_name': 'Gemini 3.1 Flash TTS',
