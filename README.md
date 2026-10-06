@@ -29,13 +29,13 @@ Apple Silicon only) so the app can narrate fully offline.
 ## Voice configuration
 
 Everything user-facing — which providers exist, per-provider settings, models,
-per-model default voices, prices, and friendly voice aliases — lives in a config
-**directory** shared by the CLI and the GUI. Three kinds of file:
+per-model default voices, prices, and friendly voice aliases — lives in a config **directory** shared by the CLI and the
+GUI. Three kinds of file:
 
 - `config.json` — the provider registry: the names of the providers in use, in
   order.
-- `providers/<name>.json` — one file per provider: the settings block
-  (secrets, endpoint) and the list of models it serves.
+- `providers/<name>.json` — one file per provider: the settings block (secrets, endpoint) and the list of models it
+  serves.
 - `models/<alias>.json` — one file per model: its id, the request wiring,
   default voice, pricing, and friendly voice aliases.
 
@@ -47,10 +47,10 @@ preselected on cold start.
 
 The config directory, per platform:
 
-| Platform | Path |
-| --- | --- |
-| macOS | `~/Library/Application Support/com.wyrdness.tts-narrator/` |
-| Linux | `~/.local/share/com.wyrdness.tts-narrator/` |
+| Platform | Path                                                       |
+|----------|------------------------------------------------------------|
+| macOS    | `~/Library/Application Support/com.wyrdness.tts-narrator/` |
+| Linux    | `~/.local/share/com.wyrdness.tts-narrator/`                |
 
 Both sit inside a hidden folder, so reveal it first with `Cmd+Shift+.` on macOS,
 or `Ctrl+H` in most Linux file managers. Windows is not supported yet.
@@ -64,7 +64,10 @@ them, and shadow their counterparts by name — see
 
 ```json
 {
-  "providers": ["openrouter", "local"]
+  "providers": [
+    "openrouter",
+    "local"
+  ]
 }
 ```
 
@@ -72,7 +75,11 @@ them, and shadow their counterparts by name — see
 
 ```json
 {
-  "models": ["fish", "gemini", "kokoro"],
+  "models": [
+    "fish",
+    "gemini",
+    "kokoro"
+  ],
   "settings": {
     "base_url": "https://openrouter.ai/api/v1",
     "api_key": "${OPENROUTER_API_KEY}"
@@ -84,19 +91,23 @@ them, and shadow their counterparts by name — see
 
 ```json
 {
-  "models": ["kokoro_local"],
-  "settings": { "base_url": "http://localhost:8000/v1" }
+  "models": [
+    "kokoro_local"
+  ],
+  "settings": {
+    "base_url": "http://localhost:8000/v1"
+  }
 }
 ```
 
 `settings` is a flat map of strings for one service. The keys the app reads:
 
-| Setting | Required | Meaning |
-| --- | --- | --- |
-| `base_url` | yes | the speech endpoint **root**, e.g. `https://openrouter.ai/api/v1`. The app appends `/audio/speech`, so do not include that part. A trailing slash is normalized |
-| `endpoint` | no | documented alias for `base_url`, for configs that already use that name. Carries the same root semantics |
-| `api_key` | no | the credential: a literal key, or a `${VAR}` reference read from the environment. Never sent as a normal setting — it is stripped out and delivered separately, so a secret is not carried in the settings map |
-| `default_voice` | no | voice id to use when the request names none. Fills a gap only; an explicitly chosen voice always wins |
+| Setting         | Required | Meaning                                                                                                                                                                                                        |
+|-----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `base_url`      | yes      | the speech endpoint **root**, e.g. `https://openrouter.ai/api/v1`. The app appends `/audio/speech`, so do not include that part. A trailing slash is normalized                                                |
+| `endpoint`      | no       | documented alias for `base_url`, for configs that already use that name. Carries the same root semantics                                                                                                       |
+| `api_key`       | no       | the credential: a literal key, or a `${VAR}` reference read from the environment. Never sent as a normal setting — it is stripped out and delivered separately, so a secret is not carried in the settings map |
+| `default_voice` | no       | voice id to use when the request names none. Fills a gap only; an explicitly chosen voice always wins                                                                                                          |
 
 Every other key passes through untouched to the service as a request setting,
 so a vendor can take options the app knows nothing about.
@@ -112,7 +123,10 @@ header and the server decides whether it needed one.
 ```json
 {
   "id": "fish-audio/s2.1-pro-free",
-  "formats": ["wav", "mp3"],
+  "formats": [
+    "wav",
+    "mp3"
+  ],
   "wav_response_format": "pcm",
   "default_voice": "British Female Narrator",
   "voices": {
@@ -127,7 +141,9 @@ header and the server decides whether it needed one.
 ```json
 {
   "id": "google/gemini-3.1-flash-tts-preview",
-  "formats": ["wav"],
+  "formats": [
+    "wav"
+  ],
   "wav_response_format": "pcm",
   "prompt_style": true,
   "default_voice": "Charon",
@@ -135,7 +151,10 @@ header and the server decides whether it needed one.
     "input_usd_per_m_tokens": 1.0,
     "output_usd_per_m_tokens": 20.0
   },
-  "voices": { "Charon": "Charon", "Zephyr": "Zephyr" }
+  "voices": {
+    "Charon": "Charon",
+    "Zephyr": "Zephyr"
+  }
 }
 ```
 
@@ -144,14 +163,30 @@ header and the server decides whether it needed one.
 ```json
 {
   "id": "hexgrad/kokoro-82m",
-  "formats": ["wav", "mp3"],
+  "formats": [
+    "wav",
+    "mp3"
+  ],
   "wav_response_format": "pcm",
   "sends_language": true,
   "default_voice": "bf_emma",
   "default_language": "b",
-  "languages": { "b": "British English", "a": "American English", "j": "Japanese" },
-  "pricing": { "usd_per_m_chars": 0.62 },
-  "voices": { "bf_emma": { "name": "Emma" }, "bm_lewis": { "name": "Lewis" } }
+  "languages": {
+    "b": "British English",
+    "a": "American English",
+    "j": "Japanese"
+  },
+  "pricing": {
+    "usd_per_m_chars": 0.62
+  },
+  "voices": {
+    "bf_emma": {
+      "name": "Emma"
+    },
+    "bm_lewis": {
+      "name": "Lewis"
+    }
+  }
 }
 ```
 
@@ -159,13 +194,13 @@ header and the server decides whether it needed one.
 
 Model differences drive how requests are built:
 
-| Alias | Voice format | Prompt styling | Output |
-| --- | --- | --- | --- |
-| `fish` (default) | free-form 32-hex fish.audio id | ✗ (read aloud — prompt styling disabled) | `.wav` or `.mp3` (free) |
-| `gemini` | named voices (rated on the OpenRouter page) | ✓ (accent/style/`[calm]`) | `.wav` |
-| `kokoro` | Kokoro-82M voices (54 voices, 9 languages, keyed by id) | ✗ (read aloud — prompt styling disabled) | `.wav` or `.mp3` |
-| `kokoro_local` | same Kokoro-82M voices | ✗ (read aloud — prompt styling disabled) | `.wav` or `.mp3` (local, free) |
-| `qwen3_voicedesign` | ✗ (none — the voice is described, not chosen) | ✗ (prose voice design instead) | `.wav` or `.mp3` (local, free) |
+| Alias               | Voice format                                            | Prompt styling                            | Output                         |
+|---------------------|---------------------------------------------------------|-------------------------------------------|--------------------------------|
+| `fish` (default)    | free-form 32-hex fish.audio id                          | ✗ (read aloud — prompt styling disabled) | `.wav` or `.mp3` (free)        |
+| `gemini`            | named voices (rated on the OpenRouter page)             | ✓ (accent/style/`[calm]`)                | `.wav`                         |
+| `kokoro`            | Kokoro-82M voices (54 voices, 9 languages, keyed by id) | ✗ (read aloud — prompt styling disabled) | `.wav` or `.mp3`               |
+| `kokoro_local`      | same Kokoro-82M voices                                  | ✗ (read aloud — prompt styling disabled) | `.wav` or `.mp3` (local, free) |
+| `qwen3_voicedesign` | ✗ (none — the voice is described, not chosen)          | ✗ (prose voice design instead)           | `.wav` or `.mp3` (local, free) |
 
 A model's `formats` list is a promise its backend keeps: the first entry is the
 default, and a model offering both gets an **Output format** segmented control
@@ -219,12 +254,17 @@ list them bare — which is what `gemini.json` does, since Gemini's thirty voice
 names are themselves the provider ids:
 
 ```json
-"voices": ["Achernar", "Charon", "Zephyr"]
+{
+  "voices": [
+    "Achernar",
+    "Charon",
+    "Zephyr"
+  ]
+}
 ```
 
 Each entry there is its own key, id and label, so there is nothing to repeat. A
-voice needing a name or gender uses the object form instead. Plain-string entries
-(`"Charon": "Charon"`) load too.
+voice needing a name or gender uses the object form instead. Plain-string entries (`"Charon": "Charon"`) load too.
 
 Configs ship with fish tagged (from its curated list) and gemini untagged —
 gemini's named voices carry no published gender signal, so instead a model that
@@ -345,8 +385,8 @@ its id, provider and offered output formats, plus a table of voices you can add,
 remove, and choose a default from.
 
 Only models whose file sets `"voices_editable": true` can be edited — of the
-shipped models that is `fish`, whose voices are free-form ids. The others
-(`gemini`, `kokoro`, `kokoro_local`) have a fixed voice set, so their table is
+shipped models that is `fish`, whose voices are free-form ids. The others (`gemini`, `kokoro`, `kokoro_local`) have a
+fixed voice set, so their table is
 read-only; to change one, copy its downloaded `models/<alias>.json` into
 `user/models/`, add `"voices_editable": true` to your copy, and edit it there.
 The screen has a **Reveal Config Folder** button for finding the directory.
@@ -367,9 +407,16 @@ The editor writes one voice shape — the key is the label, the id is always sta
 explicitly, and `gender` appears when tagged:
 
 ```json
-"voices": {
-  "British Female Narrator": { "id": "89f41ea230034706881f85a8227d6ab9" },
-  "Alice": { "id": "c536c6cdbe8e4d9484232e78ab80020f", "gender": "female" }
+{
+  "voices": {
+    "British Female Narrator": {
+      "id": "89f41ea230034706881f85a8227d6ab9"
+    },
+    "Alice": {
+      "id": "c536c6cdbe8e4d9484232e78ab80020f",
+      "gender": "female"
+    }
+  }
 }
 ```
 
@@ -380,12 +427,20 @@ not the key, so such a model keeps working.
 
 ## Output
 
-Each segment is written to an output folder you choose (default `output/`), as
+Each segment is written to an output folder you choose (default: a
+`tts_narrator_output` folder under the system temp directory), as
 `<input-stem>/<input-stem>_<nn>.<ext>` (padded to the width of the segment
 count, so files sort numerically), plus a `manifest.json` describing the run.
 
+The `<input-stem>/` subdirectory is per *document*, so several documents can
+share one chosen output folder without colliding. A document that has never been
+saved has no filename to name a folder after, so its files go straight into the
+folder you chose: `untitled_01.mp3` … `untitled_16.mp3` next to the
+`manifest.json`, with no `untitled/` folder. The editor status bar shows the
+directory a run will actually use.
+
 The extension comes from the format you picked in the Run Setup panel, so
-`story.txt` on a `.mp3` model → `output/story/story_01.mp3` … `story_16.mp3`; the
+`story.txt` on a `.mp3` model → `<out>/story/story_01.mp3` … `story_16.mp3`; the
 same story on a `.wav` model → `story_01.wav` … `story_16.wav`. The bytes are
 what the provider returned, except where the model file's
 `"wav_response_format": "pcm"` says the backend sends headerless samples, in
@@ -395,13 +450,14 @@ The manifest is rewritten after every segment, so an interrupted run can be
 picked up without re-generating completed paragraphs.
 
 Manifest contents:
+
 - `model`, `voice`, optional `voice_label` (friendly alias if used), optional
   `language` (only when the model sends one), and `format`
 - per-segment `wav`, `bytes`, `excerpt`, and the exact
   `input`/`prompt` that produced it (for reproducibility)
 
-Playback (macOS): `afplay output/story/story_1.mp3` or
-`afplay output/story/story_1.wav`, whichever the run produced.
+Playback (macOS): `afplay <out>/story/story_01.mp3` or
+`afplay <out>/story/story_01.wav`, whichever the run produced.
 
 ## How narration text is segmented
 
@@ -409,8 +465,8 @@ By default the text is segmented so each paragraph gets a controlled,
 consistent reading:
 
 1. Split the input on blank lines into paragraphs.
-2. Merge a paragraph into the next when it is shorter than the "Min words per segment" setting
-   (default 30), so isolated short fragments aren't given their own
+2. Merge a paragraph into the next when it is shorter than the "Min words per segment" setting (default 30), so isolated
+   short fragments aren't given their own
    off-register reading.
 3. Any merged paragraph longer than 4,000 characters is split at sentence
    boundaries.
@@ -423,8 +479,8 @@ Whole-file narration is limited to 60,000 characters (roughly an hour of audio)
 so a runaway document isn't sent as one unbounded request — the GUI hides the
 toggle above that size and rejects the plan with a clear error.
 
-The mood of Gemini 3.1 Flash TTS is controlled through the prompt text
-(accent/style/`[calm]`, accent/style descriptions) rather than a separate
+The mood of Gemini 3.1 Flash TTS is controlled through the prompt text (accent/style/`[calm]`, accent/style
+descriptions) rather than a separate
 pitch/rate parameter. There is no per-call voice memory, so keeping the prompt
 identical and segment sizes in the ~30–300 word range produces the most
 consistent narrator.
@@ -433,18 +489,19 @@ consistent narrator.
 
 A Flutter desktop app (`app/`) provides an editor-first interface: type or
 paste the text you want narrated right into the window (no backing file — the
-core reads the in-memory text via `sourceText`), then click **Narrate**. A collapsible Run Setup panel controls the model, voice, and
+core reads the in-memory text via `sourceText`), then click **Narrate**. A collapsible Run Setup panel controls the
+model, voice, and
 model-specific options (declared by each model's own `models/<alias>.json`), the run view
 shows per-segment progress with in-app playback of finished clips, Cancel, and
 Back — and the editor is intact when you return. macOS gets the standard native
 menu bar (`PlatformMenuBar`) with App / File / Edit / View / Window: Open (⌘O),
 Save (⌘S), Save As (⇧⌘S), Narrate (⌘N), and the Edit menu's
 undo/redo/cut/copy/paste/select-all, which dispatch to the focused text field.
-Linux and Windows get the same commands in an in-app menu bar
-(`LinuxMenuBar`), where each item shows its shortcut and can be disabled when the
+Linux and Windows get the same commands in an in-app menu bar (`LinuxMenuBar`), where each item shows its shortcut and
+can be disabled when the
 command is unavailable; Quit (⌃Q on Linux/Windows, ⌘Q natively) ends the app.
 Saving writes the document to a `.txt`; once saved, narration names its output
-from the real filename.
+subdirectory from the real filename.
 
 ```bash
 cd app
@@ -475,5 +532,4 @@ fvm flutter build macos --release
 ## Development
 
 For contributor documentation — repository structure, voice-config schema,
-provider architecture, GUI internals, and the design-token workflow — see
-**[DEVELOPER.md](DEVELOPER.md)**.
+provider architecture, GUI internals, and the design-token workflow — see **[DEVELOPER.md](DEVELOPER.md)**.

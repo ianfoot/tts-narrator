@@ -99,7 +99,7 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final text = _leftTruncate(
-                  controller.outDir,
+                  controller.resolvedOutDir,
                   monoReadout,
                   constraints.maxWidth,
                 );

@@ -22,6 +22,7 @@ class NarrationConfig {
     this.sampleLen,
     this.speed = 1.0,
     this.outDir = 'output',
+    this.nestOutputInInputSubdir = true,
     this.dryRun = false,
     this.resume = false,
     this.pricing = freePricing,
@@ -115,6 +116,15 @@ class NarrationConfig {
   /// Output directory for generated WAV files and the manifest.
   final String outDir;
 
+  /// Whether a run writes into `<outDir>/<input-stem>/` instead of `outDir`
+  /// itself (see [outputDirPath]).
+  ///
+  /// True for a run with a real backing file, so several documents narrated into
+  /// one chosen folder do not collide. False for an in-memory document: there is
+  /// no filename to name a folder after, so the run writes into `outDir` and its
+  /// files carry the `inputPath` stem as a filename prefix instead.
+  final bool nestOutputInInputSubdir;
+
   /// If true, print the narration plan and exit without calling the API.
   final bool dryRun;
 
@@ -161,6 +171,7 @@ class NarrationConfig {
     sampleLen: sampleLen,
     speed: speed,
     outDir: outDir,
+    nestOutputInInputSubdir: nestOutputInInputSubdir,
     dryRun: dryRun,
     resume: resume,
     pricing: pricing,

@@ -374,6 +374,11 @@ class AppController extends ChangeNotifier {
     _settings.outDir = value;
   }
 
+  /// The directory a run will write into: the chosen output folder plus the open
+  /// document's stem when the document is saved to a file. What the editor status
+  /// bar displays, so it matches where files land.
+  String get resolvedOutDir => _settings.resolvedOutDir;
+
   bool get resume => _settings.resume;
 
   /// The UI locale, or null to follow the platform. Read by both app shells to

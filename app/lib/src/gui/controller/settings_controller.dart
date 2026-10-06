@@ -88,6 +88,15 @@ class SettingsController extends ChangeNotifier {
   /// Folder name created under the system temp dir for the default output.
   static const _defaultOutDirName = 'tts_narrator_output';
 
+  /// The default output folder path, always absolute, without creating it.
+  ///
+  /// [defaultOutDir] is the same path and creates it; this variant is for
+  /// callers that only need to *show* the default (the editor status bar) and
+  /// must not touch the filesystem on every build.
+  static String defaultOutDirPath() =>
+      '${Directory.systemTemp.path}${Platform.pathSeparator}'
+      '$_defaultOutDirName';
+
   /// The default output folder, created on demand and always absolute.
   ///
   /// Absolute because the rendered files are handed to GStreamer-backed
@@ -97,10 +106,7 @@ class SettingsController extends ChangeNotifier {
   /// checkout containing that folder. Under the system temp dir because the
   /// rendered audio is disposable — nothing is expected to outlive the run.
   static String defaultOutDir() {
-    final dir = Directory(
-      '${Directory.systemTemp.path}${Platform.pathSeparator}'
-      '$_defaultOutDirName',
-    );
+    final dir = Directory(defaultOutDirPath());
     if (!dir.existsSync()) dir.createSync(recursive: true);
     return dir.path;
   }
@@ -305,6 +311,28 @@ class SettingsController extends ChangeNotifier {
     _prefs?.setString(_outDirPrefsKey, value);
   }
 
+  /// The directory a run actually writes into: the chosen output folder, plus
+  /// the open document's stem when it is backed by a file.
+  ///
+  /// A saved document narrates into `<outDir>/<stem>/` so several documents can
+  /// share one chosen folder. An in-memory (never saved) document has no
+  /// filename to name a folder after, so it writes straight into `outDir` rather
+  /// than into an `untitled/` folder inside it. [buildConfig] resolves the same
+  /// way via [NarrationConfig.outDir] + [NarrationConfig.nestOutputInInputSubdir];
+  /// this getter exists so the UI can display it without assembling a config
+  /// (which needs a model and a voice).
+  String get resolvedOutDir => resolveOutputDir(
+    outDir: _trimmedOutDir,
+    inputPath: _document.documentPath,
+    nestUnderInputName: _document.documentPath != null,
+  );
+
+  /// The chosen output folder, or the default when it is blank — the same
+  /// fallback [buildConfig] applies, kept in one place so the status bar cannot
+  /// disagree with where the run lands.
+  String get _trimmedOutDir =>
+      outDir.trim().isEmpty ? defaultOutDirPath() : outDir.trim();
+
   bool get resume => _resume;
 
   set resume(bool value) {
@@ -479,6 +507,10 @@ class SettingsController extends ChangeNotifier {
   /// typed/pasted content needs no backing file. [inputPath] drives only
   /// output naming.
   ///
+  /// A saved document gets a `nestOutputInInputSubdir` subdirectory under the
+  /// chosen folder; an in-memory one writes into that folder directly (see
+  /// [resolvedOutDir]).
+  ///
   /// Throws a [FormatException] when the active model has no voice selected and
   /// no config default (mirrors the CLI's error).
   NarrationConfig buildConfig() {
@@ -530,7 +562,8 @@ class SettingsController extends ChangeNotifier {
       sendWholeFile: sendWholeFile,
       sampleLen: sampleLen,
       speed: speed,
-      outDir: outDir.trim().isEmpty ? defaultOutDir() : outDir.trim(),
+      outDir: _trimmedOutDir,
+      nestOutputInInputSubdir: _document.documentPath != null,
       resume: resume,
       providerSettings: _resolveProviderSettings(providerBlock),
       apiKey: _resolveApiKey(providerBlock, p),

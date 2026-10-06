@@ -260,6 +260,10 @@ void main() {
       expect(cfg.voice, '89f41ea230034706881f85a8227d6ab9');
       expect(cfg.apiKey, 'sk-test');
       expect(cfg.pricing, freePricing);
+      // An in-memory document has no filename to name a folder after, so the
+      // run writes straight into the chosen out dir — no `untitled/` subdir.
+      expect(cfg.nestOutputInInputSubdir, isFalse);
+      expect(outputDirPath(cfg), cfg.outDir);
     });
 
     test('documents use the real path for output naming', () async {
@@ -267,10 +271,31 @@ void main() {
       final story = File('${dir.path}/my chapter.txt')
         ..writeAsStringSync('A chapter with enough words to narrate.');
       final c = makeController()..loadFromFile(story.path);
+      c.outDir = '${dir.path}/out';
       final cfg = c.buildConfig();
       expect(cfg.sourceText, 'A chapter with enough words to narrate.');
       expect(cfg.inputPath, story.absolute.path);
       expect(inputStem(cfg.inputPath), 'my_chapter');
+      // A saved document keeps its own subdirectory under the chosen folder.
+      expect(cfg.nestOutputInInputSubdir, isTrue);
+      expect(outputDirPath(cfg), '${dir.path}/out/my_chapter');
+      expect(c.resolvedOutDir, '${dir.path}/out/my_chapter');
+    });
+
+    test('an unsaved document resolves to the chosen output folder itself', () {
+      writeFishConfig();
+      final c = makeController()..setText('Hello world. Some more words.');
+      c.outDir = '${dir.path}/out';
+      expect(c.resolvedOutDir, '${dir.path}/out');
+      // Saving the document moves the run into a stem-named subdirectory.
+      c.saveTo('${dir.path}/chapter one.txt');
+      expect(c.resolvedOutDir, '${dir.path}/out/chapter_one');
+    });
+
+    test('a blank output folder falls back to the default path', () {
+      writeFishConfig();
+      final c = makeController()..outDir = '   ';
+      expect(c.resolvedOutDir, SettingsController.defaultOutDirPath());
     });
 
     test('sendWholeFile flows through to the narration config', () async {
@@ -1953,7 +1978,8 @@ void main() {
 
       expect(c.canCleanupSegments, isTrue);
 
-      final outDir = Directory('${dir.path}/untitled');
+      // An unsaved document writes into the chosen out dir directly.
+      final outDir = Directory(dir.path);
       expect(File('${outDir.path}/untitled_full.mp3').existsSync(), isTrue);
       final manifestPath = '${outDir.path}/manifest.json';
       expect(File(manifestPath).existsSync(), isTrue);

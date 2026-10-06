@@ -175,18 +175,42 @@ String inputStem(String inputPath) {
 String outDirBasename(String outDir) =>
     outDir.split(Platform.pathSeparator).last;
 
-/// Final output directory for [config]: the out dir joined with the input
-/// stem unless the stem is already the trailing component.
-String outputDirPath(NarrationConfig config) {
-  final stem = inputStem(config.inputPath);
-  return outDirBasename(config.outDir) == stem
-      ? config.outDir
-      : '${config.outDir}/$stem';
+/// Resolves the directory a run writes into, from the chosen output folder and
+/// the input file name.
+///
+/// With [nestUnderInputName] (the default, and what
+/// [NarrationConfig.nestOutputInInputSubdir] selects) the input stem is appended
+/// so several documents narrated into one folder stay separate — unless it is
+/// already the trailing component. With [inputPath] null or nesting off, [outDir]
+/// is returned untouched: there is no filename to name a folder after, so the run
+/// writes directly into the folder the caller chose.
+///
+/// Pure, so a GUI can display where a run will land without assembling a whole
+/// [NarrationConfig] (which requires a model and a voice).
+String resolveOutputDir({
+  required String outDir,
+  String? inputPath,
+  bool nestUnderInputName = true,
+}) {
+  if (!nestUnderInputName || inputPath == null) return outDir;
+  final stem = inputStem(inputPath);
+  return outDirBasename(outDir) == stem ? outDir : '$outDir/$stem';
 }
+
+/// Final output directory for [config]: the out dir joined with the input
+/// stem unless the stem is already the trailing component, or unless the config
+/// narrates an in-memory document ([NarrationConfig.nestOutputInInputSubdir] is
+/// false), in which case [NarrationConfig.outDir] is used as-is.
+String outputDirPath(NarrationConfig config) => resolveOutputDir(
+  outDir: config.outDir,
+  inputPath: config.inputPath,
+  nestUnderInputName: config.nestOutputInInputSubdir,
+);
 
 /// Narrates [config] paragraph by paragraph (reading [NarrationConfig.sourceText]
 /// when set, else the file at [config.inputPath]), writing WAV files and a
-/// manifest into [config.outDir]. The manifest is rewritten after every segment
+/// manifest into [outputDirPath] (which defaults to `outDir` plus the input
+/// stem). The manifest is rewritten after every segment
 /// so a failed run can be resumed via `--resume`.
 ///
 /// [client] is the speech seam, injected by the entrypoint rather than resolved

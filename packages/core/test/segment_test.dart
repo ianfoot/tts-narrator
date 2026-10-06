@@ -145,6 +145,39 @@ void main() {
     test('avoids double-append when out dir already ends with the stem', () {
       expect(outputDirPath(cfg('story.txt', 'output/story')), 'output/story');
     });
+
+    test('resolveOutputDir appends the stem only when nesting is on', () {
+      expect(
+        resolveOutputDir(outDir: 'output', inputPath: 'story.txt'),
+        'output/story',
+      );
+      expect(
+        resolveOutputDir(
+          outDir: 'output',
+          inputPath: 'story.txt',
+          nestUnderInputName: false,
+        ),
+        'output',
+      );
+    });
+
+    test('resolveOutputDir returns the out dir when there is no input file', () {
+      expect(resolveOutputDir(outDir: 'output', inputPath: null), 'output');
+    });
+
+    test('an unnested config writes straight into the chosen out dir', () {
+      final config = NarrationConfig(
+        inputPath: 'untitled.txt',
+        profile: local,
+        outputFormat: TtsAudioFormat.wav,
+        voice: 'Callirrhoe',
+        outDir: 'output',
+        nestOutputInInputSubdir: false,
+      );
+      expect(outputDirPath(config), 'output');
+      // The filename stem is unaffected: segments stay `untitled_NN.<ext>`.
+      expect(inputStem(config.inputPath), 'untitled');
+    });
   });
 
   group('resumeMatch', () {
