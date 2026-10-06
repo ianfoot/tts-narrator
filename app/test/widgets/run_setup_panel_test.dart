@@ -434,6 +434,16 @@ void main() {
         // lang_code the model synthesises in, so this model still needs it.
         expect(find.byKey(const Key('languageDropdown')), findsOneWidget);
 
+        // And it is not narrowed by the missing voice list: picking a language
+        // used to be refused because no voice spoke it, so every choice snapped
+        // back to English.
+        await tester.tap(find.byKey(const Key('languageDropdown')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Chinese').last);
+        await tester.pumpAndSettle();
+        expect(c.voiceLanguage, 'Chinese');
+        expect(find.text('Chinese'), findsWidgets);
+
         // Its narrator is written from prose instead, in the model options.
         expect(find.byKey(const Key('instructField')), findsOneWidget);
         expect(c.takesVoice, isFalse);

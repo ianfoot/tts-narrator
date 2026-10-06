@@ -124,6 +124,10 @@ this file sets `"sends_language": true`.
 English, Chinese, Japanese, Korean, German, French, Russian, Portuguese, Spanish,
 Italian.
 
+The **Language** dropdown picks straight from this table, without being narrowed by
+a voice list: this model has no voices, so the code is a `lang_code` rather than a
+filter over which voices to show.
+
 ## Licensing and provenance
 
 - Model: [`Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign`](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign), Apache 2.0.

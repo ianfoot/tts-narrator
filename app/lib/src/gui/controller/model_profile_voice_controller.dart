@@ -352,11 +352,18 @@ class ModelProfileVoiceController extends ChangeNotifier {
   /// language silently snapping back, which is the same bargain the gender setter
   /// makes in the other order. Only a language with no voice at all behind it is
   /// refused outright.
+  ///
+  /// That refusal is a rule about the voice list, so it does not apply to a model
+  /// that has no voice list. Qwen3 Voice Design ships no voices at all and takes
+  /// its language as the `lang_code` it synthesises in, so there is nothing for
+  /// the list to hold behind any code: every language looked empty, every pick
+  /// was refused, and the dropdown snapped back to the default however many times
+  /// it was used. Such a model takes the choice as written.
   void applyLanguage(String code) {
     final p = profile;
     if (p == null) return;
     if (!_voiceConfig.languagesFor(p.alias).containsKey(code)) return;
-    if (!_hasVisible(p, language: code)) {
+    if (p.sendsVoiceField && !_hasVisible(p, language: code)) {
       if (!_hasVisible(p, language: code, gender: VoiceGender.neutral)) return;
       _voiceGender = VoiceGender.neutral;
     }

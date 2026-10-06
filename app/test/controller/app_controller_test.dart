@@ -1575,6 +1575,36 @@ void main() {
       expect(c.voiceLanguage, 'b');
     });
 
+    test('a voiceless model takes the language as lang_code', () {
+      // A voice-design model has no voices, so its language is not a filter
+      // over a list. Refusing a code because no voice speaks it left every
+      // pick unselectable and the dropdown snapped back to the default.
+      writeConfig({
+        'models': {
+          'qwen': {
+            'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+            'format': 'wav',
+            'sends_voice': false,
+            'sends_instruct': true,
+            'sends_language': true,
+            'default_language': 'English',
+            'languages': {'English': 'English', 'Japanese': 'Japanese'},
+          },
+        },
+      });
+      final c = makeController()..changeModel('qwen');
+      expect(c.voiceLanguage, 'English');
+      expect(c.voiceItems, isEmpty);
+
+      c.applyVoiceLanguage('Japanese');
+      expect(c.voiceLanguage, 'Japanese');
+      // What the request carries, not just what the picker shows.
+      expect(c.buildConfig().language, 'Japanese');
+
+      c.applyVoiceLanguage('Klingon'); // not in the table
+      expect(c.voiceLanguage, 'Japanese');
+    });
+
     test('a language table with no default still narrows the list', () {
       writeConfig({
         'models': {
