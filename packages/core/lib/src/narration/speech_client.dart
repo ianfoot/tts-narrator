@@ -37,9 +37,11 @@ class GeneratedAudio {
 /// sent only for a model that declares `"speed": true`. [language] is likewise
 /// null unless the model declares `"sends_language": true`, and is the short
 /// code the provider expects (Kokoro: `lang_code`, the first character of its
-/// voice ids). [abort] is checked
-/// before the first attempt and between retries — an already-cancelled token
-/// throws [AbortException] without calling the API.
+/// voice ids). [instruct] is a free-form natural-language description of the
+/// voice to synthesize — the field Qwen3 Voice Design takes instead of a voice
+/// id — and is null unless the model declares `"sends_instruct": true`.
+/// [abort] is checked before the first attempt and between retries — an
+/// already-cancelled token throws [AbortException] without calling the API.
 ///
 /// [apiKey] is null when no key is configured; the request then carries no
 /// `Authorization` header. Whether one was *needed* is the server's judgement,
@@ -52,6 +54,7 @@ typedef SpeechClient = Future<GeneratedAudio> Function({
   required Map<String, String> settings,
   required double? speed,
   String? language,
+  String? instruct,
   String? apiKey,
   AbortToken? abort,
 });

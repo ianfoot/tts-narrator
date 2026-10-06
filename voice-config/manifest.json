@@ -5,7 +5,8 @@
       "fish.json",
       "gemini.json",
       "kokoro.json",
-      "kokoro_local.json"
+      "kokoro_local.json",
+      "qwen3_voicedesign.json"
     ],
     "linux": [
       "fish.json",

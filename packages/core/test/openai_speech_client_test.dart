@@ -238,6 +238,47 @@ void main() {
       }
     });
 
+    test('carries instruct when a voice design describes the narrator', () async {
+      final server = await _serve(_audio);
+      addTearDown(server.close);
+
+      await OpenAiSpeechClient().synthesize(
+        model: 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+        voice: null,
+        input: 'hi',
+        responseFormat: 'wav',
+        settings: server.block,
+        speed: 1.0,
+        instruct: '  A calm, low British male narrator.  ',
+      );
+
+      expect(server.requests.single.body['instruct'], 'A calm, low British male narrator.');
+    });
+
+    test('omits instruct for a null, empty or whitespace-only value', () async {
+      // An empty instruct is not a request for the vendor's default voice: it
+      // describes no voice at all, so the field is dropped rather than sent blank.
+      final server = await _serve(_audio);
+      addTearDown(server.close);
+
+      for (final instruct in [null, '', '   ']) {
+        await OpenAiSpeechClient().synthesize(
+          model: 'm',
+          voice: 'v',
+          input: 'hi',
+          responseFormat: 'mp3',
+          settings: server.block,
+          speed: 1.0,
+          instruct: instruct,
+        );
+      }
+
+      expect(server.requests, hasLength(3));
+      for (final request in server.requests) {
+        expect(request.body.containsKey('instruct'), isFalse);
+      }
+    });
+
     test('maps X-Generation-Id onto generationId', () async {
       final server = await _serve((request) {
         request.response.headers.set('X-Generation-Id', 'gen-1');

@@ -156,6 +156,46 @@ void main() {
       });
     });
 
+    group('voice design', () {
+      const json =
+          '{"id":"mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",'
+          '"sends_instruct":true,"sends_voice":false,'
+          '"default_instruct":"A calm, low British male narrator."}';
+
+      TtsModelProfile loadProfile(String modelJson) {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', modelJson);
+        final (cfg, warnings) = load();
+        expect(warnings, isEmpty);
+        return cfg.models['m']!;
+      }
+
+      test('reads the capability and its default prose', () {
+        final profile = loadProfile(json);
+        expect(profile.sendsInstructField, isTrue);
+        expect(profile.defaultInstruct, 'A calm, low British male narrator.');
+        expect(profile.sendsVoiceField, isFalse);
+      });
+
+      test('a model with neither key reads as absent, not empty', () {
+        final profile = loadProfile('{"id":"x/y"}');
+        expect(profile.sendsInstructField, isFalse);
+        expect(profile.defaultInstruct, isNull);
+      });
+
+      test('rejects a non-bool sends_instruct', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id":"x/y","sends_instruct":"yes"}');
+        expect(load().$2.first, contains('"sends_instruct" must be a bool'));
+      });
+
+      test('rejects a non-string default_instruct', () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', '{"id":"x/y","default_instruct":42}');
+        expect(load().$2.first, contains('"default_instruct" must be a string'));
+      });
+    });
+
     test(
       'accepts a directory with only an empty config.json and no models',
       () {
@@ -426,6 +466,54 @@ void main() {
       expect(raw.containsKey('sends_language'), isFalse);
       expect(raw.containsKey('default_language'), isFalse);
       expect(raw.containsKey('languages'), isFalse);
+    });
+
+    test('voice design round-trips, and an ordinary model emits no instruct keys', () {
+      writeVoiceConfig(
+        dir.path,
+        VoiceConfig(
+          providers: {
+            testProvider: const ProviderConfig(
+              name: testProvider,
+              models: ['one', 'two'],
+            ),
+          },
+          models: {
+            'one': const TtsModelProfile(
+              alias: 'one',
+              id: 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+              sendsInstructField: true,
+              defaultInstruct: 'A calm, low British male narrator.',
+              provider: testProvider,
+            ),
+            'two': const TtsModelProfile(
+              alias: 'two',
+              id: 'x/two',
+              provider: testProvider,
+            ),
+          },
+        ),
+      );
+
+      final designed = jsonDecode(
+        File(at(kVoiceConfigModelsDir, 'one.json')).readAsStringSync(),
+      ) as Map<String, dynamic>;
+      expect(designed['sends_instruct'], isTrue);
+      expect(designed['default_instruct'], 'A calm, low British male narrator.');
+
+      final plain = jsonDecode(
+        File(at(kVoiceConfigModelsDir, 'two.json')).readAsStringSync(),
+      ) as Map<String, dynamic>;
+      expect(plain.containsKey('sends_instruct'), isFalse);
+      expect(plain.containsKey('default_instruct'), isFalse);
+
+      final (cfg, warnings) = loadVoiceConfig(dir.path);
+      expect(warnings, isEmpty);
+      expect(cfg.models['one']!.sendsInstructField, isTrue);
+      expect(
+        cfg.models['one']!.defaultInstruct,
+        'A calm, low British male narrator.',
+      );
     });
 
     test('round-trips the whole tree back into an equal config', () {

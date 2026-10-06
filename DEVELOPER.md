@@ -60,12 +60,14 @@ so in practice the tests and any non-GUI front end. The GUI always injects one.
 - `providers/<name>.json` — one file per provider: a `models` list naming the
   models that provider serves, and a `settings` block (secrets).
 - `models/<alias>.json` — one file per model: `id`, `format`, `sample_rate`,
-  `prompt_style`, `speed`, `sends_language`, `default_voice`,
-  `default_language`, `pricing`, `languages`, and `voices`. A `voices` entry is
+  `prompt_style`, `speed`, `sends_language`, `sends_instruct`,
+  `default_instruct`, `sends_voice`, `default_voice`, `default_language`,
+  `pricing`, `languages`, and `voices`. A `voices` entry is
   keyed by the voice id and may carry a `name` and an optional `gender`
   (`male`/`female`/`neutral`); `id` may also be spelled out explicitly when it
   differs from the key, and the value may be a plain string (`"Charon":
-  "Charon"`).
+  "Charon"`). An entry that names no `id` and whose only other fields are ones
+  this schema does not define is rejected, not ignored.
 
 So the directory holds three kinds of file:
 
@@ -85,11 +87,15 @@ literally.
 Core reads exactly four keys — `base_url` (alias `endpoint`) to build the speech
 URL, `default_voice` to fill in an unspecified voice, and `api_key`, which is
 stripped out before expansion and delivered separately as
-`NarrationConfig.apiKey` so a secret is never carried in the settings map. Every
-other key passes through untouched to the service, which is how a vendor can
-accept options the app knows nothing about. So a settings block is *not* fully
-opaque: adding a key core must understand means touching
-`provider_settings.dart` and the client, not just the config.
+`NarrationConfig.apiKey` so a secret is never carried in the settings map. So a
+settings block is *not* fully opaque: adding a key core must understand means
+touching `provider_settings.dart` and the client, not just the config.
+
+No other key reaches the service. `OpenAiSpeechClient.synthesize` builds an
+explicit request body, so an unrecognised settings key is dropped rather than
+forwarded — a vendor option the app knows nothing about has to be plumbed
+through `SpeechClient` like any other request field, which is what happened for
+`instruct`.
 
 A key can come from three places, in this order: the OS keychain (what the user
 typed into the Run Setup panel), an `api_key` literal in the provider block, then an
@@ -469,9 +475,24 @@ title.
   model id. `prompt_style: true` derives the "Narrator gender" / accent / style /
   passage-prefix controls in the run-setup panel's Model options; `speed: true`
   derives the speed slider and is what puts `speed` in the request body. A
-  model declaring neither shows no model-options section at all. Both are
+  model declaring neither shows no model-options section at all. All are
   computed by `ModelUiSpec.forProfile`, so adding a vendor can never strand the
   run-setup panel.
+- Voice-design models opt in with `sends_instruct: true`, which is what puts
+  `instruct` in the request body, and are usually paired with
+  `sends_voice: false`: the model writes the narrator from the prose instead of
+  picking one, so there is nothing to pick. Such a model ships no `voices` and no
+  `default_voice` — `buildConfig` skips voice resolution entirely, and the voice
+  picker, its gender filter and the advanced raw-id override are all hidden
+  (`AppController.takesVoice`). `default_instruct` rides the profile so the GUI
+  can prefill the editable box without core knowing any GUI defaults, and the
+  language dropdown survives because `lang_code` is a real field for these
+  models too. An empty box is a deliberate choice, not a reset: the `instruct`
+  setter stores the empty string verbatim, and `RunController.narrateBlockReason`
+  returns `NarrationBlockReason.emptyVoiceDesign` while the prose is blank, since
+  `OpenAiSpeechClient` drops an empty `instruct` and the vendor has no voice list
+  to guess from. The one shipped example is `qwen3_voicedesign`; see
+  [docs/QWEN3_VOICEDESIGN.md](docs/QWEN3_VOICEDESIGN.md).
 - Multilingual models opt in with `sends_language: true`, which is what puts
   `lang_code` in the request body — the same gating shape as `speed`. The codes
   themselves are data: `languages` is a `{code: label}` table (its declaration

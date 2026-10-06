@@ -338,6 +338,110 @@ void main() {
       expect(c.voice, isEmpty);
       expect(() => c.buildConfig(), throwsA(isA<NoVoiceSelected>()));
     });
+
+    test('a model that takes no voice builds without one', () {
+      // The counterpart to the NoVoiceSelected case above: a voice-design model
+      // declares no voices at all, so there is nothing to select. Demanding one
+      // would make the model unrunnable on the grounds that a field it never
+      // sends is empty.
+      writeConfig({
+        'models': {
+          'qwen': {
+            'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+            'format': 'wav',
+            'sample_rate': 24000,
+            'sends_voice': false,
+            'sends_instruct': true,
+            'default_instruct':
+                'An older male narrator with a resonant, warm tone.',
+          },
+        },
+      });
+      final c = makeController();
+      c.changeModel('qwen');
+      expect(c.voice, isEmpty);
+
+      final cfg = c.buildConfig();
+      expect(cfg.voice, isEmpty);
+      // The prose the model file defaults to reaches the request instead.
+      expect(cfg.instruct, 'An older male narrator with a resonant, warm tone.');
+    });
+
+    test('instruct is the user edit, and a model switch drops a stale one', () {
+      writeConfig({
+        'models': {
+          'qwen': {
+            'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+            'format': 'wav',
+            'sends_voice': false,
+            'sends_instruct': true,
+            'default_instruct': 'The shipped default.',
+          },
+          'gemini': {'id': 'google/gemini-3.1-flash-tts-preview'},
+        },
+        'defaults': {'gemini': 'Charon'},
+        'voices': {
+          'gemini': {'Charon': 'Charon'},
+        },
+      });
+      final c = makeController();
+      c.changeModel('qwen');
+      expect(c.instruct, 'The shipped default.');
+
+      c.instruct = 'A young, bright and energetic presenter.';
+      expect(c.buildConfig().instruct, 'A young, bright and energetic presenter.');
+
+      // Prose written for one model says nothing about the next, so switching
+      // goes back to the newly selected model's own default rather than
+      // narrating the previous model in the previous voice.
+      c.changeModel('gemini');
+      expect(c.instruct, isEmpty);
+      expect(c.buildConfig().instruct, isEmpty);
+    });
+
+    test('a voice-design model with no prose blocks the run', () {
+      // No `default_instruct` this time: the shipped model always ships one,
+      // but a user overlay can drop it, and VoiceDesign has no voice list to
+      // fall back on. Sending the request anyway leaves the narrator to the
+      // server's guess, so the run is blocked while the box can still be
+      // filled.
+      writeConfig({
+        'models': {
+          'qwen': {
+            'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+            'format': 'wav',
+            'sends_voice': false,
+            'sends_instruct': true,
+          },
+        },
+      });
+      final c = makeController();
+      c.changeModel('qwen');
+      c.setText('A paragraph to narrate.');
+
+      expect(c.narrateBlockReason(), NarrationBlockReason.emptyVoiceDesign);
+
+      c.instruct = 'A calm male narrator.';
+      expect(c.narrateBlockReason(), isNull);
+    });
+
+    test('a model that takes no instruct is never blocked for prose', () {
+      // The guard is the capability, not the emptiness: a plain model with no
+      // voice design box has nothing to fill in, so it must still run.
+      writeConfig({
+        'models': {'gemini': {'id': 'google/gemini-3.1-flash-tts-preview'}},
+        'defaults': {'gemini': 'Charon'},
+        'voices': {
+          'gemini': {'Charon': 'Charon'},
+        },
+      });
+      final c = makeController();
+      c.changeModel('gemini');
+      c.setText('A paragraph to narrate.');
+
+      expect(c.instruct, isEmpty);
+      expect(c.narrateBlockReason(), isNull);
+    });
   });
 
   group('API key secure-store fallback', () {
@@ -1469,6 +1573,36 @@ void main() {
       final c = makeController()..changeModel('kokoro');
       c.applyVoiceLanguage('p'); // declared, but no voice speaks it
       expect(c.voiceLanguage, 'b');
+    });
+
+    test('a voiceless model takes the language as lang_code', () {
+      // A voice-design model has no voices, so its language is not a filter
+      // over a list. Refusing a code because no voice speaks it left every
+      // pick unselectable and the dropdown snapped back to the default.
+      writeConfig({
+        'models': {
+          'qwen': {
+            'id': 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
+            'format': 'wav',
+            'sends_voice': false,
+            'sends_instruct': true,
+            'sends_language': true,
+            'default_language': 'English',
+            'languages': {'English': 'English', 'Japanese': 'Japanese'},
+          },
+        },
+      });
+      final c = makeController()..changeModel('qwen');
+      expect(c.voiceLanguage, 'English');
+      expect(c.voiceItems, isEmpty);
+
+      c.applyVoiceLanguage('Japanese');
+      expect(c.voiceLanguage, 'Japanese');
+      // What the request carries, not just what the picker shows.
+      expect(c.buildConfig().language, 'Japanese');
+
+      c.applyVoiceLanguage('Klingon'); // not in the table
+      expect(c.voiceLanguage, 'Japanese');
     });
 
     test('a language table with no default still narrows the list', () {

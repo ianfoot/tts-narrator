@@ -68,7 +68,11 @@ class _ModelVoiceSectionState extends State<ModelVoiceSection> {
             onChanged: (alias) => _controller.changeModel(alias),
           ),
           VoicePickerWidget(controller: _controller),
-          AdvancedVoiceWidget(controller: _controller),
+          // The raw-voice override is a sibling of the picker rather than part
+          // of it, so it needs the same gate: a model that sends no voice id has
+          // nothing for a custom id to override.
+          if (_controller.takesVoice)
+            AdvancedVoiceWidget(controller: _controller),
         ],
       ),
     );

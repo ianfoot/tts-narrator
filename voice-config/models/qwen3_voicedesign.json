@@ -1,0 +1,24 @@
+{
+  "id": "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",
+  "display_name": "Qwen3 TTS 1.7B Voice Design (Local)",
+  "format": "wav",
+  "sample_rate": 24000,
+  "sends_voice": false,
+  "sends_instruct": true,
+  "sends_language": true,
+  "speed": true,
+  "default_instruct": "A calm male narrator with a low, steady voice and a clear British accent.",
+  "default_language": "English",
+  "languages": {
+    "English": "English",
+    "Chinese": "Chinese",
+    "Japanese": "Japanese",
+    "Korean": "Korean",
+    "German": "German",
+    "French": "French",
+    "Russian": "Russian",
+    "Portuguese": "Portuguese",
+    "Spanish": "Spanish",
+    "Italian": "Italian"
+  }
+}

@@ -124,7 +124,11 @@ class AppController extends ChangeNotifier {
   /// Re-reads the config directory after the settings screen wrote to it,
   /// keeping the selected model and voice.
   void reloadConfig() {
+    final before = _model.modelAlias;
     _model.reloadConfig();
+    // A reload that had to fall back to the default model changed the model
+    // under the reader, so a voice-design override goes with it.
+    if (_model.modelAlias != before) _settings.resetInstruct();
     notifyListeners();
   }
 
@@ -134,6 +138,9 @@ class AppController extends ChangeNotifier {
   void changeModel(String alias) {
     if (alias == _model.modelAlias) return;
     _model.changeModel(alias);
+    // Voice design is per-model prose: an override written for the old model
+    // describes a narrator the new one would not produce.
+    _settings.resetInstruct();
     notifyListeners();
   }
 
@@ -169,6 +176,11 @@ class AppController extends ChangeNotifier {
     _settings.applyNarratorGender(_model.voiceGenderFilter);
     notifyListeners();
   }
+
+  /// Whether the active model takes a voice at all; false for a model that
+  /// writes its voice from prose, which has nothing to pick (drives whether the
+  /// voice dropdown is shown in "Model & voice").
+  bool get takesVoice => _model.takesVoice;
 
   /// Whether the active model tags any of its voices with a gender (drives the
   /// voice-picker gender control in "Model & voice").
@@ -309,6 +321,14 @@ class AppController extends ChangeNotifier {
 
   set passagePrefix(String value) {
     _settings.passagePrefix = value;
+  }
+
+  /// Voice-design prose for a model that takes an `instruct` field; empty for
+  /// every other model. Prefilled from the model's `default_instruct`.
+  String get instruct => _settings.instruct;
+
+  set instruct(String value) {
+    _settings.instruct = value;
   }
 
   /// Speech-rate multiplier (1.0 = normal, clamped 0.25-2.0 by

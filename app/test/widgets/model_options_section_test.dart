@@ -162,4 +162,66 @@ void main() {
     expect(c.voiceGenderFilter, VoiceGender.male);
     expect(c.passagePrefix, contains('male narrator'));
   });
+
+  group('voice design', () {
+    testWidgets('renders the prose the model file defaults to', (
+      tester,
+    ) async {
+      writeVoiceDesignConfig(configDir);
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
+
+      expect(find.byKey(const Key('instructField')), findsOneWidget);
+      // Prefilled, not blank: the shipped model is runnable with no input.
+      expect(c.instruct, contains('calm male narrator'));
+      expect(find.text('Voice design'), findsOneWidget);
+    });
+
+    testWidgets('an edit reaches the controller', (tester) async {
+      writeVoiceDesignConfig(configDir);
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
+
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(const Key('instructField')),
+          matching: find.byType(CupertinoTextField),
+        ),
+        'A young, bright and energetic presenter.',
+      );
+      expect(c.instruct, 'A young, bright and energetic presenter.');
+    });
+
+    testWidgets('the prose can be cleared and left empty', (tester) async {
+      // Regression: clearing the box used to mean "no override", which handed
+      // the model's default prose straight back and made the field impossible
+      // to empty. An empty box is a deliberate choice, not an absent one.
+      writeVoiceDesignConfig(configDir);
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
+
+      final field = find.byKey(const Key('instructField'));
+      expect(c.instruct, contains('calm male narrator'));
+
+      await tester.enterText(
+        find.descendant(of: field, matching: find.byType(CupertinoTextField)),
+        '',
+      );
+      await tester.pump();
+
+      expect(c.instruct, isEmpty);
+      expect(tester.widget<AppTextField>(field).controller.text, isEmpty);
+    });
+
+    testWidgets('a model that takes no instruct shows no prose box', (
+      tester,
+    ) async {
+      writeCapableFish({'prompt_style': true});
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
+
+      expect(find.byKey(const Key('instructField')), findsNothing);
+      expect(c.instruct, isEmpty);
+    });
+  });
 }

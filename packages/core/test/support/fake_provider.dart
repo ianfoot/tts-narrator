@@ -37,6 +37,7 @@ class FakeTtsProvider {
       Map<String, String> settings,
       double? speed,
       String? language,
+      String? instruct,
       String? apiKey,
     })
   >
@@ -55,6 +56,7 @@ class FakeTtsProvider {
     required Map<String, String> settings,
     required double? speed,
     String? language,
+    String? instruct,
     String? apiKey,
     AbortToken? abort,
   }) async {
@@ -67,6 +69,7 @@ class FakeTtsProvider {
       settings: Map.unmodifiable(settings),
       speed: speed,
       language: language,
+      instruct: instruct,
       apiKey: apiKey,
     ));
     return GeneratedAudio(bytes: bytes);

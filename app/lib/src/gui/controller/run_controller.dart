@@ -15,10 +15,11 @@ import 'settings_controller.dart';
 /// single change stream.
 ///
 /// The controller reads the open document ([DocumentController]) only to guard
-/// run start against empty text, the current settings ([SettingsController])
-/// only to assemble the run config at start, and the active model
+/// run start against empty text, the current settings ([SettingsController]) to
+/// assemble the run config at start and to guard a voice-design model that has
+/// been left without any prose, and the active model
 /// ([ModelProfileVoiceController]) for the pricing fallback in the cost
-/// estimate.
+/// estimate and that same voice-design guard.
 class RunController extends ChangeNotifier {
   RunController({
     required this._document,
@@ -32,10 +33,12 @@ class RunController extends ChangeNotifier {
   /// The open document (read only to block run start on empty text).
   final DocumentController _document;
 
-  /// The narration settings (read only to assemble the run config at start).
+  /// The narration settings (read to assemble the run config at start, and to
+  /// guard run start on a voice-design model with no prose).
   final SettingsController _settings;
 
-  /// The active model (read only for the pricing fallback in estimates).
+  /// The active model (read for the pricing fallback in estimates, and to guard
+  /// run start on a voice-design model with no prose).
   final ModelProfileVoiceController _model;
 
   /// The speech seam handed to `narrate` for every segment.
@@ -287,11 +290,19 @@ class RunController extends ChangeNotifier {
   /// `BuildContext` to localize with. See
   /// `NarrationBlockReasonX.message`.
   NarrationBlockReason? narrateBlockReason() {
-    if (_model.profile == null) {
+    final profile = _model.profile;
+    if (profile == null) {
       return NarrationBlockReason.noModelConfigured;
     }
     if (_document.text.trim().isEmpty) {
       return NarrationBlockReason.emptyText;
+    }
+    // A voice-design model is told what to sound like in prose, and cannot
+    // invent a narrator from nothing: the client drops an empty `instruct`
+    // rather than sending it, which would leave the server guessing. Block the
+    // run instead, so the reason is visible while the box can still be filled.
+    if (profile.sendsInstructField && _settings.instruct.trim().isEmpty) {
+      return NarrationBlockReason.emptyVoiceDesign;
     }
     if (_narrating) {
       return NarrationBlockReason.alreadyRunning;
@@ -308,6 +319,13 @@ enum NarrationBlockReason {
 
   /// The editor has no narratable text.
   emptyText,
+
+  /// The active model writes its voice from prose and that prose is blank.
+  ///
+  /// Qwen3 Voice Design has no voice list to fall back on, so an empty
+  /// `instruct` is a request with nothing to obey. The client drops the field
+  /// rather than sending it, which leaves the outcome up to the server.
+  emptyVoiceDesign,
 
   /// A run is already in flight.
   alreadyRunning,

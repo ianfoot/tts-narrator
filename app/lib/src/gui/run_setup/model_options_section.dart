@@ -12,9 +12,10 @@ import 'speed_widget.dart';
 
 /// The "Model options" section: renders the active model's plugin-declared
 /// options one per row. Built-in keys (`accent`, `style`, `passagePrefix`,
-/// `speed`) bind to the narration settings the controller owns; any other key
-/// is ignored — the app interprets the shared convention, never model-specific
-/// knowledge. Renders nothing when the active model declares no options.
+/// `speed`, `instruct`) bind to the narration settings the controller owns; any
+/// other key is ignored — the app interprets the shared convention, never
+/// model-specific knowledge. Renders nothing when the active model declares no
+/// options.
 class ModelOptionsSection extends StatefulWidget {
   const ModelOptionsSection({super.key, required this.controller});
 
@@ -28,6 +29,7 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
   late final TextEditingController _accent;
   late final TextEditingController _style;
   late final TextEditingController _prefix;
+  late final TextEditingController _instruct;
 
   /// Set while applying controller state into the local fields; prevents the
   /// controller notify -> field write -> onChanged -> controller write loop
@@ -41,6 +43,7 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
     'style',
     'passagePrefix',
     'speed',
+    'instruct',
   };
 
   AppController get _controller => widget.controller;
@@ -53,13 +56,14 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
     _accent = TextEditingController(text: _controller.accent);
     _style = TextEditingController(text: _controller.style);
     _prefix = TextEditingController(text: _controller.passagePrefix);
+    _instruct = TextEditingController(text: _controller.instruct);
     _controller.addListener(_onControllerChanged);
   }
 
   @override
   void dispose() {
     _controller.removeListener(_onControllerChanged);
-    for (final c in [_accent, _style, _prefix]) {
+    for (final c in [_accent, _style, _prefix, _instruct]) {
       c.dispose();
     }
     super.dispose();
@@ -78,6 +82,9 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
       }
       if (_prefix.text != _controller.passagePrefix) {
         _prefix.text = _controller.passagePrefix;
+      }
+      if (_instruct.text != _controller.instruct) {
+        _instruct.text = _controller.instruct;
       }
       _syncing = false;
     });
@@ -142,6 +149,7 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
                 'accent' => l10n.gui_run_setup_accentFieldTooltip,
                 'style' => l10n.gui_run_setup_styleFieldTooltip,
                 'passagePrefix' => l10n.gui_run_setup_prefixFieldTooltip,
+                'instruct' => l10n.gui_run_setup_instructFieldTooltip,
                 _ => null,
               },
               controller: _modelOptionController(option.key),
@@ -164,6 +172,8 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
         return _style;
       case 'passagePrefix':
         return _prefix;
+      case 'instruct':
+        return _instruct;
     }
     // Unknown text keys are declared by a plugin this app version does not
     // know how to bind; skip them rather than crash the rail.
@@ -181,6 +191,9 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
         break;
       case 'passagePrefix':
         _controller.passagePrefix = value;
+        break;
+      case 'instruct':
+        _controller.instruct = value;
         break;
     }
   }

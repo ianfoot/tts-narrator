@@ -166,6 +166,12 @@ abstract class AppLocalizations {
   /// **'Editor text is empty'**
   String get gui_controller_blockReasons_emptyText;
 
+  /// No description provided for @gui_controller_blockReasons_emptyVoiceDesign.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the voice in the Voice design box before narrating'**
+  String get gui_controller_blockReasons_emptyVoiceDesign;
+
   /// No description provided for @gui_controller_blockReasons_alreadyRunning.
   ///
   /// In en, this message translates to:
@@ -554,6 +560,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Text prepended to each paragraph'**
   String get gui_run_setup_prefixFieldTooltip;
+
+  /// No description provided for @gui_run_setup_instructFieldTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the narrator in prose; the model designs the voice from it'**
+  String get gui_run_setup_instructFieldTooltip;
 
   /// No description provided for @gui_run_setup_sampleLenFieldTooltip.
   ///

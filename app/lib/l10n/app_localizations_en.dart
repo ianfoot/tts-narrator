@@ -90,6 +90,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_controller_blockReasons_emptyText => 'Editor text is empty';
 
   @override
+  String get gui_controller_blockReasons_emptyVoiceDesign =>
+      'Describe the voice in the Voice design box before narrating';
+
+  @override
   String get gui_controller_blockReasons_alreadyRunning =>
       'Narration is already running.';
 
@@ -317,6 +321,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get gui_run_setup_prefixFieldTooltip =>
       'Text prepended to each paragraph';
+
+  @override
+  String get gui_run_setup_instructFieldTooltip =>
+      'Describe the narrator in prose; the model designs the voice from it';
 
   @override
   String get gui_run_setup_sampleLenFieldTooltip =>

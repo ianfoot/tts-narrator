@@ -44,6 +44,9 @@ void main() {
     double speed = 1.0,
     bool sendsLanguageField = false,
     String? language,
+    bool sendsInstructField = false,
+    String? defaultInstruct,
+    String? instruct,
     Map<String, String> providerSettings = const {'api_key': 'sk-test'},
   }) {
     return NarrationConfig(
@@ -56,12 +59,15 @@ void main() {
         sendsVoiceField: sendsVoiceField,
         supportsSpeed: supportsSpeed,
         sendsLanguageField: sendsLanguageField,
+        sendsInstructField: sendsInstructField,
+        defaultInstruct: defaultInstruct,
         sampleRate: sampleRate,
         provider: testProvider,
       ),
       voice: 'VoiceOne',
       voiceLabel: 'Voice One',
       language: language,
+      instruct: instruct,
       speed: speed,
       // `narrate` validates the block before the first segment, so every test
       // needs a base URL; a test may still override or extend the map.
@@ -238,6 +244,55 @@ void main() {
       File('${dir.path}/out2/story/manifest.json').readAsStringSync(),
     ) as Map<String, dynamic>;
     expect(other.containsKey('language'), isFalse);
+  });
+
+  group('voice design', () {
+    test('sends the prose the user wrote', () async {
+      final input = writeInput();
+      await narrate(
+        config(
+          input,
+          sendsVoiceField: false,
+          sendsInstructField: true,
+          instruct: 'A calm, low British male narrator.',
+          defaultInstruct: 'The shipped default.',
+        ),
+        client: provider.client,
+      );
+
+      final call = provider.calls.single;
+      expect(call.instruct, 'A calm, low British male narrator.');
+      // Voice design replaces the voice id rather than adding to it.
+      expect(call.voice, isNull);
+    });
+
+    test("falls back to the model's own default when the user wrote nothing", () async {
+      // Otherwise a model declaring the capability would be dispatched a request
+      // describing no voice at all, which the vendor cannot fulfil.
+      final input = writeInput();
+      await narrate(
+        config(
+          input,
+          sendsInstructField: true,
+          defaultInstruct: 'The shipped default.',
+        ),
+        client: provider.client,
+      );
+
+      expect(provider.calls.single.instruct, 'The shipped default.');
+    });
+
+    test('drops the prose for a model that does not take it', () async {
+      // The gate is the capability, not the value: a stray `instruct` on a model
+      // that has no such field must not reach the wire.
+      final input = writeInput();
+      await narrate(
+        config(input, instruct: 'A calm, low British male narrator.'),
+        client: provider.client,
+      );
+
+      expect(provider.calls.single.instruct, isNull);
+    });
   });
 
   test('passes the resolved provider settings through untouched', () async {

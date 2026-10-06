@@ -51,6 +51,7 @@ class OpenAiSpeechClient {
     required Map<String, String> settings,
     required double? speed,
     String? language,
+    String? instruct,
     String? apiKey,
     AbortToken? abort,
   }) async {
@@ -79,6 +80,13 @@ class OpenAiSpeechClient {
     // Gated like `speed`: a null language means the field is omitted.
     if (language != null && language.isNotEmpty) {
       body['lang_code'] = language;
+    }
+    // Qwen3 Voice Design synthesizes a voice from prose rather than picking one
+    // from a list, so its `instruct` replaces `voice` entirely. Sent only when
+    // non-empty: an empty string would be a different (and meaningless) request
+    // from omitting the field, not the vendor's default voice.
+    if (instruct != null && instruct.trim().isNotEmpty) {
+      body['instruct'] = instruct.trim();
     }
 
     var attempt = 0;

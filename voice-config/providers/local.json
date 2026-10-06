@@ -1,5 +1,5 @@
 {
-  "models": ["kokoro_local"],
+  "models": ["kokoro_local", "qwen3_voicedesign"],
   "settings": {
     "base_url": "http://localhost:8000/v1"
   }

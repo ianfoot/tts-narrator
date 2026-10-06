@@ -41,7 +41,7 @@ void main() {
     test('loads through the real loader with no warnings at all', () {
       final (config, warnings) = loadVoiceConfig(shipped.path);
       expect(warnings, isEmpty);
-      expect(config.models.keys, hasLength(4));
+      expect(config.models.keys, hasLength(5));
       expect(config.providers.keys, ['openrouter', 'local']);
     });
   });
@@ -83,15 +83,18 @@ void main() {
       }
     });
 
-    test('does not offer kokoro_local on platforms without a local server', () {
-      // It is in the macOS list only, so a Linux install never downloads a model
-      // whose only provider is localhost.
-      expect(manifest.filesFor('macos'), contains('kokoro_local.json'));
-      expect(manifest.filesFor('linux'), isNot(contains('kokoro_local.json')));
-      expect(
-        manifest.filesFor('windows'),
-        isNot(contains('kokoro_local.json')),
-      );
+    test('offers the mlx-audio models only where a local server can exist', () {
+      // Both are served by mlx-audio, which needs Apple Silicon, so a Linux or
+      // Windows install must never download a model whose only provider is
+      // localhost.
+      for (final name in const [
+        'kokoro_local.json',
+        'qwen3_voicedesign.json',
+      ]) {
+        expect(manifest.filesFor('macos'), contains(name));
+        expect(manifest.filesFor('linux'), isNot(contains(name)));
+        expect(manifest.filesFor('windows'), isNot(contains(name)));
+      }
     });
   });
 
@@ -122,14 +125,29 @@ void main() {
       }
     });
 
-    test('every voice entry names a voice, with no duplicate ids', () {
+    test('a model that sends a voice lists resolvable, non-duplicate voices', () {
+      // Two halves of one invariant, because both are promises the request
+      // depends on. A model that takes a voice id must offer at least one and
+      // they must be addressable, or the picker is empty and defaultVoiceFor
+      // throws. A model that writes its voice from prose instead sends no id at
+      // all, so listing voices would only invent rows the request cannot use.
       for (final file in shipped.modelFiles) {
         final json =
             jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
-        final voices = json['voices'] as Map<String, dynamic>;
+        final voices = json['voices'] as Map<String, dynamic>?;
+        if (json['sends_voice'] == false) {
+          expect(
+            voices,
+            anyOf(isNull, isEmpty),
+            reason:
+                '${file.path} sends no voice id, so its ${voices?.length} '
+                'listed voice(s) could never be selected',
+          );
+          continue;
+        }
         expect(voices, isNotEmpty, reason: '${file.path} has no voices');
         final ids = <String>[];
-        for (final entry in voices.entries) {
+        for (final entry in voices!.entries) {
           final decoded = voiceFromEntry(entry.key, entry.value);
           expect(
             decoded.voice,
