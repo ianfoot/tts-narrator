@@ -161,9 +161,12 @@ void main() {
       );
     });
 
-    test('resolveOutputDir returns the out dir when there is no input file', () {
-      expect(resolveOutputDir(outDir: 'output', inputPath: null), 'output');
-    });
+    test(
+      'resolveOutputDir returns the out dir when there is no input file',
+      () {
+        expect(resolveOutputDir(outDir: 'output', inputPath: null), 'output');
+      },
+    );
 
     test('an unnested config writes straight into the chosen out dir', () {
       final config = NarrationConfig(
