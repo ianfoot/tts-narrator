@@ -1292,6 +1292,26 @@ void main() {
       expect(voiceEntryJson('Charon', const Voice(id: 'Charon')), isEmpty);
     });
 
+    test('an id-keyed voice survives the empty object it is written as', () {
+      // A voice with no name and no gender, keyed by its own id, has nothing
+      // left to say, so it is written as "Charon": {} -- a shape no shipped file
+      // contains, and the one a model shipped as a bare id list becomes the
+      // moment anything rewrites its config. It reloads only because an empty
+      // map states no id for voiceFromEntry to reject and names no field
+      // outside the schema, so both of its checks pass on nothing at all. Pinned
+      // here so tightening either check is a deliberate act rather than a silent
+      // way to drop every voice in the file.
+      final encoded = voiceEntryJson('Charon', const Voice(id: 'Charon'));
+      expect(encoded, isEmpty);
+
+      final decoded = voiceFromEntry('Charon', encoded);
+      expect(decoded.problem, isNull);
+      expect(decoded.voice, isNotNull);
+      expect(decoded.voice!.id, 'Charon');
+      expect(decoded.voice!.name, isNull);
+      expect(decoded.voice!.gender, isNull);
+    });
+
     test('canonicalVoiceEntryJson always states the id and never a name', () {
       expect(
         canonicalVoiceEntryJson(const Voice(id: 'Charon', name: 'Charon')),

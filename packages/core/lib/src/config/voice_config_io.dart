@@ -672,8 +672,12 @@ _parseModelFile(String path, String alias, String provider) {
     }
     for (final id in voicesRaw) {
       if (id is! String || id.isEmpty) {
+        // `skip` quotes the name it is given, so a string is handed over as it is
+        // and anything else is encoded rather than interpolated: a number would
+        // otherwise read as ""42"", and an empty string as """", neither of
+        // which tells the author what to fix.
         skip(
-          id == null ? 'null' : '"$id"',
+          id is String ? id : jsonEncode(id),
           'a voice id in a "voices" list must be a non-empty string.',
         );
         continue;

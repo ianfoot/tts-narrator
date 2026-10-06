@@ -345,8 +345,21 @@ void main() {
       );
       final (cfg, warnings) = load();
       expect(cfg.voices['x']?.keys, ['Charon', 'Zephyr']);
-      expect(warnings.where((w) => w.contains('"42"')), hasLength(1));
-      expect(warnings.where((w) => w.contains('null')), hasLength(1));
+      // Matched on the whole rendered warning rather than a word inside it: a
+      // bare `contains('null')` would settle for any warning merely mentioning
+      // nullability, and pass for the wrong reason. Each is named exactly once
+      // by skip, so a doubled-quoting bug in the name cannot hide here.
+      const because =
+          'is skipped: a voice id in a "voices" list must be a non-empty string.';
+      expect(
+        warnings,
+        containsAll(<Matcher>[
+          startsWith('Voice "42" in model "x" $because'),
+          startsWith('Voice "" in model "x" $because'),
+          startsWith('Voice "null" in model "x" $because'),
+        ]),
+      );
+      expect(warnings, hasLength(3));
       expect(warnings.every((w) => w.contains('is skipped')), isTrue);
     });
 
