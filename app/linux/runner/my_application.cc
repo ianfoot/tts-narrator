@@ -25,28 +25,6 @@ static void my_application_activate(GApplication* application) {
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
-  // Set the window icon from the bundled one, letting an installed icon theme
-  // override it by name. The bundled icon is registered with the default theme
-  // in my_application_startup, so this lookup resolves inside a relocatable
-  // bundle as well as from a system install. Falling back to the default icon
-  // means a window always has something rather than none.
-  GtkIconTheme* icon_theme = gtk_icon_theme_get_default();
-  GdkPixbuf* window_icon = nullptr;
-  if (gtk_icon_theme_has_icon(icon_theme, APPLICATION_ID)) {
-    window_icon = gtk_icon_theme_lookup_icon(icon_theme, APPLICATION_ID, 256,
-                                             GTK_ICON_LOOKUP_FORCE_SIZE, nullptr);
-  }
-  if (window_icon == nullptr) {
-    window_icon = gtk_window_get_default_icon();
-    if (window_icon != nullptr) {
-      g_object_ref(window_icon);
-    }
-  }
-  if (window_icon != nullptr) {
-    gtk_window_set_icon(window, window_icon);
-    g_object_unref(window_icon);
-  }
-
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu
   // desktop).
@@ -128,22 +106,6 @@ static void my_application_startup(GApplication* application) {
   // Perform any actions required at application startup.
 
   G_APPLICATION_CLASS(my_application_parent_class)->startup(application);
-
-  // Make the icon installed alongside this bundle discoverable by name, so the
-  // lookup in my_application_activate finds it. The directory is resolved
-  // relative to the running executable rather than a path baked in at build
-  // time, which is what keeps the bundle relocatable: the install prefix is
-  // known only at install time and the whole bundle can be moved afterwards.
-  // A null readlink simply leaves the theme untouched.
-  g_autofree gchar* exe_path = g_file_read_link("/proc/self/exe", nullptr);
-  if (exe_path != nullptr) {
-    g_autofree gchar* exe_dir = g_path_get_dirname(exe_path);
-    g_autofree gchar* icon_dir =
-        g_build_filename(exe_dir, "data", "icons", nullptr);
-    if (g_file_test(icon_dir, G_FILE_TEST_IS_DIR)) {
-      gtk_icon_theme_add_resource_path(gtk_icon_theme_get_default(), icon_dir);
-    }
-  }
 }
 
 // Implements GApplication::shutdown.
