@@ -84,11 +84,14 @@ void main() {
     test('resolves rows from the downloaded file before any edit', () {
       expect(f.store.hasOverlayModel('fish'), isFalse);
       final rows = f.store.voicesFor('fish');
-      expect(rows.map((r) => r.key), ['Alice', 'Bob']);
+      // A row is keyed by the voice's id whatever the file was keyed by, so
+      // these two come back under 'aaa'/'bbb' even though the file files them
+      // under their names. That is what lets a write re-file them by id.
+      expect(rows.map((r) => r.key), ['aaa', 'bbb']);
       expect(rows.map((r) => r.id), ['aaa', 'bbb']);
-      expect(rows.first.label, 'Alice');
+      expect(rows.map((r) => r.label), ['Alice', 'Bob']);
       expect(rows.first.gender, VoiceGender.female);
-      expect(f.store.defaultVoiceKey('fish'), 'Alice');
+      expect(f.store.defaultVoiceKey('fish'), 'aaa');
     });
 
     test('a string shorthand entry resolves with key as both id and label', () {
@@ -193,7 +196,7 @@ void main() {
   });
 
   group('saveVoice', () {
-    test('adds a row in the canonical shape', () {
+    test('adds a row keyed by its id, with the label in a name', () {
       final edit = f.store.saveVoice(
         'fish',
         label: 'Custom',
@@ -202,24 +205,25 @@ void main() {
       );
       expect(edit.ok, isTrue);
       final voices = f.readOverlay('fish')['voices'] as Map<String, dynamic>;
-      expect(voices['Custom'], {'id': 'ccc', 'gender': 'neutral'});
+      expect(voices['ccc'], {'name': 'Custom', 'gender': 'neutral'});
     });
 
     test('replaces a row in place, keeping file order', () {
-      f.store.saveVoice('fish', key: 'Alice', label: 'Alicia', id: 'aaa');
+      f.store.saveVoice('fish', key: 'aaa', label: 'Alicia', id: 'aaa');
       final voices = f.readOverlay('fish')['voices'] as Map<String, dynamic>;
-      expect(voices.keys, ['Alicia', 'Bob']);
+      expect(voices.keys, ['aaa', 'bbb']);
+      expect(voices['aaa'], {'name': 'Alicia', 'gender': 'female'});
     });
 
     test('carries the default across a rename', () {
-      f.store.saveVoice('fish', key: 'Alice', label: 'Alicia', id: 'aaa');
-      expect(f.readOverlay('fish')['default_voice'], 'Alicia');
-      expect(f.store.defaultVoiceKey('fish'), 'Alicia');
+      f.store.saveVoice('fish', key: 'aaa', label: 'Alicia', id: 'aaa');
+      expect(f.readOverlay('fish')['default_voice'], 'aaa');
+      expect(f.store.defaultVoiceKey('fish'), 'aaa');
     });
 
     test('leaves a non-default voice alone when another is renamed', () {
-      f.store.saveVoice('fish', key: 'Bob', label: 'Robert', id: 'bbb');
-      expect(f.readOverlay('fish')['default_voice'], 'Alice');
+      f.store.saveVoice('fish', key: 'bbb', label: 'Robert', id: 'bbb');
+      expect(f.readOverlay('fish')['default_voice'], 'aaa');
     });
 
     test('rejects a blank label', () {
@@ -235,8 +239,15 @@ void main() {
       expect(f.store.hasOverlayModel('fish'), isFalse);
     });
 
-    test('rejects a duplicate label', () {
-      expect(f.store.saveVoice('fish', label: 'Bob', id: 'ccc').ok, isFalse);
+    test('accepts a duplicate label, which the id keys apart', () {
+      // Kokoro ships three voices named "Santa", so refusing on a repeated label
+      // would make every edit to that model unwritable. The id is the key, so
+      // two Santas are two entries rather than one that overwrites the other.
+      final edit = f.store.saveVoice('fish', label: 'Bob', id: 'ccc');
+      expect(edit.ok, isTrue);
+      final voices = f.readOverlay('fish')['voices'] as Map<String, dynamic>;
+      expect(voices['bbb'], {'name': 'Bob', 'gender': 'male'});
+      expect(voices['ccc'], {'name': 'Bob'});
     });
 
     test('rejects a duplicate id, which would vanish from the picker', () {
@@ -260,28 +271,31 @@ void main() {
 
   group('removeVoice', () {
     test('removes a non-default row', () {
-      expect(f.store.removeVoice('fish', 'Bob').ok, isTrue);
+      expect(f.store.removeVoice('fish', 'bbb').ok, isTrue);
       final voices = f.readOverlay('fish')['voices'] as Map<String, dynamic>;
-      expect(voices.keys, ['Alice']);
+      expect(voices.keys, ['aaa']);
     });
 
-    test('refuses a removal that would collapse a duplicate label', () {
+    test('removes one of several voices sharing a label', () {
       f.writeModel('kokoro', const {
         'id': 'hexgrad/kokoro-82m',
         'voices': {
-          'Emma': {'id': 'bf_emma'},
-          'bm_santa': {'name': 'Santa', 'id': 'bm_santa'},
-          'am_santa': {'name': 'Santa', 'id': 'am_santa'},
+          'bf_emma': {'name': 'Emma'},
+          'bm_santa': {'name': 'Santa'},
+          'am_santa': {'name': 'Santa'},
         },
       });
-      final edit = f.store.removeVoice('kokoro', 'Emma');
-      expect(edit.ok, isFalse);
-      expect(edit.error, contains('Santa'));
-      expect(f.store.hasOverlayModel('kokoro'), isFalse);
+      final edit = f.store.removeVoice('kokoro', 'am_santa');
+      expect(edit.ok, isTrue);
+      // The write keys by id, so dropping one Santa cannot collapse the other
+      // into it -- which is what the old label-keyed write had to refuse.
+      final voices = f.readOverlay('kokoro')['voices'] as Map<String, dynamic>;
+      expect(voices.keys, ['bf_emma', 'bm_santa']);
+      expect(voices['bm_santa'], {'name': 'Santa'});
     });
 
     test('refuses to remove the default voice', () {
-      final edit = f.store.removeVoice('fish', 'Alice');
+      final edit = f.store.removeVoice('fish', 'aaa');
       expect(edit.ok, isFalse);
       expect(edit.error, contains('default'));
       expect(f.store.hasOverlayModel('fish'), isFalse);
@@ -290,59 +304,30 @@ void main() {
 
   group('setDefaultVoice', () {
     test('points default_voice at the chosen row', () {
-      expect(f.store.setDefaultVoice('fish', 'Bob').ok, isTrue);
-      expect(f.readOverlay('fish')['default_voice'], 'Bob');
-      expect(f.store.defaultVoiceKey('fish'), 'Bob');
+      expect(f.store.setDefaultVoice('fish', 'bbb').ok, isTrue);
+      expect(f.readOverlay('fish')['default_voice'], 'bbb');
+      expect(f.store.defaultVoiceKey('fish'), 'bbb');
     });
 
     test('rejects an unknown key', () {
       expect(f.store.setDefaultVoice('fish', 'Nobody').ok, isFalse);
     });
 
-    test('refuses a write that would file two voices under one label', () {
-      // The write keys the block by label, so letting this through would drop
-      // bm_santa from the file over an edit that never mentioned it. Kokoro
-      // ships three "Santa"s and the README tells users to copy that model into
-      // their overlay, so this is reachable on a shipped file.
+    test('points the default at one of several voices sharing a label', () {
+      // The write keys by id, so naming one of the Santas cannot disturb the
+      // others -- the case the old label-keyed write had to refuse outright.
       f.writeModel('kokoro', const {
         'id': 'hexgrad/kokoro-82m',
         'voices': {
-          'Emma': {'id': 'bf_emma'},
-          'bm_santa': {'name': 'Santa', 'id': 'bm_santa'},
-          'am_santa': {'name': 'Santa', 'id': 'am_santa'},
+          'bf_emma': {'name': 'Emma'},
+          'bm_santa': {'name': 'Santa'},
+          'am_santa': {'name': 'Santa'},
         },
       });
-      final edit = f.store.setDefaultVoice('kokoro', 'bm_santa');
-      expect(edit.ok, isFalse);
-      expect(edit.error, contains('Santa'));
-      expect(f.store.hasOverlayModel('kokoro'), isFalse);
-    });
-
-    test('renaming one of the duplicates is what unblocks the edit', () {
-      f.writeModel('kokoro', const {
-        'id': 'hexgrad/kokoro-82m',
-        'voices': {
-          'Emma': {'id': 'bf_emma'},
-          'bm_santa': {'name': 'Santa', 'id': 'bm_santa'},
-          'am_santa': {'name': 'Santa', 'id': 'am_santa'},
-        },
-      });
-      expect(f.store.setDefaultVoice('kokoro', 'bm_santa').ok, isFalse);
-
-      final rename = f.store.saveVoice(
-        'kokoro',
-        key: 'am_santa',
-        label: 'Santa (male)',
-        id: 'am_santa',
-      );
-      expect(rename.ok, isTrue);
-
-      // The write keys the block by label, so the row is now filed under its
-      // name rather than its id -- which is the whole point of normalising.
+      expect(f.store.setDefaultVoice('kokoro', 'bm_santa').ok, isTrue);
+      expect(f.readOverlay('kokoro')['default_voice'], 'bm_santa');
       final voices = f.readOverlay('kokoro')['voices'] as Map<String, dynamic>;
-      expect(voices.keys, ['Emma', 'Santa', 'Santa (male)']);
-      expect(f.store.setDefaultVoice('kokoro', 'Santa').ok, isTrue);
-      expect(f.readOverlay('kokoro')['default_voice'], 'Santa');
+      expect(voices.keys, ['bf_emma', 'bm_santa', 'am_santa']);
     });
   });
 
@@ -354,16 +339,16 @@ void main() {
     // cannot be selected at all.
 
     test('survives a removal of an unrelated voice', () {
-      expect(f.store.removeVoice('fish', 'Bob').ok, isTrue);
-      expect(f.readOverlay('fish')['default_voice'], 'Alice');
+      expect(f.store.removeVoice('fish', 'bbb').ok, isTrue);
+      expect(f.readOverlay('fish')['default_voice'], 'aaa');
     });
 
     test('survives an edit to an unrelated voice', () {
       expect(
-        f.store.saveVoice('fish', key: 'Bob', label: 'Robert', id: 'bbb').ok,
+        f.store.saveVoice('fish', key: 'bbb', label: 'Robert', id: 'bbb').ok,
         isTrue,
       );
-      expect(f.readOverlay('fish')['default_voice'], 'Alice');
+      expect(f.readOverlay('fish')['default_voice'], 'aaa');
     });
 
     test('a default named by id is carried even when it is not a file key', () {
@@ -377,8 +362,8 @@ void main() {
       });
       expect(f.store.defaultVoiceKey('kokoro'), 'bf_emma');
       expect(f.store.removeVoice('kokoro', 'bm_george').ok, isTrue);
-      // Normalised to the label the write files it under, which still resolves.
-      expect(f.readOverlay('kokoro')['default_voice'], 'Emma');
+      // Left as the id the write keys the block by, which still resolves.
+      expect(f.readOverlay('kokoro')['default_voice'], 'bf_emma');
     });
 
     test('a default naming nothing in the list is left exactly as found', () {
@@ -393,7 +378,7 @@ void main() {
         },
       });
       expect(f.store.defaultVoiceKey('fish'), isNull);
-      expect(f.store.removeVoice('fish', 'Bob').ok, isTrue);
+      expect(f.store.removeVoice('fish', 'bbb').ok, isTrue);
       expect(
         f.readOverlay('fish')['default_voice'],
         '89f41ea230034706881f85a8227d6ab9',
@@ -412,7 +397,7 @@ void main() {
           'Broken': {'id': ''},
         },
       });
-      expect(f.store.removeVoice('fish', 'Alice').ok, isTrue);
+      expect(f.store.removeVoice('fish', 'aaa').ok, isTrue);
       expect(f.readOverlay('fish')['default_voice'], 'Ghost');
     });
 
@@ -427,7 +412,7 @@ void main() {
           'Bob': {'id': 'bbb'},
         },
       });
-      expect(f.store.removeVoice('fish', 'Bob').ok, isTrue);
+      expect(f.store.removeVoice('fish', 'bbb').ok, isTrue);
       expect(f.readOverlay('fish')['default_voice'], '');
     });
   });
@@ -453,7 +438,7 @@ void main() {
   });
 
   group('normalisation on write', () {
-    test('folds an explicit name into the key', () {
+    test('leaves an id-keyed entry keyed by its id', () {
       f.writeModel('kokoro', const {
         'id': 'hexgrad/kokoro-82m',
         'default_voice': 'Emma',
@@ -464,19 +449,54 @@ void main() {
       f.store.saveVoice('kokoro', key: 'bf_emma', label: 'Emma', id: 'bf_emma');
       final json = f.readOverlay('kokoro');
       final voices = json['voices'] as Map<String, dynamic>;
-      expect(voices.keys, ['Emma']);
-      expect(voices['Emma'], {'id': 'bf_emma'});
-      expect(json['default_voice'], 'Emma');
+      expect(voices.keys, ['bf_emma']);
+      // The `name` survives as metadata; the id is the key, so it is not
+      // repeated in the value.
+      expect(voices['bf_emma'], {'name': 'Emma'});
+      expect(json['default_voice'], 'bf_emma');
     });
 
-    test('expands a string shorthand to the explicit id form', () {
+    test('re-files a name-keyed entry under its id, keeping the name', () {
+      // The migration case: a file written before this shape was normalised now
+      // lands on the id key, with the display name carried across rather than
+      // promoted to the key where it could collide.
+      f.writeModel('fish', const {
+        'id': 'fish-audio/s2.1',
+        'default_voice': 'Alice',
+        'voices': {
+          'Alice': {'id': 'aaa', 'gender': 'female', 'language': 'en-gb'},
+          'Bob': {'id': 'bbb', 'gender': 'male', 'language': 'en-us'},
+        },
+      });
+      f.store.saveVoice('fish', key: 'aaa', label: 'Alice', id: 'aaa');
+      final json = f.readOverlay('fish');
+      final voices = json['voices'] as Map<String, dynamic>;
+      expect(voices.keys, ['aaa', 'bbb']);
+      expect(voices['aaa'], {
+        'name': 'Alice',
+        'gender': 'female',
+        'language': 'en-gb',
+      });
+      expect(voices['bbb'], {
+        'name': 'Bob',
+        'gender': 'male',
+        'language': 'en-us',
+      });
+      expect(json['default_voice'], 'aaa');
+    });
+
+    test('drops a name that would only repeat the id', () {
+      // A string shorthand reads as id == label == key, so writing it back
+      // spells the id twice over. The reader falls back to the id for the label,
+      // so nothing is lost.
       f.writeModel('gemini', const {
         'id': 'google/gemini',
         'voices': {'Charon': 'Charon'},
       });
       f.store.saveVoice('gemini', key: 'Charon', label: 'Charon', id: 'Charon');
       final voices = f.readOverlay('gemini')['voices'] as Map<String, dynamic>;
-      expect(voices['Charon'], {'id': 'Charon'});
+      expect(voices.keys, ['Charon']);
+      expect(voices['Charon'], isEmpty);
     });
 
     test('reads a model whose voices arrived as a bare id list', () {
@@ -508,7 +528,7 @@ void main() {
         gender: VoiceGender.female,
       );
       final voices = f.readOverlay('kokoro')['voices'] as Map<String, dynamic>;
-      expect(voices['Emma'], {'id': 'bf_emma', 'gender': 'female'});
+      expect(voices['bf_emma'], {'name': 'Emma', 'gender': 'female'});
     });
 
     test('leaves the non-voice half of the model file untouched', () {
@@ -547,8 +567,9 @@ void main() {
       f.writeRegistry(const ['fish']);
       final (cfg, warnings) = loadVoiceConfig(f.dir.path);
       expect(warnings, isEmpty);
-      final voice = cfg.voices['fish']!['Custom']!;
+      final voice = cfg.voices['fish']!['ccc']!;
       expect(voice.id, 'ccc');
+      expect(voice.name, 'Custom');
       expect(voice.gender, VoiceGender.male);
       expect(cfg.models['fish']!.provider, 'local');
     });

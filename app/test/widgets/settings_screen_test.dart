@@ -157,7 +157,7 @@ void main() {
       expect(overlay.hasOverlayModel('fish'), isTrue);
       expect(
         overlay.readModelJson('fish')!['voices'],
-        containsPair('Custom', {'id': 'deadbeef'}),
+        containsPair('deadbeef', {'name': 'Custom'}),
       );
       // ...and the controller re-read it, so the picker has it too.
       expect(c.voiceItems.where((i) => i.$1 == 'deadbeef'), hasLength(1));
@@ -228,12 +228,13 @@ void main() {
       expect(find.text('Alice'), findsNothing);
       expect(
         VoiceConfigStore(configDir).readModelJson('fish')!['voices'],
-        isNot(contains('Alice')),
+        isNot(contains('c536c6cdbe8e4d9484232e78ab80020f')),
       );
-      // The default the removed row was not is untouched.
+      // The default the removed row was not is untouched, and it is the id the
+      // voices block is keyed by — not the label, which may have been renamed.
       expect(
         VoiceConfigStore(configDir).readModelJson('fish')!['default_voice'],
-        'British Female Narrator',
+        '89f41ea230034706881f85a8227d6ab9',
       );
     });
 
@@ -253,7 +254,10 @@ void main() {
       await tester.pumpAndSettle();
 
       final json = VoiceConfigStore(configDir).readModelJson('fish')!;
-      expect(json['default_voice'], 'Renamed Narrator');
+      // The default follows the voice, and the voice is filed under its id, so
+      // a rename leaves the default pointing at the same entry.
+      expect(json['default_voice'], '89f41ea230034706881f85a8227d6ab9');
+      expect(json['voices'], contains('89f41ea230034706881f85a8227d6ab9'));
       expect(find.text('Renamed Narrator'), findsOneWidget);
       expect(find.text('British Female Narrator'), findsNothing);
     });
@@ -272,7 +276,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final json = VoiceConfigStore(configDir).readModelJson('fish')!;
-      expect(json['default_voice'], 'Alice');
+      expect(json['default_voice'], 'c536c6cdbe8e4d9484232e78ab80020f');
     });
   });
 

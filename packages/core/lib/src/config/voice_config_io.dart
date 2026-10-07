@@ -490,19 +490,6 @@ Map<String, Object?> voiceEntryJson(String key, Voice voice) => {
   if (voice.language != null) 'language': voice.language,
 };
 
-/// The JSON for one `voices` entry as the app writes it.
-///
-/// One shape, always, so a file the user edits by hand and one the app writes
-/// read the same way: the key is the display label, so the id is always spelled
-/// out, and a `name` is never written because the label is already the key. This
-/// is safe for models whose voices encode a language in the id, because
-  /// [languageFromVoiceId] and [genderFromVoiceId] read the id, not the key.
-  Map<String, Object?> canonicalVoiceEntryJson(Voice voice) => {
-    'id': voice.id,
-    if (voice.gender != null) 'gender': voice.gender!.label,
-    if (voice.language != null) 'language': voice.language,
-  };
-
 /// Reads the output formats a model file offers, most-preferred first.
 ///
 /// Required. A model that does not declare what it can produce is a model the

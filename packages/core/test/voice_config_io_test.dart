@@ -1312,19 +1312,6 @@ void main() {
       expect(decoded.voice!.gender, isNull);
     });
 
-    test('canonicalVoiceEntryJson always states the id and never a name', () {
-      expect(
-        canonicalVoiceEntryJson(const Voice(id: 'Charon', name: 'Charon')),
-        {'id': 'Charon'},
-      );
-      expect(
-        canonicalVoiceEntryJson(
-          const Voice(id: 'bf_emma', name: 'Emma', gender: VoiceGender.female),
-        ),
-        {'id': 'bf_emma', 'gender': 'female'},
-      );
-    });
-
     test('readModelJson prefers the overlay and falls back to the base', () {
       final dir = Directory.systemTemp.createTempSync('tts_config_test_');
       addTearDown(() => dir.deleteSync(recursive: true));

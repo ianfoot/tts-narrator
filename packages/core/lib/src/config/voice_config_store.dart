@@ -7,11 +7,14 @@ import 'voice_config.dart';
 import 'voice_config_io.dart' as io;
 
 /// One row of a model's voice list, as an editor sees it.
-///
-/// [key] is how the voice is filed in the model file and is what an edit
-/// addresses; [label] is what the picker shows, which is the entry's `name` when
-/// it has one and the key otherwise. The two differ only for a config authored
-/// the other way round, and [label] is what the app writes back as the key.
+  ///
+  /// [key] is how the voice is filed in the model file and is what an edit
+  /// addresses; it is always the voice's [id], whatever shape the file it was
+  /// read from used. [label] is what the picker shows, which is the entry's
+  /// `name` when it has one and the id otherwise; it is written back as a `name`,
+  /// not as the key. The two differ only for a config authored the other way
+  /// round -- a voice filed under its label -- and the next write re-files it
+  /// under the id.
 class EditableVoice {
   const EditableVoice({
     required this.key,
@@ -163,8 +166,9 @@ class VoiceConfigStore {
   /// The file key of [alias]'s default voice, or null when it configures none.
   ///
   /// Resolved through the same key-then-label scan as a write, so a config that
-  /// names its default by label rather than by key still reports a key — which
-  /// is what a caller compares a row's key against.
+  /// names its default by label rather than by key still reports a key -- which
+  /// is what a caller compares a row's key against. The key returned is always
+  /// the voice's id.
   String? defaultVoiceKey(String alias) {
     final json = readModelJson(alias);
     if (json == null) return null;
@@ -173,15 +177,17 @@ class VoiceConfigStore {
 
   /// Adds or updates one voice of [alias] and rewrites the file.
   ///
-  /// [key] addresses an existing voice to update, or is null to add a new one.
-  /// [label] is the display label and becomes the file key; [id] is what the
-  /// provider is sent and cannot repeat within a model, because
-  /// [voiceEntries] dedupes on it and a second row with the same id would
-  /// silently vanish from the picker.
+  /// [key] addresses an existing voice to update -- it is that voice's id -- or is
+  /// null to add a new one. [label] is the display label and is written as the
+  /// entry's `name`; it may repeat, because the file is keyed by [id] rather than
+  /// by label. [id] is what the provider is sent and cannot repeat within a
+  /// model, because [voiceEntries] dedupes on it and a second row with the same
+  /// id would silently vanish from the picker.
   ///
-  /// A rename carries `default_voice` across, since that is a key into this same
-  /// map and [defaultVoiceFor] throws when it stops resolving -- which would
-  /// break selecting the model at all, not just the default.
+  /// An edit that changes [id] changes the key, and carries `default_voice`
+  /// across, since that is a key into this same map and [defaultVoiceFor] throws
+  /// when it stops resolving -- which would break selecting the model at all, not
+  /// just the default.
   VoiceEdit saveVoice(
     String alias, {
     String? key,
@@ -209,11 +215,12 @@ class VoiceConfigStore {
     if (key != null && !byKey.containsKey(key)) {
       return VoiceEdit.rejected('That voice is no longer in "$alias".');
     }
+    // A repeated label is allowed: the file is keyed by id, so two voices may be
+    // called the same thing and still be two entries. A repeated id is not -- it
+    // is what the map is keyed by, so the second would overwrite the first, and
+    // [voiceEntries] would have dropped one from the picker anyway.
     for (final r in rows) {
       if (r.key == key) continue;
-      if (r.label == newLabel) {
-        return VoiceEdit.rejected('"$newLabel" is already a voice here.');
-      }
       if (r.id == newId) {
         return VoiceEdit.rejected(
           'That id is already used by "${r.label}"; two voices cannot share '
@@ -224,13 +231,14 @@ class VoiceConfigStore {
 
     final existing = key == null ? null : byKey[key];
     final updated = EditableVoice(
-      key: existing?.key ?? newLabel,
+      key: existing?.key ?? newId,
       label: newLabel,
       id: newId,
-      gender: gender,
-      // An explicit language survives an edit that never mentions one: dropping
-      // it would re-tag a UUID voice as untagged and lose its language. A new
-      // language replaces the old.
+      // An explicit gender and language survive an edit that never mentions
+      // them: dropping either would re-tag a voice the file describes as
+      // untagged, and a Fish UUID carries its language nowhere else. A new
+      // value replaces the old.
+      gender: gender ?? existing?.gender,
       language: language ?? existing?.language,
     );
 
@@ -243,7 +251,7 @@ class VoiceConfigStore {
       alias,
       json,
       next,
-      defaultLabel: _carriedDefaultLabel(json, rows, key, newLabel),
+      defaultId: _carriedDefaultId(json, rows, key, newId),
     );
   }
 
@@ -271,7 +279,7 @@ class VoiceConfigStore {
     return _writeVoices(alias, json, [
       for (final r in rows)
         if (r.key != key) r,
-    ], defaultLabel: _carriedDefaultLabel(json, rows, null, null));
+    ], defaultId: _carriedDefaultId(json, rows, null, null));
   }
 
   /// Makes the voice filed under [key] the default for [alias].
@@ -285,21 +293,22 @@ class VoiceConfigStore {
     if (target == null) {
       return VoiceEdit.rejected('That voice is no longer in "$alias".');
     }
-    return _writeVoices(alias, json, rows, defaultLabel: target.label);
+    return _writeVoices(alias, json, rows, defaultId: target.id);
   }
 
-  /// The label the model's `default_voice` should carry forward as, given that
-  /// the voice filed under [renamedFrom] is becoming [renamedTo] -- or that
-  /// neither is null when nothing is being renamed.
+  /// The id the model's `default_voice` should carry forward as, given that the
+  /// voice filed under [renamedFrom] is becoming [renamedTo] -- or that neither
+  /// is null when nothing is being renamed.
   ///
   /// `default_voice` is a key into the same map being rewritten, and
   /// [defaultVoiceFor] throws when it stops resolving, so a rename has to bring
-  /// it along or the model becomes unselectable.
+  /// it along or the model becomes unselectable. The value written is the id
+  /// because that is what the rewritten map is keyed by.
   ///
   /// Null means the file's `default_voice` should be left as it stands -- either
   /// there is none, or it names something no row matches and the write has no
   /// opinion about it. See [_writeVoices].
-  String? _carriedDefaultLabel(
+  String? _carriedDefaultId(
     Map<String, dynamic> json,
     List<EditableVoice> rows,
     String? renamedFrom,
@@ -308,15 +317,15 @@ class VoiceConfigStore {
     final key = _configuredDefaultKey(json, rows);
     if (key == null) return null;
     if (renamedFrom != null && key == renamedFrom) return renamedTo;
-    return rows.firstWhere((r) => r.key == key).label;
+    return rows.firstWhere((r) => r.key == key).id;
   }
 
   /// Replaces the voice list of [alias] and writes the file.
   ///
-  /// The list is normalised to the one shape the app writes -- key is the label,
-  /// id always explicit, no `name` -- so a file the user hand-edited and one the
-  /// app wrote read the same way after a save. [defaultLabel], when given,
-  /// becomes the `default_voice` value.
+  /// The list is normalised to the one shape the app writes -- every voice
+  /// keyed by its id, the label in a `name` when it differs -- so a file the
+  /// user hand-edited and one the app wrote read the same way after a save.
+  /// [defaultId], when given, becomes the `default_voice` value.
   ///
   /// A `default_voice` this call does not set is carried through verbatim rather
   /// than dropped, including one that matches no row -- see below.
@@ -325,34 +334,32 @@ class VoiceConfigStore {
   /// this schema does not define: the file is the user's to hold vendor quirks
   /// in, and a voice edit should not be the thing that drops them.
   ///
-  /// Refused, rather than written, when two rows share a label -- see below.
+  /// Nothing is refused here. Keying by id is what makes an edit safe to write
+  /// unconditionally: the id is unique, so two voices can never collapse into
+  /// one entry no matter what they are called. Kokoro ships three "Santa"s and
+  /// the README tells users to copy that model into their layer, so a repeated
+  /// name is reachable on a shipped file, not a malformed one.
   VoiceEdit _writeVoices(
     String alias,
     Map<String, dynamic> json,
     List<EditableVoice> rows, {
-    String? defaultLabel,
+    String? defaultId,
   }) {
-    // The key a voice is filed under becomes its label here, so two rows with
-    // one label would collapse into a single entry -- dropping a voice from the
-    // file because of an edit that did not mention it. Kokoro ships three
-    // "Santa"s and the README tells users to copy that model into their layer,
-    // so this is reachable on a shipped file, not a malformed one. Refuse
-    // instead: the user can rename one, which they can see and reason about.
-    final collision = _duplicateLabel(rows);
-    if (collision != null) {
-      return VoiceEdit.rejected(
-        '"$alias" has more than one voice labelled "$collision"; rename one of '
-        'them before saving, because both cannot be filed under that label.',
-      );
-    }
-
     json['voices'] = {
       for (final r in rows)
-        r.label: io.canonicalVoiceEntryJson(
-          Voice(id: r.id, gender: r.gender, language: r.language),
+        r.id: io.voiceEntryJson(
+          r.id,
+          Voice(
+            id: r.id,
+            // A label that repeats the id would be noise, and the reader takes
+            // the id for the label when there is no `name` anyway.
+            name: r.label == r.id ? null : r.label,
+            gender: r.gender,
+            language: r.language,
+          ),
         ),
     };
-    // Only ever set, never cleared. A null [defaultLabel] means "this call has
+    // Only ever set, never cleared. A null [defaultId] means "this call has
     // no opinion", not "there is no default": it covers both a file that
     // configures none and a `default_voice` naming something no row matches --
     // an id that is not in `voices`, which [VoiceConfig.resolveVoice] still
@@ -360,7 +367,7 @@ class VoiceConfigStore {
     // README documents. Removing it in either case would let an edit to an
     // unrelated voice un-default the model, after which [defaultVoiceFor] throws
     // and the model cannot be selected at all.
-    if (defaultLabel != null) json['default_voice'] = defaultLabel;
+    if (defaultId != null) json['default_voice'] = defaultId;
 
     writeModelJson(alias, json);
     return const VoiceEdit.written();
@@ -396,22 +403,19 @@ class VoiceConfigStore {
     return null;
   }
 
-  /// The first label used by more than one of [rows], or null if each is unique.
-  String? _duplicateLabel(List<EditableVoice> rows) {
-    final seen = <String>{};
-    for (final r in rows) {
-      if (!seen.add(r.label)) return r.label;
-    }
-    return null;
-  }
-
   /// The `voices` block of [json] as editable rows, in file order.
+  ///
+  /// Every row is keyed by its voice id, whatever shape the file used: an
+  /// entry filed under a name reads that name as the label and hands the id to
+  /// [EditableVoice.key], so the next write re-files it under the id. That is
+  /// the one shape the app writes (see [_writeVoices]) and the one that makes a
+  /// name safe to repeat, which is why an id — not a name — is the key.
   ///
   /// Entries the loader would reject are left out, matching what the app can
   /// actually use; [loadVoiceConfig] reports them as warnings.
   List<EditableVoice> _rowsOf(Map<String, dynamic> json) {
     // Both shapes the loader accepts are read here, so a model whose voices
-    // arrived as a bare id list is as editable as one keyed by label: returning
+    // arrived as a bare id list is as editable as one keyed by id: returning
     // an empty list for the list form would show the user no voices at all
     // rather than the ones their model file declares.
     final raw = json['voices'];
@@ -428,10 +432,15 @@ class VoiceConfigStore {
       if (voice == null) continue;
       rows.add(
         EditableVoice(
-          key: key,
-          label: voice.name ?? key,
+          key: voice.id,
+          // A name the entry states outright wins. Failing that, a file key that
+          // differs from the id was a label — that is how the name-keyed shape
+          // keeps its names through the re-file. Otherwise there is no label but
+          // the id, and the picker shows the id.
+          label: voice.name ?? (key == voice.id ? voice.id : key),
           id: voice.id,
           gender: voice.gender,
+          language: voice.language,
         ),
       );
     }
