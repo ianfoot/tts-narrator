@@ -1,22 +1,28 @@
 {
-  "providers": ["openrouter.json", "local.json"],
+  "providers": [
+    "openrouter.json",
+    "local.json"
+  ],
   "platforms": {
     "macos": [
       "fish.json",
       "gemini.json",
       "kokoro.json",
       "kokoro_local.json",
+      "mai-flash.json",
       "qwen3_voicedesign.json"
     ],
     "linux": [
       "fish.json",
       "gemini.json",
-      "kokoro.json"
+      "kokoro.json",
+      "mai-flash.json"
     ],
     "windows": [
       "fish.json",
       "gemini.json",
-      "kokoro.json"
+      "kokoro.json",
+      "mai-flash.json"
     ]
   }
 }

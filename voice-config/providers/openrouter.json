@@ -2,7 +2,8 @@
   "models": [
     "fish",
     "gemini",
-    "kokoro"
+    "kokoro",
+    "mai-flash"
   ],
   "settings": {
     "base_url": "https://openrouter.ai/api/v1",

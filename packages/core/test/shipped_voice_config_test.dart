@@ -41,7 +41,7 @@ void main() {
     test('loads through the real loader with no warnings at all', () {
       final (config, warnings) = loadVoiceConfig(shipped.path);
       expect(warnings, isEmpty);
-      expect(config.models.keys, hasLength(5));
+      expect(config.models.keys, hasLength(6));
       expect(config.providers.keys, ['openrouter', 'local']);
     });
   });
@@ -289,6 +289,13 @@ void main() {
         'gemini': (['wav'], 'pcm'),
         'kokoro_local': (['wav', 'mp3'], null),
         'qwen3_voicedesign': (['wav', 'mp3'], null),
+        // Not probed: taken from OpenRouter's own field list, which offers
+        // exactly {"mp3", "pcm"} for this model with pcm as the default, and
+        // documents no wav container. That is the same answer as the probe
+        // above reached for the other two OpenRouter-hosted models, so the
+        // entry is here to be overwritten by a real probe rather than to
+        // stand in for one.
+        'mai': (['wav', 'mp3'], 'pcm'),
       };
 
       final (config, warnings) = loadVoiceConfig(shipped.path);
