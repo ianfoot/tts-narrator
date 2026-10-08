@@ -89,13 +89,21 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "tts_narrator" "\0"
+            // This app deliberately leaves "CompanyName" empty.
+            // path_provider_windows builds its app-specific directory as
+            // company-name\product-name, and drops the company component when
+            // it is empty, so an empty "CompanyName" is what makes the Windows
+            // config directory come out as
+            // %APPDATA%\com.wyrdness.tts-narrator\ -- the same leaf the macOS
+            // bundle id and the Linux APPLICATION_ID produce. Changing this
+            // string changes where every user's voice config lives.
+            VALUE "CompanyName", "" "\0"
+            VALUE "FileDescription", "TTS Narrator" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "tts_narrator" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Ian Paul Foot. All rights reserved." "\0"
             VALUE "OriginalFilename", "tts_narrator.exe" "\0"
-            VALUE "ProductName", "tts_narrator" "\0"
+            VALUE "ProductName", "com.wyrdness.tts-narrator" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

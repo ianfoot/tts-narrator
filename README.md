@@ -1,11 +1,27 @@
 # tts-narrator
 
-**tts-narrator** converts text into spoken audio. It splits your text into
-segments, calls a text-to-speech engine for each one, and saves the results as
-audio files. Every engine is reached over the same OpenAI-compatible
-`/audio/speech` protocol, so cloud and local narration differ only by
-configuration: a cloud TTS provider and a local audio server such as
-[mlx-audio](https://github.com/Blaizzy/mlx-audio) (Apple Silicon).
+**tts-narrator** turns text into spoken audio. Paste a chapter or an article
+into the window, pick a voice, and press **Narrate** — it writes out a folder of
+audio files you can play back without leaving the app.
+
+<img src="docs/media/screenshot.png" alt="The tts-narrator window: a Run Setup panel on the left with model, output format and voice controls, and the text editor on the right." width="820" />
+
+<!-- TODO: replace the screenshot above with a short demo video once one exists. -->
+
+- **Any provider** — OpenRouter's Gemini and Kokoro, Fish Audio, or your own
+  OpenAI-compatible endpoint.
+- **Cloud or fully local** — point it at a local server and nothing leaves the
+  machine.
+- **Resumable** — progress is written per segment, so an interrupted run picks
+  up where it stopped instead of starting over.
+- **Editor-first** — no project files and no import step; type or paste and go.
+
+Under the hood it splits your text into segments, calls a text-to-speech engine
+for each one, and saves the results as audio files. Every engine is reached over
+the same OpenAI-compatible `/audio/speech` protocol, so cloud and local
+narration differ only by configuration: a cloud TTS provider and a local audio
+server such as [mlx-audio](https://github.com/Blaizzy/mlx-audio) (Apple
+Silicon).
 
 ## Getting started
 
@@ -55,7 +71,9 @@ platform serves only its own entry:
 ```json
 {
   "models": {
-    "macos": ["kokoro_local"],
+    "macos": [
+      "kokoro_local"
+    ],
     "linux": [],
     "windows": []
   }
@@ -75,9 +93,10 @@ The config directory, per platform:
 |----------|------------------------------------------------------------|
 | macOS    | `~/Library/Application Support/com.wyrdness.tts-narrator/` |
 | Linux    | `~/.local/share/com.wyrdness.tts-narrator/`                |
+| Windows  | `%APPDATA%\com.wyrdness.tts-narrator\`                     |
 
-Both sit inside a hidden folder, so reveal it first with `Cmd+Shift+.` on macOS,
-or `Ctrl+H` in most Linux file managers. Windows is not supported yet.
+The macOS and Linux paths sit inside a hidden folder, so reveal it first with
+`Cmd+Shift+.` on macOS, or `Ctrl+H` in most Linux file managers.
 
 The files directly in that directory are the ones the app downloaded, and the app
 never rewrites them. Your own changes live in a `user/` subdirectory alongside
