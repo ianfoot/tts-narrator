@@ -19,6 +19,8 @@ fvm flutter run -d macos
 For pre-built releases and full installation instructions, see
 [Download & Installation (macOS)](#download--installation-macos) below.
 
+To build or run from source on Windows, see **[WINDOWS.md](WINDOWS.md)**.
+
 ## Download & Installation (macOS)
 
 Pre-built macOS releases (`TTS Narrator.app`) and Gatekeeper security bypass
