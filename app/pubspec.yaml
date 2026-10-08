@@ -1,5 +1,5 @@
 name: tts_narrator
-description: "Config-driven TTS audiobook narration (macOS GUI)."
+description: "Config-driven TTS audiobook narration (desktop GUI)."
 publish_to: 'none'
 version: 0.1.0+1
 

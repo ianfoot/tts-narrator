@@ -27,22 +27,39 @@ Silicon).
 
 To run the application in development:
 
-```bash
-cd app
-fvm flutter run -d macos
-```
+| Platform | Command                      | Setup instructions       |
+|----------|------------------------------|--------------------------|
+| macOS    | `fvm flutter run -d macos`   | [MAC.md](MAC.md)         |
+| Linux    | `fvm flutter run -d linux`   | [LINUX.md](LINUX.md)     |
+| Windows  | `fvm flutter run -d windows` | [WINDOWS.md](WINDOWS.md) |
 
-For pre-built releases and full installation instructions, see
-[Download & Installation (macOS)](#download--installation-macos) below.
+(Run from the `app` directory; prefix with `cd app` if you're at the repo root.)
 
-To build or run from source on Windows, see **[WINDOWS.md](WINDOWS.md)**.
+For pre-built releases, see [Download & Installation](#download--installation) below.
 
-## Download & Installation (macOS)
+## Download & Installation
 
-Pre-built macOS releases (`TTS Narrator.app`) and Gatekeeper security bypass
-instructions are documented in **[MAC.md](MAC.md)**. The same file covers
-setting up the local OpenAI-compatible audio server (a.k.a. the MLX Audio server,
-Apple Silicon only) so the app can narrate fully offline.
+### macOS
+
+Pre-built macOS releases (`TTS Narrator.app`) are available as downloadable `.zip`
+archives and `.dmg` installers. Gatekeeper security bypass instructions and
+detailed installation steps are documented in **[MAC.md](MAC.md)**. The same file
+covers setting up the local OpenAI-compatible audio server (a.k.a. the MLX Audio
+server, Apple Silicon only) so the app can narrate fully offline.
+
+### Linux
+
+No pre-built Linux binaries are provided yet. To build and run from source on
+Linux, see **[LINUX.md](LINUX.md)**.
+
+### Windows
+
+No pre-built Windows binaries are provided yet. To build and run from source on
+Windows, see **[WINDOWS.md](WINDOWS.md)**.
+
+> **Note:** Pre-built releases currently exist only for macOS — the CI workflow
+> (`build-macos.yml`) builds and packages macOS binaries only. Linux and Windows
+> support is complete in the codebase, but you must build from source.
 
 ## Voice configuration
 
@@ -96,7 +113,9 @@ The config directory, per platform:
 | Windows  | `%APPDATA%\com.wyrdness.tts-narrator\`                     |
 
 The macOS and Linux paths sit inside a hidden folder, so reveal it first with
-`Cmd+Shift+.` on macOS, or `Ctrl+H` in most Linux file managers.
+`Cmd+Shift+.` on macOS, or `Ctrl+H` in most Linux file managers. On Windows,
+`%APPDATA%` is visible by default — paste the path directly into the Explorer
+address bar, or press `Win+R` and type `%APPDATA%`.
 
 The files directly in that directory are the ones the app downloaded, and the app
 never rewrites them. Your own changes live in a `user/` subdirectory alongside
@@ -504,8 +523,9 @@ Manifest contents:
 - per-segment `wav`, `bytes`, `excerpt`, and the exact
   `input`/`prompt` that produced it (for reproducibility)
 
-Playback (macOS): `afplay <out>/story/story_01.mp3` or
-`afplay <out>/story/story_01.wav`, whichever the run produced.
+Playback: The app has built-in audio playback — click any completed segment in
+the run view to play it without leaving the app. For CLI playback, use `afplay
+<out>/story/story_01.mp3` (macOS), or `aplay` / `paplay` (Linux).
 
 ## How narration text is segmented
 
@@ -533,7 +553,7 @@ pitch/rate parameter. There is no per-call voice memory, so keeping the prompt
 identical and segment sizes in the ~30–300 word range produces the most
 consistent narrator.
 
-## GUI (macOS)
+## GUI
 
 A Flutter desktop app (`app/`) provides an editor-first interface: type or
 paste the text you want narrated right into the window (no backing file — the
@@ -551,13 +571,40 @@ command is unavailable; Quit (⌃Q on Linux/Windows, ⌘Q natively) ends the app
 Saving writes the document to a `.txt`; once saved, narration names its output
 subdirectory from the real filename.
 
+### Building and running
+
+From the `app` directory:
+
+**macOS:**
+
 ```bash
-cd app
 fvm flutter run -d macos            # debug run
 fvm flutter test test               # widget tests
 fvm flutter build macos --debug     # build the .app (SPM-only, no CocoaPods)
 fvm flutter build macos --release
 ```
+
+Release output: `app/build/macos/Build/Products/Release/TTS Narrator.app`
+
+**Linux:**
+
+```bash
+fvm flutter run -d linux
+fvm flutter test test
+fvm flutter build linux --release
+```
+
+Release output: `app/build/linux/x64/release/bundle/` (copy the entire `bundle/` directory)
+
+**Windows:**
+
+```powershell
+fvm flutter run -d windows
+fvm flutter test test
+fvm flutter build windows --release
+```
+
+Release output: `app\build\windows\x64\runner\Release\` (copy the entire directory, not just the `.exe`)
 
 ## Notes / current behaviour
 
@@ -581,3 +628,6 @@ fvm flutter build macos --release
 
 For contributor documentation — repository structure, voice-config schema,
 provider architecture, GUI internals, and the design-token workflow — see **[DEVELOPER.md](DEVELOPER.md)**.
+
+For platform-specific setup instructions (toolchain, FVM, pinned SDK), see **[MAC.md](MAC.md)**,
+**[LINUX.md](LINUX.md)**, or **[WINDOWS.md](WINDOWS.md)**.

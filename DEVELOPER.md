@@ -17,8 +17,8 @@ and holds the single shared lockfile:
 - `packages/core` — `tts_narrator_core`, the pure-Dart narration core: voice
   config load/save, segmentation, the OpenAI-protocol speech client, cost
   estimates. No Flutter or GUI dependencies.
-- `app` — `tts_narrator`, the Flutter GUI (macOS, with a scaffolded Linux
-  runner). Constructs the speech client and hands it to the run controller (`lib/main.dart`).
+- `app` — `tts_narrator`, the Flutter GUI (macOS, Linux, and Windows). Constructs the speech client and hands it to the
+  run controller (`lib/main.dart`).
 - `voice-config/` — the shipped voice config, and the **only** copy of it:
   `config.json` (the ordered provider registry), `providers/<name>.json` (one
   per provider, with `${ENV}` references and no secrets),
@@ -40,11 +40,11 @@ The config **directory** is shared by the CLI and the GUI. The GUI resolves it
 with `getApplicationSupportDirectory()` (`app/lib/main.dart`), which returns the
 platform app-data root with the app id appended:
 
-| Platform | Path                                                        |
-|----------|-------------------------------------------------------------|
-| macOS    | `~/Library/Application Support/com.wyrdness.tts-narrator/`  |
-| Linux    | `~/.local/share/com.wyrdness.tts-narrator/`                 |
-| Windows  | `%APPDATA%\com.wyrdness.tts-narrator\` (not yet scaffolded) |
+| Platform | Path                                                       |
+|----------|------------------------------------------------------------|
+| macOS    | `~/Library/Application Support/com.wyrdness.tts-narrator/` |
+| Linux    | `~/.local/share/com.wyrdness.tts-narrator/`                |
+| Windows  | `%APPDATA%\com.wyrdness.tts-narrator\`                     |
 
 The app id comes from `PRODUCT_BUNDLE_IDENTIFIER` (macOS) and `APPLICATION_ID`
 (Linux), so the directory is already namespaced per app and needs no
@@ -320,8 +320,8 @@ first segment.
 - The sandboxed macOS app needs the **`com.apple.security.network.client`**
   entitlement to reach your TTS provider's API; it's already present in
   `app/macos/Runner/DebugProfile.entitlements` and `Release.entitlements`.
-- Windows is planned but not yet scaffolded; the Linux runner is scaffolded but
-  never compiled in CI, so changes to `app/linux/` are unverified by
+- The Windows and Linux runners are scaffolded but never compiled in CI, so
+  changes to `app/windows/` and `app/linux/` are unverified by
   `flutter analyze`/`flutter test`.
 - `app/lib/src/gui/settings/` is the providers-and-voices screen, pushed as a
   full-screen route from the `⌘,` / `Ctrl+,` settings item (and the macOS App
