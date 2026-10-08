@@ -1,13 +1,12 @@
 # tts-narrator — Developer Guide
 
-For end-user documentation (install, usage, voice configuration), see
-**[README.md](README.md)**.
+For end-user documentation (install, usage, voice configuration), see **[README.md](README.md)**.
 
 ## Requirements
 
 - Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.5`, Dart 3.13.4).
-- An API key for your cloud TTS provider (see the README and
-  **[MAC.md](MAC.md)** for setup options). A local OpenAI-compatible audio
+- An API key for your cloud TTS provider (see the README and **[MAC.md](MAC.md)** for setup options). A local
+  OpenAI-compatible audio
   server needs no key.
 
 ## Repository structure
@@ -19,8 +18,7 @@ and holds the single shared lockfile:
   config load/save, segmentation, the OpenAI-protocol speech client, cost
   estimates. No Flutter or GUI dependencies.
 - `app` — `tts_narrator`, the Flutter GUI (macOS, with a scaffolded Linux
-  runner). Constructs the speech client and hands it to the run controller
-  (`lib/main.dart`).
+  runner). Constructs the speech client and hands it to the run controller (`lib/main.dart`).
 - `voice-config/` — the shipped voice config, and the **only** copy of it:
   `config.json` (the ordered provider registry), `providers/<name>.json` (one
   per provider, with `${ENV}` references and no secrets),
@@ -42,11 +40,11 @@ The config **directory** is shared by the CLI and the GUI. The GUI resolves it
 with `getApplicationSupportDirectory()` (`app/lib/main.dart`), which returns the
 platform app-data root with the app id appended:
 
-| Platform | Path |
-| --- | --- |
-| macOS | `~/Library/Application Support/com.wyrdness.tts-narrator/` |
-| Linux | `~/.local/share/com.wyrdness.tts-narrator/` |
-| Windows | `%APPDATA%\com.wyrdness.tts-narrator\` (not yet scaffolded) |
+| Platform | Path                                                        |
+|----------|-------------------------------------------------------------|
+| macOS    | `~/Library/Application Support/com.wyrdness.tts-narrator/`  |
+| Linux    | `~/.local/share/com.wyrdness.tts-narrator/`                 |
+| Windows  | `%APPDATA%\com.wyrdness.tts-narrator\` (not yet scaffolded) |
 
 The app id comes from `PRODUCT_BUNDLE_IDENTIFIER` (macOS) and `APPLICATION_ID`
 (Linux), so the directory is already namespaced per app and needs no
@@ -57,8 +55,17 @@ so in practice the tests and any non-GUI front end. The GUI always injects one.
 
 - `config.json` — the registry: an ordered list of provider names, nothing
   else. The first entry is the default provider.
-- `providers/<name>.json` — one file per provider: a `models` list naming the
-  models that provider serves, and a `settings` block (secrets).
+- `providers/<name>.json` — one file per provider: a `models` block naming the
+  models that provider serves, and a `settings` block (secrets). `models` is
+  either a list, served on every platform, or a map keyed by platform tag (`macos` / `linux` / `windows`) naming what
+  each platform serves. The map is
+  for a provider whose models exist on only some platforms — `config.json` is one
+  global registry, so `providers/*.json` lands everywhere, and the gate is what
+  stops a platform that never downloaded those model files from reading as a
+  provider claiming models that are missing. `_parseProviderModels` in
+  `voice_config_io.dart` applies it, one layer at a time, and rejects any key
+  outside `kVoiceConfigPlatformTags` rather than serving an empty list for it.
+  With no platform tag passed, a map yields every platform's aliases.
 - `models/<alias>.json` — one file per model: `id`, `formats`,
   `wav_response_format`, `prompt_style`,
   `speed`, `sends_language`, `sends_instruct`,
@@ -137,8 +144,8 @@ the downloaded copy is replaceable at any time, the authored one never is.
 Merge rules, in the order they matter:
 
 - **Model and provider files replace wholesale.** A `user/models/fish.json` is
-  read as the entire `fish` model. Partial overlays would mean every reader
-  (the GUI table, the CLI, a future importer) has to reconcile two half-files, and
+  read as the entire `fish` model. Partial overlays would mean every reader (the GUI table, the CLI, a future importer)
+  has to reconcile two half-files, and
   the failure mode is a voice that silently vanishes from the picker.
 - **Registries accumulate.** `user/config.json` is merged with the downloaded
   one rather than replacing it, so naming one new provider there does not silently
@@ -167,8 +174,7 @@ Merge rules, in the order they matter:
   never intended to override.
 - **Claims accumulate.** `claimedBy = {...base, ...overlay}`, so an overlay
   provider that drops a model from its `models` list does not un-claim it: the
-  downloaded provider file still claims it. Changing who serves an alias needs a
-  *same-named* provider file.
+  downloaded provider file still claims it. Changing who serves an alias needs a *same-named* provider file.
 - **A broken overlay file degrades, it does not brick.** The model layer catches
   a parse failure per file and keeps the downloaded parse, so a half-written
   override costs the user their edits rather than the model. Everything the
@@ -236,8 +242,8 @@ project is willing to keep in sync, not an access control. Only `fish` sets it.
 
 ## Providers
 
-Every provider speaks the same wire protocol, so there is exactly one client in
-**core**: `OpenAiSpeechClient`. `SpeechClient` is the function type the
+Every provider speaks the same wire protocol, so there is exactly one client in **core**: `OpenAiSpeechClient`.
+`SpeechClient` is the function type the
 narration layer takes — `narrate` requires one, and `RunController` owns the
 concrete instance (`OpenAiSpeechClient` by default, overridable through
 `AppController(client:)` so tests never touch the network). Everything that
@@ -253,18 +259,19 @@ varies between providers is data:
   `Authorization` header. Its default preset ships as
   `voice-config/models/kokoro_local.json`.
 - **Adding a provider** = a `providers/<name>.json` file (its `settings`, plus
-  the `models` it serves) and the name added to the `config.json` registry. No
+  the `models` it serves — a list, or a per-platform map if its models only exist
+  on some platforms) and the name added to the `config.json` registry. No
   code. A model file on its own is inert: nothing reaches it until a provider
   claims it.
 
 The four settings core understands:
 
-| Setting | Read by | Notes |
-| --- | --- | --- |
-| `base_url` | `providerBaseUrl` | **A root, not the full URL.** The client appends `/audio/speech` (`_speechUri`). A trailing slash is trimmed first |
-| `endpoint` | `providerBaseUrl` | Alias for `base_url`, checked only when `base_url` is absent. Same root semantics |
-| `api_key` | `resolveProviderApiKey` | Literal or `${VAR}`. Stripped from `providerSettings` before expansion and passed as `NarrationConfig.apiKey` |
-| `default_voice` | `OpenAiSpeechClient._defaultVoice` | Fills an unspecified voice only; an explicit voice always wins |
+| Setting         | Read by                            | Notes                                                                                                              |
+|-----------------|------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| `base_url`      | `providerBaseUrl`                  | **A root, not the full URL.** The client appends `/audio/speech` (`_speechUri`). A trailing slash is trimmed first |
+| `endpoint`      | `providerBaseUrl`                  | Alias for `base_url`, checked only when `base_url` is absent. Same root semantics                                  |
+| `api_key`       | `resolveProviderApiKey`            | Literal or `${VAR}`. Stripped from `providerSettings` before expansion and passed as `NarrationConfig.apiKey`      |
+| `default_voice` | `OpenAiSpeechClient._defaultVoice` | Fills an unspecified voice only; an explicit voice always wins                                                     |
 
 The `base_url`-is-a-root rule is the one that bites. Both former provider
 packages treated `endpoint` as a **full** speech URL, so a config carrying
@@ -274,8 +281,8 @@ compatibility shim for it (see the "no legacy handling" decision) — the value 
 to be a root.
 
 Transport concerns are handled once, in the client, for every provider: retry on
-`500`/`502`/`503`/`529` and on an empty 2xx stream (`_retries = 3` allowed
-*after* the first, so 4 requests in the worst case, with `2 * attempt` seconds
+`500`/`502`/`503`/`529` and on an empty 2xx stream (`_retries = 3` allowed *after* the first, so 4 requests in the worst
+case, with `2 * attempt` seconds
 of backoff), and abort support.
 
 ## Per-platform starter configs
@@ -284,8 +291,8 @@ Which starter model files the first-run bootstrap downloads is decided by data,
 not code: `voice-config/manifest.json` carries a top-level `providers` list
 fetched on every platform, and maps a platform tag (`macos`/`linux`/`windows`)
 to the model files shipped there by default (e.g. Linux and Windows omit
-`kokoro_local.json`). `packages/core` fetches/parses the manifest
-(`ManifestVoiceConfig`, `fetchVoiceConfigManifest`) and the GUI caches a copy
+`kokoro_local.json`). `packages/core` fetches/parses the manifest (`ManifestVoiceConfig`, `fetchVoiceConfigManifest`)
+and the GUI caches a copy
 in its config dir, then only requires/downloads the current platform's list —
 provider files travel with them, and `config.json` is always fetched. The
 manifest holds bare file names; the downloader owns which subdirectory each
@@ -347,8 +354,8 @@ those are layout-grid constants that don't change with the brand.
 
 To change a color or a font size:
 
-```bash
-cd app
+``` bash
+cd app 
 # 1. Edit app/assets/theme/tokens.json.
 # 2. Regenerate the .g.dart from the JSON.
 fvm dart run tool/generate_tokens.dart
@@ -385,7 +392,7 @@ Config is `app/l10n.yaml`.
 
 To add or change a string:
 
-```bash
+``` bash
 cd app
 # 1. Edit app/lib/l10n/app_en.arb.
 # 2. Regenerate.
@@ -425,36 +432,33 @@ returns only the noun and discards the number, so a count can never sit outside
 its own plural case. Pass the locale-formatted number as a `String` and the
 noun from a `core_plurals_*` key:
 
-```jsonc
+``` jsonc
 // Wrong — renders "segments", dropping the count.
 "gui_cleanup_removedMessage": "Removed {removedCount} {segmentLabel}."
 // Right — the caller supplies both halves.
 "gui_cleanup_removedMessage": "Removed {removedCount} segment {fileLabel}."
 ```
 
-```dart
-l10n.gui_cleanup_removedMessage(
-  removed,
-  l10n.core_plurals_file(removed), // "file" / "files"
-);
+``` dart
+l10n.gui_cleanup_removedMessage(removed, l10n.core_plurals_file(removed), // "file" / "files");
 ```
 
 This is why the status bar formats `wordCount`/`charCount` through
 `NumberFormat.decimalPattern(locale)` and then passes `core_plurals_word` /
-`core_plurals_character` alongside. A plural noun hardcoded outside ICU
-(`"... ~{minutes} min ..."`) is the bug this rule exists to prevent.
+`core_plurals_character` alongside. A plural noun hardcoded outside ICU (`"... ~{minutes} min ..."`) is the bug this
+rule exists to prevent.
 
 ### Wiring
 
 Both app shells pass the delegate list explicitly rather than
 `AppLocalizations.localizationsDelegates`:
 
-```dart
-localizationsDelegates: const [
-  AppLocalizations.delegate,
-  DefaultWidgetsLocalizations.delegate,
-  DefaultCupertinoLocalizations.delegate,
-],
+``` dart
+localizationsDelegates: const [AppLocalizations.delegate,
+DefaultWidgetsLocalizations.delegate,
+DefaultCupertinoLocalizations.delegate,
+]
+,
 ```
 
 Deliberate — the convenience bundle adds `GlobalMaterialLocalizations`, which
@@ -502,8 +506,8 @@ title.
   matching a documented Gemini TTS quirk. (Fish failures are not billed.)
 - Every model — `fish` included — comes from its own `models/<alias>.json` file
   in the voice config. `TtsModelProfile` in
-  `packages/core/lib/src/narration/model_profiles.dart` is just the parsed shape
-  (with a now-`required provider`, stamped on by the loader from the owning
+  `packages/core/lib/src/narration/model_profiles.dart` is just the parsed shape (with a now-`required provider`,
+  stamped on by the loader from the owning
   provider's `models` list); there is no compiled-in bootstrap for any model.
 - Per-model capabilities are declared in the model file, never sniffed from the
   model id. `prompt_style: true` derives the "Narrator gender" / accent / style /
@@ -517,8 +521,8 @@ title.
   `sends_voice: false`: the model writes the narrator from the prose instead of
   picking one, so there is nothing to pick. Such a model ships no `voices` and no
   `default_voice` — `buildConfig` skips voice resolution entirely, and the voice
-  picker, its gender filter and the advanced raw-id override are all hidden
-  (`AppController.takesVoice`). `default_instruct` rides the profile so the GUI
+  picker, its gender filter and the advanced raw-id override are all hidden (`AppController.takesVoice`).
+  `default_instruct` rides the profile so the GUI
   can prefill the editable box without core knowing any GUI defaults, and the
   language dropdown survives because `lang_code` is a real field for these
   models too. An empty box is a deliberate choice, not a reset: the `instruct`

@@ -49,6 +49,107 @@ void main() {
       expect(warnings, isEmpty);
       expect(config.models, isNotEmpty);
     });
+
+    test('every provider keys its models by a known platform, or by none', () {
+      // A provider file may key `models` by platform, and a key that is not a
+      // real tag is rejected by the loader -- so a typo here would skip the
+      // provider outright. It is worth checking directly because the loads above
+      // cannot see it: an untagged read unions every entry, so the misspelled
+      // key's models still appear, and a tagged read for the tag the author
+      // meant is never made.
+      for (final file in shipped.providerFiles) {
+        final json =
+            jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+        final models = json['models'];
+        if (models is! Map) continue;
+        for (final tag in models.keys) {
+          expect(
+            kVoiceConfigPlatformTags,
+            contains(tag),
+            reason: '${file.path} keys its models by unknown platform "$tag"',
+          );
+        }
+      }
+    });
+  });
+
+  group('the shipped config as a first download leaves it', () {
+    // The directory a user actually has is not the repository: it is the subset
+    // `downloadVoiceConfigFiles` writes, which fetches config.json, every
+    // provider file, and only the model files the manifest lists for the running
+    // platform. Providers are fetched globally, so a provider file is present on
+    // platforms that cannot run any of its models.
+    //
+    // That makes the two layers disagree unless each provider says which of its
+    // models this platform may claim. When they did disagree, Linux -- which
+    // fetches providers/local.json but not the macOS-only MLX model files behind
+    // it -- loaded a provider claiming models that were correctly absent and
+    // warned about each one. The warnings described a state that could not exist.
+    //
+    // Deriving the file set from the shipped manifest rather than naming files
+    // here is what makes this a guard: it fails if the manifest and the provider
+    // files drift apart, which is the only way the bug can come back.
+
+    late Directory dir;
+
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('tts_first_download_');
+    });
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    /// Copies the registry, every provider, and only [platform]'s model files.
+    ///
+    /// The subdirectories are created rather than assumed, because a fresh
+    /// download writes into them: that the write needs a directory is the
+    /// download step's business, and this fixture is not testing it.
+    void writeFirstDownloadFor(ManifestVoiceConfig manifest, String platform) {
+      void write(String subdir, String name, String from) {
+        final file = File('${dir.path}/$subdir/$name');
+        file.parent.createSync(recursive: true);
+        file.writeAsStringSync(File(from).readAsStringSync());
+      }
+
+      write('', kVoiceConfigRegistryName, shipped.registry.path);
+      for (final provider in manifest.providers) {
+        write(
+          kVoiceConfigProvidersDir,
+          provider,
+          '${shipped.path}/$kVoiceConfigProvidersDir/$provider',
+        );
+      }
+      for (final model in manifest.filesFor(platform)) {
+        write(
+          kVoiceConfigModelsDir,
+          model,
+          '${shipped.path}/$kVoiceConfigModelsDir/$model',
+        );
+      }
+    }
+
+    for (final platform in const [
+      kPlatformTagMacos,
+      kPlatformTagLinux,
+      kPlatformTagWindows,
+    ]) {
+      test('loads on $platform with no warnings at all', () {
+        final manifest = ManifestVoiceConfig.fromJson(
+          jsonDecode(shipped.manifest.readAsStringSync())
+              as Map<String, dynamic>,
+        );
+        writeFirstDownloadFor(manifest, platform);
+
+        final (config, warnings) = loadVoiceConfig(
+          dir.path,
+          platformTag: platform,
+        );
+        expect(
+          warnings,
+          isEmpty,
+          reason: 'a first $platform download is clean',
+        );
+        expect(config.models, isNotEmpty, reason: 'on $platform');
+      });
+    }
   });
 
   group('the shipped manifest', () {
@@ -166,6 +267,9 @@ class _ShippedConfig {
 
   /// The manifest naming the starter files to fetch.
   final File manifest;
+
+  /// The provider registry, fetched on every platform.
+  File get registry => File('$path/$kVoiceConfigRegistryName');
 
   List<File> get modelFiles => _filesIn(kVoiceConfigModelsDir);
 

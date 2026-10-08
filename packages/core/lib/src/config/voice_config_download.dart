@@ -11,15 +11,6 @@ const _voiceConfigDir = 'voice-config';
 /// directory (both in the repo and when cached locally).
 const kVoiceConfigManifestName = 'manifest.json';
 
-/// Platform tags used as manifest keys.
-///
-/// Single source of truth for the tag strings: app code (see
-/// `platform_detection.dart`) maps a running platform to a tag via these
-/// constants instead of repeating the literals.
-const kPlatformTagMacos = 'macos';
-const kPlatformTagLinux = 'linux';
-const kPlatformTagWindows = 'windows';
-
 /// Starter file lists, parsed from the repo's `voice-config/manifest.json`.
 ///
 /// Two kinds of file ship by default:

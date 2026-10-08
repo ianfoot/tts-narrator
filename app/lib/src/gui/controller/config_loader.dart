@@ -2,14 +2,22 @@ import 'dart:io';
 
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
+// Prefixed so the [UserVoiceConfigLoader.platformTag] field can default from the
+// detected platform without the two names colliding in the initializer list.
+import '../platform/platform_detection.dart' as platform;
+
 /// Loads the shared config directory (CLI + GUI use the same layout, the GUI
 /// read-only) and resolves the bits a run config needs: the effective models,
 /// the default voice, pricing, and the provider settings block with `${ENV}`
 /// references expanded from the runtime environment.
 class UserVoiceConfigLoader {
-  UserVoiceConfigLoader({String? configDir, Map<String, String>? environment})
-    : configDir = configDir ?? defaultConfigDir(),
-      environment = environment ?? Platform.environment;
+  UserVoiceConfigLoader({
+    String? configDir,
+    Map<String, String>? environment,
+    String? platformTag,
+  }) : configDir = configDir ?? defaultConfigDir(),
+       environment = environment ?? Platform.environment,
+       platformTag = platformTag ?? platform.platformTag;
 
   /// Absolute path of the config directory (defaults to the platform path).
   final String configDir;
@@ -19,12 +27,28 @@ class UserVoiceConfigLoader {
   /// depend on what the host shell happens to export.
   final Map<String, String> environment;
 
+  /// The platform tag (`macos` / `linux` / `windows`) that selects which models
+  /// a provider file claims when its `models` block is a per-platform map.
+  /// Defaults to the detected platform; injectable so tests can read a config
+  /// as another platform would without running on it.
+  ///
+  /// This has to be threaded rather than left out: `config.json` is one global
+  /// registry, so `providers/*.json` lands on every platform, and a provider
+  /// that gates its models must say which of them this platform may serve. Read
+  /// without a tag it would claim every platform's models and warn about the
+  /// macOS-only ones on Linux -- where the download step correctly never fetched
+  /// them, so the warning described a state that cannot exist.
+  final String platformTag;
+
   /// Warnings from the last [load] (e.g. a skipped malformed model file).
   List<String> warnings = const [];
 
   /// Reads the config from [configDir]; empty when the directory is absent.
   VoiceConfig load() {
-    final (cfg, warnings) = loadVoiceConfig(configDir);
+    final (cfg, warnings) = loadVoiceConfig(
+      configDir,
+      platformTag: platformTag,
+    );
     this.warnings = warnings;
     return cfg;
   }

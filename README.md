@@ -34,16 +34,38 @@ GUI. Three kinds of file:
 
 - `config.json` — the provider registry: the names of the providers in use, in
   order.
-- `providers/<name>.json` — one file per provider: the settings block (secrets, endpoint) and the list of models it
+- `providers/<name>.json` — one file per provider: the settings block (secrets, endpoint) and the models it
   serves.
 - `models/<alias>.json` — one file per model: its id, the request wiring,
   default voice, pricing, and friendly voice aliases.
 
 Providers name the models they serve, not the other way round, so adding a
 model is a matter of dropping a file in `models/` and adding its alias to a
-provider's `models` list. Order matters: the first provider in the registry is
+provider's `models`. Order matters: the first provider in the registry is
 the default, and the first model in that provider's list is the model
 preselected on cold start.
+
+`models` is normally a list, read the same on every platform. When a provider's
+models only exist on some platforms — the bundled `local` provider points at
+MLX backends, which are Apple-Silicon only — key it by platform instead, and each
+platform serves only its own entry:
+
+```json
+{
+  "models": {
+    "macos": ["kokoro_local"],
+    "linux": [],
+    "windows": []
+  }
+}
+```
+
+A platform the map does not name serves nothing, the same as an empty list. The
+keys must be `macos`, `linux`, or `windows`; anything else is reported rather
+than ignored, since a misspelled one would otherwise leave the provider serving
+nothing with nothing to say why. Use this only when the models genuinely differ
+per platform — the manifest already decides which model files each platform
+downloads, and the two must agree.
 
 The config directory, per platform:
 
@@ -87,13 +109,18 @@ them, and shadow their counterparts by name — see
 }
 ```
 
-`<config_dir>/providers/local.json`:
+`<config_dir>/providers/local.json` — keyed by platform because its models are
+Apple-Silicon only:
 
 ```json
 {
-  "models": [
-    "kokoro_local"
-  ],
+  "models": {
+    "macos": [
+      "kokoro_local"
+    ],
+    "linux": [],
+    "windows": []
+  },
   "settings": {
     "base_url": "http://localhost:8000/v1"
   }

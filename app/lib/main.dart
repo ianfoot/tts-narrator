@@ -171,8 +171,10 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   /// Platform-neutral starter set used when the manifest is unreachable
   /// (kokoro_local.json is macOS-only data, so it is never in this fallback).
   ///
-  /// With no manifest there are no provider files to fetch, so the fallback
-  /// ships models only; the loader ignores models no provider claims anyway.
+  /// The provider files are absent here too, which is why the macOS-only model
+  /// files have nothing to gate them: with no manifest there are no provider
+  /// files to fetch, so the fallback ships models only, and the loader ignores
+  /// models no provider claims anyway.
   static const _fallbackStarterFiles = [
     'fish.json',
     'gemini.json',

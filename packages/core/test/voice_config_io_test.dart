@@ -477,11 +477,238 @@ void main() {
         );
       });
 
-      test('rejects a non-list models entry', () {
+      test(
+        'rejects a models entry that is neither a list nor a platform map',
+        () {
+          writeRegistry('{"providers":["alpha"]}');
+          writeProvider('alpha', '{"models":"one","settings":{}}');
+          final (_, warnings) = load();
+          expect(warnings.join('\n'), contains('"models" must be a list'));
+        },
+      );
+    });
+
+    group('per-platform provider models', () {
+      // A provider file may key its models by platform instead of listing them
+      // flat, which is how a provider that ships everywhere -- config.json is one
+      // global registry, so providers/*.json lands on every platform -- can say
+      // which of its models each platform may actually serve.
+
+      test('a bare list serves every platform', () {
+        for (final tag in [
+          kPlatformTagMacos,
+          kPlatformTagLinux,
+          kPlatformTagWindows,
+        ]) {
+          writeRegistry('{"providers":["alpha"]}');
+          writeProvider('alpha', '{"models":["one"],"settings":{}}');
+          writeModel('one', '{"id":"x/one","formats":["wav"]}');
+
+          final (cfg, warnings) = loadVoiceConfig(dir.path, platformTag: tag);
+          expect(warnings, isEmpty, reason: 'on $tag');
+          expect(cfg.models['one']!.provider, 'alpha', reason: 'on $tag');
+        }
+      });
+
+      test('a platform map serves only the named platform', () {
+        for (final tag in [
+          kPlatformTagMacos,
+          kPlatformTagLinux,
+          kPlatformTagWindows,
+        ]) {
+          writeRegistry('{"providers":["alpha"]}');
+          writeProvider(
+            'alpha',
+            '{"models":{"$kPlatformTagMacos":["mac_only"]},'
+                '"settings":{}}',
+          );
+          writeModel('mac_only', '{"id":"x/mac","formats":["wav"]}');
+
+          final (cfg, warnings) = loadVoiceConfig(dir.path, platformTag: tag);
+          expect(warnings, isEmpty, reason: 'on $tag');
+          if (tag == kPlatformTagMacos) {
+            expect(
+              cfg.models['mac_only']!.provider,
+              'alpha',
+              reason: 'on $tag',
+            );
+          } else {
+            // The file is present but the platform may not claim the model, so
+            // it is not loaded -- and, crucially, not warned about either.
+            expect(
+              cfg.models.containsKey('mac_only'),
+              isFalse,
+              reason: 'on $tag',
+            );
+          }
+        }
+      });
+
+      test('a platform the map does not name serves nothing', () {
         writeRegistry('{"providers":["alpha"]}');
-        writeProvider('alpha', '{"models":"one","settings":{}}');
-        final (_, warnings) = load();
+        writeProvider(
+          'alpha',
+          '{"models":{"$kPlatformTagMacos":["mac_only"]},"settings":{}}',
+        );
+
+        final (cfg, warnings) = loadVoiceConfig(
+          dir.path,
+          platformTag: kPlatformTagLinux,
+        );
+        expect(warnings, isEmpty);
+        expect(cfg.providers['alpha']!.models, isEmpty);
+      });
+
+      test('an explicitly empty platform list serves nothing', () {
+        writeRegistry('{"providers":["alpha"]}');
+        writeProvider(
+          'alpha',
+          '{"models":{"$kPlatformTagMacos":["mac_only"],'
+              '"$kPlatformTagLinux":[]},"settings":{}}',
+        );
+        writeModel('mac_only', '{"id":"x/mac","formats":["wav"]}');
+
+        final (mac, macWarnings) = loadVoiceConfig(
+          dir.path,
+          platformTag: kPlatformTagMacos,
+        );
+        final (linux, linuxWarnings) = loadVoiceConfig(
+          dir.path,
+          platformTag: kPlatformTagLinux,
+        );
+
+        expect(macWarnings, isEmpty);
+        expect(linuxWarnings, isEmpty);
+        expect(mac.models['mac_only']!.provider, 'alpha');
+        expect(linux.providers['alpha']!.models, isEmpty);
+      });
+
+      test('each platform entry is validated as a list of aliases', () {
+        writeRegistry('{"providers":["alpha"]}');
+        writeProvider(
+          'alpha',
+          '{"models":{"$kPlatformTagLinux":"one"},"settings":{}}',
+        );
+        final (_, warnings) = loadVoiceConfig(
+          dir.path,
+          platformTag: kPlatformTagLinux,
+        );
         expect(warnings.join('\n'), contains('"models" must be a list'));
+      });
+
+      test('an unknown platform key is rejected by name', () {
+        // A misspelled tag is the failure mode worth guarding: it reads the same
+        // as "serves nothing", so the provider silently claims no models on
+        // every platform -- including the one the key was written for -- and
+        // nothing anywhere reports why.
+        writeRegistry('{"providers":["alpha"]}');
+        writeProvider(
+          'alpha',
+          '{"models":{"macOS":["mac_only"]},"settings":{}}',
+        );
+        writeModel('mac_only', '{"id":"x/mac","formats":["wav"]}');
+
+        for (final tag in [kPlatformTagMacos, null]) {
+          final (cfg, warnings) = loadVoiceConfig(
+            dir.path,
+            platformTag: tag,
+          );
+          final joined = warnings.join('\n');
+          expect(joined, contains('Skipped provider "alpha"'));
+          expect(joined, contains('unknown platform "macOS"'));
+          expect(
+            cfg.providers.containsKey('alpha'),
+            isFalse,
+            reason: 'on ${tag ?? 'an untagged read'}',
+          );
+        }
+      });
+
+      test('an empty alias in a platform entry is rejected', () {
+        writeRegistry('{"providers":["alpha"]}');
+        writeProvider(
+          'alpha',
+          '{"models":{"$kPlatformTagLinux":["  "]},"settings":{}}',
+        );
+        final (_, warnings) = loadVoiceConfig(
+          dir.path,
+          platformTag: kPlatformTagLinux,
+        );
+        expect(warnings.join('\n'), contains('"models" must hold non-empty'));
+      });
+
+      test('no platform tag unions every platform entry', () {
+        // A caller inspecting the config as data has no platform in hand. The
+        // union keeps such a caller seeing the whole picture -- and keeps the
+        // shipped-config test, which loads without a tag, resolving the map.
+        writeRegistry('{"providers":["alpha"]}');
+        writeProvider(
+          'alpha',
+          '{"models":{"$kPlatformTagMacos":["mac_only"],'
+              '"$kPlatformTagLinux":["linux_only"]},"settings":{}}',
+        );
+        writeModel('mac_only', '{"id":"x/mac","formats":["wav"]}');
+        writeModel('linux_only', '{"id":"x/linux","formats":["wav"]}');
+
+        final (cfg, warnings) = loadVoiceConfig(dir.path);
+        expect(warnings, isEmpty);
+        expect(cfg.providers['alpha']!.models, ['mac_only', 'linux_only']);
+      });
+
+      test('a shared alias in two platform entries appears once', () {
+        writeRegistry('{"providers":["alpha"]}');
+        writeProvider(
+          'alpha',
+          '{"models":{"$kPlatformTagMacos":["shared","mac_only"],'
+              '"$kPlatformTagLinux":["shared","linux_only"]},"settings":{}}',
+        );
+
+        final (cfg, _) = loadVoiceConfig(dir.path);
+        expect(cfg.providers['alpha']!.models, [
+          'shared',
+          'mac_only',
+          'linux_only',
+        ]);
+      });
+
+      test('a per-platform gate also silences the missing-model warning', () {
+        // The regression this shape exists for: on Linux the download step
+        // fetches providers/local.json but not its macOS-only model files, so a
+        // provider claiming them unconditionally reads as broken.
+        writeRegistry('{"providers":["alpha"]}');
+        writeProvider(
+          'alpha',
+          '{"models":{"$kPlatformTagMacos":["mac_only"]},"settings":{}}',
+        );
+
+        final (unaware, unawareWarnings) = loadVoiceConfig(dir.path);
+        expect(unawareWarnings.join('\n'), contains('lists model "mac_only"'));
+        expect(unaware.providers['alpha']!.models, ['mac_only']);
+
+        final (linux, linuxWarnings) = loadVoiceConfig(
+          dir.path,
+          platformTag: kPlatformTagLinux,
+        );
+        expect(linuxWarnings, isEmpty);
+      });
+
+      test('a bare provider file is unaffected by the platform', () {
+        // The backward-compatibility half of the same rule: the flat shape keeps
+        // meaning "every platform", so no shipped provider needs rewriting.
+        writeRegistry('{"providers":["alpha"]}');
+        writeProvider('alpha', '{"models":["one"],"settings":{}}');
+        writeModel('one', '{"id":"x/one","formats":["wav"]}');
+
+        final (mac, _) = loadVoiceConfig(
+          dir.path,
+          platformTag: kPlatformTagMacos,
+        );
+        final (linux, _) = loadVoiceConfig(
+          dir.path,
+          platformTag: kPlatformTagLinux,
+        );
+        expect(mac.providers['alpha']!.models, ['one']);
+        expect(linux.providers['alpha']!.models, ['one']);
       });
     });
 

@@ -1,5 +1,9 @@
 {
-  "models": ["kokoro_local", "qwen3_voicedesign"],
+  "models": {
+    "macos": ["kokoro_local", "qwen3_voicedesign"],
+    "linux": [],
+    "windows": []
+  },
   "settings": {
     "base_url": "http://localhost:8000/v1"
   }

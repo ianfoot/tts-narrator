@@ -35,6 +35,35 @@ const String kVoiceConfigModelsDir = 'models';
 /// `user/providers/` shadows the provider of the same name.
 const String kVoiceConfigOverlayDirName = 'user';
 
+/// Platform tags a voice config may be keyed by.
+///
+/// Single source of truth for the tag strings, and they name the same concept
+/// in both places a platform appears: the keys of `manifest.json`'s `platforms`
+/// block (see [ManifestVoiceConfig]) and the keys of a provider file's per-platform
+/// `models` map. App code (see `platform_detection.dart`) maps a running platform
+/// to a tag via these constants instead of repeating the literals.
+///
+/// These live here rather than beside the manifest because a provider file's
+/// `models` map is read without one (see [loadVoiceConfig]), so the loader has
+/// to know the tags even when no manifest is in play.
+const String kPlatformTagMacos = 'macos';
+const String kPlatformTagLinux = 'linux';
+const String kPlatformTagWindows = 'windows';
+
+/// Every tag [kPlatformTagMacos], [kPlatformTagLinux] and [kPlatformTagWindows]
+/// name, for validating a config that keys models by platform.
+///
+/// A key outside this set is rejected rather than ignored. The map's whole
+/// purpose is to say which platforms may claim the models, so a key that is
+/// spelled wrong is indistinguishable in effect from one that claims nothing --
+/// and it would claim nothing on the platform it was *meant* for, which is the
+/// worst way to get a typo. Naming it beats silently serving an empty list.
+const Set<String> kVoiceConfigPlatformTags = {
+  kPlatformTagMacos,
+  kPlatformTagLinux,
+  kPlatformTagWindows,
+};
+
 /// Loads a [VoiceConfig] from a config *directory* ([configDir]).
 ///
 /// Reads `config.json` for the ordered provider registry, then one
@@ -67,8 +96,23 @@ const String kVoiceConfigOverlayDirName = 'user';
 /// defaults is the caller's decision: await `downloadVoiceConfigFiles()`
 /// explicitly first if you want them.
 ///
+/// [platformTag] is the running platform's tag -- `kPlatformTagMacos`,
+/// `kPlatformTagLinux`, or `kPlatformTagWindows` -- and selects which models a
+/// provider file claims when its `models` block is a per-platform map. Providers
+/// themselves are not gated here: `config.json` is one global registry and
+/// `providers/*.json` ships on every platform, so a provider file is present even
+/// on a platform that cannot run any of its models. What [platformTag] decides
+/// is which models that provider is taken to serve, which is what keeps a
+/// platform that downloaded the provider but not its model files -- macOS-only
+/// MLX backends on Linux, say -- from reading as a provider claiming models that
+/// are missing. Omit it for a caller with no platform in hand; a per-platform map
+/// then yields every platform's aliases rather than one arbitrary slice.
+///
 /// Returns the loaded config plus warnings for anything skipped or broken.
-(VoiceConfig, List<String>) loadVoiceConfig(String configDir) {
+(VoiceConfig, List<String>) loadVoiceConfig(
+  String configDir, {
+  String? platformTag,
+}) {
   // Note: download is no longer triggered automatically here so
   // loadVoiceConfig stays pure synchronous disk I/O. Callers that
   // want remote defaults should await downloadVoiceConfigFiles()
@@ -80,7 +124,7 @@ const String kVoiceConfigOverlayDirName = 'user';
   final overlayDir =
       '$configDir${Platform.pathSeparator}$kVoiceConfigOverlayDirName';
 
-  final base = _loadProviderLayer(configDir);
+  final base = _loadProviderLayer(configDir, platformTag: platformTag);
   // A provider the base registry already names needs no entry in the overlay
   // registry in order to be overridden there, so base names count as named.
   // _warnUnregisteredProviderFiles then skips them: to the overlay layer they
@@ -89,6 +133,7 @@ const String kVoiceConfigOverlayDirName = 'user';
   final overlay = _loadProviderLayer(
     overlayDir,
     alsoRegistered: base.order.toSet(),
+    platformTag: platformTag,
   );
 
   // Whichever layer claims an alias first decides who serves it, and a user's
@@ -222,9 +267,17 @@ typedef _ParsedModel = ({
 /// redundant entry, not a broken one, because the shadowed copy answers for it.
 /// That is suppressed too, so copying a registry and adding to it -- what the
 /// README tells a user to do -- warns about nothing at all.
+///
+/// [platformTag] is passed through to each provider file's `models` block so a
+/// provider that gates its models per platform contributes only the ones this
+/// platform may serve. The gate is a per-file decision, so it is applied
+/// independently per layer rather than merged: an overlay provider file replaces
+/// its baseline counterpart wholesale, and it is the replacing file that decides
+/// what it claims.
 _ProviderLayer _loadProviderLayer(
   String dir, {
   Set<String> alsoRegistered = const {},
+  String? platformTag,
 }) {
   final separator = Platform.pathSeparator;
   final warnings = <String>[];
@@ -251,7 +304,7 @@ _ProviderLayer _loadProviderLayer(
       continue;
     }
     try {
-      final provider = _parseProviderFile(path, name);
+      final provider = _parseProviderFile(path, name, platformTag);
       providers[name] = provider;
       order.add(name);
       if (isOwn) promoted.add(name);
@@ -371,25 +424,95 @@ List<File> _jsonFilesIn(String dir) {
   return files;
 }
 
-ProviderConfig _parseProviderFile(String path, String name) {
+/// Reads the `models` block of a provider file and returns the aliases this
+/// platform is served.
+///
+/// Two shapes are accepted, and the difference is exactly the platform gate:
+///
+/// - A bare **list** is read as "this provider serves these models on every
+///   platform". This is the original shape and stays valid, so a provider that
+///   genuinely has nothing platform-specific about it keeps saying so simply.
+/// - A **map** keyed by platform tag is read as "this provider serves these
+///   models *here*", and only the entry for [platformTag] is taken. A tag the
+///   map does not name yields no models at all, which is how a provider can
+///   ship on every platform -- `config.json` registers providers globally --
+///   while serving models on only the ones that can actually run them. A tag
+///   mapped to an empty list says the same thing explicitly. Every key must be
+///   one of [kVoiceConfigPlatformTags]: a misspelled tag would otherwise leave
+///   the provider serving nothing on the platform it was written for, and
+///   nothing anywhere else would say why.
+///
+/// Putting the gate here rather than in the manifest is what keeps the two
+/// layers agreeing: the provider file that claims a model is the same file
+/// that says which platforms may claim it, so a platform that downloaded the
+/// provider but not the models -- because the manifest lists its model files
+/// only for other platforms -- no longer reads as a provider claiming models
+/// that are missing.
+///
+/// [platformTag] is the running platform's tag (`macos`, `linux`, `windows`).
+/// It may be null for a caller with no platform in hand -- a tool inspecting
+/// the config as data -- and a per-platform map then yields the union of every
+/// platform's entry, so such a caller still sees the whole picture rather than
+/// one arbitrarily chosen platform's slice of it.
+List<String> _parseProviderModels(Object? raw, String? platformTag) {
+  // A list, or the per-platform map's entry, reduces to the same reading: an
+  // ordered, de-duplicated list of non-empty aliases.
+  List<String> readAliases(Object? value) {
+    if (value == null) return const [];
+    if (value is! List) {
+      throw VoiceConfigurationError('"models" must be a list of model aliases');
+    }
+    final aliases = <String>[];
+    for (final entry in value) {
+      if (entry is! String || entry.trim().isEmpty) {
+        throw VoiceConfigurationError('"models" must hold non-empty aliases');
+      }
+      final alias = entry.trim();
+      if (!aliases.contains(alias)) aliases.add(alias);
+    }
+    return aliases;
+  }
+
+  if (raw is Map<String, dynamic>) {
+    // Checked before dispatching, so the typo is reported whether or not this
+    // read happens to be the one for the tag that was meant.
+    for (final tag in raw.keys) {
+      if (!kVoiceConfigPlatformTags.contains(tag)) {
+        throw VoiceConfigurationError(
+          '"models" names unknown platform "$tag"; expected one of '
+          '${(kVoiceConfigPlatformTags.toList()..sort()).join(', ')}',
+        );
+      }
+    }
+    if (platformTag == null) {
+      // Platform-agnostic read: every platform's aliases, in the order the map
+      // names them, so the union still de-duplicates rather than repeating an
+      // alias two platforms share.
+      final union = <String>[];
+      for (final value in raw.values) {
+        for (final alias in readAliases(value)) {
+          if (!union.contains(alias)) union.add(alias);
+        }
+      }
+      return union;
+    }
+    return readAliases(raw[platformTag]);
+  }
+
+  return readAliases(raw);
+}
+
+ProviderConfig _parseProviderFile(
+  String path,
+  String name,
+  String? platformTag,
+) {
   final raw = _readJson(path);
   if (raw is! Map<String, dynamic>) {
     throw VoiceConfigurationError('must be a JSON object');
   }
 
-  final modelsRaw = raw['models'];
-  final models = <String>[];
-  if (modelsRaw is List) {
-    for (final entry in modelsRaw) {
-      if (entry is! String || entry.trim().isEmpty) {
-        throw VoiceConfigurationError('"models" must hold non-empty aliases');
-      }
-      final alias = entry.trim();
-      if (!models.contains(alias)) models.add(alias);
-    }
-  } else if (modelsRaw != null) {
-    throw VoiceConfigurationError('"models" must be a list of model aliases');
-  }
+  final models = _parseProviderModels(raw['models'], platformTag);
 
   final settingsOut = <String, String>{};
   final settingsRaw = raw['settings'];
