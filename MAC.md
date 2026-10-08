@@ -1,10 +1,13 @@
-# macOS Download & Installation
+# tts-narrator — macOS Setup
 
 The latest macOS release build (`TTS Narrator.app`) is packaged as a `.zip` by
 the [Build macOS](https://github.com/ianfoot/tts-narrator/actions/workflows/build-macos.yml) workflow.
 
 Download it from
 the [latest release](https://github.com/ianfoot/tts-narrator/releases/latest/download/tts-narrator-macos.zip).
+
+> **Just want to run it?** Download the `.zip` above and work through the sections
+> below. **Building from source?** Skip to [Building from source](#building-from-source).
 
 ## ⚠️ macOS Security Warning ("Cannot Verify App")
 
@@ -256,3 +259,100 @@ and WAV needs nothing extra. If you have `ffmpeg` and would rather have MP3, the
 **Output format** segmented control under the model dropdown in Run Setup has an
 MP3 button — the same way `kokoro_local` works. The model file declares both
 (`"formats": ["wav", "mp3"]`), and your pick is remembered per model.
+
+---
+
+## Building from source
+
+Follow this section if you would rather build the app yourself than download a
+release. It mirrors [LINUX.md](LINUX.md) and [WINDOWS.md](WINDOWS.md), which
+cover the same three steps on their platforms.
+
+The **macOS Security Warning** section above applies only to a **downloaded**
+build, because the quarantine flag is set at download time. An `.app` you build
+locally is not quarantined, so macOS opens it without complaint and there is
+nothing to bypass.
+
+### Prerequisites
+
+- **macOS 12 or newer.** The runner's deployment target is macOS 12
+  (`MACOSX_DEPLOYMENT_TARGET` in `app/macos/Runner.xcodeproj`).
+- **Xcode.** The full app is required; the command line tools alone are not
+  enough:
+
+  ```bash
+  xcode-select --install
+  xcodebuild -version
+  ```
+
+- **Homebrew**, for the FVM step: <https://brew.sh>
+
+### 1. Install FVM
+
+FVM pins this repo's Flutter version; see `DEVELOPER.md` for why that matters.
+macOS has a package manager, so this is shorter than the manual install the
+Linux and Windows guides describe:
+
+```bash
+brew install fvm
+fvm --version
+```
+
+Homebrew currently ships `fvm` **4.3.1**. Bottles are published for Apple Silicon
+macOS; on an Intel Mac Homebrew builds it from source the first time.
+
+Do **not** add a Flutter SDK to your shell `PATH`. A bare `flutter` would drift
+from the version this repo pins, and would resolve a different one. `fvm flutter
+…` always uses the pinned SDK.
+
+### 2. Install the pinned Flutter SDK
+
+From the **repo root**:
+
+```bash
+fvm install
+```
+
+`fvm install` takes no argument on purpose: it reads the version configured for
+the project — `3.47.6`, per `.fvmrc` — and installs exactly that. Naming a
+version (or setting a global default) would defeat the pin.
+
+Verify:
+
+```bash
+fvm list
+```
+
+### 3. Run the app
+
+From the `app` directory:
+
+```bash
+cd app
+fvm flutter pub get
+fvm flutter run -d macos
+```
+
+Other useful invocations, same prefix:
+
+```bash
+fvm flutter test                  # widget tests
+fvm flutter build macos --release
+```
+
+A release build lands in
+`app/build/macos/Build/Products/Release/TTS Narrator.app`.
+
+### Troubleshooting
+
+**`flutter doctor` complaints.** Run the pinned SDK's own check:
+
+```bash
+fvm flutter doctor -v
+```
+
+**"You have not agreed to the Xcode licenses."** Accept them:
+
+```bash
+sudo xcodebuild -license accept
+```

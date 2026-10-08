@@ -4,7 +4,7 @@ For end-user documentation (install, usage, voice configuration), see **[README.
 
 ## Requirements
 
-- Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.5`, Dart 3.13.4).
+- Flutter SDK pinned via `fvm` (`.fvmrc` → `3.47.6`, Dart 3.13.5).
 - An API key for your cloud TTS provider (see the README and **[MAC.md](MAC.md)** for setup options). A local
   OpenAI-compatible audio
   server needs no key.

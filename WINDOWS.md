@@ -70,7 +70,7 @@ fvm install
 ```
 
 `fvm install` takes no argument on purpose: it reads the version configured for
-the project — `3.47.5`, per `.fvmrc` — and installs exactly that. Naming a
+the project — `3.47.6`, per `.fvmrc` — and installs exactly that. Naming a
 version (or setting a global default) would defeat the pin.
 
 Verify:
