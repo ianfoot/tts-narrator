@@ -129,7 +129,15 @@ void main() {
 
     test('setText with identical value is ignored', () {
       final c = makeController();
+      var notified = 0;
+      c.addListener(() => notified++);
       c.setText('Hello');
+      expect(notified, 1);
+      // The editor re-emits its text on every rebuild, so a value that has not
+      // actually changed must not notify: otherwise each rebuild would dirty
+      // the document and wake every listener for nothing.
+      c.setText('Hello');
+      expect(notified, 1);
       expect(c.dirty, isTrue);
       // Editing does not name the document; it stays null until first save.
       expect(c.documentName, isNull);
