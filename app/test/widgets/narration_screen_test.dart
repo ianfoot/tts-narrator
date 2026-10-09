@@ -15,29 +15,15 @@ import '../support/fake_tts_provider.dart';
 import '../support/l10n_test_support.dart';
 import '../support/run_setup_fixtures.dart' as fixtures;
 
-/// Speech client whose [synthesize] never returns: keeps a run in-flight so
-/// Cancel and the active-run Back confirm modal are meaningful.
-class _BlockingClient {
-  SpeechClient get client => synthesize;
-
-  Future<GeneratedAudio> synthesize({
-    required String model,
-    required String? voice,
-    required String input,
-    required TtsAudioFormat responseFormat,
-    required TtsWavResponseFormat wavResponseFormat,
-    required Map<String, String> settings,
-    required double? speed,
-    String? language,
-    String? instruct,
-    String? apiKey,
-    AbortToken? abort,
-  }) async {
-    await Completer<void>().future;
-    abort?.throwIfCancelled();
-    return GeneratedAudio(bytes: const [0]);
-  }
-}
+/// A speech client whose `synthesize` never returns, so a run stays in-flight
+/// for as long as the test needs it to.
+///
+/// This is [FakeTtsProvider] parked on a [Completer] that is never completed:
+/// the gate is one-shot and awaited before the call is recorded, so the run sits
+/// mid-flight until the test cancels it — which is exactly what makes Cancel and
+/// the active-run Back confirm modal meaningful.
+SpeechClient blockingClient() =>
+    (FakeTtsProvider()..gate = Completer<void>()).client;
 
 void main() {
   late Directory dir;
@@ -55,30 +41,7 @@ void main() {
   /// Writes the starter fish config so the controller has a resolvable default
   /// model, as after the first-run download; without it no model is configured
   /// and runs cannot start.
-  void writeFishConfig() {
-    fixtures.writeConfig(configDir, {
-      'providers': {
-        // A real model is served by the real (key-requiring) cloud
-        // provider; give the fixture a dummy key so run-plan building
-        // succeeds regardless of the fake provider registered here, and a
-        // base_url so `narrate`'s up-front block check passes.
-        'alpha': {
-          'base_url': 'https://vendor.example/api/v1',
-          'api_key': 'sk-test',
-        },
-      },
-      'models': {
-        'fish': {
-          'id': 'fish-audio/s2.1-pro-free:free',
-          'formats': ['mp3'],
-        },
-      },
-      'defaults': {'fish': 'British Female Narrator'},
-      'voices': {
-        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
-      },
-    });
-  }
+  void writeFishConfig() => fixtures.writeRunnableFishConfig(configDir);
 
   AppController makeController({SpeechClient? client}) {
     writeFishConfig();
@@ -267,7 +230,7 @@ void main() {
   });
 
   testWidgets('Cancel Run stops a running narration', (tester) async {
-    final c = makeController(client: _BlockingClient().client)..sampleLen = 5;
+    final c = makeController(client: blockingClient())..sampleLen = 5;
     c.startRun();
     await pumpRun(tester, c);
 
@@ -283,7 +246,7 @@ void main() {
   testWidgets('Back during an active run prompts and Cancel Run leaves', (
     tester,
   ) async {
-    final c = makeController(client: _BlockingClient().client)..sampleLen = 3;
+    final c = makeController(client: blockingClient())..sampleLen = 3;
     c.startRun();
     await pumpRun(tester, c);
 
@@ -329,7 +292,7 @@ void main() {
   testWidgets(
     'system pop while a run is active prompts, then leaves on confirm',
     (tester) async {
-      final c = makeController(client: _BlockingClient().client)..sampleLen = 3;
+      final c = makeController(client: blockingClient())..sampleLen = 3;
       c.startRun();
       await pumpPushedRun(tester, c);
 
@@ -376,7 +339,7 @@ void main() {
   testWidgets('double-tap Back while running shows a single confirm dialog', (
     tester,
   ) async {
-    final c = makeController(client: _BlockingClient().client)..sampleLen = 3;
+    final c = makeController(client: blockingClient())..sampleLen = 3;
     c.startRun();
     await pumpPushedRun(tester, c);
 

@@ -27,6 +27,10 @@ void main() {
   setUp(() {
     dir = Directory.systemTemp.createTempSync('tts_controller_test_');
     configDir = '${dir.path}/cfg';
+    // Every test in this file runs in the same isolate; reset the mock so a
+    // stored key never leaks between tests. Mutable: the mock also accepts
+    // writes from save/remove.
+    FlutterSecureStorage.setMockInitialValues(<String, String>{});
   });
 
   tearDown(() {
@@ -69,53 +73,17 @@ void main() {
     return store;
   }
 
-  /// Writes the starter fish config (a fish model file claimed by a provider)
-  /// mirroring the shipped voice-config layout) so the controller preselects
-  /// fish with its default voice, as it does after the first-run download.
-  void writeFishConfig() {
-    writeConfig({
-      'providers': {
-        'alpha': {
-          'base_url': 'https://vendor.example/api/v1',
-          'api_key': 'sk-test',
-        },
-      },
-      'models': {
-        'fish': {
-          'id': 'fish-audio/s2.1-pro-free:free',
-          'formats': ['mp3'],
-        },
-      },
-      'defaults': {'fish': 'British Female Narrator'},
-      'voices': {
-        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
-      },
-    });
-  }
+  /// Writes the starter fish config so the controller preselects fish with its
+  /// default voice. See `fixtures.writeRunnableFishConfig`.
+  void writeFishConfig() => fixtures.writeRunnableFishConfig(configDir);
 
   /// As [writeFishConfig], but the model declares `prompt_style`, which is
   /// what derives the prompt-controls portion of the model-options spec.
-  void writePromptStyleFishConfig() {
-    writeConfig({
-      'providers': {
-        'alpha': {
-          'base_url': 'https://vendor.example/api/v1',
-          'api_key': 'sk-test',
-        },
-      },
-      'models': {
-        'fish': {
-          'id': 'fish-audio/s2.1-pro-free:free',
-          'formats': ['mp3'],
-          'prompt_style': true,
-        },
-      },
-      'defaults': {'fish': 'British Female Narrator'},
-      'voices': {
-        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
-      },
-    });
-  }
+  void writePromptStyleFishConfig() =>
+      fixtures.writeRunnableFishConfig(
+        configDir,
+        extra: const {'prompt_style': true},
+      );
 
   group('cold start', () {
     test('boots an empty, untitled document with no model configured', () {
@@ -487,13 +455,6 @@ void main() {
   });
 
   group('API key secure-store fallback', () {
-    setUp(() {
-      // Every test in this file runs in the same isolate; reset the mock so a
-      // stored key never leaks between tests. Mutable: the mock also accepts
-      // writes from save/remove.
-      FlutterSecureStorage.setMockInitialValues(<String, String>{});
-    });
-
     /// Writes the fish config whose alpha block references a `${ENV}`
     /// that is guaranteed absent — the exact double-click scenario the
     /// secure-store fallback exists for.
@@ -521,11 +482,7 @@ void main() {
       'an unresolvable \${ENV} ref falls back to the securely stored key',
       () async {
         writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
-        final c = AppController(
-          loader: UserVoiceConfigLoader(
-            configDir: configDir,
-            environment: const {},
-          ),
+        final c = makeController(
           apiKeyStore: await storeLoadedWith('sk-stored'),
         )..setText('A sentence.');
         final cfg = c.buildConfig();
@@ -536,11 +493,7 @@ void main() {
 
     test('a config literal is the key when nothing is stored', () async {
       writeFishConfig(); // `api_key: sk-test` literal.
-      final c = AppController(
-        loader: UserVoiceConfigLoader(
-          configDir: configDir,
-          environment: const {},
-        ),
+      final c = makeController(
         apiKeyStore: await storeLoadedWith(null),
       )..setText('A sentence.');
       final cfg = c.buildConfig();
@@ -552,11 +505,8 @@ void main() {
       'a resolvable \${ENV} ref flows through and reads as environment',
       () async {
         writeEnvRefFishConfig(r'${HOME}');
-        final c = AppController(
-          loader: UserVoiceConfigLoader(
-            configDir: configDir,
-            environment: const {'HOME': '/home/test'},
-          ),
+        final c = makeController(
+          environment: const {'HOME': '/home/test'},
           apiKeyStore: await storeLoadedWith('sk-stored'),
         )..setText('A sentence.');
         final cfg = c.buildConfig();
@@ -570,11 +520,7 @@ void main() {
       // in it can be a pooled credential. A keychain entry was typed by this
       // user, so it wins.
       writeFishConfig(); // `api_key: sk-test` literal.
-      final c = AppController(
-        loader: UserVoiceConfigLoader(
-          configDir: configDir,
-          environment: const {},
-        ),
+      final c = makeController(
         apiKeyStore: await storeLoadedWith('sk-stored'),
       )..setText('A sentence.');
       final cfg = c.buildConfig();
@@ -586,11 +532,8 @@ void main() {
       'a resolvable \${ENV} ref flows through and reads as environment',
       () async {
         writeEnvRefFishConfig(r'${HOME}');
-        final c = AppController(
-          loader: UserVoiceConfigLoader(
-            configDir: configDir,
-            environment: const {'HOME': '/home/test'},
-          ),
+        final c = makeController(
+          environment: const {'HOME': '/home/test'},
           apiKeyStore: ApiKeyStore(),
         )..setText('A sentence.');
         final cfg = c.buildConfig();
@@ -601,11 +544,7 @@ void main() {
 
     test('the key never lands in providerSettings', () async {
       writeFishConfig(); // `api_key: sk-test` literal.
-      final c = AppController(
-        loader: UserVoiceConfigLoader(
-          configDir: configDir,
-          environment: const {},
-        ),
+      final c = makeController(
         apiKeyStore: await storeLoadedWith('sk-stored'),
       )..setText('A sentence.');
       final settings = c.buildConfig().providerSettings;
@@ -622,13 +561,8 @@ void main() {
       // server's judgement, so the app must not refuse to build a run. A null
       // apiKey means "send no Authorization header", not "error".
       writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
-      final c = AppController(
-        loader: UserVoiceConfigLoader(
-          configDir: configDir,
-          environment: const {},
-        ),
-        apiKeyStore: ApiKeyStore(),
-      )..setText('A sentence.');
+      final c = makeController(apiKeyStore: ApiKeyStore())
+        ..setText('A sentence.');
       expect(() => c.buildConfig(), returnsNormally);
       expect(c.buildConfig().apiKey, isNull);
       expect(c.apiKeySource, ApiKeySource.missing);
@@ -636,13 +570,7 @@ void main() {
 
     test('saving/removing through the store flips the rail status', () async {
       writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
-      final c = AppController(
-        loader: UserVoiceConfigLoader(
-          configDir: configDir,
-          environment: const {},
-        ),
-        apiKeyStore: await storeLoadedWith(null),
-      );
+      final c = makeController(apiKeyStore: await storeLoadedWith(null));
       expect(c.apiKeySource, ApiKeySource.missing);
       await c.saveApiKey(' sk-stored ');
       expect(c.hasStoredApiKey, isTrue);
@@ -655,10 +583,6 @@ void main() {
   });
 
   group('per-provider key store', () {
-    setUp(() {
-      FlutterSecureStorage.setMockInitialValues(<String, String>{});
-    });
-
     /// Two providers, each claiming its own model, so switching model switches
     /// which provider the active model resolves to.
     void writeTwoProviderConfig() {
@@ -697,11 +621,7 @@ void main() {
 
     test('a saved key is filed under the active provider only', () async {
       writeTwoProviderConfig();
-      final c = AppController(
-        loader: UserVoiceConfigLoader(
-          configDir: configDir,
-          environment: const {},
-        ),
+      final c = makeController(
         apiKeyStore: await storeLoadedWith(null),
       );
       expect(c.profile?.provider, 'alpha');
@@ -719,11 +639,7 @@ void main() {
 
     test('switching model switches which stored key is visible', () async {
       writeTwoProviderConfig();
-      final c = AppController(
-        loader: UserVoiceConfigLoader(
-          configDir: configDir,
-          environment: const {},
-        ),
+      final c = makeController(
         apiKeyStore: await storeLoadedWith(null),
       );
 
@@ -768,10 +684,6 @@ void main() {
   });
 
   group('api_key resolution', () {
-    setUp(() {
-      FlutterSecureStorage.setMockInitialValues(<String, String>{});
-    });
-
     /// Writes a fish config whose only provider is [providerName], declaring
     /// exactly [settings]. The provider file's name is what the model resolves
     /// its provider to, so this also proves the name is not special-cased.
@@ -824,11 +736,7 @@ void main() {
       r'an unresolvable ${ENV} reference falls back to the stored key',
       () async {
         writeProviderConfig('alpha', {'api_key': r'${VENDOR_API_KEY}'});
-        final c = AppController(
-          loader: UserVoiceConfigLoader(
-            configDir: configDir,
-            environment: const {},
-          ),
+        final c = makeController(
           apiKeyStore: await storeLoadedWith('sk-stored'),
         )..setText('A sentence.');
 

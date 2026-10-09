@@ -125,6 +125,35 @@ void writeFishConfig(String configDir) {
   });
 }
 
+/// As [writeFishConfig], but with a provider block carrying a *literal* API key
+/// rather than the `${VENDOR_API_KEY}` reference [writeConfig] defaults to.
+///
+/// That is the whole difference, and it is the difference that matters: an
+/// unresolved reference yields no key, and `narrate` refuses to start a run
+/// without one. So this is the fixture for any test that actually starts a run,
+/// where [writeFishConfig] is the right one for tests that only read the config
+/// back. [extra] merges into the model file, for the tests whose subject is a
+/// capability the plain fish profile does not declare.
+void writeRunnableFishConfig(
+  String configDir, {
+  Map<String, Object?> extra = const {},
+}) => writeConfig(configDir, {
+  'providers': {
+    'alpha': {'base_url': 'https://vendor.example/api/v1', 'api_key': 'sk-test'},
+  },
+  'models': {
+    'fish': {
+      'id': 'fish-audio/s2.1-pro-free:free',
+      'formats': ['mp3'],
+      ...extra,
+    },
+  },
+  'defaults': {'fish': 'British Female Narrator'},
+  'voices': {
+    'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
+  },
+});
+
 /// Writes a voice-design config: a model that takes no voice id and writes its
 /// narrator from prose instead, the way Qwen3 TTS Voice Design does.
 ///

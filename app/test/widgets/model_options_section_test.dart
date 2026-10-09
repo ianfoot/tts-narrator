@@ -28,21 +28,8 @@ void main() {
   /// Writes a single `fish` model with the given extra model-file keys, so a
   /// test can opt a model into the prompt-style and/or speed capabilities
   /// that `ModelUiSpec.forProfile` derives its controls from.
-  void writeCapableFish(Map<String, Object?> extra) {
-    writeConfig(configDir, {
-      'models': {
-        'fish': {
-          'id': 'fish-audio/s2.1-pro-free:free',
-          'formats': ['mp3'],
-          ...extra,
-        },
-      },
-      'defaults': {'fish': 'British Female Narrator'},
-      'voices': {
-        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
-      },
-    });
-  }
+  void writeCapableFish(Map<String, Object?> extra) =>
+      writeRunnableFishConfig(configDir, extra: extra);
 
   testWidgets('declared fields render and write through to the controller', (
     tester,

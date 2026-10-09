@@ -35,24 +35,7 @@ void main() {
   });
 
   AppController makeController({SpeechClient? client}) {
-    fixtures.writeConfig(configDir, {
-      'providers': {
-        'alpha': {
-          'base_url': 'https://vendor.example/api/v1',
-          'api_key': 'sk-test',
-        },
-      },
-      'models': {
-        'fish': {
-          'id': 'fish-audio/s2.1-pro-free:free',
-          'formats': ['mp3'],
-        },
-      },
-      'defaults': {'fish': 'British Female Narrator'},
-      'voices': {
-        'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
-      },
-    });
+    fixtures.writeRunnableFishConfig(configDir);
     return AppController(
       loader: UserVoiceConfigLoader(configDir: configDir),
       client: client,

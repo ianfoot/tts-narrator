@@ -3,10 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tts_narrator/src/gui/controller/app_controller.dart';
-import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/run_setup/run_setup_panel.dart';
-import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/l10n_test_support.dart';
 import '../support/run_setup_fixtures.dart' as fixtures;
@@ -24,48 +21,16 @@ void main() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
-  /// Writes the shared grouped config body onto the registry layout, against
-  /// this group's config dir.
-  void writeConfig(Map<String, Object?> body) =>
-      fixtures.writeConfig(configDir, body);
-
-  /// Pass [client] to drive narration with a fake instead of the network;
-  /// omitting it keeps the real client, which is correct for tests that never
-  /// start a run. [environment] defaults to empty so no test depends on what
-  /// the host shell exports.
-  AppController makeController({
-    SpeechClient? client,
-    Map<String, String>? environment,
-  }) => AppController(
-    loader: UserVoiceConfigLoader(
-      configDir: configDir,
-      environment: environment ?? const {},
-    ),
-    client: client,
-  );
-
-  Future<void> pumpRunSetupPanel(
-    WidgetTester tester,
-    AppController controller,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(1200, 1800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: testLocalizationsDelegates,
-        supportedLocales: testSupportedLocales,
-        home: Scaffold(body: RunSetupPanel(controller: controller)),
-      ),
-    );
-  }
-
   group('defaults', () {
     testWidgets('boots with the fish model, its voice, and the defaults', (
       tester,
     ) async {
-      writeConfig({});
-      final c = makeController();
-      await pumpRunSetupPanel(tester, c);
+      fixtures.writeConfig(configDir, {});
+      final c = fixtures.makeController(configDir);
+      await fixtures.pumpRunSetupSection(
+        tester,
+        RunSetupPanel(controller: c),
+      );
 
       expect(find.byKey(const Key('runSetupPanel')), findsOneWidget);
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
@@ -104,7 +69,7 @@ void main() {
       // The one test that stays in this file's own right: it is the only place
       // that asserts the panel actually mounts every section at once. The
       // per-section behaviour lives in the section test files.
-      writeConfig({
+      fixtures.writeConfig(configDir, {
         'models': {
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
@@ -122,9 +87,12 @@ void main() {
           'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
         },
       });
-      final c = makeController();
+      final c = fixtures.makeController(configDir);
       c.changeModel('gemini');
-      await pumpRunSetupPanel(tester, c);
+      await fixtures.pumpRunSetupSection(
+        tester,
+        RunSetupPanel(controller: c),
+      );
 
       expect(find.byKey(const Key('runSetupPanel')), findsOneWidget);
       // Model & voice: the language row only renders for a model that declares
@@ -145,7 +113,7 @@ void main() {
     testWidgets('the kokoro panel surfaces a speed slider; fish does not', (
       tester,
     ) async {
-      writeConfig({
+      fixtures.writeConfig(configDir, {
         'models': {
           'fish': {
             'id': 'fish-audio/s2.1-pro-free:free',
@@ -174,8 +142,11 @@ void main() {
       });
       // Kokoro declares "speed": true in its model file, so the rail offers
       // the slider for it; fish declares nothing and gets none.
-      final c = makeController();
-      await pumpRunSetupPanel(tester, c);
+      final c = fixtures.makeController(configDir);
+      await fixtures.pumpRunSetupSection(
+        tester,
+        RunSetupPanel(controller: c),
+      );
 
       expect(c.modelAlias, 'fish');
       expect(find.text('MODEL OPTIONS'), findsNothing);
@@ -197,8 +168,11 @@ void main() {
       'a voice-design model drops the voice picker but keeps the language one',
       (tester) async {
         fixtures.writeVoiceDesignConfig(configDir);
-        final c = makeController();
-        await pumpRunSetupPanel(tester, c);
+        final c = fixtures.makeController(configDir);
+        await fixtures.pumpRunSetupSection(
+          tester,
+          RunSetupPanel(controller: c),
+        );
 
         // No voice id is ever sent, so there is nothing to pick: the dropdown
         // and its advanced-override row both disappear rather than sitting
@@ -234,7 +208,7 @@ void main() {
       tester,
     ) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-      writeConfig({
+      fixtures.writeConfig(configDir, {
         'models': {
           'gemini': {
             'id': 'google/gemini-3.1-flash-tts-preview',
@@ -250,7 +224,7 @@ void main() {
         },
       });
       // gemini declares prompt_style, so switching to it derives its options.
-      final c = makeController();
+      final c = fixtures.makeController(configDir);
       await tester.binding.setSurfaceSize(const Size(1200, 1800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(testApp(home: RunSetupPanel(controller: c)));
