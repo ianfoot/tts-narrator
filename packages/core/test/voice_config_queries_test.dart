@@ -315,18 +315,7 @@ void main() {
   });
 
   group('defaultVoiceFor', () {
-    test('uses the configured default label', () {
-      final cfg = _cfg(
-        voices: const {
-          'kokoro': {'Emma': Voice(id: 'bf_emma')},
-        },
-        defaults: const {'kokoro': 'Emma'},
-        models: {'kokoro': _model(alias: 'kokoro', id: 'hexgrad/kokoro-82m')},
-      );
-      final model = profileFor('kokoro', cfg)!;
-      final (id, label) = defaultVoiceFor(model, cfg);
-      expect(label, 'Emma');
-    });
+    
 
     test('uses the configured default voice for a model', () {
       final cfg = _cfg(

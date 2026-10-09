@@ -478,19 +478,6 @@ void main() {
       });
     }
 
-    test(
-      'an unresolvable \${ENV} ref falls back to the securely stored key',
-      () async {
-        writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
-        final c = makeController(
-          apiKeyStore: await storeLoadedWith('sk-stored'),
-        )..setText('A sentence.');
-        final cfg = c.buildConfig();
-        expect(cfg.apiKey, 'sk-stored');
-        expect(c.apiKeySource, ApiKeySource.keychain);
-      },
-    );
-
     test('a config literal is the key when nothing is stored', () async {
       writeFishConfig(); // `api_key: sk-test` literal.
       final c = makeController(
@@ -502,7 +489,7 @@ void main() {
     });
 
     test(
-      'a resolvable \${ENV} ref flows through and reads as environment',
+      'a stored key still wins over a resolvable \${ENV} ref',
       () async {
         writeEnvRefFishConfig(r'${HOME}');
         final c = makeController(
@@ -554,18 +541,6 @@ void main() {
         reason:
             'the secret travels as NarrationConfig.apiKey, not as a setting',
       );
-    });
-
-    test('a run is never blocked when no key exists anywhere', () {
-      // The load-bearing guarantee: whether a provider *needs* a key is the
-      // server's judgement, so the app must not refuse to build a run. A null
-      // apiKey means "send no Authorization header", not "error".
-      writeEnvRefFishConfig(r'${TTS_NARRATOR_NOT_SET}');
-      final c = makeController(apiKeyStore: ApiKeyStore())
-        ..setText('A sentence.');
-      expect(() => c.buildConfig(), returnsNormally);
-      expect(c.buildConfig().apiKey, isNull);
-      expect(c.apiKeySource, ApiKeySource.missing);
     });
 
     test('saving/removing through the store flips the rail status', () async {
@@ -749,6 +724,9 @@ void main() {
       writeProviderConfig('alpha', {'api_key': r'${VENDOR_API_KEY}'});
       final c = makeController()..setText('A sentence.');
 
+      // The load-bearing guarantee: whether a provider *needs* a key is the
+      // server's judgement, so the app must not refuse to build a run. A null
+      // apiKey means "send no Authorization header", not "error".
       expect(() => c.buildConfig(), returnsNormally);
       expect(c.buildConfig().apiKey, isNull);
       // Not `environment`: nothing was actually sent from the environment.

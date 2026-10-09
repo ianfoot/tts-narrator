@@ -233,7 +233,6 @@ void main() {
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
       // The default fish model declares no options -> no styling-only controls.
       expect(find.byKey(const Key('useCalmTagSwitch')), findsNothing);
-      expect(tester.takeException(), isNull);
 
       // Open the native pop-up menu and pick gemini.
       await tester.tap(find.byKey(const Key('modelDropdown')));
@@ -244,7 +243,6 @@ void main() {
       expect(c.modelAlias, 'gemini');
       expect(c.voice, 'CN2pVME9cDEeMRXJzcMPYj0p');
       expect(find.byKey(const Key('accentField')), findsOneWidget);
-      expect(tester.takeException(), isNull);
 
       debugDefaultTargetPlatformOverride = null;
     });

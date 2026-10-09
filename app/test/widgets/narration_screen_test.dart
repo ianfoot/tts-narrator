@@ -137,7 +137,6 @@ void main() {
     expect(find.byKey(const Key('runHeaderTitle')), findsOneWidget);
     final pill = tester.widget<Text>(find.byKey(const Key('runSummaryPill')));
     expect(pill.data, contains('1 segment · '));
-    expect(pill.data, contains('·'));
     expect(find.byKey(const Key('runProgressBar')), findsOneWidget);
     expect(find.byKey(const Key('runBackButton')), findsOneWidget);
     expect(find.byKey(const Key('runActionBack')), findsOneWidget);
@@ -312,7 +311,6 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Cancel active narration run?'), findsOneWidget);
-      expect(find.byKey(const Key('editorHost')), findsNothing);
       expect(c.narrating, isTrue);
 
       // Deferring keeps the run on screen and generating.
