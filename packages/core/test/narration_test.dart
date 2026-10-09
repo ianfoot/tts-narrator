@@ -8,6 +8,7 @@ import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/narration.dart';
 import 'package:tts_narrator_core/src/narration/prompt.dart';
+import 'package:tts_narrator_core/src/narration/prompt_strings.dart';
 import 'package:tts_narrator_core/src/narration/wav.dart';
 
 import 'support/fake_provider.dart';
@@ -480,9 +481,20 @@ void main() {
   });
 
   group('sourceText (in-memory)', () {
-    NarrationConfig typedConfig() => NarrationConfig(
+    /// A config whose every field is identical from one test to the next, so
+    /// that a test reads as the one or two fields it is actually varying.
+    ///
+    /// [minWords] defaults to null rather than a number so that leaving it
+    /// unset keeps [NarrationConfig]'s own default; a test that passes 1 is
+    /// stating that every paragraph must stay its own segment.
+    NarrationConfig typedConfig({
+      String sourceText = _inputText,
+      bool sendWholeFile = false,
+      int? minWords,
+      int? sampleLen,
+    }) => NarrationConfig(
       inputPath: 'story.txt',
-      sourceText: _inputText,
+      sourceText: sourceText,
       profile: TtsModelProfile(
         alias: 'test',
         id: 'test/model',
@@ -493,6 +505,9 @@ void main() {
       voice: 'VoiceOne',
       providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
       outDir: '${dir.path}/out',
+      sendWholeFile: sendWholeFile,
+      minWords: minWords ?? PromptDefaults.minWords,
+      sampleLen: sampleLen,
     );
 
     test('plans from text without any backing file', () {
@@ -502,36 +517,14 @@ void main() {
     });
 
     test('empty sourceText raises the inputPath-guarded planning error', () {
-      final cfg = NarrationConfig(
-        inputPath: 'story.txt',
-        sourceText: '',
-        profile: TtsModelProfile(
-          alias: 'test',
-          id: 'test/model',
-          formats: const [TtsAudioFormat.mp3],
-          provider: provider.id,
-        ),
-        outputFormat: TtsAudioFormat.mp3,
-        voice: 'VoiceOne',
-        outDir: '${dir.path}/out',
-      );
+      final cfg = typedConfig(sourceText: '');
       expect(() => planSegments(cfg), throwsStateError);
     });
 
     test('sendWholeFile returns the entire source as one segment', () {
       const multi = 'Para alpha.\n\nPara beta.\n\nPara gamma.';
-      final cfg = NarrationConfig(
-        inputPath: 'story.txt',
+      final cfg = typedConfig(
         sourceText: multi,
-        profile: TtsModelProfile(
-          alias: 'test',
-          id: 'test/model',
-          formats: const [TtsAudioFormat.mp3],
-          provider: provider.id,
-        ),
-        outputFormat: TtsAudioFormat.mp3,
-        voice: 'VoiceOne',
-        outDir: '${dir.path}/out',
         // Segmentation settings are ignored in whole-file mode.
         minWords: 1,
         sendWholeFile: true,
@@ -540,100 +533,34 @@ void main() {
     });
 
     test('sendWholeFile trims and normalizes line endings', () {
-      final cfg = NarrationConfig(
-        inputPath: 'story.txt',
+      final cfg = typedConfig(
         sourceText: 'One.\r\n\r\nTwo.',
-        profile: TtsModelProfile(
-          alias: 'test',
-          id: 'test/model',
-          formats: const [TtsAudioFormat.mp3],
-          provider: provider.id,
-        ),
-        outputFormat: TtsAudioFormat.mp3,
-        voice: 'VoiceOne',
-        outDir: '${dir.path}/out',
         sendWholeFile: true,
       );
       expect(planSegments(cfg), ['One.\n\nTwo.']);
     });
 
     test('sendWholeFile with only blank text raises the planning error', () {
-      final cfg = NarrationConfig(
-        inputPath: 'story.txt',
-        sourceText: '   \n\n  ',
-        profile: TtsModelProfile(
-          alias: 'test',
-          id: 'test/model',
-          formats: const [TtsAudioFormat.mp3],
-          provider: provider.id,
-        ),
-        outputFormat: TtsAudioFormat.mp3,
-        voice: 'VoiceOne',
-        outDir: '${dir.path}/out',
-        sendWholeFile: true,
-      );
+      final cfg = typedConfig(sourceText: '   \n\n  ', sendWholeFile: true);
       expect(() => planSegments(cfg), throwsStateError);
     });
 
     test('sendWholeFile rejects a document over the whole-file cap', () {
       final tooLong = List.filled(maxWholeFileLength + 1, 'x').join();
-      final cfg = NarrationConfig(
-        inputPath: 'story.txt',
-        sourceText: tooLong,
-        profile: TtsModelProfile(
-          alias: 'test',
-          id: 'test/model',
-          formats: const [TtsAudioFormat.mp3],
-          provider: provider.id,
-        ),
-        outputFormat: TtsAudioFormat.mp3,
-        voice: 'VoiceOne',
-        outDir: '${dir.path}/out',
-        sendWholeFile: true,
-      );
+      final cfg = typedConfig(sourceText: tooLong, sendWholeFile: true);
       expect(() => planSegments(cfg), throwsStateError);
     });
 
     test('sendWholeFile accepts a document at the cap', () {
       final atCap = List.filled(maxWholeFileLength, 'x').join();
-      final cfg = NarrationConfig(
-        inputPath: 'story.txt',
-        sourceText: atCap,
-        profile: TtsModelProfile(
-          alias: 'test',
-          id: 'test/model',
-          formats: const [TtsAudioFormat.mp3],
-          provider: provider.id,
-        ),
-        outputFormat: TtsAudioFormat.mp3,
-        voice: 'VoiceOne',
-        outDir: '${dir.path}/out',
-        sendWholeFile: true,
-      );
+      final cfg = typedConfig(sourceText: atCap, sendWholeFile: true);
       expect(planSegments(cfg), [atCap]);
     });
 
     test(
       'the manifest records the whole-file cap in whole-file mode',
       () async {
-        final cfg = NarrationConfig(
-          inputPath: 'story.txt',
-          sourceText: _inputText,
-          profile: TtsModelProfile(
-            alias: 'test',
-            id: 'test/model',
-            formats: const [TtsAudioFormat.mp3],
-            provider: provider.id,
-          ),
-          outputFormat: TtsAudioFormat.mp3,
-          voice: 'VoiceOne',
-          providerSettings: const {
-            'base_url': testBaseUrl,
-            'api_key': 'sk-test',
-          },
-          outDir: '${dir.path}/out',
-          sendWholeFile: true,
-        );
+        final cfg = typedConfig(sendWholeFile: true);
         await narrate(cfg, client: provider.client);
 
         final manifest = jsonDecode(
@@ -644,19 +571,8 @@ void main() {
     );
 
     test('sendWholeFile narrates the whole source in a single call', () async {
-      final cfg = NarrationConfig(
-        inputPath: 'story.txt',
+      final cfg = typedConfig(
         sourceText: '$_inputText\n\n$_inputText',
-        profile: TtsModelProfile(
-          alias: 'test',
-          id: 'test/model',
-          formats: const [TtsAudioFormat.mp3],
-          provider: provider.id,
-        ),
-        outputFormat: TtsAudioFormat.mp3,
-        voice: 'VoiceOne',
-        providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
-        outDir: '${dir.path}/out',
         sendWholeFile: true,
       );
       await narrate(cfg, client: provider.client);
@@ -688,19 +604,8 @@ void main() {
 
     test('sampleLen limits an in-memory run', () async {
       const multi = '$_inputText\n\n$_inputText\n\n$_inputText\n\n$_inputText';
-      final cfg = NarrationConfig(
-        inputPath: 'story.txt',
+      final cfg = typedConfig(
         sourceText: multi,
-        profile: TtsModelProfile(
-          alias: 'test',
-          id: 'test/model',
-          formats: const [TtsAudioFormat.mp3],
-          provider: provider.id,
-        ),
-        outputFormat: TtsAudioFormat.mp3,
-        voice: 'VoiceOne',
-        providerSettings: const {'base_url': testBaseUrl, 'api_key': 'sk-test'},
-        outDir: '${dir.path}/out',
         // minWords 1 keeps every paragraph its own segment = 4 segments.
         minWords: 1,
         sampleLen: 1,

@@ -76,6 +76,40 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// The screen's own writer, as the test reads it back off disk.
+  VoiceConfigStore store() => VoiceConfigStore(configDir);
+
+  /// Drives the add-voice dialog end to end.
+  ///
+  /// The cases here differ only in which fields they fill and how they leave,
+  /// so naming the dialog once leaves each test on what it is really about: a
+  /// blank submit is a no-op, a cancel writes nothing, a full save lands.
+  /// Leaving [label] and [id] null leaves both fields blank.
+  Future<void> addVoice(
+    WidgetTester tester, {
+    String? label,
+    String? id,
+    bool cancel = false,
+  }) async {
+    await tester.tap(find.byKey(const Key('addVoiceButton')));
+    await tester.pumpAndSettle();
+    if (label != null) {
+      await tester.enterText(
+        find.byKey(const Key('voiceDialogLabelField')),
+        label,
+      );
+    }
+    if (id != null) {
+      await tester.enterText(find.byKey(const Key('voiceDialogIdField')), id);
+    }
+    await tester.tap(
+      find.byKey(
+        Key(cancel ? 'voiceDialogCancelButton' : 'voiceDialogSaveButton'),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
   group('layout', () {
     testWidgets('shows the model metadata and every configured voice', (
       tester,
@@ -136,18 +170,7 @@ void main() {
       final c = makeController();
       await pumpSettingsScreen(tester, c);
 
-      await tester.tap(find.byKey(const Key('addVoiceButton')));
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byKey(const Key('voiceDialogLabelField')),
-        'Custom',
-      );
-      await tester.enterText(
-        find.byKey(const Key('voiceDialogIdField')),
-        'deadbeef',
-      );
-      await tester.tap(find.byKey(const Key('voiceDialogSaveButton')));
-      await tester.pumpAndSettle();
+      await addVoice(tester, label: 'Custom', id: 'deadbeef');
 
       // The new row shows...
       expect(find.text('Custom'), findsOneWidget);
@@ -167,16 +190,9 @@ void main() {
       writeEditableConfig();
       await pumpSettingsScreen(tester, makeController());
 
-      await tester.tap(find.byKey(const Key('addVoiceButton')));
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byKey(const Key('voiceDialogIdField')),
-        'deadbeef',
-      );
-      await tester.tap(find.byKey(const Key('voiceDialogCancelButton')));
-      await tester.pumpAndSettle();
+      await addVoice(tester, id: 'deadbeef', cancel: true);
 
-      expect(VoiceConfigStore(configDir).hasOverlayModel('fish'), isFalse);
+      expect(store().hasOverlayModel('fish'), isFalse);
     });
 
     testWidgets('a blank row is refused and no file is written', (
@@ -185,14 +201,11 @@ void main() {
       writeEditableConfig();
       await pumpSettingsScreen(tester, makeController());
 
-      await tester.tap(find.byKey(const Key('addVoiceButton')));
-      await tester.pumpAndSettle();
       // Both fields blank: the dialog's submit is a no-op, so it stays open.
-      await tester.tap(find.byKey(const Key('voiceDialogSaveButton')));
-      await tester.pumpAndSettle();
+      await addVoice(tester);
 
       expect(find.byKey(const Key('voiceDialogLabelField')), findsOneWidget);
-      expect(VoiceConfigStore(configDir).hasOverlayModel('fish'), isFalse);
+      expect(store().hasOverlayModel('fish'), isFalse);
     });
 
     testWidgets('removing the default voice is refused with a reason', (
@@ -213,7 +226,7 @@ void main() {
       );
       // Nothing was written, so the row is still there.
       expect(find.text('British Female Narrator'), findsOneWidget);
-      expect(VoiceConfigStore(configDir).hasOverlayModel('fish'), isFalse);
+      expect(store().hasOverlayModel('fish'), isFalse);
     });
 
     testWidgets('a non-default voice can be removed', (tester) async {
@@ -227,13 +240,13 @@ void main() {
 
       expect(find.text('Alice'), findsNothing);
       expect(
-        VoiceConfigStore(configDir).readModelJson('fish')!['voices'],
+        store().readModelJson('fish')!['voices'],
         isNot(contains('c536c6cdbe8e4d9484232e78ab80020f')),
       );
       // The default the removed row was not is untouched, and it is the id the
       // voices block is keyed by — not the label, which may have been renamed.
       expect(
-        VoiceConfigStore(configDir).readModelJson('fish')!['default_voice'],
+        store().readModelJson('fish')!['default_voice'],
         '89f41ea230034706881f85a8227d6ab9',
       );
     });
@@ -253,7 +266,7 @@ void main() {
       await tester.tap(find.byKey(const Key('voiceDialogSaveButton')));
       await tester.pumpAndSettle();
 
-      final json = VoiceConfigStore(configDir).readModelJson('fish')!;
+      final json = store().readModelJson('fish')!;
       // The default follows the voice, and the voice is filed under its id, so
       // a rename leaves the default pointing at the same entry.
       expect(json['default_voice'], '89f41ea230034706881f85a8227d6ab9');
@@ -275,7 +288,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final json = VoiceConfigStore(configDir).readModelJson('fish')!;
+      final json = store().readModelJson('fish')!;
       expect(json['default_voice'], 'c536c6cdbe8e4d9484232e78ab80020f');
     });
   });
@@ -295,18 +308,7 @@ void main() {
       final c = makeController();
       await pumpSettingsScreen(tester, c);
 
-      await tester.tap(find.byKey(const Key('addVoiceButton')));
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byKey(const Key('voiceDialogLabelField')),
-        'Custom',
-      );
-      await tester.enterText(
-        find.byKey(const Key('voiceDialogIdField')),
-        'deadbeef',
-      );
-      await tester.tap(find.byKey(const Key('voiceDialogSaveButton')));
-      await tester.pumpAndSettle();
+      await addVoice(tester, label: 'Custom', id: 'deadbeef');
       expect(find.byKey(const Key('revertModelButton')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('revertModelButton')));
@@ -315,7 +317,7 @@ void main() {
       expect(find.byKey(const Key('revertModelButton')), findsNothing);
       expect(find.text('Custom'), findsNothing);
       expect(find.text('Alice'), findsOneWidget);
-      expect(VoiceConfigStore(configDir).hasOverlayModel('fish'), isFalse);
+      expect(store().hasOverlayModel('fish'), isFalse);
       expect(c.voiceItems.where((i) => i.$1 == 'deadbeef'), isEmpty);
     });
 

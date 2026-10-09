@@ -26,6 +26,48 @@ void main() {
   Future<void> pumpSection(WidgetTester tester, AppController c) =>
       pumpRunSetupSection(tester, ModelVoiceSection(controller: c));
 
+  /// Opens the dropdown with key [key] and picks the entry [label].
+  ///
+  /// Every picker in this section is the same gesture on a different key. The
+  /// `.last` is what selects the entry out of the open overlay, which repeats
+  /// the closed button's own label; [exact] is false where the entry is
+  /// identified by part of its name rather than all of it.
+  Future<void> pickFrom(
+    WidgetTester tester,
+    String key,
+    String label, {
+    bool exact = true,
+  }) async {
+    await tester.tap(find.byKey(Key(key)));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      (exact ? find.text(label) : find.textContaining(label)).last,
+    );
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> switchModelTo(WidgetTester tester, String label) =>
+      pickFrom(tester, 'modelDropdown', label, exact: false);
+
+  Future<void> pickVoice(WidgetTester tester, String label) =>
+      pickFrom(tester, 'voiceDropdown', label);
+
+  Future<void> pickLanguage(WidgetTester tester, String label) =>
+      pickFrom(tester, 'languageDropdown', label);
+
+  /// Opens the voice menu without choosing from it, for tests that only read
+  /// what it offers.
+  Future<void> openVoiceMenu(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('voiceDropdown')));
+    await tester.pumpAndSettle();
+  }
+
+  /// Dismisses the open menu by tapping well clear of it.
+  Future<void> closeMenus(WidgetTester tester) async {
+    await tester.tapAt(const Offset(600, 100));
+    await tester.pumpAndSettle();
+  }
+
   group('boot', () {
     testWidgets('boots with the model and voice pickers and a collapsed '
         'advanced voice id', (tester) async {
@@ -65,10 +107,7 @@ void main() {
       await pumpSection(tester, c);
       await expandVoiceRaw(tester);
 
-      await tester.tap(find.byKey(const Key('modelDropdown')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('Gemini 3.1').last);
-      await tester.pumpAndSettle();
+      await switchModelTo(tester, 'Gemini 3.1');
 
       expect(c.modelAlias, 'gemini');
       expect(c.voice, 'CN2pVME9cDEeMRXJzcMPYj0p');
@@ -92,10 +131,7 @@ void main() {
       c.setVoice('my_custom_voice');
       await pumpSection(tester, c);
 
-      await tester.tap(find.byKey(const Key('modelDropdown')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('Gemini 3.1').last);
-      await tester.pumpAndSettle();
+      await switchModelTo(tester, 'Gemini 3.1');
 
       expect(c.modelAlias, 'gemini');
       expect(c.voice, 'my_custom_voice');
@@ -116,10 +152,7 @@ void main() {
       final c = makeController(configDir);
       await pumpSection(tester, c);
 
-      await tester.tap(find.byKey(const Key('voiceDropdown')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Narrator').last);
-      await tester.pumpAndSettle();
+      await pickVoice(tester, 'Narrator');
 
       expect(c.voice, 'hex123');
       expect(c.voiceLabel, 'Narrator');
@@ -195,13 +228,11 @@ void main() {
       expect(control.items.map((it) => it.$2), ['Any', 'Female', 'Male']);
 
       // Female voices get a compact shorthand in the dropdown.
-      await tester.tap(find.byKey(const Key('voiceDropdown')));
-      await tester.pumpAndSettle();
+      await openVoiceMenu(tester);
       expect(find.text('Emma (f)').last, findsOneWidget);
       expect(find.text('Alice (f)').last, findsOneWidget);
       // Close the open dropdown.
-      await tester.tapAt(const Offset(600, 100));
-      await tester.pumpAndSettle();
+      await closeMenus(tester);
 
       // Switch to Male: the filter narrows the picker and auto-selects.
       await tester.tap(find.text('Male'));
@@ -209,21 +240,18 @@ void main() {
       expect(c.voiceGenderFilter, VoiceGender.male);
       expect(c.voiceLabel, 'Daniel');
 
-      await tester.tap(find.byKey(const Key('voiceDropdown')));
-      await tester.pumpAndSettle();
+      await openVoiceMenu(tester);
       expect(find.text('Daniel (m)').last, findsOneWidget);
       expect(find.text('Fable (m)').last, findsOneWidget);
       expect(find.text('Emma (f)'), findsNothing);
 
       // Back to Any: the picker returns to the full list (Material path must
       // forward the "any" selection instead of treating it as no-op).
-      await tester.tapAt(const Offset(600, 100));
-      await tester.pumpAndSettle();
+      await closeMenus(tester);
       await tester.tap(find.text('Any'));
       await tester.pump();
       expect(c.voiceGenderFilter, VoiceGender.neutral);
-      await tester.tap(find.byKey(const Key('voiceDropdown')));
-      await tester.pumpAndSettle();
+      await openVoiceMenu(tester);
       expect(find.text('Emma (f)').last, findsOneWidget);
       expect(find.text('Daniel (m)').last, findsOneWidget);
     });
@@ -298,10 +326,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Switching to Japanese narrows the voices and re-picks one.
-        await tester.tap(find.byKey(const Key('languageDropdown')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Japanese').last);
-        await tester.pumpAndSettle();
+        await pickLanguage(tester, 'Japanese');
 
         expect(c.voiceLanguage, 'j');
         expect(c.voiceLabel, 'Kumo');
@@ -365,26 +390,18 @@ void main() {
       await pumpSection(tester, c);
 
       // The picker shows each voice's `name`, never its `voices` key.
-      await tester.tap(find.byKey(const Key('voiceDropdown')));
-      await tester.pumpAndSettle();
+      await openVoiceMenu(tester);
       expect(find.text('Emma (f)').last, findsOneWidget);
-      await tester.tapAt(const Offset(600, 100));
-      await tester.pumpAndSettle();
+      await closeMenus(tester);
 
       // Two voices may share a name, so the id is what has to disambiguate:
       // Spanish's Santa sends em_santa...
-      await tester.tap(find.byKey(const Key('languageDropdown')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Spanish').last);
-      await tester.pumpAndSettle();
+      await pickLanguage(tester, 'Spanish');
       expect(c.voiceLabel, 'Santa');
       expect(c.voice, 'em_santa');
 
       // ...and Brazilian Portuguese's sends pm_santa, same label and all.
-      await tester.tap(find.byKey(const Key('languageDropdown')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Brazilian Portuguese').last);
-      await tester.pumpAndSettle();
+      await pickLanguage(tester, 'Brazilian Portuguese');
       expect(c.voiceLabel, 'Santa');
       expect(c.voice, 'pm_santa');
     });

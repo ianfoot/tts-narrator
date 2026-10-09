@@ -104,6 +104,27 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
   }
 
+  /// Confirms the active-run Back modal with "Cancel Run", then pumps past the
+  /// dialog's dismiss transition.
+  ///
+  /// Every way of leaving an active run — the Back button, a system pop, a
+  /// double tap — funnels through the same modal, so the confirmation and the
+  /// pumps after it belong in one place. pumpAndSettle can't be used while
+  /// narrating: the progress animation never settles.
+  Future<void> confirmCancelRun(WidgetTester tester) async {
+    await tester.tap(
+      find.descendant(
+        of: find.byType(CupertinoAlertDialog),
+        matching: find.text('Cancel Run'),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
   testWidgets('a launched run renders the header and frozen summary pill', (
     tester,
   ) async {
@@ -274,17 +295,7 @@ void main() {
     await tester.tap(find.byKey(const Key('runBackButton')).first);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(
-      find.descendant(
-        of: find.byType(CupertinoAlertDialog),
-        matching: find.text('Cancel Run'),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 400));
+    await confirmCancelRun(tester);
     expect(c.runStopped, isTrue);
     expect(c.text, isNotEmpty);
   });
@@ -319,17 +330,7 @@ void main() {
       // Confirming cancelRun stops generation and pops back to the editor.
       await tester.binding.handlePopRoute();
       await tester.pump(const Duration(milliseconds: 400));
-      await tester.tap(
-        find.descendant(
-          of: find.byType(CupertinoAlertDialog),
-          matching: find.text('Cancel Run'),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 400));
+      await confirmCancelRun(tester);
       expect(c.runStopped, isTrue);
       expect(find.byKey(const Key('runHeaderTitle')), findsNothing);
       expect(find.byKey(const Key('editorHost')), findsOneWidget);
@@ -359,17 +360,7 @@ void main() {
 
     // Confirming once stops the run and pops; a stray second invocation is
     // already blocked, and the run is no longer active anyway.
-    await tester.tap(
-      find.descendant(
-        of: find.byType(CupertinoAlertDialog),
-        matching: find.text('Cancel Run'),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 400));
+    await confirmCancelRun(tester);
     expect(c.runStopped, isTrue);
     expect(find.byKey(const Key('runHeaderTitle')), findsNothing);
     expect(find.byKey(const Key('editorHost')), findsOneWidget);

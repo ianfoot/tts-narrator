@@ -17,18 +17,7 @@ Future<AppController> makeController() async {
   final dir = Directory.systemTemp.createTempSync('tts_menu_test_');
   addTearDown(() => dir.deleteSync(recursive: true));
   final configDir = '${dir.path}/cfg';
-  fixtures.writeConfig(configDir, {
-    'models': {
-      'fish': {
-        'id': 'fish-audio/s2.1-pro-free:free',
-        'formats': ['mp3'],
-      },
-    },
-    'defaults': {'fish': 'British Female Narrator'},
-    'voices': {
-      'fish': {'British Female Narrator': '89f41ea230034706881f85a8227d6ab9'},
-    },
-  });
+  fixtures.writeFishConfig(configDir);
   return AppController(loader: UserVoiceConfigLoader(configDir: configDir));
 }
 

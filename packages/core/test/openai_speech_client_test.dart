@@ -67,20 +67,53 @@ Future<_Server> _serve(
 /// The common case: any request gets audio.
 FutureOr<String> _audio(HttpRequest request) => 'audio';
 
+/// Synthesizes against [server], supplying the arguments every request here
+/// shares so that each call below reads as the arguments actually under test.
+///
+/// [settings] defaults to the server's own provider block; pass one only to
+/// exercise an alias or a smuggled key. The future is returned rather than
+/// awaited so a test can assert on how a request *fails*, not only on what
+/// comes back.
+Future<GeneratedAudio> _speak(
+  _Server server, {
+  String model = 'm',
+  String? voice,
+  String input = 'hi',
+  TtsAudioFormat format = TtsAudioFormat.mp3,
+  TtsWavResponseFormat wavFormat = TtsWavResponseFormat.wav,
+  Map<String, String>? settings,
+  double? speed = 1.0,
+  String? language,
+  String? instruct,
+  String? apiKey,
+  AbortToken? abort,
+  bool immediateBackoff = false,
+}) => (immediateBackoff
+        ? OpenAiSpeechClient.immediateBackoff()
+        : OpenAiSpeechClient())
+    .synthesize(
+      model: model,
+      voice: voice,
+      input: input,
+      responseFormat: format,
+      wavResponseFormat: wavFormat,
+      settings: settings ?? server.block,
+      speed: speed,
+      language: language,
+      instruct: instruct,
+      apiKey: apiKey,
+      abort: abort,
+    );
+
 void main() {
   group('base_url', () {
     test('appends /audio/speech and normalizes a trailing slash', () async {
       final server = await _serve(_audio);
       addTearDown(server.close);
 
-      await OpenAiSpeechClient().synthesize(
-        model: 'm',
-        voice: null,
-        input: 'hi',
-        responseFormat: TtsAudioFormat.mp3,
-        wavResponseFormat: TtsWavResponseFormat.wav,
+      await _speak(
+        server,
         settings: {...server.block, 'base_url': '${server.root}/'},
-        speed: 1.0,
       );
 
       expect(server.requests.single.uri.path, '/audio/speech');
@@ -90,15 +123,7 @@ void main() {
       final server = await _serve(_audio);
       addTearDown(server.close);
 
-      await OpenAiSpeechClient().synthesize(
-        model: 'm',
-        voice: null,
-        input: 'hi',
-        responseFormat: TtsAudioFormat.mp3,
-        wavResponseFormat: TtsWavResponseFormat.wav,
-        settings: {'endpoint': server.root},
-        speed: 1.0,
-      );
+      await _speak(server, settings: {'endpoint': server.root});
 
       expect(server.requests, hasLength(1));
     });
@@ -132,13 +157,11 @@ void main() {
         final server = await _serve(_audio);
         addTearDown(server.close);
 
-        await OpenAiSpeechClient().synthesize(
+        await _speak(
+          server,
           model: 'hexgrad/kokoro-82m',
           voice: 'bf_emma',
           input: 'The quick brown fox.',
-          responseFormat: TtsAudioFormat.mp3,
-          wavResponseFormat: TtsWavResponseFormat.wav,
-          settings: server.block,
           speed: 0.75,
         );
 
@@ -156,15 +179,7 @@ void main() {
       final server = await _serve(_audio);
       addTearDown(server.close);
 
-      await OpenAiSpeechClient().synthesize(
-        model: 'm',
-        voice: 'v',
-        input: 'hi',
-        responseFormat: TtsAudioFormat.mp3,
-        wavResponseFormat: TtsWavResponseFormat.wav,
-        settings: server.block,
-        speed: null,
-      );
+      await _speak(server, voice: 'v', speed: null);
 
       expect(server.requests.single.body.containsKey('speed'), isFalse);
     });
@@ -173,15 +188,7 @@ void main() {
       final server = await _serve(_audio);
       addTearDown(server.close);
 
-      await OpenAiSpeechClient().synthesize(
-        model: 'm',
-        voice: 'v',
-        input: 'hi',
-        responseFormat: TtsAudioFormat.mp3,
-        wavResponseFormat: TtsWavResponseFormat.wav,
-        settings: server.block,
-        speed: 1.0,
-      );
+      await _speak(server, voice: 'v');
 
       expect(server.requests.single.body['speed'], 1.0);
     });
@@ -192,15 +199,7 @@ void main() {
       final block = {...server.block, 'default_voice': 'bm_george'};
 
       for (final voice in [null, 'bf_emma']) {
-        await OpenAiSpeechClient().synthesize(
-          model: 'm',
-          voice: voice,
-          input: 'hi',
-          responseFormat: TtsAudioFormat.mp3,
-          wavResponseFormat: TtsWavResponseFormat.wav,
-          settings: block,
-          speed: 1.0,
-        );
+        await _speak(server, voice: voice, settings: block);
       }
 
       expect(server.requests.first.body['voice'], 'bm_george');
@@ -211,14 +210,10 @@ void main() {
       final server = await _serve(_audio);
       addTearDown(server.close);
 
-      await OpenAiSpeechClient().synthesize(
+      await _speak(
+        server,
         model: 'hexgrad/kokoro-82m',
         voice: 'jm_kumo',
-        input: 'hi',
-        responseFormat: TtsAudioFormat.mp3,
-        wavResponseFormat: TtsWavResponseFormat.wav,
-        settings: server.block,
-        speed: 1.0,
         language: 'j',
       );
 
@@ -230,16 +225,7 @@ void main() {
       addTearDown(server.close);
 
       for (final language in [null, '']) {
-        await OpenAiSpeechClient().synthesize(
-          model: 'm',
-          voice: 'v',
-          input: 'hi',
-          responseFormat: TtsAudioFormat.mp3,
-          wavResponseFormat: TtsWavResponseFormat.wav,
-          settings: server.block,
-          speed: 1.0,
-          language: language,
-        );
+        await _speak(server, voice: 'v', language: language);
       }
 
       for (final request in server.requests) {
@@ -253,14 +239,10 @@ void main() {
         final server = await _serve(_audio);
         addTearDown(server.close);
 
-        await OpenAiSpeechClient().synthesize(
+        await _speak(
+          server,
           model: 'mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16',
-          voice: null,
-          input: 'hi',
-          responseFormat: TtsAudioFormat.wav,
-          wavResponseFormat: TtsWavResponseFormat.wav,
-          settings: server.block,
-          speed: 1.0,
+          format: TtsAudioFormat.wav,
           instruct: '  A calm, low British male narrator.  ',
         );
 
@@ -278,16 +260,7 @@ void main() {
       addTearDown(server.close);
 
       for (final instruct in [null, '', '   ']) {
-        await OpenAiSpeechClient().synthesize(
-          model: 'm',
-          voice: 'v',
-          input: 'hi',
-          responseFormat: TtsAudioFormat.mp3,
-          wavResponseFormat: TtsWavResponseFormat.wav,
-          settings: server.block,
-          speed: 1.0,
-          instruct: instruct,
-        );
+        await _speak(server, voice: 'v', instruct: instruct);
       }
 
       expect(server.requests, hasLength(3));
@@ -303,15 +276,7 @@ void main() {
       });
       addTearDown(server.close);
 
-      final audio = await OpenAiSpeechClient().synthesize(
-        model: 'm',
-        voice: null,
-        input: 'hi',
-        responseFormat: TtsAudioFormat.mp3,
-        wavResponseFormat: TtsWavResponseFormat.wav,
-        settings: server.block,
-        speed: 1.0,
-      );
+      final audio = await _speak(server);
 
       expect(audio.generationId, 'gen-1');
       expect(utf8.decode(audio.bytes), 'audio');
@@ -328,16 +293,7 @@ void main() {
       final server = await _serve(_audio);
       addTearDown(server.close);
 
-      await OpenAiSpeechClient().synthesize(
-        model: 'm',
-        voice: null,
-        input: 'hi',
-        responseFormat: TtsAudioFormat.mp3,
-        wavResponseFormat: TtsWavResponseFormat.wav,
-        settings: server.block,
-        speed: 1.0,
-        apiKey: 'sk-test',
-      );
+      await _speak(server, apiKey: 'sk-test');
 
       expect(server.requests.single.auth, 'Bearer sk-test');
     });
@@ -346,15 +302,7 @@ void main() {
       final server = await _serve(_audio);
       addTearDown(server.close);
 
-      await OpenAiSpeechClient().synthesize(
-        model: 'm',
-        voice: null,
-        input: 'hi',
-        responseFormat: TtsAudioFormat.mp3,
-        wavResponseFormat: TtsWavResponseFormat.wav,
-        settings: server.block,
-        speed: 1.0,
-      );
+      await _speak(server);
 
       expect(server.requests.single.auth, isNull);
     });
@@ -365,15 +313,7 @@ void main() {
       final server = await _serve(_audio);
       addTearDown(server.close);
 
-      await OpenAiSpeechClient().synthesize(
-        model: 'm',
-        voice: null,
-        input: 'hi',
-        responseFormat: TtsAudioFormat.mp3,
-        wavResponseFormat: TtsWavResponseFormat.wav,
-        settings: {...server.block, 'api_key': 'sk-leaked'},
-        speed: 1.0,
-      );
+      await _speak(server, settings: {...server.block, 'api_key': 'sk-leaked'});
 
       expect(server.requests.single.auth, isNull);
     });
@@ -390,14 +330,9 @@ void main() {
       });
       addTearDown(server.close);
       try {
-        await OpenAiSpeechClient.immediateBackoff().synthesize(
-          model: 'm',
-          voice: null,
-          input: 'hi',
-          responseFormat: TtsAudioFormat.mp3,
-          wavResponseFormat: TtsWavResponseFormat.wav,
-          settings: server.block,
-          speed: 1.0,
+        await _speak(
+          server,
+          immediateBackoff: true,
           apiKey: withKey ? 'sk-rejected' : null,
         );
         fail('expected an HttpException');
@@ -430,16 +365,7 @@ void main() {
       addTearDown(server.close);
 
       try {
-        await OpenAiSpeechClient.immediateBackoff().synthesize(
-          model: 'm',
-          voice: null,
-          input: 'hi',
-          responseFormat: TtsAudioFormat.mp3,
-          wavResponseFormat: TtsWavResponseFormat.wav,
-          settings: server.block,
-          speed: 1.0,
-          apiKey: 'sk-test',
-        );
+        await _speak(server, immediateBackoff: true, apiKey: 'sk-test');
         fail('expected an HttpException');
       } on HttpException catch (e) {
         expect(e.message, contains('quota exceeded'));
@@ -460,15 +386,7 @@ void main() {
       });
       addTearDown(server.close);
 
-      final audio = await OpenAiSpeechClient.immediateBackoff().synthesize(
-        model: 'm',
-        voice: null,
-        input: 'hi',
-        responseFormat: TtsAudioFormat.mp3,
-        wavResponseFormat: TtsWavResponseFormat.wav,
-        settings: server.block,
-        speed: 1.0,
-      );
+      final audio = await _speak(server, immediateBackoff: true);
 
       expect(attempts, 2);
       expect(utf8.decode(audio.bytes), 'audio');
@@ -482,15 +400,7 @@ void main() {
       addTearDown(server.close);
 
       await expectLater(
-        OpenAiSpeechClient().synthesize(
-          model: 'm',
-          voice: null,
-          input: 'hi',
-          responseFormat: TtsAudioFormat.mp3,
-          wavResponseFormat: TtsWavResponseFormat.wav,
-          settings: server.block,
-          speed: 1.0,
-        ),
+        _speak(server),
         throwsA(
           isA<HttpException>().having(
             (e) => e.message,
@@ -525,16 +435,7 @@ void main() {
       final server = await _serve((_) => Completer<String>().future);
       final token = AbortToken();
 
-      final future = OpenAiSpeechClient().synthesize(
-        model: 'm',
-        voice: null,
-        input: 'hi',
-        responseFormat: TtsAudioFormat.mp3,
-        wavResponseFormat: TtsWavResponseFormat.wav,
-        settings: server.block,
-        speed: 1.0,
-        abort: token,
-      );
+      final future = _speak(server, abort: token);
       await server.arrived.future;
       token.cancel();
 
