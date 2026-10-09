@@ -6,7 +6,7 @@ import '../narration/cost.dart';
 import '../narration/model_profiles.dart';
 import 'voice_config.dart';
 
-/// Default config directory, shared by the CLI and GUI.
+/// Default config directory, used when a caller injects none.
 String defaultConfigDir() {
   if (Platform.isWindows) {
     final appData = Platform.environment['APPDATA'];

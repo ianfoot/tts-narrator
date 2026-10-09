@@ -47,8 +47,8 @@ TtsModelProfile? profileFor(String aliasOrId, VoiceConfig config) {
   return null;
 }
 
-/// The model the CLI and GUI preselect: the first model of the first
-/// configured provider, or null when there is none.
+/// The model the GUI preselects: the first model of the first configured
+/// provider, or null when there is none.
 ///
 /// The default is whatever the config lists first, so a user changes it by
 /// reordering. An unresolvable first entry (a model file that failed to load)

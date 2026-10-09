@@ -29,7 +29,7 @@ class TtsModelProfile {
     this.voicesEditable = false,
   });
 
-  /// Short CLI name used for `--model <alias>`.
+  /// Short alias for the model, matched against [id] as a fallback.
   final String alias;
 
   /// Full model identifier sent in the request body.

@@ -91,7 +91,7 @@ VoiceGender? genderFromVoiceId(String voiceId) {
   };
 }
 
-/// A single selectable voice for the GUI voice picker and CLI listing.
+/// A single selectable voice offered by the GUI voice picker.
 class VoiceOption {
   const VoiceOption({
     required this.model,

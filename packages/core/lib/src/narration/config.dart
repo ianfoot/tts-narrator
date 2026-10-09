@@ -39,7 +39,8 @@ class NarrationConfig {
 
   /// In-memory text to narrate instead of reading [inputPath] from disk.
   ///
-  /// Null for the CLI, which always reads the file.
+  /// Null when the caller has no backing file and expects [inputPath] to be read
+  /// from disk.
   final String? sourceText;
 
   /// TTS model profile driving the request body and prompt.

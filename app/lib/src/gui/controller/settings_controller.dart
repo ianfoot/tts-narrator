@@ -478,7 +478,7 @@ class SettingsController extends ChangeNotifier {
   /// [resolvedOutDir]).
   ///
   /// Throws a [FormatException] when the active model has no voice selected and
-  /// no config default (mirrors the CLI's error).
+  /// no config default to fall back on.
   NarrationConfig buildConfig() {
     final p = _model.profile;
     if (p == null) {

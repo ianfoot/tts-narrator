@@ -4,8 +4,8 @@ typedef CancelCallback = void Function();
 /// Cooperative cancellation token for long-running narration.
 ///
 /// Threaded through [SpeechClient] and `narrate()` so the GUI's Cancel
-/// button can stop a run. The CLI never passes one, so behavior there is
-/// unchanged (a null token is a no-op).
+/// button can stop a run. Optional throughout: a null token is a no-op, so a
+/// caller that never cancels passes none.
 class AbortToken {
   AbortToken();
 

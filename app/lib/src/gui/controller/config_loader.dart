@@ -6,10 +6,10 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 // detected platform without the two names colliding in the initializer list.
 import '../platform/platform_detection.dart' as platform;
 
-/// Loads the shared config directory (CLI + GUI use the same layout, the GUI
-/// read-only) and resolves the bits a run config needs: the effective models,
-/// the default voice, pricing, and the provider settings block with `${ENV}`
-/// references expanded from the runtime environment.
+/// Loads the shared config directory (read-only) and resolves the bits a run
+/// config needs: the effective models, the default voice, pricing, and the
+/// provider settings block with `${ENV}` references expanded from the runtime
+/// environment.
 class UserVoiceConfigLoader {
   UserVoiceConfigLoader({
     String? configDir,

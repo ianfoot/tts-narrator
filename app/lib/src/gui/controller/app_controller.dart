@@ -23,7 +23,8 @@ export 'run_controller.dart' show NarrationSegment;
 ///
 /// The controller holds no View state; every screen derives what it needs from
 /// here and subscribes via [ChangeNotifier]. Model/voice handling reuses the
-/// core's config resolution so the GUI and CLI agree on defaults.
+/// core's config resolution so defaults come from the same place the rest of
+/// the pipeline reads them.
 ///
 /// The sub-controllers ([DocumentController], [ThemeController],
 /// [ModelProfileVoiceController], [SettingsController], [RunController]) own the

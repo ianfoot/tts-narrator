@@ -64,8 +64,8 @@ Windows, see **[WINDOWS.md](WINDOWS.md)**.
 ## Voice configuration
 
 Everything user-facing — which providers exist, per-provider settings, models,
-per-model default voices, prices, and friendly voice aliases — lives in a config **directory** shared by the CLI and the
-GUI. Three kinds of file:
+per-model default voices, prices, and friendly voice aliases — lives in a config
+**directory** the app manages. Three kinds of file:
 
 - `config.json` — the provider registry: the names of the providers in use, in
   order.
@@ -524,8 +524,9 @@ Manifest contents:
   `input`/`prompt` that produced it (for reproducibility)
 
 Playback: The app has built-in audio playback — click any completed segment in
-the run view to play it without leaving the app. For CLI playback, use `afplay
-<out>/story/story_01.mp3` (macOS), or `aplay` / `paplay` (Linux).
+the run view to play it without leaving the app. To play a clip with an external
+player, use `afplay <out>/story/story_01.mp3` (macOS), or `aplay` / `paplay`
+(Linux).
 
 ## How narration text is segmented
 

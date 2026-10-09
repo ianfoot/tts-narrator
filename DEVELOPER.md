@@ -36,8 +36,8 @@ same core can be driven from the GUI or from another front end without rework.
 
 ## Voice configuration internals
 
-The config **directory** is shared by the CLI and the GUI. The GUI resolves it
-with `getApplicationSupportDirectory()` (`app/lib/main.dart`), which returns the
+The GUI resolves the config **directory** with
+`getApplicationSupportDirectory()` (`app/lib/main.dart`), which returns the
 platform app-data root with the app id appended:
 
 | Platform | Path                                                       |
@@ -144,7 +144,7 @@ the downloaded copy is replaceable at any time, the authored one never is.
 Merge rules, in the order they matter:
 
 - **Model and provider files replace wholesale.** A `user/models/fish.json` is
-  read as the entire `fish` model. Partial overlays would mean every reader (the GUI table, the CLI, a future importer)
+  read as the entire `fish` model. Partial overlays would mean every reader (the GUI table, a future importer)
   has to reconcile two half-files, and
   the failure mode is a voice that silently vanishes from the picker.
 - **Registries accumulate.** `user/config.json` is merged with the downloaded
@@ -205,8 +205,9 @@ as found, because no edit to an unrelated voice has standing to remove it. The
 store can set a default; nothing in it can clear one, which is the right shape
 for a key whose absence would make the model unselectable.
 
-Do not reach for `writeVoiceConfig` from app code. It is the CLI's
-round-trip-the-whole-tree writer: it emits a fixed key set through
+Do not reach for `writeVoiceConfig` from app code. It is the
+round-trip-the-whole-tree writer used for standalone config authoring, not by
+the GUI: it emits a fixed key set through
 `TtsModelProfile`, so it silently drops unknown keys, rewrites provider `api_key`
 literals, and would destroy `manifest.json`.
 

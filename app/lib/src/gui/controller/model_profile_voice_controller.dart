@@ -6,9 +6,8 @@ import 'config_loader.dart';
 /// Owns the active model profile, voice selection, and narrator-gender filter
 /// for the TTS Narrator GUI.
 ///
-/// The controller loads the shared [VoiceConfig] (the same directory the CLI
-/// reads) and exposes the resolved profile, the selected voice, and the
-/// gender-filtered voice items.
+/// The controller loads the shared [VoiceConfig] and exposes the resolved
+/// profile, the selected voice, and the gender-filtered voice items.
 ///
 /// There is no compiled default model: with no models in the config directory,
 /// [profile] and [modelAlias] are null and narration stays blocked until the
