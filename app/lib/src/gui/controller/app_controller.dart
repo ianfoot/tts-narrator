@@ -32,7 +32,7 @@ export 'run_controller.dart' show NarrationSegment;
 /// so callers keep a single change stream.
 class AppController extends ChangeNotifier {
   AppController({
-    UserVoiceConfigLoader? loader,
+    required UserVoiceConfigLoader loader,
     SharedPreferences? prefs,
     ApiKeyStore? apiKeyStore,
     SpeechClient? client,

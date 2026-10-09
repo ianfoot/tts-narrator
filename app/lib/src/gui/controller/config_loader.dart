@@ -12,14 +12,13 @@ import '../platform/platform_detection.dart' as platform;
 /// environment.
 class UserVoiceConfigLoader {
   UserVoiceConfigLoader({
-    String? configDir,
+    required this.configDir,
     Map<String, String>? environment,
     String? platformTag,
-  }) : configDir = configDir ?? defaultConfigDir(),
-       environment = environment ?? Platform.environment,
+  }) : environment = environment ?? Platform.environment,
        platformTag = platformTag ?? platform.platformTag;
 
-  /// Absolute path of the config directory (defaults to the platform path).
+  /// Absolute path of the config directory.
   final String configDir;
 
   /// The environment `${ENV}` references in the provider block resolve against.

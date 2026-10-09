@@ -13,8 +13,7 @@ import 'config_loader.dart';
 /// [profile] and [modelAlias] are null and narration stays blocked until the
 /// user supplies a config.
 class ModelProfileVoiceController extends ChangeNotifier {
-  ModelProfileVoiceController({UserVoiceConfigLoader? loader})
-    : _loader = loader ?? UserVoiceConfigLoader() {
+  ModelProfileVoiceController({required this._loader}) {
     _voiceConfig = _loader.load();
     final def = defaultModelFor(_voiceConfig);
     _modelAlias = def?.alias;

@@ -48,10 +48,9 @@ platform app-data root with the app id appended:
 
 The app id comes from `PRODUCT_BUNDLE_IDENTIFIER` (macOS) and `APPLICATION_ID`
 (Linux), so the directory is already namespaced per app and needs no
-`tts-narrator/` segment of its own. Separately, `defaultConfigDir()` in
-`voice_config_io.dart` returns `~/.config/tts-narrator` (`%APPDATA%\tts-narrator`
-on Windows); that is the fallback used only when a caller injects no directory,
-so in practice the tests and any non-GUI front end. The GUI always injects one.
+`tts-narrator/` segment of its own. The path is threaded into
+`UserVoiceConfigLoader` as a required argument, so the GUI and the tests read the
+same directory by construction rather than by agreeing on a fallback.
 
 - `config.json` — the registry: an ordered list of provider names, nothing
   else. The first entry is the default provider.
@@ -205,16 +204,14 @@ as found, because no edit to an unrelated voice has standing to remove it. The
 store can set a default; nothing in it can clear one, which is the right shape
 for a key whose absence would make the model unselectable.
 
-Do not reach for `writeVoiceConfig` from app code. It is the
-round-trip-the-whole-tree writer used for standalone config authoring, not by
-the GUI: it emits a fixed key set through
-`TtsModelProfile`, so it silently drops unknown keys, rewrites provider `api_key`
-literals, and would destroy `manifest.json`.
+There is no whole-tree writer. Edits go through `VoiceConfigStore`, which rewrites
+one entry at a time and leaves unknown keys in place — a fixed-key writer would
+silently drop them, rewrite provider `api_key` literals, and destroy
+`manifest.json`.
 
 A `voices` entry has three accepted shapes (key is id / key is name with explicit
 id / plain string). Read and write share one codec so they cannot drift:
-`voiceFromEntry` decodes, `voiceEntryJson` round-trips minimally (used by
-`writeVoiceConfig`), and `canonicalVoiceEntryJson` emits the one form the editor
+`voiceFromEntry` decodes and `voiceEntryJson` emits the one form the editor
 writes — key is the label, `id` always stated, no `name`, since the picker already
 reads `name ?? key` and stating both would be redundant. Folding `name` into the
 key is safe for id-convention models because `languageFromVoiceId` and
@@ -225,7 +222,7 @@ ids are already the labels it wants shown — Gemini's thirty named voices,
 where the object form would write each name twice. Each element is its own key,
 id and label, so a list entry carries no `name` or `gender`; a voice needing
 either belongs in the object form. A list cannot round-trip to a list, since
-`Voice` does not remember the shape it arrived in: `writeVoiceConfig` always
+`Voice` does not remember the shape it arrived in: the store always
 writes the object form.
 
 Editing has two traps worth knowing before changing the store. `default_voice` is
@@ -552,7 +549,7 @@ title.
   name is a display detail that may legitimately repeat — so both the key and
   the name resolve to the same voice (`VoiceConfig.voiceFor` looks the map up
   by key, then scans `.values` for a matching name), the picker labels by name,
-  and `default_voice` is written as the id. `_modelJson` writes `id` back only
+  and `default_voice` is written as the id. `voiceEntryJson` writes `id` back only
   when it differs from the key, so a round trip reproduces each file's own
   style. The same reasoning drives `genderFromVoiceId`: a model that declares
   `languages` is declaring that its ids are `<lang><gender>_<name>`, so gender

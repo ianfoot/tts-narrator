@@ -6,16 +6,6 @@ import '../narration/cost.dart';
 import '../narration/model_profiles.dart';
 import 'voice_config.dart';
 
-/// Default config directory, used when a caller injects none.
-String defaultConfigDir() {
-  if (Platform.isWindows) {
-    final appData = Platform.environment['APPDATA'];
-    return appData != null ? '$appData\\tts-narrator' : 'tts-narrator';
-  }
-  final home = Platform.environment['HOME'];
-  return home != null ? '$home/.config/tts-narrator' : '.';
-}
-
 /// File name of the provider registry, in the config directory root.
 const String kVoiceConfigRegistryName = 'config.json';
 
@@ -534,8 +524,8 @@ const _voiceEntryFields = {'id', 'name', 'gender', 'language'};
 
 /// The JSON for one `voices` entry, in the shape it was most likely authored in.
 ///
-/// The round-trip form used by [writeVoiceConfig], which re-emits a config that
-/// already parsed.
+/// The round-trip form [VoiceConfigStore] writes back, and the mirror of
+/// [voiceFromEntry].
 Map<String, Object?> voiceEntryJson(String key, Voice voice) => {
   // An entry keyed by its own id needs no `id`; one keyed by a name does.
   if (voice.id != key) 'id': voice.id,
@@ -844,101 +834,6 @@ String _stemOf(String path) {
   final name = path.split(Platform.pathSeparator).last;
   final dot = name.lastIndexOf('.');
   return dot == -1 ? name : name.substring(0, dot);
-}
-
-Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
-  'id': p.id,
-  if (p.displayName != null) 'display_name': p.displayName,
-  'formats': [for (final f in p.formats) f.wireValue],
-  if (p.wavResponseFormat != TtsWavResponseFormat.wav)
-    'wav_response_format': p.wavResponseFormat.wireValue,
-  if (p.promptStyle) 'prompt_style': p.promptStyle,
-  if (!p.sendsVoiceField) 'sends_voice': p.sendsVoiceField,
-  if (p.supportsSpeed) 'speed': p.supportsSpeed,
-  if (p.sendsLanguageField) 'sends_language': p.sendsLanguageField,
-  if (p.sendsInstructField) 'sends_instruct': p.sendsInstructField,
-  if (p.defaultInstruct != null && p.defaultInstruct!.isNotEmpty)
-    'default_instruct': p.defaultInstruct,
-  if (config.defaults[p.alias] != null)
-    'default_voice': config.defaults[p.alias],
-  if (config.defaultLanguages[p.alias] != null)
-    'default_language': config.defaultLanguages[p.alias],
-  if ((config.languages[p.alias] ?? const {}).isNotEmpty)
-    'languages': {
-      for (final e in config.languagesFor(p.alias).entries) e.key: e.value,
-    },
-  if (config.pricing[p.alias] != null)
-    'pricing': {
-      if (config.pricing[p.alias]!.usdPerMChars != null)
-        'usd_per_m_chars': config.pricing[p.alias]!.usdPerMChars,
-      if (config.pricing[p.alias]!.inputUsdPerMTokens != null)
-        'input_usd_per_m_tokens': config.pricing[p.alias]!.inputUsdPerMTokens,
-      if (config.pricing[p.alias]!.outputUsdPerMTokens != null)
-        'output_usd_per_m_tokens': config.pricing[p.alias]!.outputUsdPerMTokens,
-    },
-  // Always the object form, even for a model that shipped the bare list: the parser
-  // accepts either, and one writer shape keeps this file consistent with the
-  // editor's output. A list round-trips to id-keyed entries — only brevity is
-  // lost.
-  if (config.voices[p.alias] != null && config.voices[p.alias]!.isNotEmpty)
-    'voices': {
-      for (final e in config.voices[p.alias]!.entries)
-        e.key: voiceEntryJson(e.key, e.value),
-    },
-  if (p.voicesEditable) 'voices_editable': p.voicesEditable,
-};
-
-/// Writes [config] to [configDir] in the layout [loadVoiceConfig] reads.
-///
-/// Provider order is preserved, since it decides the default. Each provider file
-/// carries the aliases it serves, taken from [config.models], so a config
-/// assembled without an explicit per-provider `models` list still round-trips.
-void writeVoiceConfig(String configDir, VoiceConfig config) {
-  final separator = Platform.pathSeparator;
-  final providersDir =
-      '$configDir$separator$kVoiceConfigProvidersDir$separator';
-  final modelsDir = '$configDir$separator$kVoiceConfigModelsDir$separator';
-
-  final byProvider = <String, List<String>>{};
-  for (final entry in config.models.entries) {
-    byProvider
-        .putIfAbsent(entry.value.provider, () => <String>[])
-        .add(entry.key);
-  }
-
-  void write(String path, Object? json) {
-    try {
-      File(path)
-        ..parent.createSync(recursive: true)
-        ..writeAsStringSync(
-          const JsonEncoder.withIndent('  ').convert(json),
-          flush: true,
-        );
-    } on FileSystemException catch (e) {
-      throw VoiceConfigurationError(
-        'Cannot write voice config "$configDir": $e',
-      );
-    }
-  }
-
-  write('$configDir$separator$kVoiceConfigRegistryName', {
-    'providers': config.providers.keys.toList(),
-  });
-
-  for (final entry in config.providers.entries) {
-    final declared = entry.value.models;
-    final extra = (byProvider[entry.key] ?? const <String>[]).where(
-      (a) => !declared.contains(a),
-    );
-    write('$providersDir${entry.key}.json', {
-      'models': [...declared, ...extra],
-      'settings': entry.value.settings,
-    });
-  }
-
-  for (final entry in config.models.entries) {
-    write('$modelsDir${entry.key}.json', _modelJson(entry.value, config));
-  }
 }
 
 /// Converts a JSON numeric value to a double, or null for non-numbers.
