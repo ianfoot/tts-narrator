@@ -66,6 +66,12 @@ class _ModelVoiceSectionState extends State<ModelVoiceSection> {
             items: _modelItems(l10n),
             onChanged: (alias) => _controller.changeModel(alias),
           ),
+          VoicePickerWidget(controller: _controller),
+          // The raw-voice override is a sibling of the picker rather than part
+          // of it, so it needs the same gate: a model that sends no voice id has
+          // nothing for a custom id to override.
+          if (_controller.takesVoice)
+            AdvancedVoiceWidget(controller: _controller),
           // Only for a model that declares more than one format: a single option
           // is not a choice, and the format is then part of the model's identity
           // rather than a run setting.
@@ -84,12 +90,6 @@ class _ModelVoiceSectionState extends State<ModelVoiceSection> {
               onChanged: (format) => _controller.outputFormat = format,
             ),
           ],
-          VoicePickerWidget(controller: _controller),
-          // The raw-voice override is a sibling of the picker rather than part
-          // of it, so it needs the same gate: a model that sends no voice id has
-          // nothing for a custom id to override.
-          if (_controller.takesVoice)
-            AdvancedVoiceWidget(controller: _controller),
         ],
       ),
     );
