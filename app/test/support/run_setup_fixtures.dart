@@ -8,6 +8,7 @@ import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import 'l10n_test_support.dart';
+import 'spec_window.dart';
 
 /// Shared fixtures for the run-setup panel section widget tests. Each section
 /// takes only an [AppController], so a section-under-test is pumped directly
@@ -180,12 +181,11 @@ void writeVoiceDesignConfig(String configDir) {
   });
 }
 
-/// Pumps the given run-setup section on a panel-sized surface (the same
-/// 1200x1800 logical size the full run-setup panel tests use) and restores the
-/// default test surface afterwards.
+/// Pumps the given run-setup section on a tall panel-sized surface and restores
+/// the default test surface afterwards. The height is not the spec default
+/// because a run-setup column is meant to scroll.
 Future<void> pumpRunSetupSection(WidgetTester tester, Widget child) async {
-  await tester.binding.setSurfaceSize(const Size(1200, 1800));
-  addTearDown(() => tester.binding.setSurfaceSize(null));
+  await setSpecWindowSize(tester, const Size(1200, 1800));
   await tester.pumpWidget(
     MaterialApp(
       localizationsDelegates: testLocalizationsDelegates,

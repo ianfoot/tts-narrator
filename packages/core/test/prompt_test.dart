@@ -18,7 +18,6 @@ void main() {
   const prefix = 'Narrate this passage for an audiobook.';
 
   NarrationConfig cfg({
-    bool tags = false,
     String accent = 'RP',
     String style = 'warm',
     String? customPrefix,
@@ -61,11 +60,10 @@ void main() {
     );
     expect(p, contains('Loop. Accent: RP.'));
     expect(p, contains('Style: warm.'));
-    expect(p.trim(), p);
-  });
-
-  test('includes the exact passage content', () {
-    final p = buildPrompt(cfg(), 'Multi\nline\npassage.');
-    expect(p, contains('Multi\nline\npassage.'));
+    // Nothing outside the assembled prompt, not even the passage's own
+    // newlines, may be trimmed away.
+    final verbatim = buildPrompt(cfg(), 'Multi\nline\npassage.');
+    expect(verbatim, contains('Multi\nline\npassage.'));
+    expect(verbatim.trim(), verbatim);
   });
 }

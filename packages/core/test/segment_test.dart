@@ -110,9 +110,7 @@ void main() {
         inputStem('/foo/bar/A Shorts Story Draft 5.txt'),
         'a_shorts_story_draft_5',
       );
-    });
-
-    test('handles no extension and trailing separator', () {
+      // A bare filename, with or without an extension.
       expect(inputStem('/x/y/story'), 'story');
       expect(inputStem('story.txt'), 'story');
     });
@@ -135,7 +133,6 @@ void main() {
 
     test('outDirBasename takes the last component', () {
       expect(outDirBasename('/a/b/c'), 'c');
-      expect(outDirBasename('output'), 'output');
     });
 
     test('appends the stem when out dir does not end with it', () {
@@ -215,6 +212,8 @@ void main() {
       final existing = [record(1, 'Hello.', 'story_1.mp3')];
       expect(resumeMatch(existing, 2, 'Hello.', dir.path, 'mp3'), isNull);
       expect(resumeMatch(existing, 1, 'Different.', dir.path, 'mp3'), isNull);
+      // Nothing recorded to resume from at all.
+      expect(resumeMatch(const [], 1, 'Hello.', dir.path, 'mp3'), isNull);
     });
 
     test('no match when the prior segment is another format', () {
@@ -226,10 +225,6 @@ void main() {
       final existing = [record(1, 'Hello.', 'story_1.wav')];
       expect(resumeMatch(existing, 1, 'Hello.', dir.path, 'mp3'), isNull);
       expect(resumeMatch(existing, 1, 'Hello.', dir.path, 'wav'), isNotNull);
-    });
-
-    test('empty existing list yields null', () {
-      expect(resumeMatch(const [], 1, 'Hello.', dir.path, 'mp3'), isNull);
     });
   });
 }

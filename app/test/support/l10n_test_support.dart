@@ -17,14 +17,6 @@ import 'package:tts_narrator/l10n/app_localizations.dart';
 /// The English localizations, for assertions that just need string values.
 AppLocalizations get testL10n => lookupAppLocalizations(const Locale('en'));
 
-/// Parses a `en`, `en_US`, or `en-US` style tag into a [Locale].
-Locale localeFromTag(String tag) {
-  final normalized = tag.replaceAll('_', '-');
-  final dash = normalized.indexOf('-');
-  if (dash == -1) return Locale(normalized);
-  return Locale(normalized.substring(0, dash), normalized.substring(dash + 1));
-}
-
 /// The production delegate set, for tests that build their own `CupertinoApp`.
 const testLocalizationsDelegates = <LocalizationsDelegate<Object>>[
   AppLocalizations.delegate,

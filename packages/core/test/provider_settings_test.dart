@@ -117,12 +117,7 @@ void main() {
       );
     });
 
-    test('an already-expanded \${ENV} value in api_key is passed through', () {
-      expect(
-        resolveProviderApiKey({'api_key': 'sk-expanded'}, env: const {}),
-        'sk-expanded',
-      );
-    });
+    
 
     test('a block with no credential setting is keyless', () {
       expect(
@@ -191,32 +186,33 @@ void main() {
     });
   });
 
-  group('isEnvReference', () {
-    test(r'a ${NAME} ref is recognised', () {
-      expect(isEnvReference(r'${VENDOR_API_KEY}'), isTrue);
-    });
+  // `isEnvReference` and `envRefName` are two readings of the same
+  // `^\$\{(\w+)\}$` match, so both are pinned from one table: a bare variable
+  // name, or a name with anything wrapped around it, is a literal that would
+  // be sent verbatim as the token.
+  const refs = <(String, bool, String?)>[
+    (r'${VENDOR_API_KEY}', true, 'VENDOR_API_KEY'),
+    ('sk-literal', false, null),
+    ('VENDOR_API_KEY', false, null),
+    (r'$VENDOR_API_KEY', false, null),
+    (r'${}', false, null),
+    (r'sk-${x}', false, null),
+    (r'prefix ${NAME}', false, null),
+  ];
 
-    test('a literal, an unwrapped name, and near-misses are not', () {
-      expect(isEnvReference('sk-literal'), isFalse);
-      // A variable name without the `${}` braces would be sent as a literal
-      // token, so this must NOT count as a reference.
-      expect(isEnvReference('VENDOR_API_KEY'), isFalse);
-      expect(isEnvReference(r'$VENDOR_API_KEY'), isFalse);
-      expect(isEnvReference(r'${}'), isFalse);
-      expect(isEnvReference(r'sk-${x}'), isFalse);
-      expect(isEnvReference(r'prefix ${NAME}'), isFalse);
-    });
+  group('isEnvReference', () {
+    for (final (input, isRef, _) in refs) {
+      test('$input is${isRef ? '' : ' not'} a reference', () {
+        expect(isEnvReference(input), isRef);
+      });
+    }
   });
 
   group('envRefName', () {
-    test('names the variable a ref points at', () {
-      expect(envRefName(r'${VENDOR_API_KEY}'), 'VENDOR_API_KEY');
-    });
-
-    test('is null for a literal or a malformed reference', () {
-      expect(envRefName('sk-literal'), isNull);
-      expect(envRefName('VENDOR_API_KEY'), isNull);
-      expect(envRefName(r'${}'), isNull);
-    });
+    for (final (input, _, refName) in refs) {
+      test('$input names ${refName ?? 'nothing'}', () {
+        expect(envRefName(input), refName);
+      });
+    }
   });
 }

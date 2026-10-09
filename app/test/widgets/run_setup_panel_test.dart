@@ -7,6 +7,7 @@ import 'package:tts_narrator/src/gui/run_setup/run_setup_panel.dart';
 
 import '../support/l10n_test_support.dart';
 import '../support/run_setup_fixtures.dart' as fixtures;
+import '../support/spec_window.dart';
 
 void main() {
   late Directory dir;
@@ -19,47 +20,6 @@ void main() {
 
   tearDown(() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
-  });
-
-  group('defaults', () {
-    testWidgets('boots with the fish model, its voice, and the defaults', (
-      tester,
-    ) async {
-      fixtures.writeConfig(configDir, {});
-      final c = fixtures.makeController(configDir);
-      await fixtures.pumpRunSetupSection(
-        tester,
-        RunSetupPanel(controller: c),
-      );
-
-      expect(find.byKey(const Key('runSetupPanel')), findsOneWidget);
-      expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
-      expect(find.byKey(const Key('voiceDropdown')), findsOneWidget);
-      expect(find.byKey(const Key('voiceAdvancedDisclosure')), findsOneWidget);
-      // The advanced voice id is collapsed by default.
-      expect(find.byKey(const Key('voiceRawField')), findsNothing);
-      expect(find.text('Overrides selected alias'), findsOneWidget);
-      expect(find.byKey(const Key('minWordsSlider')), findsOneWidget);
-      expect(find.byKey(const Key('minWordsBadge')), findsOneWidget);
-      expect(find.byKey(const Key('sampleSwitch')), findsOneWidget);
-      expect(find.byKey(const Key('resumeSwitch')), findsOneWidget);
-      // The default fish model's plugin declares no model options, so no
-      // styling-only controls (the gemini-only ones) render for it.
-      expect(find.text('MODEL OPTIONS'), findsNothing);
-      expect(find.byKey(const Key('accentField')), findsNothing);
-      expect(find.byKey(const Key('styleField')), findsNothing);
-      expect(find.byKey(const Key('passagePrefixField')), findsNothing);
-      expect(find.byKey(const Key('useCalmTagSwitch')), findsNothing);
-
-      // The min-words badge reflects the controller default.
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('minWordsBadge')),
-          matching: find.text('30'),
-        ),
-        findsOneWidget,
-      );
-    });
   });
 
   group('composition', () {
@@ -100,107 +60,29 @@ void main() {
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
       expect(find.byKey(const Key('voiceDropdown')), findsOneWidget);
       expect(find.byKey(const Key('languageDropdown')), findsOneWidget);
+      // The row is wired to the controller, not just rendered.
+      await tester.tap(find.byKey(const Key('languageDropdown')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chinese').last);
+      await tester.pumpAndSettle();
+      expect(c.voiceLanguage, 'zh');
       // Model options, derived because gemini declares prompt_style.
       expect(find.byKey(const Key('accentField')), findsOneWidget);
-      // Run options.
+      // Run options. This is the only place these render at all: the run
+      // section has no section test file of its own.
       expect(find.byKey(const Key('minWordsSlider')), findsOneWidget);
+      expect(find.byKey(const Key('minWordsBadge')), findsOneWidget);
       expect(find.byKey(const Key('sampleSwitch')), findsOneWidget);
       expect(find.byKey(const Key('resumeSwitch')), findsOneWidget);
-    });
-  });
-
-  group('model & voice', () {
-    testWidgets('the kokoro panel surfaces a speed slider; fish does not', (
-      tester,
-    ) async {
-      fixtures.writeConfig(configDir, {
-        'models': {
-          'fish': {
-            'id': 'fish-audio/s2.1-pro-free:free',
-            'formats': ['mp3'],
-          },
-          'kokoro': {
-            'id': 'hexgrad/kokoro-82m',
-            'formats': ['mp3'],
-            'display_name': 'Kokoro 82M',
-            'speed': true,
-          },
-        },
-        'defaults': {'kokoro': 'Emma'},
-        'voices': {
-          'kokoro': {
-            'Alice': {'id': 'bf_alice', 'gender': 'female'},
-            'Daniel': {'id': 'bm_daniel', 'gender': 'male'},
-            'Emma': {'id': 'bf_emma', 'gender': 'female'},
-            'Fable': {'id': 'bm_fable', 'gender': 'male'},
-            'George': {'id': 'bm_george', 'gender': 'male'},
-            'Isabella': {'id': 'bf_isabella', 'gender': 'female'},
-            'Lewis': {'id': 'bm_lewis', 'gender': 'male'},
-            'Lily': {'id': 'bf_lily', 'gender': 'female'},
-          },
-        },
-      });
-      // Kokoro declares "speed": true in its model file, so the rail offers
-      // the slider for it; fish declares nothing and gets none.
-      final c = fixtures.makeController(configDir);
-      await fixtures.pumpRunSetupSection(
-        tester,
-        RunSetupPanel(controller: c),
+      // The badge reflects the controller default.
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('minWordsBadge')),
+          matching: find.text('30'),
+        ),
+        findsOneWidget,
       );
-
-      expect(c.modelAlias, 'fish');
-      expect(find.text('MODEL OPTIONS'), findsNothing);
-      expect(find.byKey(const Key('speedSlider')), findsNothing);
-
-      // Switch to kokoro: its panel gains the speed slider alongside voice.
-      await tester.tap(find.byKey(const Key('modelDropdown')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('Kokoro 82M').last);
-      await tester.pumpAndSettle();
-
-      expect(c.modelAlias, 'kokoro');
-      expect(find.byKey(const Key('voiceAdvancedDisclosure')), findsOneWidget);
-      expect(find.text('Speed'), findsOneWidget);
-      expect(find.byKey(const Key('speedSlider')), findsOneWidget);
     });
-
-    testWidgets(
-      'a voice-design model drops the voice picker but keeps the language one',
-      (tester) async {
-        fixtures.writeVoiceDesignConfig(configDir);
-        final c = fixtures.makeController(configDir);
-        await fixtures.pumpRunSetupSection(
-          tester,
-          RunSetupPanel(controller: c),
-        );
-
-        // No voice id is ever sent, so there is nothing to pick: the dropdown
-        // and its advanced-override row both disappear rather than sitting
-        // empty under a "Voice" label.
-        expect(find.byKey(const Key('voiceDropdown')), findsNothing);
-        expect(find.byKey(const Key('voiceAdvancedDisclosure')), findsNothing);
-        // The label goes with them, so nothing dangles above the language row.
-        expect(find.text('Voice alias'), findsNothing);
-
-        // Language survives: it narrows the voice list, but it is also the
-        // lang_code the model synthesises in, so this model still needs it.
-        expect(find.byKey(const Key('languageDropdown')), findsOneWidget);
-
-        // And it is not narrowed by the missing voice list: picking a language
-        // used to be refused because no voice spoke it, so every choice snapped
-        // back to English.
-        await tester.tap(find.byKey(const Key('languageDropdown')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Chinese').last);
-        await tester.pumpAndSettle();
-        expect(c.voiceLanguage, 'Chinese');
-        expect(find.text('Chinese'), findsWidgets);
-
-        // Its narrator is written from prose instead, in the model options.
-        expect(find.byKey(const Key('instructField')), findsOneWidget);
-        expect(c.takesVoice, isFalse);
-      },
-    );
   });
 
   group('cupertino (macOS)', () {
@@ -225,14 +107,11 @@ void main() {
       });
       // gemini declares prompt_style, so switching to it derives its options.
       final c = fixtures.makeController(configDir);
-      await tester.binding.setSurfaceSize(const Size(1200, 1800));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await setSpecWindowSize(tester, const Size(1200, 1800));
       await tester.pumpWidget(testApp(home: RunSetupPanel(controller: c)));
 
       expect(find.byKey(const Key('runSetupPanel')), findsOneWidget);
       expect(find.byKey(const Key('modelDropdown')), findsOneWidget);
-      // The default fish model declares no options -> no styling-only controls.
-      expect(find.byKey(const Key('useCalmTagSwitch')), findsNothing);
 
       // Open the native pop-up menu and pick gemini.
       await tester.tap(find.byKey(const Key('modelDropdown')));

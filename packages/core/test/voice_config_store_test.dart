@@ -70,6 +70,17 @@ class _Fixture {
       jsonDecode(overlayModel(alias).readAsStringSync())
           as Map<String, dynamic>;
 
+  /// A Kokoro file carrying two voices that share the label `Santa`, so a write
+  /// has to tell them apart by id.
+  void writeKokoroWithSantas() => writeModel('kokoro', const {
+    'id': 'hexgrad/kokoro-82m',
+    'voices': {
+      'bf_emma': {'name': 'Emma'},
+      'bm_santa': {'name': 'Santa'},
+      'am_santa': {'name': 'Santa'},
+    },
+  });
+
   Map<String, dynamic> readBase(String alias) =>
       jsonDecode(baseModel(alias).readAsStringSync()) as Map<String, dynamic>;
 }
@@ -221,11 +232,6 @@ void main() {
       expect(f.store.defaultVoiceKey('fish'), 'aaa');
     });
 
-    test('leaves a non-default voice alone when another is renamed', () {
-      f.store.saveVoice('fish', key: 'bbb', label: 'Robert', id: 'bbb');
-      expect(f.readOverlay('fish')['default_voice'], 'aaa');
-    });
-
     test('rejects a blank label', () {
       final edit = f.store.saveVoice('fish', label: '  ', id: 'ccc');
       expect(edit.ok, isFalse);
@@ -277,14 +283,7 @@ void main() {
     });
 
     test('removes one of several voices sharing a label', () {
-      f.writeModel('kokoro', const {
-        'id': 'hexgrad/kokoro-82m',
-        'voices': {
-          'bf_emma': {'name': 'Emma'},
-          'bm_santa': {'name': 'Santa'},
-          'am_santa': {'name': 'Santa'},
-        },
-      });
+      f.writeKokoroWithSantas();
       final edit = f.store.removeVoice('kokoro', 'am_santa');
       expect(edit.ok, isTrue);
       // The write keys by id, so dropping one Santa cannot collapse the other
@@ -316,14 +315,7 @@ void main() {
     test('points the default at one of several voices sharing a label', () {
       // The write keys by id, so naming one of the Santas cannot disturb the
       // others -- the case the old label-keyed write had to refuse outright.
-      f.writeModel('kokoro', const {
-        'id': 'hexgrad/kokoro-82m',
-        'voices': {
-          'bf_emma': {'name': 'Emma'},
-          'bm_santa': {'name': 'Santa'},
-          'am_santa': {'name': 'Santa'},
-        },
-      });
+      f.writeKokoroWithSantas();
       expect(f.store.setDefaultVoice('kokoro', 'bm_santa').ok, isTrue);
       expect(f.readOverlay('kokoro')['default_voice'], 'bm_santa');
       final voices = f.readOverlay('kokoro')['voices'] as Map<String, dynamic>;

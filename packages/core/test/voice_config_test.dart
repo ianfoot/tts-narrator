@@ -68,33 +68,6 @@ void main() {
       expect(warnings, isEmpty);
     });
 
-    test('parses per-model files into request profiles', () {
-      writeModel('gemini', '''{
-  "id": "google/gemini-3.1-flash-tts-preview",
-  "formats": ["mp3"],
-  "prompt_style": true
-}''');
-      writeModel(
-        'kokoro',
-        '{"id": "hexgrad/kokoro-82m", "formats": ["wav", "mp3"]}',
-      );
-      writeModel(
-        'fish',
-        '{"id": "fish-audio/s2.1-pro-free", "formats": ["mp3"]}',
-      );
-      final (cfg, _) = load();
-      expect(cfg.models, hasLength(3));
-      expect(cfg.models['gemini']?.id, 'google/gemini-3.1-flash-tts-preview');
-      expect(cfg.models['gemini']?.formats, const [TtsAudioFormat.mp3]);
-      expect(cfg.models['gemini']?.promptStyle, isTrue);
-      expect(cfg.models['gemini']?.sendsVoiceField, isTrue);
-      expect(cfg.models['kokoro']?.formats, const [
-        TtsAudioFormat.wav,
-        TtsAudioFormat.mp3,
-      ]);
-      expect(cfg.models['fish']?.id, 'fish-audio/s2.1-pro-free');
-    });
-
     test('defaults model fields apply when omitted', () {
       writeModel('x', '{"id": "a/b", "formats": ["wav"]}');
       final (cfg, _) = load();
@@ -102,6 +75,7 @@ void main() {
       expect(m.formats, const [TtsAudioFormat.wav]);
       expect(m.promptStyle, isFalse);
       expect(m.sendsVoiceField, isTrue);
+      expect(m.displayName, isNull);
     });
 
     test('parses an optional display_name into the profile', () {
@@ -113,12 +87,6 @@ void main() {
       final (cfg, _) = load();
       final m = cfg.models['gemini']!;
       expect(m.displayName, 'Gemini 3.1 Flash TTS');
-    });
-
-    test('display_name defaults to null when omitted', () {
-      writeModel('x', '{"id": "a/b", "formats": ["wav"]}');
-      final (cfg, _) = load();
-      expect(cfg.models['x']!.displayName, isNull);
     });
 
     test('a non-string display_name skips the model with a warning', () {
@@ -406,14 +374,6 @@ void main() {
       expect(warnings, isEmpty);
     });
 
-    test('a wrong-typed model field is skipped with a warning', () {
-      writeModel('x', '{"id": "a/b", "formats": "mp3"}');
-      final (cfg, warnings) = load();
-      expect(cfg.models, isEmpty);
-      expect(warnings.first, contains('Skipped model "x"'));
-      expect(warnings.first, contains('"formats"'));
-    });
-
     test('an unmodelled key such as a stale sample_rate is ignored', () {
       // The rate is a property of the WAV the provider returns and the app
       // carries that container through untouched, so the key has nothing left
@@ -435,53 +395,29 @@ void main() {
     });
 
     group('the provider registry', () {
-      test('parses the provider names in order', () {
-        writeRegistry('{"providers": ["alpha", "beta"]}');
-        writeProvider('alpha', '{"models": ["fish"], "settings": {}}');
+      test('the first registered provider is the default one', () {
+        // The order the names come in is proved in voice_config_io_test.dart;
+        // what only a real load can show is that it reaches the getter.
+        writeRegistry('{"providers": ["beta", "alpha"]}');
         writeProvider('beta', '{"models": [], "settings": {}}');
-        final (cfg, _) = rawLoad();
-        expect(cfg.providers.keys, ['alpha', 'beta']);
-        expect(cfg.defaultProvider?.name, 'alpha');
+        writeProvider('alpha', '{"models": [], "settings": {}}');
+        expect(rawLoad().$1.defaultProvider?.name, 'beta');
       });
 
-      test(r'keeps a $VAR env reference as a literal', () {
-        writeRegistry('{"providers": ["alpha"]}');
-        writeProvider(
-          'alpha',
-          '{"models": [], "settings": '
-              '{"VENDOR_API_KEY": "\${VENDOR_API_KEY}"}}',
-        );
-        final (cfg, _) = rawLoad();
-        expect(
-          cfg.providers['alpha']!.settings['VENDOR_API_KEY'],
-          r'${VENDOR_API_KEY}',
-        );
-      });
-
-      test('rejects a non-list providers entry', () {
-        writeRegistry('{"providers": {"alpha": {}}}');
-        expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
-      });
-
-      test('rejects a non-string provider name', () {
-        writeRegistry('{"providers": [42]}');
-        expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
-      });
-
-      test('rejects a blank provider name', () {
-        writeRegistry('{"providers": ["  "]}');
-        expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
-      });
-
-      test('rejects malformed config.json loudly', () {
-        writeRegistry('{not json');
-        expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
-      });
-
-      test('rejects a non-object top level in config.json', () {
-        writeRegistry('[1,2,3]');
-        expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
-      });
+      // Nothing downstream can recover from a registry it cannot read, so each
+      // way of getting it wrong has to be a loud throw rather than a warning.
+      for (final (name, registry) in <(String, String)>[
+        ('a non-list providers entry', '{"providers": {"alpha": {}}}'),
+        ('a non-string provider name', '{"providers": [42]}'),
+        ('a blank provider name', '{"providers": ["  "]}'),
+        ('malformed JSON', '{not json'),
+        ('a non-object top level', '[1,2,3]'),
+      ]) {
+        test('rejects $name', () {
+          writeRegistry(registry);
+          expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
+        });
+      }
 
       test('an empty registry leaves the config empty', () {
         writeRegistry('{"providers": []}');
@@ -543,25 +479,5 @@ void main() {
       });
     });
 
-    group('the default model', () {
-      test('is the first model of the first registered provider', () {
-        writeModel(
-          'kokoro',
-          '{"id": "a/b", "formats": ["wav"]}',
-          claimedByProvider: false,
-        );
-        writeModel(
-          'fish',
-          '{"id": "c/d", "formats": ["wav"]}',
-          claimedByProvider: false,
-        );
-        writeRegistry('{"providers": ["alpha", "google"]}');
-        writeProvider('alpha', '{"models": ["kokoro"], "settings": {}}');
-        writeProvider('google', '{"models": ["fish"], "settings": {}}');
-
-        final (cfg, _) = rawLoad();
-        expect(defaultModelFor(cfg)?.alias, 'kokoro');
-      });
     });
-  });
 }

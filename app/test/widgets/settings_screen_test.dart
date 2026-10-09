@@ -8,6 +8,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/l10n_test_support.dart';
 import '../support/run_setup_fixtures.dart' as fixtures;
+import '../support/spec_window.dart';
 
 /// Widget tests for the providers & voices screen.
 ///
@@ -70,8 +71,7 @@ void main() {
   AppController makeController() => fixtures.makeController(configDir);
 
   Future<void> pumpSettingsScreen(WidgetTester tester, AppController c) async {
-    await tester.binding.setSurfaceSize(const Size(1200, 1800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await setSpecWindowSize(tester, const Size(1200, 1800));
     await tester.pumpWidget(testApp(home: SettingsScreen(controller: c)));
     await tester.pumpAndSettle();
   }

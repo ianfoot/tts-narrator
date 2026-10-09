@@ -10,6 +10,7 @@ import 'package:tts_narrator/src/gui/editor/editor_status_bar.dart';
 import 'package:tts_narrator/src/gui/theme/app_tokens.dart';
 
 import '../support/l10n_test_support.dart';
+import '../support/spec_window.dart';
 
 void main() {
   late Directory dir;
@@ -30,11 +31,12 @@ void main() {
   Future<void> pumpStatusBar(
     WidgetTester tester,
     AppController controller, {
+    // Held narrower than the spec default on purpose: the truncation tests
+    // below assert where the text clips, and a wider bar would move it.
     Size size = const Size(1000, 800),
     Brightness brightness = Brightness.light,
   }) async {
-    await tester.binding.setSurfaceSize(size);
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await setSpecWindowSize(tester, size);
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: testLocalizationsDelegates,
@@ -143,31 +145,25 @@ void main() {
     expect(estimateRight.dx, closeTo(barRect.right - 16, 1));
   });
 
-  testWidgets('readouts use textSecondary at 75% in light mode', (
-    tester,
-  ) async {
-    final controller = makeController();
-    await pumpStatusBar(tester, controller);
+  for (final (brightness, name) in [
+    (Brightness.light, 'light'),
+    (Brightness.dark, 'dark'),
+  ]) {
+    testWidgets('readouts use textSecondary at 75% in $name mode', (
+      tester,
+    ) async {
+      final controller = makeController();
+      await pumpStatusBar(tester, controller, brightness: brightness);
 
-    final expected = AppPalette.light.textSecondary.withValues(alpha: 0.75);
-    expect(
-      tester.widget<Text>(find.textContaining(' words · ')).style!.color,
-      expected,
-    );
-    expect(readoutColor(tester, const Key('statusOutDir')), expected);
-    expect(readoutColor(tester, const Key('editorEstimate')), expected);
-  });
-
-  testWidgets('readouts use textSecondary at 75% in dark mode', (tester) async {
-    final controller = makeController();
-    await pumpStatusBar(tester, controller, brightness: Brightness.dark);
-
-    final expected = AppPalette.dark.textSecondary.withValues(alpha: 0.75);
-    expect(
-      tester.widget<Text>(find.textContaining(' words · ')).style!.color,
-      expected,
-    );
-    expect(readoutColor(tester, const Key('statusOutDir')), expected);
-    expect(readoutColor(tester, const Key('editorEstimate')), expected);
-  });
+      final expected = AppPalette.of(brightness).textSecondary.withValues(
+        alpha: 0.75,
+      );
+      expect(
+        tester.widget<Text>(find.textContaining(' words · ')).style!.color,
+        expected,
+      );
+      expect(readoutColor(tester, const Key('statusOutDir')), expected);
+      expect(readoutColor(tester, const Key('editorEstimate')), expected);
+    });
+  }
 }

@@ -77,40 +77,23 @@ void main() {
       expect(find.text('Segments deleted'), findsNothing);
     });
 
-    testWidgets('bails if a new run starts while the dialog is open', (
-      tester,
-    ) async {
-      final controller = RecordingCleanupController()
-        ..cleanupUsable = true
-        ..runDir = 'original run dir'
-        ..overrideCleanup = () async {
-          fail('cleanup ran despite a new run starting mid-dialog');
-        };
-      await pumpFlowHost(tester, controller);
-
-      await tester.tap(find.text('run'));
-      await tester.pumpAndSettle();
-      expect(find.text('Delete segment files?'), findsOneWidget);
-
-      // A new run supersedes the target while the user is still deciding.
-      controller
-        ..cleanupUsable = false
-        ..runDir = 'new run dir';
-      await tester.tap(find.text('Delete'));
-      await tester.pumpAndSettle();
-
-      expect(controller.cleanups, 0);
-      expect(find.text('Segments deleted'), findsNothing);
-    });
-
-    testWidgets(
-      'bails if the target directory moves while the dialog is open',
-      (tester) async {
+    // The dialog re-validates its target on confirm; either half of that target
+    // moving under the user must abort rather than clean a stale directory.
+    for (final (name, mutate) in [
+      (
+        'a new run starts',
+        (RecordingCleanupController c) => c
+          ..cleanupUsable = false
+          ..runDir = 'new run dir',
+      ),
+      ('the target directory moves', (RecordingCleanupController c) => c.runDir = 'another run dir'),
+    ]) {
+      testWidgets('bails if $name while the dialog is open', (tester) async {
         final controller = RecordingCleanupController()
           ..cleanupUsable = true
           ..runDir = 'original run dir'
           ..overrideCleanup = () async {
-            fail('cleanup ran against a stale directory');
+            fail('cleanup ran despite the target changing mid-dialog');
           };
         await pumpFlowHost(tester, controller);
 
@@ -118,13 +101,14 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Delete segment files?'), findsOneWidget);
 
-        controller.runDir = 'another run dir';
+        mutate(controller);
         await tester.tap(find.text('Delete'));
         await tester.pumpAndSettle();
 
         expect(controller.cleanups, 0);
-      },
-    );
+        expect(find.text('Segments deleted'), findsNothing);
+      });
+    }
 
     testWidgets('surfaces a cleanup failure instead of crashing', (
       tester,

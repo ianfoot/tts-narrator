@@ -8,17 +8,15 @@ void main() {
         estimateMinutes(['one two three four five']),
         closeTo(5 / 160, 1e-9),
       );
-    });
-
-    test('empty segments estimate zero', () {
-      expect(estimateMinutes([]), 0);
-    });
-
-    test('handles multiple segments', () {
+      // Every segment counts, not just the first.
       expect(
         estimateMinutes(['a b c', 'd e f g h i j k l m']),
         closeTo(13 / 160, 1e-9),
       );
+    });
+
+    test('empty segments estimate zero', () {
+      expect(estimateMinutes([]), 0);
     });
   });
 
@@ -64,14 +62,12 @@ void main() {
   });
 
   group('formatCostUsd', () {
-    test('a free model reads as zero, with no word attached', () {
+    test('always reads as a dollar amount to two decimals', () {
+      // The one thing this owns over `toStringAsFixed` is the `$` the user sees.
       expect(formatCostUsd(0), r'$0.00');
-    });
-
-    test('formats small costs to two decimals', () {
-      expect(formatCostUsd(2.406), r'$2.41');
       expect(formatCostUsd(0.004), r'$0.00');
       expect(formatCostUsd(1.0), r'$1.00');
+      expect(formatCostUsd(2.406), r'$2.41');
     });
   });
 }

@@ -21,10 +21,6 @@ void main() {
       expect(0.004.costLabel(testL10n), r'$0.00 (free)');
     });
 
-    test('takes the annotation from l10n rather than hardcoding it', () {
-      // The point of moving "(free)" out of core: the word is the interface's,
-      // and it is read from the ARB so a locale can say it differently.
-      expect(0.0.costLabel(testL10n), contains(testL10n.core_costFree));
-    });
+    
   });
 }

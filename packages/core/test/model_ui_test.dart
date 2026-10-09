@@ -5,17 +5,16 @@ import 'support/fake_provider.dart';
 
 void main() {
   group('ModelUiSpec', () {
-    test('defaults to empty', () {
+    test('is empty until a control is declared', () {
       expect(const ModelUiSpec().isEmpty, isTrue);
       expect(const ModelUiSpec.empty().isEmpty, isTrue);
-    });
 
-    test('carries declared options in order', () {
       const spec = ModelUiSpec([
         ModelUiControl(key: 'accent', label: 'Accent'),
         ModelUiControl(key: 'style', label: 'Style'),
       ]);
       expect(spec.isEmpty, isFalse);
+      // Order is the declaration order: the panel renders the controls as given.
       expect(spec.options.map((o) => o.key), ['accent', 'style']);
     });
   });

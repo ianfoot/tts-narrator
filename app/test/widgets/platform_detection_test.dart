@@ -8,47 +8,35 @@ void main() {
     // Reset override between every test so expectations never leak.
     tearDown(() => debugDefaultTargetPlatformOverride = null);
 
-    test('isMac is true only on macOS', () {
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-      expect(platform.isMac, isTrue);
-      expect(platform.isLinux, isFalse);
-      expect(platform.isWindows, isFalse);
-    });
+    for (final (p, own, name) in [
+      (TargetPlatform.macOS, 'isMac', 'macos'),
+      (TargetPlatform.linux, 'isLinux', 'linux'),
+      (TargetPlatform.windows, 'isWindows', 'windows'),
+    ]) {
+      test('$own is true only on $name', () {
+        debugDefaultTargetPlatformOverride = p;
+        final flags = {
+          'isMac': platform.isMac,
+          'isLinux': platform.isLinux,
+          'isWindows': platform.isWindows,
+        };
+        expect(flags[own], isTrue);
+        for (final other in flags.keys.where((f) => f != own)) {
+          expect(flags[other], isFalse, reason: other);
+        }
+      });
 
-    test('isLinux is true only on Linux', () {
-      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
-      expect(platform.isLinux, isTrue);
-      expect(platform.isMac, isFalse);
-      expect(platform.isWindows, isFalse);
-    });
-
-    test('isWindows is true only on Windows', () {
-      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-      expect(platform.isWindows, isTrue);
-      expect(platform.isMac, isFalse);
-      expect(platform.isLinux, isFalse);
-    });
+      test('platformTag maps $name', () {
+        debugDefaultTargetPlatformOverride = p;
+        expect(platform.platformTag, name);
+      });
+    }
 
     test('all getters are false on non-desktop platforms', () {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       expect(platform.isMac, isFalse);
       expect(platform.isLinux, isFalse);
       expect(platform.isWindows, isFalse);
-    });
-
-    test('platformTag maps macOS', () {
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-      expect(platform.platformTag, 'macos');
-    });
-
-    test('platformTag maps Linux', () {
-      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
-      expect(platform.platformTag, 'linux');
-    });
-
-    test('platformTag maps Windows', () {
-      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-      expect(platform.platformTag, 'windows');
     });
 
     test('platformTag falls back to linux for unknown platforms', () {
@@ -71,15 +59,12 @@ void main() {
       expect(platform.acceleratorLabel('L', shift: true), '⌘⇧L');
     });
 
-    test('uses Ctrl on Linux', () {
-      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
-      expect(platform.acceleratorLabel('N'), 'Ctrl+N');
-    });
-
-    test('uses Ctrl on Windows', () {
-      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-      expect(platform.acceleratorLabel('N'), 'Ctrl+N');
-    });
+    for (final p in [TargetPlatform.linux, TargetPlatform.windows]) {
+      test('uses Ctrl on $p', () {
+        debugDefaultTargetPlatformOverride = p;
+        expect(platform.acceleratorLabel('N'), 'Ctrl+N');
+      });
+    }
 
     test('uses Ctrl+Shift on non-macOS platforms', () {
       debugDefaultTargetPlatformOverride = TargetPlatform.linux;

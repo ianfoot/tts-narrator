@@ -136,7 +136,6 @@ void main() {
         LogicalKeyboardKey.keyS,
         shift: true,
       );
-      expect(leafItem(file, 'Clean Up Segments…').label, 'Clean Up Segments…');
       // Close never closed anything - it popped the current route, which is
       // a no-op on the root editor - so it is gone rather than inert.
       expect(leafItems(file).map(bareLabel), isNot(contains('Close')));

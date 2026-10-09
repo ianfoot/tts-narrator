@@ -47,34 +47,26 @@ void main() {
       expect(File(out).readAsBytesSync(), [1, 2, 3, 4, 5, 6, 7]);
     });
 
-    test('wav strips each RIFF header and writes one WAV', () {
-      final a = writeWavBytes('a.wav', [1, 2, 3]);
-      final b = writeWavBytes('b.wav', [4, 5]);
-      final out = '${dir.path}/joined.wav';
+    // Pooling strips each segment's RIFF header and reuses the first one's. The
+    // pooled track is longer than any single segment, so a stale header would
+    // misreport its duration -- copying the `fmt ` chunk is what keeps the
+    // sample rate correct without core knowing the rate.
+    for (final sampleRate in [24000, 44100]) {
+      test('wav strips each RIFF header and writes one WAV at $sampleRate', () {
+        final a = writeWavBytes('a.wav', [1, 2, 3], sampleRate: sampleRate);
+        final b = writeWavBytes('b.wav', [4, 5], sampleRate: sampleRate);
+        final out = '${dir.path}/joined.wav';
 
-      concatSegments([a, b], outputPath: out, format: TtsAudioFormat.wav);
+        concatSegments([a, b], outputPath: out, format: TtsAudioFormat.wav);
 
-      final joined = File(out).readAsBytesSync();
-      expect(wavDataPayload(joined), [1, 2, 3, 4, 5]);
-    });
-
-    test('wav reuses the first segment header, rate included', () {
-      // The pooled track has a different length than any single segment, so a
-      // stale header would misreport its duration. Copying the `fmt ` chunk is
-      // what keeps the sample rate correct without core knowing the rate.
-      final a = writeWavBytes('a.wav', [1, 2, 3], sampleRate: 44100);
-      final b = writeWavBytes('b.wav', [4, 5], sampleRate: 44100);
-      final out = '${dir.path}/joined.wav';
-
-      concatSegments([a, b], outputPath: out, format: TtsAudioFormat.wav);
-
-      final joined = File(out).readAsBytesSync();
-      expect(wavDataPayload(joined), [1, 2, 3, 4, 5]);
-      expect(
-        readWav(joined).formatChunk,
-        readWav(File(a).readAsBytesSync()).formatChunk,
-      );
-    });
+        final joined = File(out).readAsBytesSync();
+        expect(wavDataPayload(joined), [1, 2, 3, 4, 5]);
+        expect(
+          readWav(joined).formatChunk,
+          readWav(File(a).readAsBytesSync()).formatChunk,
+        );
+      });
+    }
 
     test('wav rejects a segment whose audio layout differs', () {
       final a = writeWavBytes('a.wav', [1, 2, 3], sampleRate: 44100);
@@ -129,22 +121,8 @@ void main() {
       expect(combinedFilePath(dir.path), isNull);
     });
 
-    test('null when the manifest has no combined_file', () {
-      write(
-        'manifest.json',
-        utf8.encode(const JsonEncoder().convert({'format': 'mp3'})),
-      );
-      expect(combinedFilePath(dir.path), isNull);
-    });
-
-    test('null when the combined file is missing from disk', () {
-      write(
-        'manifest.json',
-        utf8.encode(
-          const JsonEncoder().convert({'combined_file': 'story_full.mp3'}),
-        ),
-      );
-      expect(combinedFilePath(dir.path), isNull);
+    test('null for a missing directory', () {
+      expect(combinedFilePath('${dir.path}/nope'), isNull);
     });
 
     test('returns the absolute path when the file exists', () {
@@ -157,21 +135,23 @@ void main() {
       write('story_full.mp3', [9, 9]);
       expect(combinedFilePath(dir.path), '${dir.path}/story_full.mp3');
     });
-
-    test('null for a missing directory', () {
-      expect(combinedFilePath('${dir.path}/nope'), isNull);
-    });
   });
 
   group('segmentCleanupAvailable / cleanupSegmentFiles', () {
-    test('true only when the manifest has undeleted, present segments', () {
+    // Cleanup is offered only for a run whose segments are still on disk and
+    // not yet reclaimed -- one missing precondition is enough to hide it.
+    void cleanable({
+      required bool deleted,
+      required bool combined,
+      required bool segments,
+    }) {
       write(
         'manifest.json',
         utf8.encode(
           const JsonEncoder().convert({
             'format': 'mp3',
             'combined_file': 'story_full.mp3',
-            'segments_deleted': false,
+            'segments_deleted': deleted,
             'paragraphs': [
               {'index': 1, 'wav': 'story_1.mp3'},
               {'index': 2, 'wav': 'story_2.mp3'},
@@ -179,53 +159,26 @@ void main() {
           }),
         ),
       );
-      write('story_full.mp3', [9, 9]);
-      write('story_1.mp3', [1]);
-      write('story_2.mp3', [2]);
+      if (combined) write('story_full.mp3', [9, 9]);
+      if (segments) {
+        write('story_1.mp3', [1]);
+        write('story_2.mp3', [2]);
+      }
+    }
 
-      expect(segmentCleanupAvailable(dir.path), isTrue);
-    });
-
-    test('false when segments are already deleted', () {
-      write(
-        'manifest.json',
-        utf8.encode(
-          const JsonEncoder().convert({
-            'format': 'mp3',
-            'combined_file': 'story_full.mp3',
-            'segments_deleted': true,
-            'paragraphs': [
-              {'index': 1, 'wav': 'story_1.mp3'},
-            ],
-          }),
-        ),
-      );
-      write('story_full.mp3', [9, 9]);
-      write('story_1.mp3', [1]);
-
-      expect(segmentCleanupAvailable(dir.path), isFalse);
-    });
+    for (final (name, deleted, combined, segments, available) in [
+      ('an undeleted run with every file present', false, true, true, true),
+      ('segments already deleted', true, true, true, false),
+      ('no combined file on disk', false, false, true, false),
+      ('no segments on disk', false, true, false, false),
+    ]) {
+      test('cleanup is $available for $name', () {
+        cleanable(deleted: deleted, combined: combined, segments: segments);
+        expect(segmentCleanupAvailable(dir.path), available);
+      });
+    }
 
     test('false when nobody runs in the directory', () {
-      expect(segmentCleanupAvailable(dir.path), isFalse);
-    });
-
-    test('false when no combined file is on disk', () {
-      write(
-        'manifest.json',
-        utf8.encode(
-          const JsonEncoder().convert({
-            'format': 'mp3',
-            'combined_file': 'story_full.mp3',
-            'segments_deleted': false,
-            'paragraphs': [
-              {'index': 1, 'wav': 'story_1.mp3'},
-            ],
-          }),
-        ),
-      );
-      write('story_1.mp3', [1]);
-
       expect(segmentCleanupAvailable(dir.path), isFalse);
     });
 

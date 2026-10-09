@@ -103,24 +103,12 @@ void main() {
         ],
       };
       writeManifest(dir, manifest);
+
+      final file = File('${dir.path}/manifest.json');
+      expect(file.existsSync(), isTrue);
       expect(readManifest(dir), manifest);
-    });
-
-    test('writes to the documented filename', () {
-      writeManifest(dir, {'a': 1});
-      expect(File('${dir.path}/manifest.json').existsSync(), isTrue);
-    });
-
-    test('is indented, so a hand-inspected manifest stays readable', () {
-      writeManifest(dir, {
-        'paragraphs': [
-          {'index': 1},
-        ],
-      });
-      expect(
-        File('${dir.path}/manifest.json').readAsStringSync(),
-        contains('\n  "paragraphs"'),
-      );
+      // Indented, so a manifest a user opened by hand stays readable.
+      expect(file.readAsStringSync(), contains('\n  "paragraphs"'));
     });
 
     test('overwrites a previous manifest rather than appending', () {

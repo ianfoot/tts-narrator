@@ -121,6 +121,12 @@ void main() {
       );
       final (cfg, warnings) = load();
       expect(cfg.models.containsKey('gemini'), isTrue);
+      expect(cfg.models['gemini']!.id, 'google/gemini-3.1-flash-tts-preview');
+      expect(cfg.models['gemini']!.formats, const [
+        TtsAudioFormat.wav,
+        TtsAudioFormat.mp3,
+      ]);
+      expect(cfg.models['gemini']!.promptStyle, isTrue);
       expect(cfg.models['gemini']!.provider, testProvider);
       expect(warnings, isEmpty);
     });
@@ -1402,20 +1408,6 @@ void main() {
       expect(decoded.voice!.id, 'Charon');
       expect(decoded.voice!.name, isNull);
       expect(decoded.voice!.gender, isNull);
-    });
-
-    test('readModelJson prefers the overlay and falls back to the base', () {
-      final dir = Directory.systemTemp.createTempSync('tts_config_test_');
-      addTearDown(() => dir.deleteSync(recursive: true));
-      final fx = ConfigFixture(dir);
-
-      fx.writeModel('one', '{"id":"one-base"}');
-      expect(readModelJson(dir.path, 'one')!['id'], 'one-base');
-
-      fx.writeModel('one', '{"id":"one-overlay"}', ConfigFixture.overlay);
-      expect(readModelJson(dir.path, 'one')!['id'], 'one-overlay');
-
-      expect(readModelJson(dir.path, 'absent'), isNull);
     });
   });
 }

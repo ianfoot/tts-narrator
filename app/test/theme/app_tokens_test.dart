@@ -103,12 +103,16 @@ void main() {
 
     test('of() returns the canonical palette for each brightness', () {
       expect(
-        identical(AppPalette.of(Brightness.dark), AppPalette.dark),
-        isTrue,
+        AppPalette.of(Brightness.dark).accentPrimary,
+        AppPalette.dark.accentPrimary,
       );
       expect(
-        identical(AppPalette.of(Brightness.light), AppPalette.light),
-        isTrue,
+        AppPalette.of(Brightness.light).accentPrimary,
+        AppPalette.light.accentPrimary,
+      );
+      expect(
+        AppPalette.of(Brightness.dark).accentPrimary,
+        isNot(AppPalette.light.accentPrimary),
       );
     });
   });

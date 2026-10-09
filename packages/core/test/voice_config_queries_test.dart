@@ -96,13 +96,11 @@ void main() {
       expect(profile!.provider, testProvider);
     });
 
-    test('returns null for an unknown name on an empty config', () {
-      expect(profileFor('fish', const VoiceConfig()), isNull);
-    });
-
-    test('returns null for unknown names', () {
-      expect(profileFor('unknown', const VoiceConfig()), isNull);
-    });
+    for (final name in const ['fish', 'unknown', 'google/gemini-tts']) {
+      test('returns null for the unknown name $name', () {
+        expect(profileFor(name, const VoiceConfig()), isNull);
+      });
+    }
   });
 
   group('defaultModelFor', () {
@@ -151,30 +149,27 @@ void main() {
       expect(defaultModelFor(cfg)!.alias, 'gemini');
     });
 
-    test('a provider entry that resolves to no model yields no default', () {
-      final cfg = _cfg(
-        providers: {
-          'alpha': provider('alpha', ['unknown']),
-        },
-        models: {'gemini': _model(alias: 'gemini', id: 'google/gemini-tts')},
-      );
-      expect(defaultModelFor(cfg), isNull);
-    });
-
-    test('a provider claiming no models yields no default', () {
-      final cfg = _cfg(
-        providers: {'alpha': provider('alpha', const [])},
-        models: {'gemini': _model(alias: 'gemini', id: 'google/gemini-tts')},
-      );
-      expect(defaultModelFor(cfg), isNull);
-    });
-
-    test('models with no provider block yield no default', () {
-      final cfg = _cfg(
-        models: {'gemini': _model(alias: 'gemini', id: 'google/gemini-tts')},
-      );
-      expect(defaultModelFor(cfg), isNull);
-    });
+    // A default can only come from a registered provider whose entry names a model
+    // the config actually carries.
+    for (final (name, providers) in <(String, Map<String, ProviderConfig>)>[
+      (
+        'a provider entry naming an unknown model',
+        {'alpha': ProviderConfig(name: 'alpha', models: ['unknown'])},
+      ),
+      (
+        'a provider claiming no models',
+        {'alpha': ProviderConfig(name: 'alpha', models: [])},
+      ),
+      ('models with no provider block', const {}),
+    ]) {
+      test('$name yields no default', () {
+        final cfg = _cfg(
+          providers: providers,
+          models: {'gemini': _model(alias: 'gemini', id: 'google/gemini-tts')},
+        );
+        expect(defaultModelFor(cfg), isNull);
+      });
+    }
   });
 
   group('resolveVoice', () {

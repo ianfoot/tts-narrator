@@ -166,31 +166,28 @@ void main() {
       expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsNothing);
     });
 
-    testWidgets('on macOS the dialog lists the Kokoro Local starter', (
-      tester,
-    ) async {
-      await withPlatform(TargetPlatform.macOS, () async {
-        await pumpBootstrap(tester, manifestLoader: () async => _macosManifest);
+    for (final (platform, manifest, listed) in [
+      (TargetPlatform.macOS, _macosManifest, true),
+      (TargetPlatform.linux, _linuxManifest, false),
+    ]) {
+      testWidgets('on ${platform.name} the Kokoro Local starter is '
+          '${listed ? 'listed' : 'omitted'}', (tester) async {
+        await withPlatform(platform, () async {
+          await pumpBootstrap(tester, manifestLoader: () async => manifest);
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsOneWidget);
-        expect(find.textContaining('Kokoro Local'), findsOneWidget);
+          expect(
+            find.text(testL10n.gui_bootstrap_downloadTitle),
+            findsOneWidget,
+          );
+          expect(
+            find.textContaining('Kokoro Local'),
+            listed ? findsOneWidget : findsNothing,
+          );
+        });
       });
-    });
-
-    testWidgets('on Linux the dialog omits the Kokoro Local starter', (
-      tester,
-    ) async {
-      await withPlatform(TargetPlatform.linux, () async {
-        await pumpBootstrap(tester, manifestLoader: () async => _linuxManifest);
-
-        await tester.pumpAndSettle();
-
-        expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsOneWidget);
-        expect(find.textContaining('Kokoro Local'), findsNothing);
-      });
-    });
+    }
 
     testWidgets('entire flow: manifest drives dialog, download lands on disk, '
         'relaunch skips straight to the app', (tester) async {

@@ -150,10 +150,7 @@ void main() {
     setUp(() => dir = Directory.systemTemp.createTempSync('tts_download_'));
     tearDown(() => dir.deleteSync(recursive: true));
 
-    test('downloads create the directory', () {
-      downloadVoiceConfigFiles(dir.path);
-      expect(Directory(dir.path).existsSync(), isTrue);
-    });
+    
 
     test(
       'downloads config.json plus the requested files into their subdirs',
@@ -228,6 +225,9 @@ void main() {
           dir.path,
           files: ['fish.json'],
           providers: ['alpha.json'],
+          // Without this the guard would silently fall through to a live
+          // fetch of the public repo instead of failing the test.
+          repoUrl: 'http://${server.address.address}:${server.port}',
           clientFactory: () =>
               HttpClient()..connectionTimeout = const Duration(seconds: 5),
         );

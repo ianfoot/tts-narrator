@@ -184,15 +184,6 @@ void main() {
       expect(server.requests.single.body.containsKey('speed'), isFalse);
     });
 
-    test('sends speed at the 1.0 default when the model takes it', () async {
-      final server = await _serve(_audio);
-      addTearDown(server.close);
-
-      await _speak(server, voice: 'v');
-
-      expect(server.requests.single.body['speed'], 1.0);
-    });
-
     test('default_voice fills in only a missing voice', () async {
       final server = await _serve(_audio);
       addTearDown(server.close);

@@ -78,33 +78,22 @@ void main() {
 
     expect(find.text('MODEL OPTIONS'), findsNothing);
     expect(find.byKey(const Key('accentField')), findsNothing);
-    expect(find.byKey(const Key('useCalmTagSwitch')), findsNothing);
   });
 
-  testWidgets('a speed-only model renders the slider but no prompt fields', (
-    tester,
-  ) async {
-    writeCapableFish({'speed': true});
-    final c = makeController(configDir);
-    await pumpSection(tester, c);
+testWidgets('a speed-capable model renders a slider and no prompt fields', (
+      tester,
+    ) async {
+      writeCapableFish({'speed': true});
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
 
-    expect(find.byKey(const Key('speedSlider')), findsOneWidget);
-    expect(find.byKey(const Key('accentField')), findsNothing);
-    expect(find.byKey(const Key('genderOptionSegmented')), findsNothing);
-  });
-
-  testWidgets('a speed-capable model renders a slider defaulting to 1.0', (
-    tester,
-  ) async {
-    writeCapableFish({'speed': true});
-    final c = makeController(configDir);
-    await pumpSection(tester, c);
-
-    expect(find.text('Speed'), findsOneWidget);
-    expect(find.byKey(const Key('speedSlider')), findsOneWidget);
-    expect(find.byKey(const Key('speedBadge')), findsOneWidget);
-    expect(c.speed, 1.0);
-  });
+      expect(find.text('Speed'), findsOneWidget);
+      expect(find.byKey(const Key('speedSlider')), findsOneWidget);
+      expect(find.byKey(const Key('speedBadge')), findsOneWidget);
+      expect(c.speed, 1.0);
+      expect(find.byKey(const Key('accentField')), findsNothing);
+      expect(find.byKey(const Key('genderOptionSegmented')), findsNothing);
+    });
 
   testWidgets('a style hint shows as the field placeholder', (tester) async {
     writeCapableFish({'prompt_style': true});

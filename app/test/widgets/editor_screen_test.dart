@@ -1,15 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tts_narrator/src/gui/controller/app_controller.dart';
 import 'package:tts_narrator/src/gui/controller/config_loader.dart';
 import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
-import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
-    show acceleratorLabel;
+
 import 'package:tts_narrator/src/gui/run_setup/run_setup_panel.dart';
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
@@ -18,6 +16,7 @@ import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
 import '../support/l10n_test_support.dart';
 import '../support/run_setup_fixtures.dart' as fixtures;
+import '../support/spec_window.dart';
 
 void main() {
   late Directory dir;
@@ -47,8 +46,7 @@ void main() {
     AppController controller, {
     Future<String?> Function()? pickDirectory,
   }) async {
-    await tester.binding.setSurfaceSize(const Size(1000, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await setSpecWindowSize(tester, const Size(1000, 800));
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: testLocalizationsDelegates,
@@ -61,76 +59,43 @@ void main() {
     );
   }
 
-  testWidgets('boots to an empty editor with a zeroed status bar', (
-    tester,
-  ) async {
-    final controller = await makeController(client: FakeTtsProvider().client);
-    await pumpEditor(tester, controller);
+  
 
-    expect(find.byType(EditorScreen), findsOneWidget);
-    expect(find.byKey(const Key('editorTextField')), findsOneWidget);
-    expect(find.byKey(const Key('editorOpenButton')), findsOneWidget);
-    expect(find.byKey(const Key('editorNarrateButton')), findsOneWidget);
-    // Narration is initiated from the toolbar only; the run-setup panel has no
-    // Narrate button of its own.
-    expect(find.byKey(const Key('railNarrateButton')), findsNothing);
-    expect(find.byKey(const Key('runSetupToggleButton')), findsOneWidget);
-    expect(
-      find.byTooltip(
-        '${testL10n.gui_editor_toolbar_openTextFile} '
-        '(${acceleratorLabel('O')})',
+// The panel is visible by default and round-trips, whether it is toggled by
+    // tapping the toolbar button or by driving the controller directly.
+    for (final (name, toggle) in [
+      (
+        'the toolbar button toggles the run-setup panel away and back',
+        (WidgetTester tester, AppController c) =>
+            tester.tap(find.byKey(const Key('runSetupToggleButton'))),
       ),
-      findsOneWidget,
-    );
-    expect(
-      find.byTooltip(
-        '${testL10n.gui_editor_toolbar_narrate} (${acceleratorLabel('N')})',
+      (
+        'a controller-driven toggle hides and restores the rail',
+        (WidgetTester tester, AppController c) async =>
+            c.toggleRunSetupPanel(),
       ),
-      findsOneWidget,
-    );
-  });
+    ]) {
+      testWidgets(name, (tester) async {
+        final controller = await makeController();
+        await pumpEditor(tester, controller);
 
-  testWidgets('the run-setup panel is visible by default and toggles away', (
+        expect(find.byType(RunSetupPanel), findsOneWidget);
+
+        await toggle(tester, controller);
+        await tester.pumpAndSettle();
+        expect(find.byType(RunSetupPanel), findsNothing);
+
+        await toggle(tester, controller);
+        await tester.pumpAndSettle();
+        expect(find.byType(RunSetupPanel), findsOneWidget);
+      });
+    }
+
+  testWidgets('the editor field is top-aligned so prose starts at the top', (
     tester,
   ) async {
     final controller = await makeController();
-    await pumpEditor(tester, controller);
-
-    expect(find.byType(RunSetupPanel), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('runSetupToggleButton')));
-    await tester.pumpAndSettle();
-    expect(find.byType(RunSetupPanel), findsNothing);
-
-    await tester.tap(find.byKey(const Key('runSetupToggleButton')));
-    await tester.pumpAndSettle();
-    expect(find.byType(RunSetupPanel), findsOneWidget);
-  });
-
-  testWidgets('a controller-driven panel toggle hides and restores the rail', (
-    tester,
-  ) async {
-    final controller = await makeController();
-    await pumpEditor(tester, controller);
-
-    expect(find.byType(RunSetupPanel), findsOneWidget);
-
-    controller.toggleRunSetupPanel();
-    await tester.pumpAndSettle();
-    expect(find.byType(RunSetupPanel), findsNothing);
-
-    controller.toggleRunSetupPanel();
-    await tester.pumpAndSettle();
-    expect(find.byType(RunSetupPanel), findsOneWidget);
-  });
-
-  testWidgets('macOS editor text is top-aligned in the expanding field', (
-    tester,
-  ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    final controller = await makeController();
-    await tester.binding.setSurfaceSize(const Size(1000, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await setSpecWindowSize(tester, const Size(1000, 800));
     await tester.pumpWidget(
       testApp(home: EditorScreen(controller: controller)),
     );
@@ -142,7 +107,6 @@ void main() {
       ),
     );
     expect(field.textAlignVertical, TextAlignVertical.top);
-    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('typing updates the status bar word/char/estimate', (

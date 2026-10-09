@@ -16,6 +16,7 @@ import '../support/fake_tts_provider.dart';
 import '../support/l10n_test_support.dart';
 import '../support/recording_cleanup_controller.dart';
 import '../support/run_setup_fixtures.dart' as fixtures;
+import '../support/spec_window.dart';
 
 /// Default for the optional toggle callbacks; a top-level tear-off is a
 /// constant, which an inline `() {}` closure is not.
@@ -53,8 +54,7 @@ void main() {
     void Function(String)? onShowGuard,
     VoidCallback? onCleanupSegments,
   }) async {
-    await tester.binding.setSurfaceSize(const Size(1200, 1800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await setSpecWindowSize(tester, const Size(1200, 1800));
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: testLocalizationsDelegates,
@@ -170,12 +170,15 @@ void main() {
       expect(button.onPressed, isNotNull);
       await tester.tap(find.byKey(const Key('settingsButton')));
       await tester.pump();
+      expect(tester.takeException(), isNull);
       expect(find.byKey(const Key('settingsButton')), findsOneWidget);
     });
   });
 
   group('document title', () {
-    testWidgets('shows filename and dirty dot state', (tester) async {
+    testWidgets('shows the dirty dot only once the document is edited', (
+      tester,
+    ) async {
       final controller = makeController();
       await pumpToolbar(tester, controller);
       expect(find.byKey(const Key('dirtyDot')), findsNothing);

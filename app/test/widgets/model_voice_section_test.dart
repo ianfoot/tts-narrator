@@ -93,49 +93,49 @@ void main() {
       'display_name': 'Gemini 3.1 Flash TTS',
     };
 
-    testWidgets('switching the model resets the voice to its default', (
-      tester,
-    ) async {
-      writeConfig(configDir, {
-        'models': {'gemini': gemini},
-        'defaults': {'gemini': 'Charon'},
-        'voices': {
-          'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
-        },
+    // A voice the user picked survives a model switch; a defaulted one does not.
+    for (final (name, setVoice) in [
+      ('switching the model resets the voice to its default', 'default'),
+      (
+        'a raw voice typed in the advanced field survives a model switch',
+        'my_custom_voice',
+      ),
+    ]) {
+      testWidgets(name, (tester) async {
+        writeConfig(configDir, {
+          'models': {'gemini': gemini},
+          'defaults': {'gemini': 'Charon'},
+          'voices': {
+            'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
+          },
+        });
+        final c = makeController(configDir);
+        if (setVoice != 'default') {
+          c.setVoice(setVoice);
+        } else {
+          await pumpSection(tester, c);
+          await expandVoiceRaw(tester);
+        }
+        if (setVoice != 'default') {
+          await pumpSection(tester, c);
+        }
+
+        await switchModelTo(tester, 'Gemini 3.1');
+
+        expect(c.modelAlias, 'gemini');
+        if (setVoice == 'default') {
+          expect(c.voice, 'CN2pVME9cDEeMRXJzcMPYj0p');
+          expect(c.voiceLabel, 'Charon');
+          // The raw id field follows the new default.
+          final raw = tester.widget<AppTextField>(
+            find.byKey(const Key('voiceRawField')),
+          );
+          expect(raw.controller.text, 'CN2pVME9cDEeMRXJzcMPYj0p');
+        } else {
+          expect(c.voice, 'my_custom_voice');
+        }
       });
-      final c = makeController(configDir);
-      await pumpSection(tester, c);
-      await expandVoiceRaw(tester);
-
-      await switchModelTo(tester, 'Gemini 3.1');
-
-      expect(c.modelAlias, 'gemini');
-      expect(c.voice, 'CN2pVME9cDEeMRXJzcMPYj0p');
-      expect(c.voiceLabel, 'Charon');
-      // The raw id field follows the new default.
-      final raw = tester.widget<AppTextField>(
-        find.byKey(const Key('voiceRawField')),
-      );
-      expect(raw.controller.text, 'CN2pVME9cDEeMRXJzcMPYj0p');
-    });
-
-    testWidgets('a user-set raw voice survives a model switch', (tester) async {
-      writeConfig(configDir, {
-        'models': {'gemini': gemini},
-        'defaults': {'gemini': 'Charon'},
-        'voices': {
-          'gemini': {'Charon': 'CN2pVME9cDEeMRXJzcMPYj0p'},
-        },
-      });
-      final c = makeController(configDir);
-      c.setVoice('my_custom_voice');
-      await pumpSection(tester, c);
-
-      await switchModelTo(tester, 'Gemini 3.1');
-
-      expect(c.modelAlias, 'gemini');
-      expect(c.voice, 'my_custom_voice');
-    });
+    }
 
     testWidgets('picking a voice alias resolves to its raw id', (tester) async {
       writeConfig(configDir, {

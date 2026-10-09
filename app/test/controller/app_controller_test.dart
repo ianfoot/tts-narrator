@@ -1271,16 +1271,29 @@ void main() {
       expect(c.voiceGenderFilter, VoiceGender.neutral);
     });
 
-    test('changing gender tweaks the narrator phrase on gemini', () {
-      writeGemini();
-      final c = makeController()..changeModel('gemini');
-      expect(c.passagePrefix, contains('female narrator'));
-      c.voiceGenderFilter = VoiceGender.male;
-      expect(c.passagePrefix, contains('male narrator'));
-      expect(c.passagePrefix, isNot(contains('female narrator')));
-      c.voiceGenderFilter = VoiceGender.female;
-      expect(c.passagePrefix, contains('female narrator'));
-    });
+    // The default prefix already says "female narrator"; picking Male must
+    // swap the whole phrase rather than find "male narrator" as a substring
+    // of it, and picking Any restores the default verbatim.
+    for (final (gender, phrase) in [
+      (VoiceGender.male, 'male narrator'),
+      (VoiceGender.female, 'female narrator'),
+      (VoiceGender.neutral, 'female narrator'),
+    ]) {
+      test('picking $gender makes the gemini prefix say $phrase', () {
+        writeGemini();
+        final c = makeController()..changeModel('gemini');
+        final defaultPrefix = c.passagePrefix;
+        expect(defaultPrefix, contains('female narrator'));
+        c.voiceGenderFilter = VoiceGender.male;
+        expect(c.passagePrefix, contains('male narrator'));
+        expect(c.passagePrefix, isNot(contains('female narrator')));
+        c.voiceGenderFilter = gender;
+        expect(c.passagePrefix, contains(phrase));
+        if (gender == VoiceGender.neutral) {
+          expect(c.passagePrefix, defaultPrefix);
+        }
+      });
+    }
 
     test('gender never rewrites a custom prefix without the exact phrase', () {
       writeGemini();
@@ -1288,30 +1301,6 @@ void main() {
       c.passagePrefix = 'Read this in a hushed tone.';
       c.voiceGenderFilter = VoiceGender.male;
       expect(c.passagePrefix, 'Read this in a hushed tone.');
-    });
-
-    test('selecting any reverts the narrator phrase on gemini', () {
-      writeGemini();
-      final c = makeController()..changeModel('gemini');
-      final defaultPrefix = c.passagePrefix;
-      expect(defaultPrefix, contains('female narrator'));
-      c.voiceGenderFilter = VoiceGender.male;
-      expect(c.passagePrefix, contains('male narrator'));
-      c.voiceGenderFilter = VoiceGender.neutral;
-      expect(c.passagePrefix, defaultPrefix);
-    });
-
-    test('male narrator is not mistaken inside a female phrase', () {
-      writeGemini();
-      final c = makeController()..changeModel('gemini');
-      // The default prefix already says "female narrator"; selecting Female
-      // must not treat that phrase's 'male narrator' substring as a male one.
-      c.voiceGenderFilter = VoiceGender.female;
-      expect(c.passagePrefix, contains('female narrator'));
-      expect(c.voiceGenderFilter, VoiceGender.female);
-      // Reverting to Any is likewise a no-op on the default phrase.
-      c.voiceGenderFilter = VoiceGender.neutral;
-      expect(c.passagePrefix, contains('female narrator'));
     });
 
     test('a gender with no matching voices reverts the filter to any', () {

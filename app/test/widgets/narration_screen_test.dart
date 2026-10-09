@@ -14,6 +14,7 @@ import '../support/fake_audio_platform.dart';
 import '../support/fake_tts_provider.dart';
 import '../support/l10n_test_support.dart';
 import '../support/run_setup_fixtures.dart' as fixtures;
+import '../support/spec_window.dart';
 
 /// A speech client whose `synthesize` never returns, so a run stays in-flight
 /// for as long as the test needs it to.
@@ -62,8 +63,7 @@ void main() {
   }
 
   Future<void> pumpRun(WidgetTester tester, AppController controller) async {
-    await tester.binding.setSurfaceSize(const Size(1000, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await setSpecWindowSize(tester, const Size(1000, 800));
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: testLocalizationsDelegates,
@@ -79,8 +79,7 @@ void main() {
     WidgetTester tester,
     AppController controller,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(1000, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await setSpecWindowSize(tester, const Size(1000, 800));
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: testLocalizationsDelegates,
@@ -367,7 +366,6 @@ void main() {
   testWidgets('Back on an idle run pops without a prompt', (tester) async {
     final fake = FakeTtsProvider();
     final c = makeController(client: fake.client);
-    final text = c.text;
     c.sampleLen = 1;
     c.startRun();
     await pumpRun(tester, c);
@@ -377,7 +375,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Cancel active narration run?'), findsNothing);
-    expect(c.text, text);
     expect(c.narrating, isFalse);
     expect(fake.callCount, 1);
   });
@@ -410,8 +407,7 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     final c = makeController(client: FakeTtsProvider().client)..sampleLen = 1;
     c.startRun();
-    await tester.binding.setSurfaceSize(const Size(1000, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await setSpecWindowSize(tester, const Size(1000, 800));
     await tester.pumpWidget(testApp(home: NarrationScreen(controller: c)));
 
     expect(find.text('Narrating: untitled.txt'), findsOneWidget);

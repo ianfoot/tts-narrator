@@ -14,9 +14,17 @@ import 'package:tts_narrator/src/gui/theme/app_tokens.dart';
 /// the 320px panel) overflow at the default size even though they fit at the
 /// app's real fonts and window sizes. Screen-level tests therefore pump on a
 /// realistic surface through this helper.
-Future<void> setSpecWindowSize(WidgetTester tester) async {
+///
+/// Pass [size] where a test needs a specific surface — a tall one to prove a
+/// column scrolls, a narrow one to prove a row truncates. Anything that only
+/// needs "not the 800x600 default" should take the spec default instead of
+/// inventing a third size.
+Future<void> setSpecWindowSize(
+  WidgetTester tester, [
+  Size? size,
+]) async {
   await tester.binding.setSurfaceSize(
-    const Size(AppMetrics.defaultWindowWidth, AppMetrics.defaultWindowHeight),
+    size ?? const Size(AppMetrics.defaultWindowWidth, AppMetrics.defaultWindowHeight),
   );
   addTearDown(() => tester.binding.setSurfaceSize(null));
 }

@@ -118,20 +118,24 @@ void main() {
     },
   );
 
-  test('writes provider wav bytes to disk verbatim', () async {
-    // The provider owns the container: a wav run never rewrites the payload,
-    // so the file on disk is exactly what the client returned.
-    final wav = FakeTtsProvider(bytes: wavFileBytes([1, 2, 3, 4]));
-    final input = writeInput();
-    await narrate(
-      config(input, outputFormat: TtsAudioFormat.wav),
-      client: wav.client,
-    );
+  // The provider owns the container: a wav run never rewrites the payload, so
+  // the file on disk is exactly what the client returned -- including its own
+  // header, at whatever rate the backend declared.
+  for (final sampleRate in [22050, 24000]) {
+    test('writes provider wav bytes to disk verbatim at $sampleRate', () async {
+      final bytes = wavFileBytes([1, 2, 3, 4], sampleRate: sampleRate);
+      final wav = FakeTtsProvider(bytes: bytes);
+      final input = writeInput();
+      await narrate(
+        config(input, outputFormat: TtsAudioFormat.wav),
+        client: wav.client,
+      );
 
-    final audioFile = File('${dir.path}/out/story/story_1.wav');
-    expect(audioFile.existsSync(), isTrue);
-    expect(audioFile.readAsBytesSync(), wav.bytes);
-  });
+      final audioFile = File('${dir.path}/out/story/story_1.wav');
+      expect(audioFile.existsSync(), isTrue);
+      expect(audioFile.readAsBytesSync(), bytes);
+    });
+  }
 
   group('a wav run whose backend serves raw samples', () {
     // A model that declares `wav_response_format: pcm` is a promise that the
@@ -160,25 +164,6 @@ void main() {
         reason: 'the fmt chunk must carry the rate the response reported',
       );
       expect(onDisk.length, 44 + 8, reason: 'a canonical 44-byte header');
-    });
-
-    test('a native wav backend has its own header passed through', () async {
-      // The mirror image: the model file leaves `wav_response_format` alone, so
-      // the bytes already are a container and core must not prepend a second
-      // header to them.
-      final wav = FakeTtsProvider(
-        bytes: wavFileBytes([9, 8, 7], sampleRate: 24000),
-      );
-      final input = writeInput();
-      await narrate(
-        config(input, outputFormat: TtsAudioFormat.wav),
-        client: wav.client,
-      );
-
-      final onDisk = File('${dir.path}/out/story/story_1.wav')
-          .readAsBytesSync();
-      expect(onDisk, wavFileBytes([9, 8, 7], sampleRate: 24000));
-      expect(onDisk.length, wavFileBytes([9, 8, 7]).length);
     });
 
     test('a response with no rate fails loudly rather than guessing', () async {
@@ -276,29 +261,26 @@ void main() {
     expect(provider.calls.single.input, buildPrompt(cfg, _inputText));
   });
 
-  test('omits speed for a model that does not support it', () async {
-    final input = writeInput();
-    await narrate(
-      config(input, supportsSpeed: false, speed: 1.4),
-      client: provider.client,
+  // `speed` reaches the wire only for a model that declares the capability; the
+  // configured value -- including the 1.0 default -- rides along untouched.
+  for (final (supportsSpeed, speed, forwarded) in [
+    (false, 1.4, null),
+    (true, 1.4, 1.4),
+    (true, 1.0, 1.0),
+  ]) {
+    test(
+      'speed $speed is ${forwarded == null ? 'omitted' : 'forwarded'} when '
+      'supportsSpeed is $supportsSpeed',
+      () async {
+        final input = writeInput();
+        await narrate(
+          config(input, supportsSpeed: supportsSpeed, speed: speed),
+          client: provider.client,
+        );
+        expect(provider.calls.single.speed, forwarded);
+      },
     );
-    expect(provider.calls.single.speed, isNull);
-  });
-
-  test('forwards speed for a model that supports it, even at 1.0', () async {
-    final input = writeInput();
-    await narrate(
-      config(input, supportsSpeed: true, speed: 1.4),
-      client: provider.client,
-    );
-    expect(provider.calls.single.speed, 1.4);
-  });
-
-  test('a capable model still gets its speed at the 1.0 default', () async {
-    final input = writeInput();
-    await narrate(config(input, supportsSpeed: true), client: provider.client);
-    expect(provider.calls.single.speed, 1.0);
-  });
+  }
 
   test('passes the language for a model that sends one', () async {
     final input = writeInput();
@@ -444,17 +426,8 @@ void main() {
         ),
       );
       expect(provider.callCount, 0);
-    });
-
-    test('fails before creating the output directory', () async {
-      final input = writeInput();
-      await expectLater(
-        narrate(
-          bareConfig(input, providerSettings: const {}),
-          client: provider.client,
-        ),
-        throwsA(isA<StateError>()),
-      );
+      // Validation runs ahead of any filesystem work, so a rejected block
+      // leaves no half-made output directory behind.
       expect(Directory('${dir.path}/out').existsSync(), isFalse);
     });
 
@@ -570,37 +543,29 @@ void main() {
       },
     );
 
-    test('sendWholeFile narrates the whole source in a single call', () async {
-      final cfg = typedConfig(
-        sourceText: '$_inputText\n\n$_inputText',
-        sendWholeFile: true,
+    // Whether the text is segmented or shipped whole, `inputPath` is never read --
+    // and it still names the output files.
+    for (final sendWholeFile in [false, true]) {
+      test(
+        sendWholeFile
+            ? 'sendWholeFile narrates the whole source in a single call'
+            : 'narrates from text via the provider without reading inputPath',
+        () async {
+          final text =
+              sendWholeFile ? '$_inputText\n\n$_inputText' : _inputText;
+          final cfg = typedConfig(sourceText: text, sendWholeFile: sendWholeFile);
+          await narrate(cfg, client: provider.client);
+
+          expect(provider.callCount, 1);
+          expect(provider.calls.single.input, text);
+
+          // Output naming still derives from inputPath (the document name).
+          final audio = File('${dir.path}/out/story/story_1.mp3');
+          expect(audio.existsSync(), isTrue);
+          expect(audio.readAsBytesSync(), provider.bytes);
+        },
       );
-      await narrate(cfg, client: provider.client);
-
-      expect(provider.callCount, 1);
-      expect(provider.calls.single.input, '$_inputText\n\n$_inputText');
-
-      // Output naming still derives from inputPath (the document name).
-      final audio = File('${dir.path}/out/story/story_1.mp3');
-      expect(audio.existsSync(), isTrue);
-      expect(audio.readAsBytesSync(), provider.bytes);
-    });
-
-    test(
-      'narrates from text via the provider without reading inputPath',
-      () async {
-        final cfg = typedConfig();
-        await narrate(cfg, client: provider.client);
-
-        expect(provider.callCount, 1);
-        expect(provider.calls.single.input, _inputText);
-
-        // Output naming still derives from inputPath (the document name).
-        final audio = File('${dir.path}/out/story/story_1.mp3');
-        expect(audio.existsSync(), isTrue);
-        expect(audio.readAsBytesSync(), provider.bytes);
-      },
-    );
+    }
 
     test('sampleLen limits an in-memory run', () async {
       const multi = '$_inputText\n\n$_inputText\n\n$_inputText\n\n$_inputText';

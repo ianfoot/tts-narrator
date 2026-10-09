@@ -69,30 +69,20 @@ void main() {
       AppTokens.of(tester.element(find.byType(AppButton))).colors;
 
   group('label layout', () {
-    testWidgets('outlined keeps the label visible in a tight slot', (
-      tester,
-    ) async {
-      // Regression guard: CupertinoButton's default 16px padding used to eat
-      // the toolbar's tight 44px and collapsed this paragraph to zero height,
-      // so the icon painted and the text did not. The same button in the
-      // narration screen's unbounded column was fine, which made the bug look
-      // like a theming problem instead of a layout one.
-      final rect = await labelRectIn(tester, _tightSlot);
-
-      expect(rect.height, greaterThan(0));
-    });
-
-    testWidgets('filled keeps the label visible in a tight slot', (
-      tester,
-    ) async {
-      final rect = await labelRectIn(
+    // Regression guard: CupertinoButton's default 16px padding used to eat
+    // the toolbar's tight 44px and collapsed this paragraph to zero height,
+    // so the icon painted and the text did not. The same button in the
+    // narration screen's unbounded column was fine, which made the bug look
+    // like a theming problem instead of a layout one.
+    for (final style in AppButtonStyle.values) {
+      testWidgets('${style.name} keeps the label visible in a tight slot', (
         tester,
-        _tightSlot,
-        style: AppButtonStyle.filled,
-      );
+      ) async {
+        final rect = await labelRectIn(tester, _tightSlot, style: style);
 
-      expect(rect.height, greaterThan(0));
-    });
+        expect(rect.height, greaterThan(0));
+      });
+    }
 
     testWidgets('outlined lays out identically tight and loose', (
       tester,
@@ -120,27 +110,22 @@ void main() {
   });
 
   group('label colour', () {
-    testWidgets('outlined pins the label to textPrimary, not the ambient', (
-      tester,
-    ) async {
-      await pump(
+    for (final brightness in Brightness.values) {
+      testWidgets('outlined pins the label to textPrimary in ${brightness.name}', (
         tester,
-        DefaultTextStyle(
-          style: const TextStyle(color: Color(0xFFFFFFFF)),
-          child: Center(child: button()),
-        ),
-      );
+      ) async {
+        await pump(
+          tester,
+          DefaultTextStyle(
+            style: const TextStyle(color: Color(0xFFFFFFFF)),
+            child: Center(child: button()),
+          ),
+          brightness: brightness,
+        );
 
-      expect(labelStyle(tester)?.color, colorsOf(tester).textPrimary);
-    });
-
-    testWidgets('outlined pins the label to textPrimary in dark mode', (
-      tester,
-    ) async {
-      await pump(tester, Center(child: button()), brightness: Brightness.dark);
-
-      expect(labelStyle(tester)?.color, colorsOf(tester).textPrimary);
-    });
+        expect(labelStyle(tester)?.color, colorsOf(tester).textPrimary);
+      });
+    }
 
     testWidgets('filled pins the label to textOnAccent', (tester) async {
       await pump(tester, Center(child: button(style: AppButtonStyle.filled)));

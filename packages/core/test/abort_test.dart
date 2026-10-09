@@ -11,18 +11,16 @@ import 'support/fake_provider.dart';
 
 void main() {
   group('AbortToken', () {
-    test('starts live and flips on cancel', () {
+    test('starts live, flips on cancel, and stays flipped', () {
       final token = AbortToken();
       expect(token.cancelled, isFalse);
-      token.cancel();
-      expect(token.cancelled, isTrue);
-      token.cancel();
-      expect(token.cancelled, isTrue);
-    });
-
-    test('throwIfCancelled is a no-op until cancelled', () {
-      final token = AbortToken();
       expect(token.throwIfCancelled, returnsNormally);
+
+      token.cancel();
+      expect(token.cancelled, isTrue);
+      // Idempotent: a second cancel must not undo or re-fire anything.
+      token.cancel();
+      expect(token.cancelled, isTrue);
     });
 
     test('throwIfCancelled throws AbortException once cancelled', () {
