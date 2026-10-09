@@ -70,6 +70,32 @@ void main() {
       return cfg;
     }
 
+    /// Writes [profile] as the one and only model `m`, then returns the JSON
+    /// the writer actually put on disk for it.
+    ///
+    /// The mirror of [loadProfile] for the tests whose subject is the file
+    /// rather than what the loader makes of it: those have to read the bytes
+    /// back, and re-stating the provider wiring to get there says nothing
+    /// about the model.
+    Map<String, dynamic> writeAndReadModelFile(TtsModelProfile profile) {
+      writeVoiceConfig(
+        dir.path,
+        VoiceConfig(
+          providers: {
+            testProvider: const ProviderConfig(
+              name: testProvider,
+              settings: {'base_url': testBaseUrl},
+              models: ['m'],
+            ),
+          },
+          models: {'m': profile},
+        ),
+      );
+      return jsonDecode(
+        File(at(kVoiceConfigModelsDir, 'm.json')).readAsStringSync(),
+      ) as Map<String, dynamic>;
+    }
+
     /// The shape of every "the loader refuses this model file" case below: the
     /// file is written as the one and only model, and the warning it raises
     /// must name the reason. Declared here so each case is one line of data
@@ -154,29 +180,14 @@ void main() {
       );
 
       test('writes the formats list back out', () {
-        writeVoiceConfig(
-          dir.path,
-          VoiceConfig(
-            providers: {
-              testProvider: ProviderConfig(
-                name: testProvider,
-                settings: {'base_url': testBaseUrl},
-                models: const ['m'],
-              ),
-            },
-            models: {
-              'm': const TtsModelProfile(
-                alias: 'm',
-                id: 'a/b',
-                formats: [TtsAudioFormat.wav, TtsAudioFormat.mp3],
-                provider: testProvider,
-              ),
-            },
+        final json = writeAndReadModelFile(
+          const TtsModelProfile(
+            alias: 'm',
+            id: 'a/b',
+            formats: [TtsAudioFormat.wav, TtsAudioFormat.mp3],
+            provider: testProvider,
           ),
         );
-        final json = jsonDecode(
-          File(at(kVoiceConfigModelsDir, 'm.json')).readAsStringSync(),
-        ) as Map<String, dynamic>;
         expect(json['formats'], ['wav', 'mp3']);
         // `wav_response_format` defaults to `wav`, so it stays out of the file
         // rather than being written as redundant as an explicit `pcm` would be.
@@ -191,30 +202,15 @@ void main() {
       });
 
       test('writes an explicit wav_response_format back out', () {
-        writeVoiceConfig(
-          dir.path,
-          VoiceConfig(
-            providers: {
-              testProvider: ProviderConfig(
-                name: testProvider,
-                settings: {'base_url': testBaseUrl},
-                models: const ['m'],
-              ),
-            },
-            models: {
-              'm': const TtsModelProfile(
-                alias: 'm',
-                id: 'a/b',
-                formats: [TtsAudioFormat.wav],
-                wavResponseFormat: TtsWavResponseFormat.pcm,
-                provider: testProvider,
-              ),
-            },
+        final json = writeAndReadModelFile(
+          const TtsModelProfile(
+            alias: 'm',
+            id: 'a/b',
+            formats: [TtsAudioFormat.wav],
+            wavResponseFormat: TtsWavResponseFormat.pcm,
+            provider: testProvider,
           ),
         );
-        final json = jsonDecode(
-          File(at(kVoiceConfigModelsDir, 'm.json')).readAsStringSync(),
-        ) as Map<String, dynamic>;
         expect(json['wav_response_format'], 'pcm');
         expect(
           load().$1.models['m']!.wavResponseFormat,
@@ -681,6 +677,26 @@ void main() {
         '${dir.path}${Platform.pathSeparator}$dirName'
         '${Platform.pathSeparator}$file';
 
+    const baseUrlSettings = {'base_url': testBaseUrl};
+
+    /// The one provider most of these tests speak through, claiming [models].
+    /// [settings] stays empty where a test's subject is what the writer adds on
+    /// its own, so the provider must not supply a settings block of its own.
+    ProviderConfig claiming(
+      List<String> models, {
+      Map<String, String> settings = const {},
+    }) => ProviderConfig(name: testProvider, settings: settings, models: models);
+
+    /// Writes [config] out and reads it straight back.
+    ///
+    /// Every assertion in this group is about a round trip — what the writer
+    /// put on disk, and what the loader then makes of it — so naming the pair
+    /// once leaves each test on the half it is actually about.
+    (VoiceConfig, List<String>) roundTrip(VoiceConfig config) {
+      writeVoiceConfig(dir.path, config);
+      return loadVoiceConfig(dir.path);
+    }
+
     test('writes the provider registry to config.json', () {
       writeVoiceConfig(
         dir.path,
@@ -699,33 +715,31 @@ void main() {
     });
 
     test('round-trips the speed capability through a model file', () {
-      writeVoiceConfig(
-        dir.path,
-        VoiceConfig(
-          providers: {
-            testProvider: ProviderConfig(
-              name: testProvider,
-              settings: {'base_url': testBaseUrl},
-              models: const ['fast', 'plain'],
-            ),
-          },
-          models: {
-            'fast': const TtsModelProfile(
-              alias: 'fast',
-              id: 'x/y',
-              formats: [TtsAudioFormat.wav],
-              supportsSpeed: true,
-              provider: testProvider,
-            ),
-            'plain': const TtsModelProfile(
-              alias: 'plain',
-              id: 'x/z',
-              formats: [TtsAudioFormat.wav],
-              provider: testProvider,
-            ),
-          },
-        ),
-      );
+      roundTrip(
+          VoiceConfig(
+            providers: {
+              testProvider: claiming(
+                const ['fast', 'plain'],
+                settings: baseUrlSettings,
+              ),
+            },
+            models: {
+              'fast': const TtsModelProfile(
+                alias: 'fast',
+                id: 'x/y',
+                formats: [TtsAudioFormat.wav],
+                supportsSpeed: true,
+                provider: testProvider,
+              ),
+              'plain': const TtsModelProfile(
+                alias: 'plain',
+                id: 'x/z',
+                formats: [TtsAudioFormat.wav],
+                provider: testProvider,
+              ),
+            },
+          ),
+        );
 
       final raw = jsonDecode(
         File(at(kVoiceConfigModelsDir, 'fast.json')).readAsStringSync(),
@@ -741,31 +755,29 @@ void main() {
     });
 
     test('round-trips the language table through a model file', () {
-      writeVoiceConfig(
-        dir.path,
-        VoiceConfig(
-          providers: {
-            testProvider: ProviderConfig(
-              name: testProvider,
-              settings: {'base_url': testBaseUrl},
-              models: const ['kokoro'],
-            ),
-          },
-          models: {
-            'kokoro': const TtsModelProfile(
-              alias: 'kokoro',
-              id: 'hexgrad/kokoro-82m',
-              formats: [TtsAudioFormat.wav],
-              sendsLanguageField: true,
-              provider: testProvider,
-            ),
-          },
-          languages: {
-            'kokoro': {'b': 'British English', 'j': 'Japanese'},
-          },
-          defaultLanguages: {'kokoro': 'b'},
-        ),
-      );
+      roundTrip(
+          VoiceConfig(
+            providers: {
+              testProvider: claiming(
+                const ['kokoro'],
+                settings: baseUrlSettings,
+              ),
+            },
+            models: {
+              'kokoro': const TtsModelProfile(
+                alias: 'kokoro',
+                id: 'hexgrad/kokoro-82m',
+                formats: [TtsAudioFormat.wav],
+                sendsLanguageField: true,
+                provider: testProvider,
+              ),
+            },
+            languages: {
+              'kokoro': {'b': 'British English', 'j': 'Japanese'},
+            },
+            defaultLanguages: {'kokoro': 'b'},
+          ),
+        );
 
       final raw = jsonDecode(
         File(at(kVoiceConfigModelsDir, 'kokoro.json')).readAsStringSync(),
@@ -785,15 +797,9 @@ void main() {
     });
 
     test('a model with no languages emits no language keys', () {
-      writeVoiceConfig(
-        dir.path,
+      roundTrip(
         VoiceConfig(
-          providers: {
-            testProvider: const ProviderConfig(
-              name: testProvider,
-              models: ['one'],
-            ),
-          },
+          providers: {testProvider: claiming(const ['one'])},
           models: {
             'one': const TtsModelProfile(
               alias: 'one',
@@ -816,15 +822,9 @@ void main() {
     test(
       'voice design round-trips, and an ordinary model emits no instruct keys',
       () {
-        writeVoiceConfig(
-          dir.path,
+        roundTrip(
           VoiceConfig(
-            providers: {
-              testProvider: const ProviderConfig(
-                name: testProvider,
-                models: ['one', 'two'],
-              ),
-            },
+            providers: {testProvider: claiming(const ['one', 'two'])},
             models: {
               'one': const TtsModelProfile(
                 alias: 'one',
@@ -872,11 +872,7 @@ void main() {
     test('round-trips the whole tree back into an equal config', () {
       final original = VoiceConfig(
         providers: {
-          testProvider: ProviderConfig(
-            name: testProvider,
-            settings: {'base_url': testBaseUrl},
-            models: const ['one'],
-          ),
+          testProvider: claiming(const ['one'], settings: baseUrlSettings),
         },
         models: {
           'one': const TtsModelProfile(
@@ -887,9 +883,7 @@ void main() {
           ),
         },
       );
-      writeVoiceConfig(dir.path, original);
-
-      final (reloaded, warnings) = loadVoiceConfig(dir.path);
+      final (reloaded, warnings) = roundTrip(original);
       expect(warnings, isEmpty);
       expect(reloaded.providers.keys, original.providers.keys);
       expect(
@@ -902,12 +896,9 @@ void main() {
     });
 
     test('a model missing from its provider list still round-trips', () {
-      writeVoiceConfig(
-        dir.path,
+      final (reloaded, warnings) = roundTrip(
         VoiceConfig(
-          providers: {
-            testProvider: const ProviderConfig(name: testProvider, models: []),
-          },
+          providers: {testProvider: claiming(const [])},
           models: {
             'stray': const TtsModelProfile(
               alias: 'stray',
@@ -918,8 +909,6 @@ void main() {
           },
         ),
       );
-
-      final (reloaded, warnings) = loadVoiceConfig(dir.path);
       expect(warnings, isEmpty);
       expect(reloaded.providers[testProvider]!.models, ['stray']);
       expect(reloaded.models['stray'], isNotNull);
