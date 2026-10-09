@@ -7,10 +7,8 @@ import '../../l10n/app_localizations.dart';
 /// per-segment files forfeits `--resume` reuse — a re-run would re-bill them),
 /// then deletes the segments and reports how many were removed, or the error.
 ///
-/// Shared by every surface that exposes the command — the macOS menu bar
-/// (which mounts dialogs on the navigator's overlay context) and the editor
-/// toolbar (which uses the screen's own context) — so both surfaces present
-/// the same confirm and summary dialogs.
+/// Shared by every surface that exposes the command — the macOS menu bar and
+/// the editor toolbar — so both present the same confirm and summary dialogs.
 Future<void> runCleanupSegmentsFlow({
   required AppController controller,
   required BuildContext context,
@@ -24,9 +22,8 @@ Future<void> runCleanupSegmentsFlow({
   if (confirmed != true || !context.mounted) return;
 
   // Re-validate before deleting: a new run may have started (and even
-  // finished) while the dialog was open. If the target directory moved or
-  // cleanup is no longer available, bail rather than deleting the new run's
-  // segments.
+  // finished) while the dialog was open. Bail rather than delete the new
+  // run's segments.
   if (!controller.canCleanupSegments) return;
   if (controller.lastRunOutputDir != targetDir) return;
 

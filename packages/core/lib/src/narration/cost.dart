@@ -1,9 +1,8 @@
 /// Cost data used for the `--dry-run` estimate and the GUI's summary card.
 ///
 /// Pricing is per-model data from each model's OpenRouter page, so it lives in
-/// the user's per-model config files (`pricing` in `<alias>.json`)
-/// rather than in code — it can drift or be edited without a rebuild. Any
-/// model without pricing entry is treated as free (estimate prints 0).
+/// the user's per-model config files (`pricing` in `<alias>.json`) and can drift
+/// without a rebuild. A model without pricing is treated as free.
 class AudioPricing {
   const AudioPricing({
     this.inputUsdPerMTokens,
@@ -46,9 +45,8 @@ const _narrationWordsPerMinute = 160.0;
 /// Gemini bills audio output per token; standard mapping for Gemini TTS.
 const _geminiTokensPerSecond = 160.0;
 
-/// Estimated narration duration in minutes for [segments], based on a nominal
-/// narration pace (words / 160 wpm). Used for the dry-run estimate and the
-/// run banner.
+/// Estimated narration duration in minutes for [segments], at 160 wpm. Used for
+/// the dry-run estimate and the run banner.
 double estimateMinutes(List<String> segments) {
   var words = 0;
   for (final c in segments) {
@@ -57,10 +55,9 @@ double estimateMinutes(List<String> segments) {
   return words / _narrationWordsPerMinute;
 }
 
-/// Estimated USD cost of narrating [segments] with [pricing], using the pricing
-/// from the voice config. Approximate — assumes ~4 text tokens per word's
-/// chars for token-billed input and the nominal narration pace for
-/// duration-billed output (Gemini). Free models (e.g. fish) return 0.
+/// Estimated USD cost of narrating [segments] with [pricing]. Approximate —
+/// ~4 text tokens per 4 chars for token-billed input, and the nominal narration
+/// pace for duration-billed output (Gemini). Free models return 0.
 double estimateCostUsd(AudioPricing pricing, List<String> segments) {
   if (pricing.isFree) return 0;
 
@@ -86,7 +83,6 @@ double estimateCostUsd(AudioPricing pricing, List<String> segments) {
 
 /// Short, human-friendly currency string (e.g. "$0.00", "$2.41").
 ///
-/// A free model reads "$0.00" here. Saying so is the caller's business: "(free)"
-/// is a word in the interface's language, not part of the number, so the caller
-/// appends its own localized annotation (see `CostUsdX.costLabel` in the app).
+/// A free model reads "$0.00" here; saying so is the caller's business, since
+/// "(free)" is a word in the interface's language, not part of the number.
 String formatCostUsd(double usd) => '\$${usd.toStringAsFixed(2)}';

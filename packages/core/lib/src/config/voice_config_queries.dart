@@ -50,12 +50,9 @@ TtsModelProfile? profileFor(String aliasOrId, VoiceConfig config) {
 /// The model the CLI and GUI preselect: the first model of the first
 /// configured provider, or null when there is none.
 ///
-/// No compiled default exists. The default is whatever the config lists
-/// first -- `config.json` orders the providers, and a provider file orders its
-/// models -- so a user changes it by reordering, not by editing a key. An
-/// unresolvable first entry (a model file that failed to load, say) yields
-/// null rather than silently falling through to the next one, because "the
-/// config says this is first" is not a licence to substitute something else.
+/// The default is whatever the config lists first, so a user changes it by
+/// reordering. An unresolvable first entry (a model file that failed to load)
+/// yields null rather than falling through to the next one.
 TtsModelProfile? defaultModelFor(VoiceConfig config) {
   final provider = config.defaultProvider;
   if (provider == null || provider.models.isEmpty) return null;
@@ -95,8 +92,7 @@ String _labelFor(VoiceConfig config, String modelAlias, String value) =>
 /// All selectable voices for [model] (or all models when null), narrowed to
 /// [language] when given.
 ///
-/// A voice whose id is not language-prefixed is kept whatever [language] is
-/// asked for: an untagged voice has no language to be in the wrong one, and
+/// A voice whose language is unknown is kept whatever [language] is asked for:
 /// hiding it would make a free-form voice unreachable once a language is picked.
 List<VoiceOption> voiceEntries({
   TtsModelProfile? model,
@@ -106,16 +102,12 @@ List<VoiceOption> voiceEntries({
   final profiles = model != null ? [model] : effectiveModels(config);
   final entries = <VoiceOption>[];
   for (final p in profiles) {
-    // The voice itself is passed down rather than its label: the gender has to
-    // come off this entry, not off a name lookup, since several voices in one
-    // model may share a name (Kokoro has three Santas) and a name lookup would
-    // answer for the first of them.
+    // The voice is passed down rather than its label: names repeat within one
+    // model (Kokoro has three Santas), so a label lookup would answer for the
+    // wrong entry.
     void add(Voice voice, String label, bool isAlias) {
       final id = voice.id;
       if (entries.any((e) => e.model == p.alias && e.id == id)) return;
-      // Pass the voice itself, not its id: Fish voices are keyed by name and
-      // carry UUID ids, so `voiceFor` cannot look one up to read its tag, and
-      // the tag is the only way to know its language.
       final voiceLanguage = config.languageFor(p.alias, voice);
       if (language != null &&
           voiceLanguage != null &&

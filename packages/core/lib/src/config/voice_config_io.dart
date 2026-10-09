@@ -28,24 +28,19 @@ const String kVoiceConfigModelsDir = 'models';
 /// Subdirectory of the config directory holding the *user's* config layer.
 ///
 /// `config.json`, `providers/` and `models/` hold the shipped baseline, which
-/// the app downloads and never rewrites. `user/` holds the same layout one
-/// level down and belongs to the user: [loadVoiceConfig] reads it as a second
-/// layer over the baseline, and [VoiceConfigStore] writes only here. A file in
-/// `user/models/` shadows its counterpart in `models/`; a file in
-/// `user/providers/` shadows the provider of the same name.
+/// the app downloads and never rewrites. `user/` holds the same layout one level
+/// down and belongs to the user: [loadVoiceConfig] reads it as a second layer and
+/// [VoiceConfigStore] writes only there, so each file there shadows its
+/// counterpart in the baseline.
 const String kVoiceConfigOverlayDirName = 'user';
 
 /// Platform tags a voice config may be keyed by.
 ///
-/// Single source of truth for the tag strings, and they name the same concept
-/// in both places a platform appears: the keys of `manifest.json`'s `platforms`
-/// block (see [ManifestVoiceConfig]) and the keys of a provider file's per-platform
-/// `models` map. App code (see `platform_detection.dart`) maps a running platform
-/// to a tag via these constants instead of repeating the literals.
-///
-/// These live here rather than beside the manifest because a provider file's
-/// `models` map is read without one (see [loadVoiceConfig]), so the loader has
-/// to know the tags even when no manifest is in play.
+/// Single source of truth for the tag strings, which name the same concept in
+/// both places a platform appears: the keys of `manifest.json`'s `platforms`
+/// block (see [ManifestVoiceConfig]) and the keys of a provider file's
+/// per-platform `models` map. They live here rather than beside the manifest
+/// because the loader has to know the tags even when no manifest is in play.
 const String kPlatformTagMacos = 'macos';
 const String kPlatformTagLinux = 'linux';
 const String kPlatformTagWindows = 'windows';
@@ -53,11 +48,9 @@ const String kPlatformTagWindows = 'windows';
 /// Every tag [kPlatformTagMacos], [kPlatformTagLinux] and [kPlatformTagWindows]
 /// name, for validating a config that keys models by platform.
 ///
-/// A key outside this set is rejected rather than ignored. The map's whole
-/// purpose is to say which platforms may claim the models, so a key that is
-/// spelled wrong is indistinguishable in effect from one that claims nothing --
-/// and it would claim nothing on the platform it was *meant* for, which is the
-/// worst way to get a typo. Naming it beats silently serving an empty list.
+/// A key outside this set is rejected rather than ignored: a misspelled tag would
+/// claim nothing on the platform it was meant for, and naming it beats silently
+/// serving an empty list.
 const Set<String> kVoiceConfigPlatformTags = {
   kPlatformTagMacos,
   kPlatformTagLinux,
@@ -68,56 +61,45 @@ const Set<String> kVoiceConfigPlatformTags = {
 ///
 /// Reads `config.json` for the ordered provider registry, then one
 /// `providers/<name>.json` per registered provider, then one
-/// `models/<alias>.json` per model those providers serve. A provider file
-/// lists the models it provides, so which block a model belongs to is stated
-/// once, in the provider file, and the loader inverts that into the `provider`
-/// on each model profile.
+/// `models/<alias>.json` per model those providers serve. A provider file lists
+/// the models it provides, so membership is stated once and the loader inverts it
+/// into the `provider` on each model profile.
 ///
 /// Those three file kinds make the *shipped* layer. A second layer, read from
-/// [kVoiceConfigOverlayDirName] and shaped identically, is the user's: it is
-/// loaded on top and each file it holds replaces its counterpart, so the
-/// baseline stays untouched and re-downloadable. Overlay providers are
-/// registered first, which is how a user promotes one to the default.
-/// Everything is merged before the result is built, so from here on a
-/// [VoiceConfig] cannot tell which layer any part came from -- except in
-/// warning text, where an overlay problem is prefixed so it can be traced.
+/// [kVoiceConfigOverlayDirName] and shaped identically, is the user's: loaded on
+/// top, each file it holds replacing its counterpart, so the baseline stays
+/// untouched and re-downloadable. Overlay providers are registered first, which
+/// is how a user promotes one to the default. Everything is merged before the
+/// result is built, so a [VoiceConfig] cannot tell which layer a part came from
+/// — except in warning text, where an overlay problem is prefixed so it can be
+/// traced.
 ///
-/// A missing `config.json` yields no providers, and therefore no models: the
-/// registry is the entry point. A model file no provider claims is ignored
-/// silently -- it is not configuration this config uses. A provider listed in
-/// `config.json` whose file or whose models are missing, and a provider file
-/// that no registry names, are each reported as warnings.
-///
-/// A model file that parses keeps every usable part of itself, so one bad voice
-/// entry is skipped on its own -- reported as a warning like any other -- rather
-/// than costing the whole model.
+/// A missing `config.json` yields no providers, and therefore no models. A model
+/// file no provider claims is ignored silently — it is not configuration this
+/// config uses. A listed provider whose file or models are missing, and a
+/// provider file no registry names, are reported as warnings. A model file that
+/// parses keeps every usable part of itself, so one bad voice entry costs only
+/// itself.
 ///
 /// If the config directory is missing, this returns an empty config. Fetching
 /// defaults is the caller's decision: await `downloadVoiceConfigFiles()`
 /// explicitly first if you want them.
 ///
-/// [platformTag] is the running platform's tag -- `kPlatformTagMacos`,
-/// `kPlatformTagLinux`, or `kPlatformTagWindows` -- and selects which models a
-/// provider file claims when its `models` block is a per-platform map. Providers
-/// themselves are not gated here: `config.json` is one global registry and
-/// `providers/*.json` ships on every platform, so a provider file is present even
-/// on a platform that cannot run any of its models. What [platformTag] decides
-/// is which models that provider is taken to serve, which is what keeps a
-/// platform that downloaded the provider but not its model files -- macOS-only
-/// MLX backends on Linux, say -- from reading as a provider claiming models that
-/// are missing. Omit it for a caller with no platform in hand; a per-platform map
-/// then yields every platform's aliases rather than one arbitrary slice.
+/// [platformTag] selects which models a provider file claims when its `models`
+/// block is a per-platform map. Providers themselves are not gated: `config.json`
+/// is one global registry and `providers/*.json` ships on every platform. Gating
+/// the models is what keeps a platform that downloaded a provider but not its
+/// model files — macOS-only MLX backends on Linux, say — from reading as a
+/// provider claiming missing models. Omit it to have a per-platform map yield
+/// every platform's aliases rather than one arbitrary slice.
 ///
 /// Returns the loaded config plus warnings for anything skipped or broken.
 (VoiceConfig, List<String>) loadVoiceConfig(
   String configDir, {
   String? platformTag,
 }) {
-  // Note: download is no longer triggered automatically here so
-  // loadVoiceConfig stays pure synchronous disk I/O. Callers that
-  // want remote defaults should await downloadVoiceConfigFiles()
-  // explicitly before loading.
-
+  // Download is not triggered here so this stays synchronous disk I/O; callers
+  // wanting remote defaults await downloadVoiceConfigFiles() first.
   if (!Directory(configDir).existsSync()) {
     return (const VoiceConfig(), <String>[]);
   }
@@ -125,20 +107,17 @@ const Set<String> kVoiceConfigPlatformTags = {
       '$configDir${Platform.pathSeparator}$kVoiceConfigOverlayDirName';
 
   final base = _loadProviderLayer(configDir, platformTag: platformTag);
-  // A provider the base registry already names needs no entry in the overlay
-  // registry in order to be overridden there, so base names count as named.
-  // _warnUnregisteredProviderFiles then skips them: to the overlay layer they
-  // are not the stray file the warning is about, they are the name its own
-  // registry already gives a home to.
+  // Base names count as registered for the overlay, so overriding a provider needs
+  // no second registry entry and no stray-file warning.
   final overlay = _loadProviderLayer(
     overlayDir,
     alsoRegistered: base.order.toSet(),
     platformTag: platformTag,
   );
 
-  // Whichever layer claims an alias first decides who serves it, and a user's
-  // claim outranks the baseline's. Claims are merged before any model file is
-  // read, so a model the overlay switches on is readable from either layer.
+  // The first layer to claim an alias serves it, so a user's claim outranks the
+  // baseline's. Claims merge before any model file is read, so a model the
+  // overlay switches on is readable from either layer.
   final claimedBy = <String, String>{...base.claimedBy, ...overlay.claimedBy};
   final baseModels = _loadModelLayer(configDir, claimedBy);
   final overlayModels = _loadModelLayer(overlayDir, claimedBy);
@@ -150,12 +129,10 @@ const Set<String> kVoiceConfigPlatformTags = {
     ...overlayModels.warnings.map((w) => 'Overlay: $w'),
   ];
 
-  // Only providers the overlay's *own* registry names are promoted, because
-  // being first decides the default provider and so the model a launch starts
-  // on. An inherited override -- user/providers/local.json with no
-  // user/config.json beside it -- is an edit to a provider already in use, and
-  // must not silently move it ahead of the baseline's first entry. A name in
-  // both layers resolves to the overlay file either way.
+  // Only providers the overlay's *own* registry names are promoted, since being
+  // first decides the default provider and so the model a launch starts on. An
+  // inherited override (a provider file with no user/config.json beside it) is an
+  // edit to a provider in use, not a request to move it ahead of the baseline.
   final promoted = overlay.promoted;
   final providers = <String, ProviderConfig>{};
   for (final name in <String>[
@@ -227,11 +204,8 @@ class _ProviderLayer {
   /// Loaded provider names, own registry first then inherited.
   final List<String> order;
 
-  /// The subset of [order] this layer's *own* registry named.
-  ///
-  /// Only these may be promoted ahead of the baseline: the registry is the
-  /// documented way to reorder providers and change the default, whereas an
-  /// inherited override is just an edit to a provider already in use.
+  /// The subset of [order] this layer's *own* registry named, and so the only
+  /// names that may be promoted ahead of the baseline.
   final List<String> promoted;
 
   final Map<String, ProviderConfig> providers;
@@ -255,25 +229,16 @@ typedef _ParsedModel = ({
 
 /// Reads `config.json` and every provider file it registers, in one [dir].
 ///
-/// [alsoRegistered] names providers that [dir] does not have to register for
-/// itself — a layer inherits the registry of the one it shadows. A name in that
-/// set is loaded only when its file is actually present, so an overlay can
-/// override a downloaded provider by dropping a file in its place without
-/// repeating the name in a second registry, and without inventing a "missing
-/// provider file" warning for every provider it chose not to override.
+/// [alsoRegistered] names providers [dir] need not register for itself — a layer
+/// inherits the registry of the one it shadows. A name in that set loads only if
+/// its file is present, and neither a missing file nor a re-listing in the layer's
+/// own registry warns, since the shadowed copy answers for it either way. That
+/// makes the README's "copy the registry and add to it" warn about nothing.
 ///
-/// A name the layer's *own* registry lists that this set also holds is a
-/// different case: re-listing a provider the baseline already serves is a
-/// redundant entry, not a broken one, because the shadowed copy answers for it.
-/// That is suppressed too, so copying a registry and adding to it -- what the
-/// README tells a user to do -- warns about nothing at all.
-///
-/// [platformTag] is passed through to each provider file's `models` block so a
-/// provider that gates its models per platform contributes only the ones this
-/// platform may serve. The gate is a per-file decision, so it is applied
-/// independently per layer rather than merged: an overlay provider file replaces
-/// its baseline counterpart wholesale, and it is the replacing file that decides
-/// what it claims.
+/// [platformTag] reaches each provider file's `models` block. The gate is a
+/// per-file decision, so it applies per layer rather than merged: an overlay
+/// provider file replaces its baseline counterpart wholesale, and the replacing
+/// file decides what it claims.
 _ProviderLayer _loadProviderLayer(
   String dir, {
   Set<String> alsoRegistered = const {},
@@ -292,10 +257,8 @@ _ProviderLayer _loadProviderLayer(
     final isOwn = registered.contains(name);
     final path = '$dir$separator$kVoiceConfigProvidersDir$separator$name.json';
     if (!File(path).existsSync()) {
-      // A name this layer did not register is simply not its business. A name
-      // it did register is a mistake to report -- unless the layer being
-      // shadowed already serves it, in which case the registry entry here is
-      // redundant rather than broken and the shadowed copy is the one in use.
+      // An unregistered name is not this layer's business. A registered one is a
+      // mistake to report, unless the shadowed layer already serves it.
       if (!isOwn || alsoRegistered.contains(name)) continue;
       warnings.add(
         'Provider "$name" is listed in config.json but '
@@ -339,9 +302,7 @@ _ProviderLayer _loadProviderLayer(
 
   for (final file in _jsonFilesIn(modelsDir)) {
     final alias = _stemOf(file.path);
-    // No provider claims this alias, so the file is not part of this config.
-    // Skipping quietly is deliberate: the models directory may hold packs the
-    // user has not switched on.
+    // Quietly: the models directory may hold packs the user has not switched on.
     final providerName = claimedBy[alias];
     if (providerName == null) continue;
     try {
@@ -356,10 +317,9 @@ _ProviderLayer _loadProviderLayer(
 
 /// Reads the ordered provider names out of `config.json`.
 ///
-/// Order is the whole point of this file: the first registered provider is
-/// the default, and its first model is the default model. The list is
-/// preserved exactly, so a user controls the default by ordering rather than
-/// by a separate key or by how filenames happen to sort.
+/// Order is the whole point: the first provider is the default, and its first
+/// model the default model. Preserved exactly, so a user controls the default by
+/// ordering rather than by a separate key or by filename sort.
 List<String> _loadRegistry(String path) {
   if (!File(path).existsSync()) return const [];
   final raw = _readJson(path);
@@ -391,10 +351,10 @@ List<String> _loadRegistry(String path) {
 
 /// Reports provider files present on disk that no registry names.
 ///
-/// Dropping a file into `providers/` is not enough to switch a provider on,
-/// and failing silently there would look like the file was ignored by mistake.
-/// [alsoRegistered] holds names a neighbouring layer registers, which is how an
-/// overlay file overriding a shipped provider avoids a warning it cannot fix.
+/// Dropping a file into `providers/` is not enough to switch a provider on, and
+/// failing silently would look like the file was ignored by mistake.
+/// [alsoRegistered] holds names a neighbouring layer registers, so an overlay
+/// overriding a shipped provider avoids a warning it cannot fix.
 Iterable<String> _warnUnregisteredProviderFiles(
   String configDir,
   Map<String, ProviderConfig> providers, [
@@ -429,34 +389,18 @@ List<File> _jsonFilesIn(String dir) {
 ///
 /// Two shapes are accepted, and the difference is exactly the platform gate:
 ///
-/// - A bare **list** is read as "this provider serves these models on every
-///   platform". This is the original shape and stays valid, so a provider that
-///   genuinely has nothing platform-specific about it keeps saying so simply.
-/// - A **map** keyed by platform tag is read as "this provider serves these
-///   models *here*", and only the entry for [platformTag] is taken. A tag the
-///   map does not name yields no models at all, which is how a provider can
-///   ship on every platform -- `config.json` registers providers globally --
-///   while serving models on only the ones that can actually run them. A tag
-///   mapped to an empty list says the same thing explicitly. Every key must be
-///   one of [kVoiceConfigPlatformTags]: a misspelled tag would otherwise leave
-///   the provider serving nothing on the platform it was written for, and
-///   nothing anywhere else would say why.
+/// - A bare **list**: this provider serves these models on every platform.
+/// - A **map** keyed by platform tag: this provider serves these models *here*,
+///   and only the entry for [platformTag] is taken. An unnamed tag, or one mapped
+///   to an empty list, yields no models — which is how a provider that ships
+///   everywhere (`config.json` registers providers globally) serves models on
+///   only the platforms that can run them. Every key must be one of
+///   [kVoiceConfigPlatformTags], or a typo silently serves nothing where it was
+///   meant to serve everything.
 ///
-/// Putting the gate here rather than in the manifest is what keeps the two
-/// layers agreeing: the provider file that claims a model is the same file
-/// that says which platforms may claim it, so a platform that downloaded the
-/// provider but not the models -- because the manifest lists its model files
-/// only for other platforms -- no longer reads as a provider claiming models
-/// that are missing.
-///
-/// [platformTag] is the running platform's tag (`macos`, `linux`, `windows`).
-/// It may be null for a caller with no platform in hand -- a tool inspecting
-/// the config as data -- and a per-platform map then yields the union of every
-/// platform's entry, so such a caller still sees the whole picture rather than
-/// one arbitrarily chosen platform's slice of it.
+/// [platformTag] may be null for a caller inspecting the config as data, in which
+/// case a per-platform map yields the union of every platform's entry.
 List<String> _parseProviderModels(Object? raw, String? platformTag) {
-  // A list, or the per-platform map's entry, reduces to the same reading: an
-  // ordered, de-duplicated list of non-empty aliases.
   List<String> readAliases(Object? value) {
     if (value == null) return const [];
     if (value is! List) {
@@ -474,8 +418,8 @@ List<String> _parseProviderModels(Object? raw, String? platformTag) {
   }
 
   if (raw is Map<String, dynamic>) {
-    // Checked before dispatching, so the typo is reported whether or not this
-    // read happens to be the one for the tag that was meant.
+    // Checked before dispatching, so a typo is reported even when this read is not
+    // the one for the tag that was meant.
     for (final tag in raw.keys) {
       if (!kVoiceConfigPlatformTags.contains(tag)) {
         throw VoiceConfigurationError(
@@ -485,9 +429,7 @@ List<String> _parseProviderModels(Object? raw, String? platformTag) {
       }
     }
     if (platformTag == null) {
-      // Platform-agnostic read: every platform's aliases, in the order the map
-      // names them, so the union still de-duplicates rather than repeating an
-      // alias two platforms share.
+      // Union in map order, so an alias two platforms share appears once.
       final union = <String>[];
       for (final value in raw.values) {
         for (final alias in readAliases(value)) {
@@ -536,23 +478,18 @@ ProviderConfig _parseProviderFile(
 /// outside this set is treated as a mistake rather than an annotation.
 const _voiceEntryFields = {'id', 'name', 'gender', 'language'};
 
-// Note that a whole `voices` block may also be a bare list of ids, which is read
-// in _parseModelFile rather than here: a list entry has no key to be keyed by,
-// so it cannot come through this per-entry codec at all.
+// A whole `voices` block may also be a bare list of ids, read in _parseModelFile:
+  // a list entry has no key to be filed under, so it cannot use this codec.
 
 /// Decodes one `voices` entry: the [key] it is filed under and its raw [value].
 ///
-/// On success returns the voice; on failure returns the reason, phrased to read
-/// as the tail of a "Voice ... is skipped: ..." warning.
+/// On failure returns the reason, phrased as the tail of a "Voice ... is
+/// skipped: ..." warning.
 ///
-/// The key is the voice id unless the entry spells one out, so a config can key
-/// voices by the id that is unique and name them inside.
-///
-/// An entry that says nothing about its id keeps the key-as-id reading. An entry
-/// that carries only fields this schema does not know is a config mistake --
-/// most often a mistyped "id" -- and guessing there would send the key to the
-/// provider as a voice id, narrating in the wrong voice instead of failing here
-/// where the config can name the mistake.
+/// An entry that says nothing about its id keeps the key-as-id reading. One that
+/// carries only unknown fields is a config mistake — most often a mistyped "id" —
+/// and guessing would narrate in the wrong voice instead of failing where the
+/// config can name the mistake.
 ({Voice? voice, String? problem}) voiceFromEntry(String key, Object? value) {
   if (value is String) {
     if (value.isEmpty) {
@@ -601,10 +538,8 @@ const _voiceEntryFields = {'id', 'name', 'gender', 'language'};
 
 /// The JSON for one `voices` entry, in the shape it was most likely authored in.
 ///
-/// An entry keyed by its own id needs no `id` back, so writing one is noise; a
-/// name-tagged one does, or the key would become the id on the next load. This
-/// is the round-trip form, used by [writeVoiceConfig], which re-emits a config
-/// that already parsed.
+/// The round-trip form used by [writeVoiceConfig], which re-emits a config that
+/// already parsed.
 Map<String, Object?> voiceEntryJson(String key, Voice voice) => {
   // An entry keyed by its own id needs no `id`; one keyed by a name does.
   if (voice.id != key) 'id': voice.id,
@@ -615,15 +550,13 @@ Map<String, Object?> voiceEntryJson(String key, Voice voice) => {
 
 /// Reads the output formats a model file offers, most-preferred first.
 ///
-/// Required. A model that does not declare what it can produce is a model the
-/// app cannot configure a run for, so it is rejected rather than given a
-/// default: guessing would hand the user a container the backend never produces
-/// and fail on the first segment.
+/// Required: a model that does not declare what it can produce cannot be
+/// configured for a run, and guessing would hand the user a container the
+/// backend never produces and fail on the first segment.
 ///
-/// `sample_rate` is deliberately not read. The rate is either inside the WAV the
-/// provider returns or stated in its response's content type, so a config key
-/// for it has nothing left to configure. Files that still carry it load
-/// unchanged, and the key is ignored like any other the app does not model.
+/// `sample_rate` is deliberately not read — the rate is either inside the WAV or
+/// stated in the response's content type, so a config key for it has nothing left
+/// to configure. Files carrying it still load unchanged.
 List<TtsAudioFormat> _parseFormats(Map<String, dynamic> raw, String alias) {
   final declared = raw['formats'];
   if (declared == null) {
@@ -702,8 +635,8 @@ TtsWavResponseFormat _parseWavResponseFormat(
   List<String> warnings,
 })
 _parseModelFile(String path, String alias, String provider) {
-  // Per-entry problems are collected rather than thrown: one unusable voice
-  // should not cost the whole model, but it must not vanish silently either.
+  // Per-entry problems are collected, not thrown: one unusable voice should not
+  // cost the whole model, but must not vanish silently either.
   final warnings = <String>[];
   void skip(String key, String because) =>
       warnings.add('Voice "$key" in model "$alias" is skipped: $because');
@@ -777,11 +710,9 @@ _parseModelFile(String path, String alias, String provider) {
   final voices = <String, Voice>{};
   final voicesRaw = raw['voices'];
   if (voicesRaw is List) {
-    // A bare list of voice ids, for a model whose ids are already the labels
-    // the picker should show -- Gemini's thirty named voices, where writing
-    // each id twice would say the same thing in two places. An id is its own
-    // key, so it needs no id, name or gender of its own; anything it wanted to
-    // carry would be the object form, which stays available.
+    // A bare list of voice ids, for a model whose ids are already the labels the
+    // picker should show (Gemini's thirty named voices). An id is its own key, so
+    // it needs no fields; anything more wants the object form.
     if (voicesRaw.isEmpty) {
       throw VoiceConfigurationError(
         '"voices" is an empty list, so the model would offer no voices',
@@ -789,10 +720,8 @@ _parseModelFile(String path, String alias, String provider) {
     }
     for (final id in voicesRaw) {
       if (id is! String || id.isEmpty) {
-        // `skip` quotes the name it is given, so a string is handed over as it is
-        // and anything else is encoded rather than interpolated: a number would
-        // otherwise read as ""42"", and an empty string as """", neither of
-        // which tells the author what to fix.
+        // `skip` quotes the name it is given, so non-strings are encoded rather than
+        // interpolated, where a number would read as ""42"".
         skip(
           id is String ? id : jsonEncode(id),
           'a voice id in a "voices" list must be a non-empty string.',
@@ -879,14 +808,13 @@ _parseModelFile(String path, String alias, String provider) {
 /// user's overlay file shadowing the downloaded one.
 ///
 /// Returns null when no layer holds the model, and throws
-/// [VoiceConfigurationError] when the file exists but is not a JSON object --
-/// there is nothing an editor can do with it, and silently substituting an
-/// empty one would let a save destroy whatever the user had written.
+/// [VoiceConfigurationError] when the file exists but is not a JSON object —
+/// substituting an empty one would let a save destroy what the user wrote.
 ///
 /// The map is the file as it stands, unknown keys and all, so an editor can
-/// change one part of it and put the rest back untouched. That is why this
-/// exists instead of re-emitting a [TtsModelProfile]: the profile is a lossy
-/// view of a schema the app only partly understands.
+/// change one part and put the rest back. That is why this exists instead of
+/// re-emitting a [TtsModelProfile], which is a lossy view of a schema the app
+/// only partly understands.
 Map<String, dynamic>? readModelJson(String configDir, String alias) {
   final separator = Platform.pathSeparator;
   for (final dir in <String>[
@@ -952,10 +880,10 @@ Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
       if (config.pricing[p.alias]!.outputUsdPerMTokens != null)
         'output_usd_per_m_tokens': config.pricing[p.alias]!.outputUsdPerMTokens,
     },
-  // Always the object form, even for a model that shipped the bare list: the
-  // parser accepts either, and one writer shape keeps this file readable
-  // against the editor's output. A list round-trips to id-keyed entries, so
-  // nothing is lost -- only the brevity.
+  // Always the object form, even for a model that shipped the bare list: the parser
+  // accepts either, and one writer shape keeps this file consistent with the
+  // editor's output. A list round-trips to id-keyed entries — only brevity is
+  // lost.
   if (config.voices[p.alias] != null && config.voices[p.alias]!.isNotEmpty)
     'voices': {
       for (final e in config.voices[p.alias]!.entries)
@@ -966,11 +894,9 @@ Map<String, Object?> _modelJson(TtsModelProfile p, VoiceConfig config) => {
 
 /// Writes [config] to [configDir] in the layout [loadVoiceConfig] reads.
 ///
-/// The provider order in [VoiceConfig.providers] is preserved, since it decides
-/// the default. Each provider file carries the aliases it serves, taken from
-/// [config.models] -- so a config assembled without an explicit `models` list
-/// per provider still round-trips, because every model profile knows its own
-/// `provider`.
+/// Provider order is preserved, since it decides the default. Each provider file
+/// carries the aliases it serves, taken from [config.models], so a config
+/// assembled without an explicit per-provider `models` list still round-trips.
 void writeVoiceConfig(String configDir, VoiceConfig config) {
   final separator = Platform.pathSeparator;
   final providersDir =

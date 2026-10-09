@@ -16,11 +16,10 @@ class AbortToken {
 
   /// Requests cancellation. Idempotent.
   ///
-  /// Any callbacks registered via [onCancel] fire once, in registration order,
-  /// and are then released (so a provider that aborts its in-flight request on
-  /// cancel also unregisters cleanly). A throwing callback is contained: it is
-  /// reported and the remaining callbacks still run, so cancellation never
-  /// fails partway through.
+  /// Callbacks registered via [onCancel] fire once, in registration order, and
+  /// are then released (so a provider that aborts its in-flight request on cancel
+  /// also unregisters cleanly). A throwing callback is contained: the remaining
+  /// callbacks still run, so cancellation never fails partway through.
   void cancel() {
     if (_cancelled) return;
     _cancelled = true;
@@ -30,8 +29,7 @@ class AbortToken {
       try {
         callback();
       } catch (_) {
-        // Contain subscriber errors: one bad hook must not prevent the rest
-        // from observing the cancellation (or escape into cancelRun's caller).
+        // One bad hook must not stop the rest from observing the cancellation.
       }
     }
   }
@@ -39,9 +37,9 @@ class AbortToken {
   /// Registers [callback] to run when this token is cancelled, returning an
   /// unsubscribe function.
   ///
-  /// When the token is already cancelled, [callback] runs synchronously here
-  /// and the returned function is a no-op (so a late subscription still sees
-  /// the cancellation without being held onto).
+  /// When the token is already cancelled, [callback] runs synchronously here and
+  /// the returned function is a no-op, so a late subscription still sees the
+  /// cancellation without being held onto.
   CancelCallback onCancel(CancelCallback callback) {
     if (_cancelled) {
       callback();

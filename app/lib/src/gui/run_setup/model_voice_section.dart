@@ -15,12 +15,10 @@ import 'voice_picker_widget.dart';
 /// composing the voice picker and the collapsible advanced raw voice-id field.
 ///
 /// The voice and advanced-voice widgets are extracted so per-model panels can
-/// recompose them; every control writes straight to [AppController], which
-/// notifies the editor so the status-bar estimate stays live.
-///
-/// The section listens to the controller so a voice/filter change (e.g. a new
-/// gender selection narrowing the voice dropdown) rebuilds the composed
-/// children with fresh values.
+/// recompose them; every control writes straight to [AppController], and the
+/// section listens to it so a voice/filter change (e.g. a new gender selection
+/// narrowing the voice dropdown) rebuilds the composed children with fresh
+/// values.
 class ModelVoiceSection extends StatefulWidget {
   const ModelVoiceSection({super.key, required this.controller});
 
@@ -99,7 +97,7 @@ class _ModelVoiceSectionState extends State<ModelVoiceSection> {
 
   /// The label for a format button.
   ///
-  /// Switched on the enum rather than derived from [TtsAudioFormat.wireValue] so
+  /// Switched on the enum rather than derived from [TtsAudioFormat.wireValue], so
   /// a copy change ("MP3" vs "mp3") is a translation decision, not a consequence
   /// of the config schema.
   String _formatLabel(TtsAudioFormat format, AppLocalizations l10n) =>

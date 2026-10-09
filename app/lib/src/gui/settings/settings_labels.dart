@@ -5,9 +5,8 @@ import '../../../l10n/app_localizations.dart';
 
 /// Row label for [model] in the settings screen's model list: the alias, with the
 /// model id behind it when the profile carries a display name, so two profiles
-/// that share a display name stay tellable apart. The alias alone is not enough
-/// — it is the file stem, which is an implementation detail of the config
-/// layout rather than something a reader recognises.
+/// that share a display name stay tellable apart. The alias alone is not enough —
+/// it is the file stem, an implementation detail of the config layout.
 String settingsModelLabel(TtsModelProfile model, AppLocalizations l10n) {
   final display = model.displayName;
   if (display == null || display.isEmpty || display == model.alias) {

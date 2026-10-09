@@ -23,9 +23,8 @@ import 'platform_detection.dart';
 ///
 /// Wires the controller's command slots: the native Open file picker, the
 /// Narrate / Cancel slots (navigate to the run view; Cancel stops the run) and
-/// Settings (push the providers & voices screen). Every pushed full-screen
-/// route goes through [_fadeSlideRoute] so the run view and the settings
-/// screen present as one family.
+/// Settings (push the providers & voices screen). Every pushed full-screen route
+/// goes through [_fadeSlideRoute] so the two present as one family.
 class AppRoot extends StatefulWidget {
   const AppRoot({super.key, required this.controller});
 
@@ -121,13 +120,13 @@ class _AppRootState extends State<AppRoot> {
   /// Opens the providers & voices settings screen. Guarded against a
   /// double-trigger the same way [narrateBlockReason] guards the run view: the
   /// slot is a plain callback, so a second ⌘, before the first push settles
-  /// would otherwise stack two copies of the screen.
+  /// would stack two copies of the screen.
   void _openSettings() {
     if (_settingsOpen) return;
     final navigator = _navigatorKey.currentState;
     if (navigator == null) return;
     _settingsOpen = true;
-    // Cleared on both the way back and the way out if the push never completes,
+    // Cleared on the way back and on the way out if the push never completes,
     // so a navigator that goes away mid-flight cannot latch the guard.
     navigator
         .push(
@@ -198,8 +197,8 @@ class _AppRootState extends State<AppRoot> {
         final TransitionBuilder? acceleratorHost;
         if (isMac) {
           // The native macOS menu bar lives above the editor route, so it
-          // stays mounted (and functional) while the narration run view is
-          // pushed on top. Home stays mounted under the pushed route.
+          // stays mounted (and functional) while the narration run view is pushed
+          // on top.
           home = PlatformMenuBar(
             menus: buildMacMenu(
               controller: widget.controller,
@@ -231,7 +230,7 @@ class _AppRootState extends State<AppRoot> {
           // bundle pulls in GlobalMaterialLocalizations, which would resolve
           // framework strings for the Material widgets in the shared widget
           // layer. The menu bar relies on staying Material-free (see
-          // LinuxMenuBar's class doc), so Material localization is a
+          // LinuxMenuBar's class doc), so adding Material localization is a
           // deliberate, separately-audited change.
           localizationsDelegates: const [
             AppLocalizations.delegate,
@@ -258,9 +257,9 @@ class _AppRootState extends State<AppRoot> {
   /// Toggle Settings Panel and Quit.
   ///
   /// Accelerators that would alter the document or start a run are deliberately
-  /// absent: those now live on the in-app menu bar's buttons, which Flutter
-  /// keeps focused while a submenu is open, so the menu's own key handling wins
-  /// over these bindings instead of both firing.
+  /// absent: those live on the in-app menu bar's buttons, which Flutter keeps
+  /// focused while a submenu is open, so the menu's own key handling wins over
+  /// these bindings instead of both firing.
   Map<ShortcutActivator, VoidCallback> _desktopShortcuts() {
     final controller = widget.controller;
     return <ShortcutActivator, VoidCallback>{

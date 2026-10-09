@@ -3,12 +3,12 @@
 ///
 /// Each carries only the data needed to render its message — never a
 /// pre-formatted sentence. The controllers have no `BuildContext`, so they
-/// cannot localize; the widget layer catches, matches the type, and resolves
-/// the text through `l10n`. See `settings_l10n.dart` for the translations.
+/// cannot localize; the widget layer catches, matches the type, and resolves the
+/// text through `l10n`. See `settings_l10n.dart` for the translations.
 ///
-/// Distinct types (rather than pre-baked `StateError`/`FormatException`
-/// messages) so a catch site can tell "the user needs to pick a model" apart
-/// from an unexpected fault without string-matching a message.
+/// Distinct types rather than pre-baked `StateError`/`FormatException` messages,
+/// so a catch site can tell "the user needs to pick a model" apart from an
+/// unexpected fault without string-matching.
 ///
 /// A missing API key is deliberately absent: whether a run needs one is the
 /// server's judgement, so the app never blocks on one. See

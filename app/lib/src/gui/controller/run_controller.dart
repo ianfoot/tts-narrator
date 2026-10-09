@@ -5,21 +5,11 @@ import 'document_controller.dart';
 import 'model_profile_voice_controller.dart';
 import 'settings_controller.dart';
 
-/// Owns the narration-run lifecycle for the TTS Narrator GUI: the running
-/// flag, the snapshotted [runConfig] + segment plan, per-segment progress,
-/// cancellation, and the terminal run state (finished/stopped/error) plus the
-/// combined-track path and segment cleanup.
-///
-/// Extracted from [AppController] so run execution stands alone. [AppController]
-/// forwards this surface and re-broadcasts notifications, so callers keep a
-/// single change stream.
-///
-/// The controller reads the open document ([DocumentController]) only to guard
-/// run start against empty text, the current settings ([SettingsController]) to
-/// assemble the run config at start and to guard a voice-design model that has
-/// been left without any prose, and the active model
-/// ([ModelProfileVoiceController]) for the pricing fallback in the cost
-/// estimate and that same voice-design guard.
+/// Owns the narration-run lifecycle: the running flag, the snapshotted
+/// [runConfig] + segment plan, per-segment progress, cancellation, and the
+/// terminal run state (finished/stopped/error) plus the combined-track path and
+/// segment cleanup. [AppController] forwards this surface and re-broadcasts
+/// notifications, so callers keep a single change stream.
 class RunController extends ChangeNotifier {
   RunController({
     required this._document,
@@ -33,12 +23,10 @@ class RunController extends ChangeNotifier {
   /// The open document (read only to block run start on empty text).
   final DocumentController _document;
 
-  /// The narration settings (read to assemble the run config at start, and to
-  /// guard run start on a voice-design model with no prose).
+  /// The narration settings (run config at start; the voice-design guard).
   final SettingsController _settings;
 
-  /// The active model (read for the pricing fallback in estimates, and to guard
-  /// run start on a voice-design model with no prose).
+  /// The active model (the pricing fallback and the voice-design guard).
   final ModelProfileVoiceController _model;
 
   /// The speech seam handed to `narrate` for every segment.
@@ -172,8 +160,8 @@ class RunController extends ChangeNotifier {
     runConfig = config;
     _lastRunDir = outputDirPath(config);
     // narrate() processes only min(sampleLen, paragraphs.length) segments; build
-    // segments from the same count so progress reaches 100% and no phantom
-    // pending tiles linger past a sampled run.
+    // from the same count so progress reaches 100% with no phantom pending
+    // tiles past a sampled run.
     final sampleLen = config.sampleLen;
     final runCount = sampleLen == null
         ? paragraphs.length
@@ -202,10 +190,9 @@ class RunController extends ChangeNotifier {
 
   Future<void> _narrate(NarrationConfig config) async {
     final token = _abort!;
-    // Snapshot the segment tiles this invocation owns. A successor run
-    // reassigns the runSegments field before a cancelled predecessor unwinds,
-    // so callbacks must drive the tiles they created — never whatever run is
-    // current now.
+    // Snapshot the tiles this invocation owns: a successor run reassigns
+    // runSegments before a cancelled predecessor unwinds, so callbacks must
+    // drive the tiles they created.
     final segments = runSegments;
     bool isCurrentRun() => _abort == token;
     try {
@@ -247,10 +234,9 @@ class RunController extends ChangeNotifier {
       }
     } finally {
       // Unwind unconditionally: even a non-Exception failure must not leave a
-      // lingering segment spinner on the tiles this invocation owned. Post the
-      // clear even when a successor run took over — the last notify before a
-      // cancel happened before this flag flip, and the run view keeps painting
-      // this invocation's tiles until they revert.
+      // spinner on the tiles this invocation owned. Post the clear even when a
+      // successor run took over — the last notify before a cancel happened
+      // before this flag flip.
       for (final segment in segments) {
         segment.running = false;
       }
@@ -266,29 +252,24 @@ class RunController extends ChangeNotifier {
   void cancelRun() {
     if (!_narrating) return;
     _abort?.cancel();
-    // Go idle immediately so the user can start a new run while the old
-    // request unwinds; a cancelled provider's onCancel hook aborts the live
-    // call, and the narrate tail's isCurrentRun guards keep a settled zombie
-    // from clobbering a successor run's state. Until the provider's force-close
-    // lands, a zombie may still write a late segment/manifest to the shared out
-    // dir — bounded today because the shipped cloud provider force-closes on
-    // cancel.
+    // Go idle immediately so the user can start a new run while the old request
+    // unwinds; the provider's onCancel hook aborts the live call and the
+    // narrate tail's isCurrentRun guards keep the settled zombie from
+    // clobbering the successor's state.
     _abort = null;
     _narrating = false;
-    // Mark the run as stopped immediately so the run view flips UI without
-    // waiting for the abort checkpoint; the narrate tail reconciles it too.
+    // Stopped now so the run view flips UI without waiting for the abort
+    // checkpoint; the narrate tail reconciles it too.
     _runStopped = true;
     notifyListeners();
   }
 
   /// Returns null when narration may start, otherwise why it is blocked. The
-  /// Narrate entrypoints guard on this before dispatching to the facade's
-  /// [startRun].
+  /// Narrate entrypoints guard on this before dispatching to [startRun].
   ///
-  /// Returns the enum rather than a ready-made sentence: every caller only
-  /// tests it against null, and the one caller that renders it has a
-  /// `BuildContext` to localize with. See
-  /// `NarrationBlockReasonX.message`.
+  /// The enum rather than a ready-made sentence: every caller only tests it
+  /// against null, and the one that renders it has a `BuildContext` to localize
+  /// with. See `NarrationBlockReasonX.message`.
   NarrationBlockReason? narrateBlockReason() {
     final profile = _model.profile;
     if (profile == null) {
@@ -297,10 +278,9 @@ class RunController extends ChangeNotifier {
     if (_document.text.trim().isEmpty) {
       return NarrationBlockReason.emptyText;
     }
-    // A voice-design model is told what to sound like in prose, and cannot
-    // invent a narrator from nothing: the client drops an empty `instruct`
-    // rather than sending it, which would leave the server guessing. Block the
-    // run instead, so the reason is visible while the box can still be filled.
+    // A voice-design model is told what to sound like in prose and cannot invent
+    // a narrator from nothing, so block the run while the box can still be
+    // filled.
     if (profile.sendsInstructField && _settings.instruct.trim().isEmpty) {
       return NarrationBlockReason.emptyVoiceDesign;
     }
@@ -322,9 +302,9 @@ enum NarrationBlockReason {
 
   /// The active model writes its voice from prose and that prose is blank.
   ///
-  /// Qwen3 Voice Design has no voice list to fall back on, so an empty
-  /// `instruct` is a request with nothing to obey. The client drops the field
-  /// rather than sending it, which leaves the outcome up to the server.
+  /// Qwen3 Voice Design has no voice list to fall back on, and the client drops
+  /// an empty `instruct` rather than sending it, leaving the outcome up to the
+  /// server.
   emptyVoiceDesign,
 
   /// A run is already in flight.

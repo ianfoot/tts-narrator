@@ -1,11 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
-/// Centralized platform detection helpers (Phase 1 of Linux support).
-///
-/// Every widget checks these getters instead of comparing
-/// `defaultTargetPlatform` inline, so platform branches have a single source
-/// of truth.
+/// Centralized platform detection helpers. Widgets check these getters instead
+/// of comparing `defaultTargetPlatform` inline, so platform branches have a
+/// single source of truth.
 bool get isMac => defaultTargetPlatform == TargetPlatform.macOS;
 
 /// True when running on Linux.

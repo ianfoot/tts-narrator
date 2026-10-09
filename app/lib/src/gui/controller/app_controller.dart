@@ -25,11 +25,10 @@ export 'run_controller.dart' show NarrationSegment;
 /// here and subscribes via [ChangeNotifier]. Model/voice handling reuses the
 /// core's config resolution so the GUI and CLI agree on defaults.
 ///
-/// Document management lives in [DocumentController], the appearance in
-/// [ThemeController], the model/voice state in [ModelProfileVoiceController],
-/// the narration settings in [SettingsController], and the run lifecycle in
-/// [RunController]; this controller forwards their surfaces and re-broadcasts
-/// their notifications so callers keep a single change stream.
+/// The sub-controllers ([DocumentController], [ThemeController],
+/// [ModelProfileVoiceController], [SettingsController], [RunController]) own the
+/// state; this one forwards their surfaces and re-broadcasts their notifications
+/// so callers keep a single change stream.
 class AppController extends ChangeNotifier {
   AppController({
     UserVoiceConfigLoader? loader,
@@ -38,9 +37,9 @@ class AppController extends ChangeNotifier {
     SpeechClient? client,
   }) : _model = ModelProfileVoiceController(loader: loader),
        _apiKeyStore = apiKeyStore ?? ApiKeyStore() {
-    // Preload the OS-secure key so run-config building (synchronous) can read
-    // the cached fallback; a missing host plugin or unreachable keychain is
-    // treated as "no stored key" rather than a startup failure.
+    // Preload so run-config building (synchronous) can read the cached
+    // fallback; an unreachable keychain means "no stored key", not a failed
+    // startup.
     unawaited(_apiKeyStore.load());
     _settings = SettingsController(
       document: _document,
@@ -65,19 +64,17 @@ class AppController extends ChangeNotifier {
   final ModelProfileVoiceController _model;
 
   /// The OS-secure per-provider API-key store (Keychain / Credential Manager /
-  /// libsecret). The run-config fallback reads the cached
-  /// [ApiKeyStore.value] synchronously; the run-setup panel manages the active
-  /// provider's key through this.
+  /// libsecret). The run-config fallback reads its cached value
+  /// synchronously.
   final ApiKeyStore _apiKeyStore;
 
   /// The provider owning the active model, or null when no model is configured.
   ///
   /// This is the name an API key is filed under, and the only thing gating the
-  /// run-setup panel's API-key section: with no model there is no provider to hold
-  /// a key, so the section has nothing to act on. Whether the provider *needs* a
-  /// key is not consulted — the section is offered for every provider, because
-  /// the user may hold a key the config does not mention, and the server, not
-  /// the app, decides whether one is required.
+  /// run-setup panel's API-key section. Whether the provider *needs* a key is
+  /// not consulted — the section is offered for every provider, since the user
+  /// may hold a key the config does not mention and the server, not the app,
+  /// decides whether one is required.
   String? get activeProvider => _model.profile?.provider;
 
   /// The in-memory document (text, path, dirty flag, save/load surface).
@@ -165,11 +162,10 @@ class AppController extends ChangeNotifier {
   VoiceGender get voiceGenderFilter => _model.voiceGenderFilter;
 
   /// Sets the narrator-gender filter. The model owns the filter's voice
-  /// narrowing/auto-switch; the passage-prefix consequences (rewriting the
-  /// narrator phrase for prompt-style models) are applied by
-  /// [SettingsController], which owns the prefix. The model may
-  /// revert an unmatched gender back to "any" ([VoiceGender.neutral]), so the
-  /// prefix rewrite reads the effective filter after the write.
+  /// narrowing/auto-switch; the passage-prefix consequences belong to
+  /// [SettingsController], which owns the prefix. The model may revert an
+  /// unmatched gender to [VoiceGender.neutral], so the prefix rewrite reads the
+  /// effective filter after the write.
   set voiceGenderFilter(VoiceGender value) {
     if (value == _model.voiceGenderFilter) return;
     _model.voiceGenderFilter = value;
@@ -188,9 +184,8 @@ class AppController extends ChangeNotifier {
 
   /// Selectable voices for the active model, narrowed to [voiceLanguage] and
   /// [voiceGenderFilter]. Each entry is `(id, displayLabel)`: the id is the
-  /// dropdown's value because it is the only thing that tells two same-named
-  /// voices apart, and tagged voices get a compact ` (m)`/` (f)`/` (n)` suffix
-  /// so gender is visible in the dropdown.
+  /// dropdown's value because it alone tells two same-named voices apart, and
+  /// tagged voices get an ` (m)`/` (f)`/` (n)` suffix.
   List<(String, String)> get voiceItems => _model.voiceItems;
 
   // --- Voice language ------------------------------------------------
@@ -212,9 +207,8 @@ class AppController extends ChangeNotifier {
   /// model does not declare are ignored.
   ///
   /// A code the active gender filter would leave without any voice clears that
-  /// filter instead — the reader's language choice wins — so the prefix rewrite
-  /// keyed on the gender has to be re-applied here, the same way the
-  /// [voiceGenderFilter] setter does it.
+  /// filter instead — the language choice wins — so the gender-keyed prefix
+  /// rewrite is re-applied here as the setter does.
   void applyVoiceLanguage(String code) {
     if (code == _model.language) return;
     final gender = _model.voiceGenderFilter;
@@ -228,12 +222,10 @@ class AppController extends ChangeNotifier {
   // --- Appearance ----------------------------------------------------
 
   /// The user's appearance choice ([AppThemeMode.system] follows the OS).
-  /// Session-only; defaults to the OS setting so the app boots as before.
+  /// Session-only; defaults to the OS setting.
   ///
-  /// Backed by [themeNotifier] so appearance-only widgets (e.g. the app root
-  /// theme resolution) can subscribe without rebuilding on every other
-  /// controller write; the [ChangeNotifier] notification is still fired for
-  /// widgets that display the current label.
+  /// Also published through [themeNotifier] so appearance-only widgets can
+  /// subscribe without rebuilding on every other controller write.
   AppThemeMode get themeMode => _theme.themeMode;
 
   /// Fires when [themeMode] changes. Subscribe here (not the whole
@@ -446,9 +438,8 @@ class AppController extends ChangeNotifier {
 
   /// Whole-file narration is only offered up to `maxWholeFileLength` chars; a
   /// larger document would be an unbounded single TTS call. Delegated to
-  /// [SettingsController] so a document that grows past the cap (or is loaded
-  /// oversized) drops the toggle instead of leaving it silently "on" and
-  /// planning a giant segment.
+  /// [SettingsController] so a document that grows past the cap drops the
+  /// toggle instead of leaving it silently "on".
   void _clearWholeFileIfTooLarge() => _settings.adjustWholeFileForDocument();
 
   /// Forwards a [DocumentController] notification: re-checks the whole-file
@@ -474,9 +465,8 @@ class AppController extends ChangeNotifier {
   }
 
   /// Resolves a destination for Save As (and the first save of an untitled
-  /// document); returns null when the user cancels. Wired by the platform
-  /// shell to the native save picker — platform-neutral so Linux/Windows bind
-  /// their own picker.
+  /// document); returns null when the user cancels. Bound by the platform shell
+  /// to the native save picker.
   Future<String?> Function()? get saveLocationPicker =>
       _document.saveLocationPicker;
 
@@ -535,7 +525,7 @@ class AppController extends ChangeNotifier {
   /// track and the manifest (marked `segments_deleted: true`). Returns how
   /// many files were removed; a later call is a harmless no-op. Guarded
   /// against running while narration is active so the tiles' completed
-  /// indicators revert instead of dangling at deleted files. Throws a
+  /// indicators revert rather than dangle at deleted files. Throws a
   /// [FileSystemException] when a segment cannot be removed.
   Future<int> cleanupSegments() => _run.cleanupSegments();
 
@@ -552,8 +542,8 @@ class AppController extends ChangeNotifier {
 
   /// Absolute path of the completed combined track from the last successful
   /// run, or null until one lands. Persists across leaving the run view so the
-  /// editor can keep offering playback of the finished file; cleared when a new
-  /// run starts or the run state resets (cleanup keeps the track on disk).
+  /// editor can keep offering playback; cleared when a new run starts or the run
+  /// state resets (cleanup keeps the track on disk).
   String? get completedAudioPath => _run.completedAudioPath;
 
   bool get runFinished => _run.runFinished;
@@ -573,11 +563,10 @@ class AppController extends ChangeNotifier {
 
   /// Launches narration of the current document with the current settings,
   /// snapshotting the plan + config so the run view is stable even as the
-  /// editor keeps changing behind it.
+  /// editor keeps changing behind it. The plan runs synchronously (so a
+  /// missing/empty text surfaces [runPlanError] without a half-started run),
+  /// then narration proceeds in the background.
   ///
-  /// Synchronously runs the plan (so a missing/empty text surfaces
-  /// [runPlanError] without a half-started run), then narrates in the
-  /// background, publishing per-segment progress via the re-broadcast stream.
   /// Cancel via [cancelRun] throws [AbortException] (→ [runStopped]); any other
   /// failure lands in [runError]. Delegated to [RunController].
   void startRun() => _run.startRun();
@@ -597,10 +586,8 @@ class AppController extends ChangeNotifier {
   /// Clears the document text. Disabled when no text or while narrating.
   /// Saves current text to undo stack before clearing.
   void clearText() {
-    if (!canClearText) return; // Centralized guard
-    // Save to undo stack before clearing
+    if (!canClearText) return;
     _undoStack.add(text);
-    // Keep only last 10 for memory
     if (_undoStack.length > 10) _undoStack.removeAt(0);
     _document.clearText();
   }

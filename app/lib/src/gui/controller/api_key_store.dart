@@ -6,16 +6,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Apple Keychain on macOS, DPAPI / Credential Manager on Windows, libsecret
 /// (Secret Service) on Linux.
 ///
-/// Keys are held per provider under [_keyPrefix], so two providers never share
-/// a credential and no vendor name is baked into the code.
-///
-/// The stored key is a fallback in name only — precedence is keychain, config
-/// literal, then `${ENV}` reference (see `SettingsController._resolveApiKey`),
-/// because the provider file arrives from a remote download and a keychain
-/// entry is one this user typed deliberately. The GUI reads keys through the
-/// synchronous [_values] cache so run-config building stays synchronous and a
-/// model switch needs no reload; [load] is called once at startup, and [save] /
-/// [remove] keep the cache current.
+/// Keys are held per provider under [_keyPrefix], so no vendor name is baked
+/// into the code. Reads go through the synchronous [_values] cache so run-config
+/// building stays synchronous and a model switch needs no reload; [load] runs
+/// once at startup, and [save] / [remove] keep the cache current.
 class ApiKeyStore extends ChangeNotifier {
   ApiKeyStore({FlutterSecureStorage? storage})
     : _storage = storage ?? const FlutterSecureStorage();
@@ -41,14 +35,10 @@ class ApiKeyStore extends ChangeNotifier {
   ///
   /// Reads the whole namespace once rather than per provider, so switching
   /// models never has to await the platform. Entries outside the prefix are
-  /// ignored — the backends return every entry belonging to the app, not just
-  /// ours.
+  /// ignored — the backends return every entry belonging to the app.
   ///
-  /// Best-effort: a host without the secure-storage plugin (pure-Dart unit
-  /// tests hit this before any binding is initialized), an unreachable
-  /// keychain, or any other read failure all mean "no stored key" — the app
-  /// still runs from config/env and the missing-key plan error stays the
-  /// source of truth.
+  /// Best-effort: any read failure means "no stored key" — the app still runs
+  /// from config/env and the missing-key plan error stays the source of truth.
   Future<void> load() async {
     final Map<String, String> all;
     try {

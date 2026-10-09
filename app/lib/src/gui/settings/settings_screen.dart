@@ -17,12 +17,12 @@ import 'model_list.dart';
 /// A model list on the left, the selected model's voice table on the right.
 /// Everything shown is read from the same config directory the loader uses; the
 /// only writes go through [AppController.voiceConfigStore], which puts them in
-/// the `user/` overlay so a re-download of the starter configs can never clobber
-/// a reader's own voice list.
+/// the `user/` overlay so a re-download of the starter configs cannot clobber a
+/// reader's own voice list.
 ///
-/// The screen is a pushed route rather than a section in the run-setup panel: the
-/// panel is 320px wide, and a voice table with three columns plus per-row
-/// actions does not fit in it without becoming unreadable.
+/// A pushed route rather than a section in the run-setup panel: the panel is
+/// 320px wide, and a three-column voice table with per-row actions does not fit
+/// in it legibly.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, required this.controller});
 
@@ -57,8 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// Open on the model the narrator is using, so the screen answers "what am I
-  /// about to edit?" without a click; fall back to the first configured model
-  /// when nothing is selected, and to null when there are no models at all.
+  /// about to edit?" without a click.
   String? _initialAlias() {
     final models = effectiveModels(_controller.voiceConfig);
     if (models.isEmpty) return null;
@@ -170,8 +169,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// Puts the config directory in front of the user, because every other control
-  /// here is an affordance over files that stay on disk. Copying the path as
-  /// well means the button is useful on a platform with no "reveal" concept.
+  /// here is an affordance over files that stay on disk. Copying the path keeps
+  /// the button useful on a platform with no "reveal" concept.
   Future<void> _revealConfigFolder() async {
     final dir = _controller.voiceConfigStore.configDir;
     await Clipboard.setData(ClipboardData(text: dir));

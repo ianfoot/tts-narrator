@@ -8,12 +8,9 @@ import '../widgets/disclosure.dart';
 
 /// The collapsible advanced voice-id entry of the run-setup panel: a disclosure
 /// revealing a free-form raw voice id field that overrides the picked alias.
-/// Extracted from the model section so per-model panels can compose it
-/// independently of the voice picker.
 ///
-/// The field is owned locally and synced from the controller so a model switch
-/// resetting the voice to the new default lands in the field without wiping a
-/// user-typed raw id mid-edit.
+/// The field is owned locally and synced from the controller, so a model switch
+/// resetting the voice to the new default lands in the field.
 class AdvancedVoiceWidget extends StatefulWidget {
   const AdvancedVoiceWidget({super.key, required this.controller});
 
@@ -52,9 +49,8 @@ class _AdvancedVoiceWidgetState extends State<AdvancedVoiceWidget> {
     super.dispose();
   }
 
-  /// Pushes controller changes back into the local field. The rail is the only
-  /// writer to the voice, so this mostly no-ops; the one path it matters on is
-  /// a model switch resetting the voice to the new default.
+  /// Pushes controller changes back into the local field. The one path it
+  /// matters on is a model switch resetting the voice to the new default.
   void _onControllerChanged() {
     setState(() {
       _syncing = true;

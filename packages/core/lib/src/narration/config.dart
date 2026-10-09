@@ -32,15 +32,14 @@ class NarrationConfig {
 
   /// Path to the source text to narrate (required, no default).
   ///
-  /// [sourceText] overrides reading from disk: when set, [inputPath] drives
-  /// only output naming (stem/out-dir); narration uses the in-memory text.
-  /// This lets the GUI narrate typed or pasted text with no backing file.
+  /// [sourceText] overrides reading from disk: when set, [inputPath] drives only
+  /// output naming, and narration uses the in-memory text. This lets the GUI
+  /// narrate typed or pasted text with no backing file.
   final String inputPath;
 
   /// In-memory text to narrate instead of reading [inputPath] from disk.
   ///
-  /// When null (the CLI), [inputPath] is read as before. The CLI never sets
-  /// this; the GUI sets it for typed/pasted content.
+  /// Null for the CLI, which always reads the file.
   final String? sourceText;
 
   /// TTS model profile driving the request body and prompt.
@@ -49,11 +48,11 @@ class NarrationConfig {
   /// Encoding this run writes, which must be one the model can actually
   /// produce (`profile.supportsFormat`).
   ///
-  /// Required rather than defaulted to the model's preference because the
-  /// caller is the layer that knows the user's choice: the GUI remembers a
-  /// per-model selection and passes it in. Core deliberately does not clamp it
-  /// — a format the model does not offer is a caller bug, and the resulting
-  /// provider error says so more clearly than a silent fallback would.
+  /// Required rather than defaulted to the model's preference because the caller
+  /// knows the user's choice: the GUI remembers a per-model selection and passes
+  /// it in. Core deliberately does not clamp it — an unsupported format is a
+  /// caller bug, and the resulting provider error says so more clearly than a
+  /// silent fallback would.
   ///
   /// This is also the wire format, since every supported format is a container
   /// the provider writes itself.
@@ -95,8 +94,8 @@ class NarrationConfig {
   ///
   /// Unlike [accent] and [style] — which are directives woven *into the spoken
   /// text* for prompt-style models — this describes the narrator and never
-  /// reaches the audio as words. Qwen3 Voice Design is the model that reads it:
-  /// it has no voice list, so the prose is the only way to choose a voice.
+  /// reaches the audio as words. Qwen3 Voice Design reads it: that model has no
+  /// voice list, so prose is the only way to choose a voice.
   final String? instruct;
 
   /// If set, only narrate this many paragraphs (smoke test).
@@ -121,8 +120,7 @@ class NarrationConfig {
   ///
   /// True for a run with a real backing file, so several documents narrated into
   /// one chosen folder do not collide. False for an in-memory document: there is
-  /// no filename to name a folder after, so the run writes into `outDir` and its
-  /// files carry the `inputPath` stem as a filename prefix instead.
+  /// no filename to name a folder after, so files land directly in `outDir`.
   final bool nestOutputInInputSubdir;
 
   /// If true, print the narration plan and exit without calling the API.
@@ -136,8 +134,6 @@ class NarrationConfig {
   final AudioPricing pricing;
 
   /// Resolved provider settings for the run's provider (see `resolveSettings`).
-  /// Built once when the config is assembled; providers read their non-secret
-  /// settings from here.
   ///
   /// Deliberately carries **no credential**: `api_key` is stripped out before
   /// expansion and delivered as [apiKey], so a secret never sits in this map
@@ -146,10 +142,10 @@ class NarrationConfig {
 
   /// Bearer token for this run, or null when none is configured.
   ///
-  /// Null is normal and is never an error: it means the request carries no
-  /// `Authorization` header, and whether the server requires one is the
-  /// server's decision. The GUI resolves this from the secure store, the config
-  /// block, or the environment; core just forwards it.
+  /// Null is normal and never an error: it means the request carries no
+  /// `Authorization` header, and whether the server requires one is the server's
+  /// decision. The GUI resolves this from the secure store, the config block, or
+  /// the environment; core just forwards it.
   final String? apiKey;
 
   /// Copy of this config with [inputPath] replaced (used to narrate each file

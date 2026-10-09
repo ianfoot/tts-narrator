@@ -6,21 +6,13 @@ import 'config_loader.dart';
 /// Owns the active model profile, voice selection, and narrator-gender filter
 /// for the TTS Narrator GUI.
 ///
-/// The controller loads the shared [VoiceConfig] (same directory the CLI reads,
-/// via its [UserVoiceConfigLoader]) and exposes the resolved profile, the selected
-/// voice, and the gender-filtered voice items. [AppController] forwards its
-/// model & voice surface here and re-broadcasts notifications, so callers keep
-/// a single change stream.
+/// The controller loads the shared [VoiceConfig] (the same directory the CLI
+/// reads) and exposes the resolved profile, the selected voice, and the
+/// gender-filtered voice items.
 ///
-/// There is no compiled default model: when the config directory has no models
-/// (or no first provider whose first model resolves to one), [profile] and
-/// [modelAlias] are null and there is nothing to select or narrate with.
-/// Narration is blocked until the user supplies a config (the first-run
-/// download prompt guides this).
-///
-/// The narration-settings side effects of the gender filter (rewriting the
-/// narrator phrase in the passage prefix) live in [AppController], which owns
-/// that setting and reacts to [voiceGenderFilter] writes through the facade.
+/// There is no compiled default model: with no models in the config directory,
+/// [profile] and [modelAlias] are null and narration stays blocked until the
+/// user supplies a config.
 class ModelProfileVoiceController extends ChangeNotifier {
   ModelProfileVoiceController({UserVoiceConfigLoader? loader})
     : _loader = loader ?? UserVoiceConfigLoader() {
@@ -57,31 +49,25 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   String? get modelAlias => _modelAlias;
 
-  /// The app's only writer for the config directory. Reads resolve through it so
-  /// an overlay file the user authored is what the editor shows, and every write
-  /// lands in the overlay — the downloaded files are never rewritten, so a
-  /// re-download can restore them without losing anything.
+  /// The app's only writer for the config directory. Every write lands in the
+  /// `user/` overlay — the downloaded files are never rewritten, so a
+  /// re-download can restore them.
   VoiceConfigStore get voiceConfigStore => _store;
   late final VoiceConfigStore _store = VoiceConfigStore(_loader.configDir);
 
-  /// Re-reads the config directory, keeping the selected model and voice.
+  /// Re-reads the config directory after the settings screen writes an overlay
+  /// file, keeping the selected model and voice.
   ///
-  /// Called after the settings screen writes an overlay file, so the picker
-  /// shows what was just saved without an app restart. The model alias is
-  /// re-resolved against the new config and falls back to the default model if
-  /// the file it named is gone; the voice is then re-picked by **id** from
-  /// whatever is still visible, which keeps the reader on the same voice when a
-  /// label was renamed and moves them to the default only when their id is
-  /// genuinely gone. Either way the friendly label is re-read off the surviving
-  /// id, so a rename in preferences stops showing the old name.
+  /// A model alias the new config no longer resolves falls back to the default.
+  /// The voice is re-picked by **id** from whatever is still visible, so a
+  /// rename keeps the reader on the same voice and only a genuinely gone id
+  /// moves them to the default; the friendly label is re-read off the
+  /// surviving id.
   ///
-  /// The chosen language and gender filter are kept, because editing a voice
-  /// changes neither. They are reset only when the model itself changed or is
-  /// gone, the one case where the old choice cannot be honoured. The gender
-  /// filter is re-validated against the new list in every case: delete the last
-  /// voice matching it and the picker would keep filtering to a list that no
-  /// longer holds the selected voice, so nothing would be highlighted while the
-  /// run config still sent the hidden id.
+  /// The gender filter is re-validated against the new list in every case:
+  /// delete the last voice matching it and the picker would keep filtering to a
+  /// list that no longer holds the selected voice, so nothing would be
+  /// highlighted while the run config still sent the hidden id.
   void reloadConfig() {
     _voiceConfig = _loader.load();
     final alias = _modelAlias;
@@ -150,10 +136,9 @@ class ModelProfileVoiceController extends ChangeNotifier {
   Map<String, String> rawProviderSettings(TtsModelProfile profile) =>
       _voiceConfig.providers[profile.provider]?.settings ?? const {};
 
-  /// The environment the loader expands `${ENV}` references against. Exposed so
-  /// the run-setup panel resolves an `api_key` reference against the same map the
-  /// run config is built from, rather than a second copy of the process
-  /// environment.
+  /// The environment the loader expands `${ENV}` references against, so the
+  /// run-setup panel resolves an `api_key` reference against the same map the
+  /// run config is built from.
   Map<String, String> get environment => _loader.environment;
 
   /// The editable GUI options for the active model, derived from the
@@ -217,16 +202,16 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   /// Applies a voice picked from the list, by id.
   ///
-  /// The list's value is the id, not the label, so a model with two voices of the
-  /// same name (Kokoro has three Santas) selects the one the reader actually
-  /// clicked. [label] is passed alongside for display only.
-  /// Returns false (leaving the selection unchanged) when no model is active.
+  /// The list's value is the id, not the label, so two voices sharing a name
+  /// (Kokoro has three Santas) select the one the reader actually clicked.
+  /// [label] is display-only. Returns false, leaving the selection unchanged,
+  /// when no model is active.
   bool applyVoiceId(String id, {String? label}) {
     final p = profile;
     if (p == null) return false;
-    // Look the label up from the entry the id came from, so a pick from the
-    // dropdown keeps its friendly name without the caller having to pass the
-    // display string back through the widget.
+    // Look the label up from the entry the id came from, so a dropdown pick
+    // keeps its friendly name without the widget passing the display string
+    // back.
     var friendly = label;
     for (final e in _visibleEntries(p)) {
       if (e.id == id) {
@@ -267,15 +252,10 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   /// Whether the active model takes a voice at all.
   ///
-  /// False for a model that writes its voice from prose instead (`"sends_voice":
-  /// false`, as Qwen3 Voice Design does): it has no voices to choose between,
-  /// and the picker has no row to select, so "Model & voice" drops the
-  /// dropdown rather than showing an empty one.
-  ///
-  /// True while no model is selected, because "does not take a voice" is
-  /// something a model has to declare; an empty config says nothing either way,
-  /// and the section still shows its pickers rather than blanking itself before
-  /// the user has chosen anything.
+  /// False for a model that writes its voice from prose (`"sends_voice": false`,
+  /// as Qwen3 Voice Design does): it has no voices to choose between, so the
+  /// dropdown is dropped rather than shown empty. True while no model is
+  /// selected — "does not take a voice" is something a model must declare.
   bool get takesVoice => profile?.sendsVoiceField ?? true;
 
   /// Whether the active model has any voice of a known gender — tagged with
@@ -291,23 +271,18 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   /// The last language chosen in the picker, or the model's configured
   /// `default_language` when nothing has been chosen; null for a model that
-  /// declares none.
-  ///
-  /// Backed by state rather than read straight off the voice so a model switch
-  /// can restore the *new* model's default, and so a free-form voice id with no
-  /// language prefix still leaves the picker on a real language. [language]
-  /// prefers the selected voice and falls back to this.
+  /// declares none. Kept as state rather than read off the voice so a model
+  /// switch restores the *new* model's default and a voice id with no language
+  /// prefix still leaves the picker on a real language.
   String? _language;
 
   /// The language the selected voice speaks, or null when the active model
   /// declares no languages.
   ///
-  /// Read off the voice id, so the picker and the voice cannot disagree: any
-  /// voice whose id starts with one of the model's declared codes *is* that
-  /// language's voice. A raw id with no such prefix (or no voice selected yet)
-  /// falls back to the last chosen language, then the model's default, then the
-  /// first code it declares — so the picker always shows a concrete language
-  /// rather than a blank.
+  /// Read off the voice id so the picker and the voice cannot disagree. A raw id
+  /// with no declared prefix (or no voice selected yet) falls back to the last
+  /// chosen language, then the model's default, then the first declared code —
+  /// so the picker never shows a blank.
   String? get language {
     final p = profile;
     if (p == null) return null;
@@ -346,19 +321,13 @@ class ModelProfileVoiceController extends ChangeNotifier {
   /// already speaks [code], otherwise switches to the model default voice in
   /// that language, else the first voice that speaks it.
   ///
-  /// The language the reader picked always wins. When it is the *gender* filter
-  /// that would empty the list — French has one voice and it is female, so Male +
-  /// French leaves nothing — the gender filter is cleared rather than the
-  /// language silently snapping back, which is the same bargain the gender setter
-  /// makes in the other order. Only a language with no voice at all behind it is
-  /// refused outright.
-  ///
-  /// That refusal is a rule about the voice list, so it does not apply to a model
-  /// that has no voice list. Qwen3 Voice Design ships no voices at all and takes
-  /// its language as the `lang_code` it synthesises in, so there is nothing for
-  /// the list to hold behind any code: every language looked empty, every pick
-  /// was refused, and the dropdown snapped back to the default however many times
-  /// it was used. Such a model takes the choice as written.
+  /// The reader's language always wins. When the *gender* filter would empty the
+  /// list — French has one voice and it is female, so Male + French leaves
+  /// nothing — the gender filter is cleared rather than the language snapping
+  /// back. Only a language with no voice at all behind it is refused, and that
+  /// rule does not apply to a model with no voice list (Qwen3 Voice Design ships
+  /// none, taking its language as the `lang_code` it synthesises in), so every
+  /// pick there would otherwise be refused.
   void applyLanguage(String code) {
     final p = profile;
     if (p == null) return;
@@ -372,13 +341,9 @@ class ModelProfileVoiceController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// The language the voice list is actually narrowed by: the [language] getter,
-  /// so the list can never disagree with the dropdown that chose it.
-  ///
-  /// Filtering used to read the [_language] field, which left the two out of step
-  /// whenever the language came from somewhere other than the picker — a voice id
-  /// typed into Advanced Voice ID, say, which moves the dropdown without touching
-  /// the field.
+  /// The language the voice list is narrowed by: the [language] getter, so the
+  /// list can never disagree with the dropdown that chose it (a voice id typed
+  /// into Advanced Voice ID moves the dropdown without touching [_language]).
   String? get _activeLanguage => language;
 
   /// Whether the active model would show any voice under the given filters.
@@ -399,10 +364,9 @@ class ModelProfileVoiceController extends ChangeNotifier {
       _filteredEntries(p, language: _activeLanguage);
 
   /// Selectable voices for the active model, narrowed to [language] and
-  /// [voiceGenderFilter]. Each entry is `(id, displayLabel)`: the id is the value
-  /// because it is the only thing that distinguishes two voices sharing a name,
-  /// and tagged voices get a compact ` (m)`/` (f)`/` (n)` suffix so gender is
-  /// visible in the dropdown.
+  /// [voiceGenderFilter]. Each entry is `(id, displayLabel)`: the id is the
+  /// value because it alone distinguishes two voices sharing a name, and
+  /// tagged voices get an ` (m)`/` (f)`/` (n)` suffix.
   List<(String, String)> get voiceItems {
     final p = profile;
     return p == null

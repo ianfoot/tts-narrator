@@ -11,11 +11,9 @@ import 'run_setup_labels.dart';
 
 /// The "API key" section of the run-setup panel: where the active model's key
 /// comes from, a masked field to enter a new one, and Save / Remove buttons
-/// backed by the OS secure store. The stored key is a fallback only — a key
-/// already present in config.json or the environment keeps precedence (see
-/// [SettingsController._resolveProviderSettings]). Wrapped in a collapsed
-/// [Disclosure] so the key controls stay out of the way; the status
-/// line serves as its caption.
+/// backed by the OS secure store. The stored key is a fallback only — a key in
+/// config.json or the environment keeps precedence (see
+/// [SettingsController._resolveProviderSettings]).
 class ApiKeySection extends StatefulWidget {
   const ApiKeySection({super.key, required this.controller});
 
@@ -28,8 +26,7 @@ class ApiKeySection extends StatefulWidget {
 class _ApiKeySectionState extends State<ApiKeySection> {
   late final TextEditingController _apiKey;
 
-  /// Whether the API key disclosure is expanded. Collapsed by default so the
-  /// key source/entry controls stay out of the way until opened.
+  /// Whether the API key disclosure is expanded.
   bool _apiKeyExpanded = false;
 
   /// Transient key-store failure shown under the API-key row (e.g. an
@@ -63,10 +60,10 @@ class _ApiKeySectionState extends State<ApiKeySection> {
     }
   }
 
-  /// Saves the entered key to the OS secure store and clears the visible
-  /// field (the secret never lingers in the edit box). Empty input is a no-op.
-  /// A key-store failure leaves the field populated and reports it on the
-  /// status row instead of surfacing as an unhandled async error.
+  /// Saves the entered key to the OS secure store and clears the visible field
+  /// (the secret never lingers in the edit box). Empty input is a no-op. A
+  /// key-store failure leaves the field populated and reports it on the status
+  /// row.
   Future<void> _saveApiKey() async {
     if (_apiKey.text.trim().isEmpty) return;
     try {
@@ -112,9 +109,8 @@ class _ApiKeySectionState extends State<ApiKeySection> {
             runSetupFieldLabel(_tokens, _l10n.gui_run_setup_apiKeyStatusLabel),
             Text(
               _controller.apiKeySource.apiKeyStatusLabel(_l10n),
-              // Neutral whatever the state: "Not set" is a fact, not a fault.
-              // The app does not decide whether a provider needs a key, so
-              // styling it as an error would assert something it cannot know.
+              // Neutral whatever the state: the app does not decide whether a
+              // provider needs a key, so "Not set" is a fact, not a fault.
               style: _tokens.typography.body.copyWith(
                 color: _tokens.colors.textSecondary,
               ),

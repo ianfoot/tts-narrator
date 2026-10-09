@@ -6,26 +6,21 @@ import 'dart:io';
 /// segment-retention policy that flips `segments_deleted` on it.
 ///
 /// This module owns the filename, the path arithmetic, and the policy that an
-/// unreadable or stale manifest means "no run here". Everything that reasons
-/// about a manifest goes through it, so a change to the layout is one change
-/// rather than one per caller.
+/// unreadable or stale manifest means "no run here".
 ///
 /// Keys are read and written as raw JSON rather than through a class: the
-/// manifest is a compatibility surface that files from earlier versions are
-/// still resumed from, so a reader that silently defaulted a missing key would
-/// hide the difference between "written by an older version" and "corrupt".
-/// Absence is answered by the accessors below, which say what is missing
-/// rather than inventing a value for it.
+/// manifest is a compatibility surface that files from earlier versions are still
+/// resumed from, so a reader that silently defaulted a missing key would hide the
+/// difference between "written by an older version" and "corrupt".
 
 /// Name of the manifest file inside a run directory.
 const manifestFileName = 'manifest.json';
 
 /// The manifest of the run in [outDir], or null when there is none.
 ///
-/// A missing file, unreadable file, non-JSON file, and JSON that is not an
-/// object all read as null: every caller wants "is there usable state here",
-/// and none of them can act on a partially-understood manifest. Callers that
-/// must distinguish "absent" from "corrupt" are not served by this function.
+/// A missing file, unreadable file, non-JSON file, and JSON that is not an object
+/// all read as null: every caller wants "is there usable state here", and none can
+/// act on a partially-understood manifest.
 Map<String, dynamic>? readManifest(Directory outDir) {
   final file = File(_manifestPathIn(outDir));
   if (!file.existsSync()) return null;
@@ -33,8 +28,7 @@ Map<String, dynamic>? readManifest(Directory outDir) {
     final raw = jsonDecode(file.readAsStringSync());
     return raw is Map<String, dynamic> ? raw : null;
   } on Exception {
-    // Unreadable/stale manifest is not fatal — resume re-narrates and cleanup
-    // treats the run as uncleanable. Neither is a reason to fail.
+    // Not fatal: resume re-narrates and cleanup treats the run as uncleanable.
     return null;
   }
 }
@@ -49,10 +43,9 @@ void writeManifest(Directory outDir, Map<String, dynamic> manifest) {
 /// The per-paragraph records of the run in [outDir], or empty when there is no
 /// usable manifest.
 ///
-/// The shape a resume pass consumes: one entry per paragraph, in narration
-/// order. A manifest whose `paragraphs` is absent or is not a list reads as no
-/// records rather than as an error, which is what makes a manifest written
-/// before paragraphs were recorded behave like a fresh run.
+/// One entry per paragraph, in narration order. A manifest whose `paragraphs` is
+/// absent or not a list reads as no records, so a manifest written before
+/// paragraphs were recorded behaves like a fresh run.
 List<Map<String, Object?>> paragraphRecords(Directory outDir) {
   final paragraphs = readManifest(outDir)?['paragraphs'];
   if (paragraphs is! List) return const [];

@@ -88,8 +88,7 @@ class _EditorScreenState extends State<EditorScreen> {
     if (existing != null) return existing;
     final player = AudioPlayer();
     // One player for the full track only (per-segment clips play on the run
-    // view). Reaching the end — or an explicit stop — reverts the button from
-    // Stop back to Play automatically.
+    // view). Reaching the end reverts the button from Stop back to Play.
     player.onPlayerComplete.listen((_) {
       if (mounted) setState(() => _playingFull = false);
     });
@@ -134,8 +133,8 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   /// Runs the shared Clean Up Segments flow (confirm → delete → summary) with
-  /// this screen's context so the dialogs mount inside the editor route. The
-  /// same flow backs the macOS menu bar's File ▸ Clean Up Segments command.
+  /// this screen's context so the dialogs mount inside the editor route. Backs
+  /// the macOS menu bar's File ▸ Clean Up Segments command too.
   void _cleanUpSegments() {
     runCleanupSegmentsFlow(controller: _controller, context: context);
   }

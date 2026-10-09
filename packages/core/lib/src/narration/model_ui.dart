@@ -4,9 +4,8 @@ import 'model_profiles.dart';
 ///
 /// [ModelUiSpec.forProfile] derives the controls from the model's own declared
 /// capabilities ([TtsModelProfile.promptStyle], [TtsModelProfile.supportsSpeed],
-/// [TtsModelProfile.sendsInstructField]), and the app renders whatever comes
-/// back generically. Core ships no per-model branches, and the app has none
-/// either.
+/// [TtsModelProfile.sendsInstructField]), and the app renders whatever comes back
+/// generically: core ships no per-model branches, and neither does the app.
 ///
 /// Option keys are a convention the app interprets against the model-agnostic
 /// narration settings:
@@ -29,10 +28,9 @@ class ModelUiSpec {
 
   /// The controls [model] supports, derived from the profile's capabilities.
   ///
-  /// `promptStyle` models understand accent/style/prefix directives woven into
-  /// the text, so they get those fields plus a narrator-gender control the app
-  /// rewrites into the narrated prose. `supportsSpeed` models get the speed
-  /// slider. A model can qualify for either, both, or neither.
+  /// `promptStyle` models get accent/style/prefix fields plus a narrator-gender
+  /// control the app rewrites into the narrated prose; `supportsSpeed` models get
+  /// the speed slider. Either, both, or neither.
   factory ModelUiSpec.forProfile(TtsModelProfile model) {
     final options = <ModelUiControl>[];
     if (model.promptStyle) {
@@ -72,9 +70,8 @@ class ModelUiSpec {
       );
     }
     // Voice design has no accent/style pair to speak aloud, so `instruct` is a
-    // field of its own: one multiline box describing the narrator, prefilled
-    // from the model file. Offered independently of `promptStyle` because the
-    // two never apply to the same model.
+    // field of its own, prefilled from the model file. Offered independently of
+    // `promptStyle` because the two never apply to the same model.
     if (model.sendsInstructField) {
       options.add(
         const ModelUiControl(

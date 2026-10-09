@@ -26,20 +26,11 @@ enum ApiKeySource {
   environment,
 }
 
-/// Owns the narration settings and the editor's settings-panel visibility for
-/// the TTS Narrator GUI: accent/style, passage prefix, per-segment sizing,
-/// whole-file/sample/out-dir/resume toggles, and the output folder persisted
-/// through [SharedPreferences].
-///
-/// Extracted from [AppController] so the settings surface stands alone.
-/// [AppController] forwards these getters/setters and re-broadcasts
+/// Owns the narration settings and the editor's settings-panel visibility:
+/// accent/style, passage prefix, per-segment sizing, the whole-file/sample/
+/// out-dir/resume toggles, and the output folder persisted through
+/// [SharedPreferences]. [AppController] forwards these and re-broadcasts
 /// notifications, so callers keep a single change stream.
-///
-/// The controller reads the open document ([DocumentController]) when the
-/// editor derives whole-file availability or the live segment plan, and the
-/// active model ([ModelProfileVoiceController]) when assembling the run config
-/// via [buildConfig] or when a prompt-style model's narrator-gender filter
-/// rewrites the passage prefix.
 class SettingsController extends ChangeNotifier {
   SettingsController({
     required this._document,
@@ -99,12 +90,9 @@ class SettingsController extends ChangeNotifier {
 
   /// The default output folder, created on demand and always absolute.
   ///
-  /// Absolute because the rendered files are handed to GStreamer-backed
-  /// playback on Linux, which resolves a relative path against a working
-  /// directory a packaged app does not control; the old relative `output`
-  /// default only resolved because the dev launcher happened to start in a
-  /// checkout containing that folder. Under the system temp dir because the
-  /// rendered audio is disposable — nothing is expected to outlive the run.
+  /// Absolute because GStreamer-backed playback on Linux resolves a relative
+  /// path against a working directory a packaged app does not control. Under the
+  /// system temp dir because the rendered audio is disposable.
   static String defaultOutDir() {
     final dir = Directory(defaultOutDirPath());
     if (!dir.existsSync()) dir.createSync(recursive: true);
@@ -157,28 +145,20 @@ class SettingsController extends ChangeNotifier {
   double _speed = 1.0;
 
   /// Voice-design prose, or null when the user has not edited the model's own
-  /// [TtsModelProfile.defaultInstruct].
-  ///
-  /// Held as an *override* rather than a value so a model switch can go back to
-  /// the newly selected model's default: a voice description written for one
-  /// model means nothing to the next one, and silently keeping it would narrate
-  /// the wrong narrator.
+  /// [TtsModelProfile.defaultInstruct]. Held as an *override* so a model switch
+  /// can go back to the new model's default: prose written for one model means
+  /// nothing to the next.
   String? _instruct;
 
-  /// The user's output-format choice per model alias.
-  ///
-  /// Keyed by alias rather than held as one value so switching models and coming
-  /// back keeps each model's own choice, and so a model that offers only one
-  /// format simply has nothing recorded. Read through [outputFormat], which
-  /// clamps to what the active model declares.
+  /// The user's output-format choice per model alias, keyed rather than held as
+  /// one value so switching models and coming back keeps each model's own
+  /// choice. Read through [outputFormat], which clamps to what the active model
+  /// declares.
   final Map<String, TtsAudioFormat> _outputFormats = {};
 
-  /// Selected UI locale, or null to follow the platform's resolution against
-  /// [AppLocalizations.supportedLocales].
-  ///
-  /// Only English is translated today, so the default is null (system-driven).
-  /// The preference is persisted now so adding a second `app_xx.arb` is a data
-  /// change rather than a settings-plumbing change.
+  /// Selected UI locale, or null to follow the platform's resolution. Only
+  /// English is translated today, so the default is null; the preference is
+  /// persisted now so adding a second `app_xx.arb` is a data change.
   Locale? _locale;
 
   /// The locale the UI renders in, or null to let the platform choose.
@@ -219,21 +199,17 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Voice-design prose for a model that declares `"sends_instruct": true`.
-  ///
-  /// Resolves to the user's edit when there is one, else the active model's
-  /// [TtsModelProfile.defaultInstruct], so a freshly selected voice-design model
-  /// is runnable with no input while remaining editable. Empty for any other
-  /// model, and dropped from the request by the capability gate either way.
+  /// Voice-design prose for a model that declares `"sends_instruct": true`: the
+  /// user's edit when there is one, else the model's [TtsModelProfile
+  /// .defaultInstruct], so a freshly selected voice-design model is runnable
+  /// with no input. Empty for any other model.
   String get instruct => _instruct ?? _model.profile?.defaultInstruct ?? '';
 
   /// Records the prose exactly as typed, *including* the empty string.
   ///
-  /// An empty value is a deliberate choice, not an absent one, so it is stored
-  /// rather than folded back into "use the model's default". Collapsing it would
-  /// make the field impossible to clear: emptying the box would restore the
-  /// default prose and the user could never retype their own description from
-  /// scratch. [resetInstruct] is the only way back to the default.
+  /// An empty value is a deliberate choice, not an absent one: collapsing it
+  /// into "use the model's default" would make the field impossible to clear.
+  /// [resetInstruct] is the only way back to the default.
   set instruct(String value) {
     if (value == _instruct) return;
     _instruct = value;
@@ -311,16 +287,12 @@ class SettingsController extends ChangeNotifier {
     _prefs?.setString(_outDirPrefsKey, value);
   }
 
-  /// The directory a run actually writes into: the chosen output folder, plus
-  /// the open document's stem when it is backed by a file.
-  ///
-  /// A saved document narrates into `<outDir>/<stem>/` so several documents can
-  /// share one chosen folder. An in-memory (never saved) document has no
-  /// filename to name a folder after, so it writes straight into `outDir` rather
-  /// than into an `untitled/` folder inside it. [buildConfig] resolves the same
-  /// way via [NarrationConfig.outDir] + [NarrationConfig.nestOutputInInputSubdir];
-  /// this getter exists so the UI can display it without assembling a config
-  /// (which needs a model and a voice).
+  /// The directory a run actually writes into: the chosen output folder, plus the
+  /// open document's stem when it is backed by a file, so several documents can
+  /// share one chosen folder. An in-memory document has no filename to name a
+  /// folder after, so it writes straight into `outDir`. [buildConfig] resolves
+  /// the same way; this getter exists so the UI can display it without
+  /// assembling a config.
   String get resolvedOutDir => resolveOutputDir(
     outDir: _trimmedOutDir,
     inputPath: _document.documentPath,
@@ -378,11 +350,10 @@ class SettingsController extends ChangeNotifier {
     );
   }
 
-  /// Re-checks the whole-file cap on a document change: a document that grows
-  /// past `maxWholeFileLength` (or is loaded oversized) silently drops
-  /// [sendWholeFile] instead of leaving the toggle "on" and planning a giant
-  /// segment. The announcement of the drop rides the facade's document-change
-  /// broadcast, so this method does not notify on its own.
+  /// Re-checks the whole-file cap on a document change: a document over
+  /// `maxWholeFileLength` drops [sendWholeFile] instead of leaving the toggle
+  /// "on" and planning a giant segment. The drop rides the facade's
+  /// document-change broadcast, so this does not notify on its own.
   void adjustWholeFileForDocument() {
     if (_sendWholeFile && !wholeFileAvailable) {
       _sendWholeFile = false;
@@ -451,11 +422,10 @@ class SettingsController extends ChangeNotifier {
 
   /// The resolved provider settings for [raw], with `api_key` stripped out.
   ///
-  /// Expansion runs on everything *except* the credential so that two things
-  /// hold at once: the returned map never holds a secret (it would otherwise be
-  /// serialised, logged, or shown in diagnostics), and an `api_key: "${VAR}"`
-  /// the runtime cannot fulfil does not throw out of `resolveSettings` — it
-  /// degrades to "no key", which is the same as any other unresolvable key.
+  /// Expansion runs on everything *except* the credential, so the returned map
+  /// never holds a secret (it would otherwise be serialised, logged, or shown in
+  /// diagnostics) and an unfulfillable `api_key: "${VAR}"` degrades to "no key"
+  /// rather than throwing out of `resolveSettings`.
   Map<String, String> _resolveProviderSettings(Map<String, String> raw) {
     final withoutKey = Map<String, String>.of(raw)..remove('api_key');
     return resolveSettings(withoutKey, env: _environment);
@@ -463,15 +433,13 @@ class SettingsController extends ChangeNotifier {
 
   /// The key to send for [raw], or null when none is configured anywhere.
   ///
-  /// Precedence puts the OS secure store first, ahead of the config block and
-  /// the environment. The provider file arrives from a remote download, so a
-  /// key in it can be a pooled credential belonging to someone else, while a
-  /// keychain entry is per-provider and was typed by this user deliberately. A
-  /// deliberate action should outrank ambient config.
+  /// The OS secure store outranks the config block and the environment: the
+  /// provider file arrives from a remote download, so a key in it can be a
+  /// pooled credential belonging to someone else, while a keychain entry was
+  /// typed by this user deliberately.
   ///
-  /// A null result is not an error. The request then carries no `Authorization`
-  /// header and the server decides whether it needed one; nothing here blocks
-  /// the run.
+  /// A null result is not an error — the request then carries no
+  /// `Authorization` header and the server decides whether it needed one.
   String? _resolveApiKey(Map<String, String> raw, TtsModelProfile p) {
     final stored = apiKeyStore?.value(p.provider);
     if (stored != null && stored.isNotEmpty) return stored;
@@ -518,10 +486,9 @@ class SettingsController extends ChangeNotifier {
     if (p == null) {
       throw const NoModelConfigured();
     }
-    // A voice-design model synthesizes its narrator from prose and sends no
-    // voice at all, so it declares none and has nothing to resolve. Resolving a
-    // voice for it would demand a row the picker does not even show, and block
-    // the run on a field that is dropped on the way out.
+    // A voice-design model synthesizes its narrator from prose and sends no voice,
+    // so it declares none; resolving one would demand a row the picker does not
+    // show and block the run on a field dropped on the way out.
     String voiceId = '';
     String? label;
     if (p.sendsVoiceField) {

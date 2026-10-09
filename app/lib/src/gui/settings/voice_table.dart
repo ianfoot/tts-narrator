@@ -31,13 +31,11 @@ import 'voice_dialog.dart';
 /// blank id, a duplicate id, deleting the default). A refusal is shown inline
 /// rather than thrown, because it is the expected answer to a bad edit.
 ///
-/// A model file that does not parse is also survivable here. Hand-editing
+/// An unparseable model file is survivable too: hand-editing
 /// `user/models/<alias>.json` is the documented way to do this without the app,
-/// so a stray comma is a likely state to arrive in — and the loader has already
-/// downgraded that file to a warning rather than failing the whole config. The
-/// pane reports the store's message in place of the table instead of throwing
-/// out of `build`, which would take the surrounding screen down with it and
-/// bury the Revert button that is the way out.
+/// so a stray comma is a likely way to arrive here. The pane reports the
+/// store's message in place of the table instead of throwing out of `build`,
+/// which would take the surrounding screen — and its Revert button — down.
 class VoiceTable extends StatefulWidget {
   const VoiceTable({
     super.key,
@@ -208,10 +206,9 @@ class _VoiceTableState extends State<VoiceTable> {
 /// Stands in for the table when the model file cannot be read.
 ///
 /// The store's own message is shown verbatim because it names the file and the
-/// syntax error, which is what the user needs to go fix it. The hint about
-/// reverting only appears when there is an overlay to revert, and points at the
-/// button above rather than repeating it — the Revert button is a sibling of this
-/// pane, so it stays on screen and stays pressable.
+/// syntax error. The revert hint appears only when there is an overlay to revert
+/// and points at the button above, which is a sibling of this pane and so stays
+/// on screen.
 class _Unreadable extends StatelessWidget {
   const _Unreadable({
     required this.alias,
@@ -265,9 +262,8 @@ class _RowMetrics {
 
   /// Wide enough for the two row actions side by side. [AppIconButton] wraps a
   /// [CupertinoButton], which floors its hit target at the 44px minimum
-  /// interactive dimension regardless of the icon's own size — so two of them
-  /// need 88, not the 60 their icons would suggest. Sizing the column to the
-  /// icons instead overflows the row.
+  /// interactive dimension regardless of icon size — so two of them need 88, not
+  /// the 60 their icons suggest. Sizing the column to the icons overflows.
   static const double actions = 88;
 }
 

@@ -8,11 +8,10 @@ enum AppButtonStyle { filled, outlined }
 
 /// Accent-primary button: filled or outlined, single Cupertino dialect.
 ///
-/// The filled style is a custom accent-primary container rather than
-/// `CupertinoButton.filled`, whose SDK-default geometry is taller than the
-/// app's 44px toolbar and clipped the toolbar Narrate button. The child is
-/// styled in `text-on-accent` through a `DefaultTextStyle` so a filled button
-/// renders white text/icons without every caller specifying the color.
+/// Filled is a custom container rather than `CupertinoButton.filled`, whose
+/// SDK-default geometry is taller than the 44px toolbar and clipped the
+/// Narrate button. The child is styled in `text-on-accent` through a
+/// `DefaultTextStyle` so callers don't specify the color.
 class AppButton extends StatelessWidget {
   const AppButton({
     super.key,

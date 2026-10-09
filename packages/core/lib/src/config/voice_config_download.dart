@@ -14,18 +14,18 @@ const kVoiceConfigManifestName = 'manifest.json';
 /// Starter file lists, parsed from the repo's `voice-config/manifest.json`.
 ///
 /// Two kinds of file ship by default:
-///   * `providers` — provider files, fetched for every platform, because a
-///     model file is meaningless without the block that names it.
+///   * `providers` — fetched for every platform, since a model file is
+///     meaningless without the block that names it.
 ///   * `platforms` — a platform tag (`macos` / `linux` / `windows`) mapped to
-///     the starter model `<alias>.json` file names to fetch on that platform.
+///     the starter `<alias>.json` model files to fetch there.
 ///
-/// Entries are bare file names, never paths: the subdirectory each kind lives
-/// in is the downloader's business, which keeps a manifest free of platform
-/// path separators.
+/// Entries are bare file names, never paths: the subdirectory each kind lives in
+/// is the downloader's business, which keeps a manifest free of platform path
+/// separators.
 ///
 /// `config.json` is always downloaded and is listed in neither. A platform with
-/// no starter files is expressed by omitting its key entirely (filesFor then
-/// returns an empty list), and `platforms` may be omitted altogether.
+/// no starter files omits its key entirely (filesFor then returns an empty
+/// list), and `platforms` may be omitted altogether.
 class ManifestVoiceConfig {
   ManifestVoiceConfig._(Map<String, List<String>> platforms, this.providers)
     : _platforms = platforms;
@@ -135,11 +135,9 @@ Future<ManifestVoiceConfig> fetchVoiceConfigManifest({
 /// provider files to fetch alongside them. `config.json` is always fetched.
 ///
 /// Files land in the subdirectory their kind belongs to: providers in
-/// `providers/`, models in `models/`. The manifest carries bare file names and
-/// the split happens here, so nothing has to reason about path separators.
+/// `providers/`, models in `models/`.
 ///
-/// Downloads are best-effort: a failure for one file continues with the rest,
-/// matching legacy behavior.
+/// Downloads are best-effort: a failure for one file continues with the rest.
 Future<void> downloadVoiceConfigFiles(
   String configDir, {
   List<String>? files,
@@ -149,8 +147,7 @@ Future<void> downloadVoiceConfigFiles(
   String? branch,
 }) async {
   final separator = Platform.pathSeparator;
-  // config.json first, then each kind into its own subdirectory. A set keyed by
-  // destination path, so a name appearing in both lists is fetched once.
+  // A set keyed by destination path, so a name in both lists is fetched once.
   final all = <String>{
     '$configDir$separator$kVoiceConfigRegistryName',
     for (final f in providers ?? const <String>[])
@@ -186,8 +183,8 @@ Future<void> downloadVoiceConfigFiles(
             await localFile.parent.create(recursive: true);
             await localFile.writeAsString(content);
           }
-        } catch (e) {
-          // If download fails, continue with existing behavior
+        } catch (_) {
+          // Best-effort: carry on with the rest.
         }
       }
     }

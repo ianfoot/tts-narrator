@@ -18,9 +18,8 @@ import 'active_run_confirm.dart';
 ///
 /// All run state lives in [AppController]; this screen merely subscribes. Back
 /// cancels a still-active run through a confirmation dialog; otherwise it pops
-/// straight back (the document already lives in the controller). A single
-/// [AudioPlayer] plays one segment at a time (an auto-stop for the previous
-/// clip) and reverts its button from Stop back to Play when a clip ends.
+/// straight back. A single [AudioPlayer] plays one segment at a time and reverts
+/// its button from Stop back to Play when a clip ends.
 class NarrationScreen extends StatefulWidget {
   const NarrationScreen({super.key, required this.controller});
 
@@ -66,10 +65,8 @@ class _NarrationScreenState extends State<NarrationScreen> {
     final existing = _player;
     if (existing != null) return existing;
     final player = AudioPlayer();
-    // AudioPlayer only ever plays this screen's current clip; reaching the
-    // end reverts the active button (⏹ -> ▶) automatically. Async load
-    // failures also land on the state stream (rather than a thrown play()
-    // error), so both revert paths clear the active index.
+    // Async load failures land on the state stream rather than a thrown play()
+    // error, so both that and reaching the end of a clip clear the active button.
     player.onPlayerComplete.listen((_) {
       if (mounted) setState(() => _playingIndex = null);
     });
@@ -127,9 +124,9 @@ class _NarrationScreenState extends State<NarrationScreen> {
     controller.cancelRun();
     if (!mounted) return;
     // Wait out the dialog's reverse transition before popping: it stays a
-    // present navigator route until the transition completes, and a pop while
-    // it is would target the dialog instead of this view. The endOfFrame await
-    // lets that closing frame tick past the dialog before we pop.
+    // present navigator route until the transition completes, so a pop while it
+    // is would target the dialog instead of this view. The endOfFrame await lets
+    // that closing frame tick past first.
     await Future<void>.delayed(_confirmLeaveDelay);
     await WidgetsBinding.instance.endOfFrame;
     if (mounted) Navigator.of(context).pop();
@@ -137,7 +134,6 @@ class _NarrationScreenState extends State<NarrationScreen> {
 
   void _onCancel() => _controller.cancelRun();
 
-  /// Confirms leaving via the extracted dialog class.
   Future<bool> _confirmCancel() =>
       ActiveRunConfirmDialog.show(context: context);
 
@@ -425,9 +421,8 @@ class _NarrationScreenState extends State<NarrationScreen> {
     } else {
       child = _playStopButton(segment, isPlaying);
     }
-    // Sized to its content rather than a fixed width: the button's width
-    // follows its label, so a hard column width would clip it on narrow
-    // surfaces.
+    // The button's width follows its label, so a fixed column width would clip
+    // it on narrow surfaces.
     return Align(alignment: Alignment.centerRight, child: child);
   }
 

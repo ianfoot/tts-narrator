@@ -12,10 +12,9 @@ import 'speed_widget.dart';
 
 /// The "Model options" section: renders the active model's plugin-declared
 /// options one per row. Built-in keys (`accent`, `style`, `passagePrefix`,
-/// `speed`, `instruct`) bind to the narration settings the controller owns; any
-/// other key is ignored — the app interprets the shared convention, never
-/// model-specific knowledge. Renders nothing when the active model declares no
-/// options.
+/// `speed`, `instruct`) bind to narration settings the controller owns; any other
+/// key is ignored — the app interprets the shared convention, never
+/// model-specific knowledge. Renders nothing when the model declares no options.
 class ModelOptionsSection extends StatefulWidget {
   const ModelOptionsSection({super.key, required this.controller});
 

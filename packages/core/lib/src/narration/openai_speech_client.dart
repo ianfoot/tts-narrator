@@ -8,16 +8,10 @@ import 'speech_client.dart';
 
 /// The client for every OpenAI-compatible `/audio/speech` service.
 ///
-/// Both former providers differed only in a default URL, an optional Bearer
-/// token, and a default voice — none of which is worth a class. This client is
-/// that shared protocol: the vendor identity lives entirely in the config
-/// block, so pointing core at a new speech service is a config edit.
-///
-/// Nothing is synthesized locally — the vendor does that. This speaks a wire
-/// protocol and hands back audio bytes.
-///
-/// Retry, backoff, abort and HTTP plumbing are collapsed here rather than
-/// duplicated per vendor.
+/// The vendor identity lives entirely in the config block, so pointing core at a
+/// new speech service is a config edit. Nothing is synthesized locally; this
+/// speaks a wire protocol and hands back audio bytes, with retry, backoff, abort
+/// and HTTP plumbing collapsed here rather than duplicated per vendor.
 class OpenAiSpeechClient {
   /// Attempts allowed *after* the first, i.e. 4 requests in the worst case.
   static const _retries = 3;
@@ -40,10 +34,8 @@ class OpenAiSpeechClient {
   /// Bearer token for this call, or null to send no `Authorization` header.
   ///
   /// Null is a legitimate outcome: whether a key is *required* is the server's
-  /// call, so the client never blocks a run over a missing credential. It only
-  /// reports the omission if the server then rejects the request.
-  ///
-  /// [settings] is the run's resolved provider block.
+  /// call, so the client never blocks a run over a missing credential. [settings]
+  /// is the run's resolved provider block.
   Future<GeneratedAudio> synthesize({
     required String model,
     required String? voice,
@@ -65,8 +57,7 @@ class OpenAiSpeechClient {
     final body = <String, Object?>{
       'model': model,
       'input': input,
-      // A wav run asks for whatever this model serves WAV as. Everything else
-      // is asked for by its own name.
+      // A wav run asks for whatever this model serves WAV as.
       'response_format': responseFormat == TtsAudioFormat.wav
           ? wavResponseFormat.wireValue
           : responseFormat.wireValue,
@@ -80,17 +71,15 @@ class OpenAiSpeechClient {
     if (speed != null) {
       body['speed'] = speed;
     }
-    // Kokoro's language selector. The voice id already names the language (its
-    // first character), so this is redundant data by design — but the field is
-    // what the API documents, and sending it keeps a request self-describing.
-    // Gated like `speed`: a null language means the field is omitted.
+    // Kokoro's language selector, redundant with the voice id by design but what
+    // the API documents; sending it keeps the request self-describing.
     if (language != null && language.isNotEmpty) {
       body['lang_code'] = language;
     }
     // Qwen3 Voice Design synthesizes a voice from prose rather than picking one
-    // from a list, so its `instruct` replaces `voice` entirely. Sent only when
-    // non-empty: an empty string would be a different (and meaningless) request
-    // from omitting the field, not the vendor's default voice.
+    // from a list, so `instruct` replaces `voice`. Sent only when non-empty: an
+    // empty string would be a different (and meaningless) request from omitting
+    // the field.
     if (instruct != null && instruct.trim().isNotEmpty) {
       body['instruct'] = instruct.trim();
     }
@@ -140,10 +129,8 @@ class OpenAiSpeechClient {
   ///
   /// The vendor's own error text is *replaced* rather than appended: it is
   /// usually a terse "No auth credentials found", and the actionable half is
-  /// which of the two situations the user is in. A key that was sent and
-  /// rejected (expired, revoked, wrong account) needs a different fix from no
-  /// key at all, and telling someone with a stale key to "add a key" sends them
-  /// in circles.
+  /// which of the two situations the user is in — a rejected key and a missing
+  /// key need different fixes.
   String? _authGuidance(int statusCode, String? apiKey) {
     if (statusCode != 401 && statusCode != 403) return null;
     return apiKey == null || apiKey.isEmpty
@@ -163,8 +150,8 @@ class OpenAiSpeechClient {
   Uri _speechUri(Map<String, String> settings) {
     final trimmed = providerBaseUrl(settings);
     if (trimmed == null) {
-      // Backstop only: `narrate` validates before the first segment and names
-      // the block, so reaching here means the client was called directly.
+      // Backstop only: `narrate` validates before the first segment, so reaching
+      // here means the client was called directly.
       throw StateError(
         'TTS provider block is missing required setting "base_url" '
         '(the speech endpoint root, e.g. "https://vendor.example/api/v1").',
@@ -189,9 +176,9 @@ class OpenAiSpeechClient {
   /// Runs a single attempt, normalizing a cancellation-induced mid-request
   /// failure into [AbortException] so the run unwinds cleanly.
   ///
-  /// A genuine [AbortException] (from a pre-cancelled token) passes through;
-  /// any I/O error raised by the force-close on cancel is reported as an abort
-  /// rather than a connection failure.
+  /// A genuine [AbortException] passes through; any I/O error raised by the
+  /// force-close on cancel is reported as an abort rather than a connection
+  /// failure.
   Future<(int, List<int>, String?, String?)> _runAttempt(
     String body,
     Uri uri,
@@ -216,9 +203,7 @@ class OpenAiSpeechClient {
   }) async {
     final client = HttpClient();
     // On cancel, force-close the live connection so the in-flight read is
-    // terminated instead of left billing a stalled response. Unsubscribed once
-    // this request settles; a later cancel of the same token (e.g. for a
-    // retry) registers a fresh hook.
+    // terminated rather than left billing a stalled response.
     final unsubscribe = abort?.onCancel(() => client.close(force: true));
     try {
       final request = await client.postUrl(uri);
@@ -248,10 +233,9 @@ class OpenAiSpeechClient {
   ///
   /// A provider states the audio's shape in its response type — `audio/pcm;rate=
   /// 24000;channels=1` is what OpenRouter sends for headerless samples. That is
-  /// the only place the rate is knowable for bytes that arrive with no header of
-  /// their own, so it is parsed here rather than configured. Returns null when the
-  /// header is absent or carries no such parameter, which leaves [sampleRate]
-  /// unset rather than guessing.
+  /// the only place the rate is knowable for bytes arriving with no header of
+  /// their own. Returns null when the header is absent or carries no such
+  /// parameter, leaving [sampleRate] unset rather than guessing.
   int? _parameter(String? contentType, String name) {
     if (contentType == null) return null;
     for (final part in contentType.split(';').skip(1)) {

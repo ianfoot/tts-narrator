@@ -6,10 +6,8 @@
 /// needed to build a request for a given model.
 ///
 /// Models are never compiled here: they come only from the user's config
-/// directory (`<alias>.json`), so the user can point at a different or newer
-/// model id (e.g. swap the gemini preview for a GA id) without a rebuild.
-/// Voices and pricing are also user data and live in the per-model files (see
-/// `voice_config.dart`).
+/// directory (`<alias>.json`), so pointing at a different or newer model id needs
+/// no rebuild. Voices and pricing are user data too, living in the same files.
 library;
 
 import 'audio_format.dart';
@@ -43,15 +41,14 @@ class TtsModelProfile {
 
   /// Output formats this model can produce, most-preferred first.
   ///
-  /// Required, and never empty: a model file that does not say what it can
-  /// produce is a file the app cannot act on, so the parser rejects it rather
-  /// than assuming. The first entry is the model's default and the one a fresh
-  /// run uses. A single-entry list means the user has no choice to make, so the
-  /// GUI hides the format picker rather than showing a one-option control.
+  /// Required, and never empty: a model file that does not say what it can produce
+  /// is one the app cannot act on, so the parser rejects it rather than assuming.
+  /// The first entry is the default for a fresh run; a single-entry list means no
+  /// choice to make, so the GUI hides the format picker.
   ///
-  /// Recorded here, in the model file, because core has no compiled-in list of
-  /// models and cannot probe a provider. Each name becomes the file extension,
-  /// so a format listed here is a promise the backend keeps.
+  /// Recorded in the model file because core has no compiled-in model list and
+  /// cannot probe a provider. Each name becomes the file extension, so a format
+  /// listed here is a promise the backend keeps.
   final List<TtsAudioFormat> formats;
 
   /// The format a run uses unless the user picks another one.
@@ -59,11 +56,10 @@ class TtsModelProfile {
 
   /// What to ask this model for when the run's output format is WAV.
   ///
-  /// Only consulted for a wav run, and only because no single value works
-  /// everywhere: some backends return a finished WAV container and some return
-  /// headerless samples that need a header the app writes. Defaults to `wav`,
-  /// which writes the provider's bytes through untouched — the path that cannot
-  /// mislabel anything. A model that needs `pcm` says so.
+  /// No single value works everywhere: some backends return a finished WAV
+  /// container, some headerless samples that need a header the app writes.
+  /// Defaults to `wav`, which writes the provider's bytes through untouched — the
+  /// path that cannot mislabel anything. A model that needs `pcm` says so.
   final TtsWavResponseFormat wavResponseFormat;
 
   /// Whether [format] is one this model can produce.
@@ -78,31 +74,27 @@ class TtsModelProfile {
 
   /// Whether the model accepts a `speed` multiplier in the request body.
   ///
-  /// The OpenAI speech protocol defines the field but not every vendor honours
-  /// it, so it is opt-in per model (`"speed": true` in the model file). When
-  /// false the field is omitted from the request entirely rather than sent at a
-  /// default, and the GUI hides the speed slider.
+  /// The OpenAI speech protocol defines the field but not every vendor honours it,
+  /// so it is opt-in per model (`"speed": true`). When false the field is omitted
+  /// rather than sent at a default, and the GUI hides the slider.
   final bool supportsSpeed;
 
   /// Whether the model accepts a `lang_code` field in the request body.
   ///
-  /// Kokoro ships one multi-language voice set, where the language is named by
-  /// the voice id's first character and the API also takes it as an explicit
-  /// `lang_code`. It is opt-in per model (`"sends_language": true`) for the same
-  /// reason as [supportsSpeed]: the field only exists on some vendors, and is
-  /// omitted entirely otherwise.
+  /// Kokoro ships one multi-language voice set, where the language is named by the
+  /// voice id's first character and the API also takes it as an explicit
+  /// `lang_code`. Opt-in per model (`"sends_language": true`) for the same reason
+  /// as [supportsSpeed].
   final bool sendsLanguageField;
 
   /// Whether the model accepts an `instruct` field in the request body.
   ///
-  /// Qwen3 Voice Design has no voice list at all: it *writes* the voice from a
-  /// natural-language description — persona and demographics, pitch and timbre,
-  /// pace, emotional tone, accent. That prose travels in `instruct`, a field no
-  /// other model on the protocol defines, so it is opt-in per model
-  /// (`"sends_instruct": true`) exactly like [supportsSpeed].
-  ///
-  /// Mutually exclusive in practice with [sendsVoiceField]: a voice-design model
-  /// is described, not selected.
+  /// Qwen3 Voice Design has no voice list at all: it *writes* the voice from prose
+  /// — persona and demographics, pitch and timbre, pace, emotional tone, accent.
+  /// That prose travels in `instruct`, a field no other model on the protocol
+  /// defines, so it is opt-in per model (`"sends_instruct": true`) exactly like
+  /// [supportsSpeed]. Mutually exclusive in practice with [sendsVoiceField]: a
+  /// voice-design model is described, not selected.
   final bool sendsInstructField;
 
   /// Name of the `providers.<name>` block that serves this model. Required in
@@ -113,25 +105,20 @@ class TtsModelProfile {
   /// The `instruct` prose a [sendsInstructField] model starts from, if the model
   /// file supplies one.
   ///
-  /// Voice design has no "unset" state to fall back to — the model is described
-  /// or it is not, so a shipped model that declares `sends_instruct` should say
-  /// something here. Carrying it on the profile (rather than only in the model
-  /// file) is what lets the GUI prefill an editable control without core knowing
-  /// anything about the GUI's defaults.
+  /// Voice design has no "unset" state to fall back to — the model is described or
+  /// it is not. Carrying it on the profile is what lets the GUI prefill an editable
+  /// control without core knowing anything about GUI defaults.
   final String? defaultInstruct;
 
   /// Whether the user may edit this model's voice list from the app.
   ///
-  /// Some models have a closed set of voices the provider itself defines
-  /// (Gemini's 30 named voices, Kokoro's 54 language-prefixed ids). Others are
-  /// open-ended: Fish accepts any id, so the useful thing is for the user to
-  /// curate their own list. That is opt-in per model
-  /// (`"voices_editable": true` in the model file) and defaults to false, so a
-  /// model that says nothing is read-only in the UI.
+  /// Some models have a closed voice set the provider defines (Gemini's 30 named
+  /// voices, Kokoro's 54 language-prefixed ids); Fish accepts any id, so there the
+  /// useful thing is a user-curated list. Opt-in per model
+  /// (`"voices_editable": true`), defaulting to false.
   ///
-  /// This gates the *UI affordance* only. The capability is always there: a
-  /// hand-written overlay file can change any model's voices, and the loader
-  /// honours it regardless of this flag.
+  /// This gates the *UI affordance* only: a hand-written overlay can change any
+  /// model's voices, and the loader honours it regardless of this flag.
   final bool voicesEditable;
 
   TtsModelProfile copyWith({

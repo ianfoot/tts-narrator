@@ -116,8 +116,8 @@ class _EditorToolbarState extends State<EditorToolbar> {
     );
   }
 
-  /// Saves the document, mirroring the menu bar's File ▸ Save (⌘S). Disabled
-  /// (greyed, via a null callback) while there is nothing unsaved.
+  /// Saves the document, mirroring the menu bar's File ▸ Save (⌘S). Greyed
+  /// out while there is nothing unsaved.
   Widget _buildSaveButton() {
     return AppIconButton(
       key: const Key('editorSaveButton'),
@@ -166,9 +166,8 @@ class _EditorToolbarState extends State<EditorToolbar> {
     );
   }
 
-  /// Full-track play/stop toggle. Geometry, typography and colours all come
-  /// from [AppButton], the same widget the narration screen's per-segment
-  /// play/stop buttons use, so the two read identically.
+  /// Full-track play/stop toggle. Uses [AppButton], the same widget as the
+  /// narration screen's per-segment buttons, so the two read identically.
   Widget? _buildFullPlayButton(AppTokens tokens) {
     if (controller.completedAudioPath == null) return null;
 
@@ -193,9 +192,8 @@ class _EditorToolbarState extends State<EditorToolbar> {
   }
 
   /// Deletes the last run's per-segment files, mirroring the menu bar's
-  /// File ▸ Clean Up Segments… command. Only rendered while a finished run
-  /// still has cleanable segments; the shared flow it dispatches to confirms
-  /// deletion before touching anything.
+  /// File ▸ Clean Up Segments… command. The shared flow it dispatches to
+  /// confirms deletion before touching anything.
   Widget _buildCleanupButton() {
     return AppIconButton(
       key: const Key('editorCleanupButton'),

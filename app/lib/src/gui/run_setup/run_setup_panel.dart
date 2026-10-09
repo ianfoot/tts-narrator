@@ -9,12 +9,12 @@ import 'model_voice_section.dart';
 import 'run_section.dart';
 
 /// Left-side run-setup panel beside the editor: model & voice, styling, and run
-/// options. Every control writes straight to [AppController], which notifies
-/// the editor so the status-bar estimate stays live. The panel is hidden via the
+/// options. Every control writes straight to [AppController], which notifies the
+/// editor so the status-bar estimate stays live. The panel is hidden via the
 /// editor toolbar's toggle; narration is initiated from the toolbar, not here.
 ///
-/// A thin composition root: each section is its own widget owning its local
-/// controls and syncing back from the controller.
+/// A thin composition root: each section owns its local controls and syncs back
+/// from the controller.
 class RunSetupPanel extends StatelessWidget {
   const RunSetupPanel({super.key, required this.controller});
 
@@ -50,8 +50,8 @@ class RunSetupPanel extends StatelessWidget {
               children: [
                 ModelVoiceSection(controller: controller),
                 // Model options are declared by the active model's plugin (the
-                // provider package); the app has no per-model UI knowledge.
-                // The section renders nothing when no options are declared.
+                // provider package); the app has no per-model UI knowledge, and
+                // the section renders nothing when none are declared.
                 ModelOptionsSection(controller: controller),
                 ApiKeySection(controller: controller),
                 RunSection(controller: controller),

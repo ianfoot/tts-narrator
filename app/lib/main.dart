@@ -46,10 +46,10 @@ class BootstrapApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CupertinoApp(
-      // Not localized: this widget's context sits ABOVE the delegate scope it
-      // is about to install, so `AppLocalizations.of(context)` cannot resolve
-      // here. BootstrapApp is a transient pre-AppRoot shell anyway — AppRoot
-      // installs the real app and owns the window title.
+      // Not localized: this context sits ABOVE the delegate scope it is about
+      // to install, so `AppLocalizations.of(context)` cannot resolve here.
+      // BootstrapApp is a transient pre-AppRoot shell anyway — AppRoot owns
+      // the window title.
       title: 'TTS Narrator',
       debugShowCheckedModeBanner: false,
       // Matches the delegate set in `platform/app_root.dart`, and for the same
@@ -103,8 +103,8 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   List<String> _starterFiles = const [];
 
   /// The provider files every platform needs (from the manifest). Kept apart
-  /// from [_starterFiles] because they are fetched alongside the models but are
-  /// not models, so naming them in the download prompt would be wrong.
+  /// from [_starterFiles]: they travel with the models but are not models, so
+  /// naming them in the download prompt would be wrong.
   List<String> _starterProviders = const [];
 
   /// Created once and reused across rebuilds (including hot reload), so the
@@ -170,11 +170,8 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
 
   /// Platform-neutral starter set used when the manifest is unreachable
   /// (kokoro_local.json is macOS-only data, so it is never in this fallback).
-  ///
-  /// The provider files are absent here too, which is why the macOS-only model
-  /// files have nothing to gate them: with no manifest there are no provider
-  /// files to fetch, so the fallback ships models only, and the loader ignores
-  /// models no provider claims anyway.
+  /// No provider files here either — with no manifest there is nothing to
+  /// fetch, and the loader ignores models no provider claims anyway.
   static const _fallbackStarterFiles = [
     'fish.json',
     'gemini.json',
@@ -189,9 +186,8 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
     _starterFiles = await _loadStarterFiles();
     final registry = File('${widget.configDir}/$kVoiceConfigRegistryName')
         .existsSync();
-    // A config is complete only when the registry, every provider it needs, and
-    // every starter model are on disk: the loader reaches models through
-    // providers, so a missing provider file makes a downloaded model unusable.
+    // The loader reaches models through providers, so a missing provider file
+    // makes a downloaded model unusable: registry + providers + models all up.
     final missing =
         !registry ||
         _starterProviders.any((f) => !_existsIn(kVoiceConfigProvidersDir, f)) ||

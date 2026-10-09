@@ -33,15 +33,12 @@ VoiceGender? parseVoiceGender(String? value) {
   };
 }
 
-/// One configured voice in a model's `voices` block: the provider voice id
-/// sent in the request body, plus optional metadata (the name shown in the
-/// picker, the narrator gender, and room for more fields later) — one entry per
-/// voice, so a voice's fields live together instead of being split across
-/// parallel blocks.
+/// One configured voice in a model's `voices` block: the provider voice id sent
+/// in the request body, plus optional metadata for the picker.
 ///
-/// The `voices` *key* is the voice id whenever the entry does not spell one out,
-/// which is what lets a voice be keyed by something that is always unique: a
-/// name is not (Kokoro has three `Santa`s), an id is.
+/// The `voices` *key* is the voice id when the entry does not spell one out, so a
+/// voice is always keyed by something unique: a name is not (Kokoro has three
+/// `Santa`s), an id is.
 class Voice {
   const Voice({required this.id, this.name, this.gender, this.language});
 
@@ -49,9 +46,7 @@ class Voice {
   final String id;
 
   /// The name to show for this voice in the picker, or null to show the id.
-  ///
-  /// Purely cosmetic — the id is what gets sent, and what the config keys on.
-  /// Two voices may share a name; they cannot share an id.
+  /// Cosmetic only. Two voices may share a name; they cannot share an id.
   final String? name;
 
   /// Optional narrator gender tag; null when untagged.
@@ -59,25 +54,20 @@ class Voice {
 
   /// The language code this voice speaks, when the entry tags it explicitly.
   ///
-  /// Null to fall back to [languageFromVoiceId], which reads the code off the id
-  /// itself — the `<lang><gender>_<name>` convention Kokoro uses. A UUID like
-  /// Fish Audio's carries no such prefix, so those voices must spell their
-  /// language out here. The tag is only honoured when it names a code the model
-  /// declares; an unknown code is ignored rather than mislabelled.
+  /// Null falls back to [languageFromVoiceId]. A UUID id like Fish Audio's
+  /// carries no language prefix, so those voices must spell their language out
+  /// here. An unknown code is ignored rather than mislabelled.
   final String? language;
 }
 
 /// The language of [voiceId], when its first character is one of [codes].
 ///
 /// Multi-language models name their voices `<lang><gender>_<name>` (`bf_emma`,
-/// `jf_alpha`, `zf_xiaobei`), so the language is readable off the id instead of
-/// being repeated on every voice entry. The id prefix only *proposes* a
-/// language: it counts when the model actually declares that code, so a model
-/// whose voices happen to start with a letter it does not offer a language for
-/// is left untagged rather than mislabelled.
+/// `zf_xiaobei`), so the language is readable off the id. The prefix only
+/// *proposes* a language: it counts when the model declares that code, so an
+/// accidental letter match leaves the voice untagged rather than mislabelled.
 ///
-/// Returns null for an empty id, a one-character id (no name after the
-/// prefix), or a prefix the model does not declare.
+/// Null for an empty or one-character id, or an undeclared prefix.
 String? languageFromVoiceId(String voiceId, Iterable<String> codes) {
   if (voiceId.length < 2) return null;
   final prefix = voiceId.substring(0, 1);
@@ -87,12 +77,10 @@ String? languageFromVoiceId(String voiceId, Iterable<String> codes) {
 /// The narrator gender [voiceId] names, when its second character is one of
 /// `m`/`f`/`n`.
 ///
-/// The counterpart to [languageFromVoiceId]: the same `<lang><gender>_<name>`
-/// convention that puts the language first puts the gender second, so a voice
-/// entry needs no `gender` tag of its own — the id already says it.
+/// The counterpart to [languageFromVoiceId]: the `<lang><gender>_<name>`
+/// convention puts the gender second, so an entry needs no `gender` tag.
 ///
-/// Only meaningful for ids that *are* language-prefixed; see [languageFor].
-/// Returns null for an empty or one-character id, or an unrecognised letter.
+/// Only meaningful for language-prefixed ids; see [genderOfVoice].
 VoiceGender? genderFromVoiceId(String voiceId) {
   if (voiceId.length < 2) return null;
   return switch (voiceId.substring(1, 2)) {
@@ -137,10 +125,9 @@ class VoiceOption {
 /// One configured provider: the settings it is reached with, and the models
 /// it serves.
 ///
-/// A provider file owns the relationship to its models rather than each model
-/// naming its provider, so a block is described once no matter how many models
-/// sit behind it. [models] is ordered, and the first entry is the provider's
-/// default model.
+/// A provider file owns the relationship to its models, so a block is described
+/// once no matter how many models sit behind it. [models] is ordered; the first
+/// is the default model.
 class ProviderConfig {
   const ProviderConfig({
     required this.name,
@@ -174,16 +161,14 @@ class ProviderConfig {
 ///                              pricing, voices (each keyed by its id, with an
 ///                              optional name and gender tag)
 ///
-/// A provider lists the models it serves, and a model file does not name a
-/// provider, so which block a model belongs to is stated in exactly one place.
-/// Splitting into one file per provider and per model keeps the user's voice
-/// library modular: edit a single model without touching the others, drop in a
-/// new model, or copy a curated voice pack between machines.
+/// A provider lists the models it serves and a model file does not name a
+/// provider, so membership is stated in exactly one place. One file per provider
+/// and per model keeps the library modular: edit one model, drop in a new one, or
+/// copy a curated voice pack between machines.
 ///
-/// `config.json` lists providers in order, and the first is the default
-/// provider; the default model is the first model it lists. That ordering is
-/// the config's, not the filesystem's, so it does not depend on which name
-/// happens to sort first.
+/// `config.json` orders providers; the first is the default provider, and the
+/// default model is the first model it lists. Ordering comes from the config, not
+/// the filesystem, so it does not depend on which name happens to sort first.
 class VoiceConfig {
   const VoiceConfig({
     this.providers = const {},
@@ -215,11 +200,9 @@ class VoiceConfig {
   /// Per-model configured voices (alias → voice id or name → Voice).
   final Map<String, Map<String, Voice>> voices;
 
-  /// Per-model language tables (alias → code → label), in configured order.
-  ///
-  /// A model that declares languages supports picking a voice by language, and
-  /// each voice's own language is read off its id — so a model only lists the
-  /// codes it offers here.
+  /// Per-model language tables (alias → code → label), in configured order. A model
+  /// that declares languages supports picking a voice by language, so it only
+  /// needs to list the codes it offers.
   final Map<String, Map<String, String>> languages;
 
   /// Per-model default language codes (alias → code), used when no voice is
@@ -237,12 +220,10 @@ class VoiceConfig {
   /// The language [voiceId] speaks under [modelAlias], or null when the model
   /// declares no languages.
   ///
-  /// The voice entry's own `language` tag wins — that is the only way to name a
-  /// language for a voice whose id is not language-prefixed, like a UUID. When
-  /// the entry tags nothing, the id prefix is read instead (see
-  /// [languageFromVoiceId]), which is what makes Kokoro's `bf_emma` British
-  /// without repeating `b` on every entry. Either way the result is checked
-  /// against the model's declared codes, so an unrecognised tag is null.
+  /// The entry's own `language` tag wins — the only way to name a language for a
+  /// voice whose id is not language-prefixed, like a UUID. Otherwise the id prefix
+  /// is read (see [languageFromVoiceId]). Either way the result must be a
+  /// declared code, so an unrecognised tag is null.
   String? languageFor(String modelAlias, Voice voice) {
     final codes = languagesFor(modelAlias);
     if (codes.isEmpty) return null;
@@ -254,9 +235,8 @@ class VoiceConfig {
   /// The language [voiceId] speaks under [modelAlias], looked up from its
   /// configured entry when one exists, else read off the id prefix.
   ///
-  /// Takes a raw id rather than a [Voice] because the caller may hold a
-  /// free-form id with no entry behind it — the id-prefix path stays available
-  /// then, so a typed-in id can still narrow the picker.
+  /// Takes a raw id so a typed-in id with no entry behind it still narrows the
+  /// picker via the id-prefix path.
   String? languageForId(String modelAlias, String voiceId) =>
       languageFor(modelAlias, voiceFor(modelAlias, voiceId) ?? Voice(id: voiceId));
 
@@ -277,9 +257,8 @@ class VoiceConfig {
     for (final voice in modelVoices.values) {
       if (voice.name == value) return voice;
     }
-    // A third match, by id: Fish voices are keyed by name and carry UUID ids,
-    // so a user who pastes an id (or the picker hands one over) still finds the
-    // entry behind it — and with it, its explicit language tag.
+    // A third match, by id: Fish voices are keyed by name and carry UUID ids, so
+    // a pasted id still finds the entry — and with it, its language tag.
     for (final voice in modelVoices.values) {
       if (voice.id == value) return voice;
     }
@@ -288,8 +267,8 @@ class VoiceConfig {
 
   /// Resolves a `--voice` value to the provider voice id for [modelAlias].
   ///
-  /// The returned label is what the picker shows for that voice — its `name`
-  /// when it has one — so a name always comes back as its name, never as its id.
+  /// The label is what the picker shows: the voice's `name` when it has one, so a
+  /// name comes back as its name rather than its id.
   (String id, String label) resolveVoice(String modelAlias, String value) {
     final voice = voiceFor(modelAlias, value);
     return voice == null ? (value, value) : (voice.id, voice.name ?? value);
@@ -298,15 +277,13 @@ class VoiceConfig {
   /// The gender for [voice] under [modelAlias], or null when unknown.
   ///
   /// A configured entry's own `gender` tag wins. An untagged voice falls back to
-  /// the second character of its id — but only for a model that declares
-  /// languages, because that declaration is what makes its ids
-  /// `<lang><gender>_<name>` and their second character a gender. Without that
-  /// evidence a bare id like `nala` would be misread as a neutral voice.
+  /// the second character of its id, but only for a model that declares
+  /// languages — that declaration is what makes its ids `<lang><gender>_<name>`.
+  /// Without it a bare id like `nala` would read as neutral.
   ///
-  /// Takes the entry itself rather than a name to look up: [genderFor] has to go
-  /// through [voiceFor], whose name scan returns the *first* of several voices
-  /// sharing a name, so asking it about the second Santa would answer for the
-  /// first.
+  /// Takes the entry rather than a name: [voiceFor]'s name scan returns the first
+  /// of several voices sharing a name, so asking about the second Santa would
+  /// answer for the first.
   VoiceGender? genderOfVoice(String modelAlias, Voice voice) {
     final tagged = voice.gender;
     if (tagged != null) return tagged;
@@ -316,9 +293,8 @@ class VoiceConfig {
 
   /// The gender for [voiceLabel] under [modelAlias], or null when unknown.
   ///
-  /// [voiceLabel] may be a configured name or a raw id; a value with no config
-  /// entry is read as a bare id. Prefer [genderOfVoice] when the caller already
-  /// holds the voice — see its note on duplicate names.
+  /// [voiceLabel] may be a configured name or a raw id; one with no entry is read
+  /// as a bare id. Prefer [genderOfVoice] when the caller already holds the voice.
   VoiceGender? genderFor(String modelAlias, String voiceLabel) => genderOfVoice(
     modelAlias,
     voiceFor(modelAlias, voiceLabel) ?? Voice(id: voiceLabel),

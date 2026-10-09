@@ -33,11 +33,10 @@ class UserVoiceConfigLoader {
   /// as another platform would without running on it.
   ///
   /// This has to be threaded rather than left out: `config.json` is one global
-  /// registry, so `providers/*.json` lands on every platform, and a provider
-  /// that gates its models must say which of them this platform may serve. Read
-  /// without a tag it would claim every platform's models and warn about the
-  /// macOS-only ones on Linux -- where the download step correctly never fetched
-  /// them, so the warning described a state that cannot exist.
+  /// registry, so `providers/*.json` lands on every platform. Read without a
+  /// tag, a provider that gates its models would claim every platform's and warn
+  /// about macOS-only ones on Linux -- where the download step correctly never
+  /// fetched them, so the warning described a state that cannot exist.
   final String platformTag;
 
   /// Warnings from the last [load] (e.g. a skipped malformed model file).
@@ -57,9 +56,8 @@ class UserVoiceConfigLoader {
   ///
   /// [overrides] are merged over the raw `settings` block from the model's
   /// `providers/<name>.json` before `${ENV}` expansion, so a caller can
-  /// substitute a value (e.g. a key from the OS secure store) for a setting the
-  /// environment could not provide. An unresolved `${ENV}` reference still
-  /// throws the core `StateError`.
+  /// substitute a value the environment could not provide (e.g. a key from the
+  /// OS secure store). An unresolved `${ENV}` still throws the core `StateError`.
   Map<String, String> resolveProviderSettings(
     TtsModelProfile profile, {
     Map<String, String>? overrides,

@@ -11,12 +11,11 @@ import 'wav.dart';
 /// [outputPath]. Segments are joined in list order, so pass them in narration
 /// (index) order.
 ///
-/// - [TtsAudioFormat.wav]: each input must be a WAV; its `data` chunk is
-///   extracted and all the samples are written as one fresh WAV. The combined
-///   header is copied from the first segment, which is what makes this safe
-///   without knowing the sample rate up front — every segment comes from one
-///   run of one model, so they agree, and a mismatch is rejected rather than
-///   silently producing a file whose header lies about its samples.
+/// - [TtsAudioFormat.wav]: each input's `data` chunk is extracted and all the
+///   samples written as one fresh WAV whose header is copied from the first
+///   segment. Safe without knowing the sample rate up front — every segment
+///   comes from one run of one model, so they agree — and a mismatch is rejected
+///   rather than producing a file whose header lies about its samples.
 /// - [TtsAudioFormat.mp3]: files are appended byte-for-byte. Same-codec,
 ///   same-encoder MP3s splice cleanly; a brief silence may be audible at each
 ///   boundary since there is no re-encoding step.
@@ -86,12 +85,11 @@ class _CleanableRun {
 
   final Directory outDir;
 
-  /// The whole document, because cleanup writes the flag back and must not
-  /// drop the keys it did not read.
+  /// The whole document: cleanup writes the flag back and must not drop keys it
+  /// did not read.
   final Map<String, dynamic> manifest;
 
-  /// The `combined_file` name, kept for the same reason cleanup must not
-  /// delete the track it is keeping.
+  /// The `combined_file` name, which cleanup must not delete.
   final String combined;
   final List<Map<String, dynamic>> paragraphs;
 }
@@ -170,16 +168,13 @@ Uint8List _readSegment(String path) {
 
 /// Whether two `fmt ` chunks declare the same audio layout.
 ///
-/// The counterpart to [WavFile.formatChunk]: a concatenation can copy the first
-/// segment's chunk into the combined header only if every other segment's
-/// samples genuinely belong to that layout, and the bytes themselves are what
-/// say so. Comparing them rather than decoding into fields is what lets an
-/// unmodelled chunk shape (a bit depth above 16, an extensible header) still be
-/// checked for equality.
+/// The counterpart to [WavFile.formatChunk]: the first segment's chunk can be
+/// copied into the combined header only if every other segment's samples
+/// genuinely belong to that layout, and the bytes themselves are what say so.
+/// Comparing bytes rather than decoding fields also lets an unmodelled chunk
+/// shape (a bit depth above 16, an extensible header) be checked for equality.
 ///
-/// Private to concatenation because concatenation is the only thing that has to
-/// answer it. [Uint8List] is a view onto bytes, so two chunks holding identical
-/// bytes are still different objects and `==` would compare identity; the
-/// element-wise equality is the whole point.
+/// [Uint8List] is a view onto bytes, so two chunks holding identical bytes are
+/// still different objects and `==` would compare identity.
 bool _sameFormatChunk(Uint8List a, Uint8List b) =>
     const ListEquality<int>().equals(a, b);

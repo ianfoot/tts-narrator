@@ -4,16 +4,13 @@ import 'package:flutter/material.dart';
 import '../theme/app_tokens.dart';
 
 /// Enabled toolbar icons rest at ~78% opacity and step up to full
-/// [AppPalette.textPrimary] only while hovered (or pressed), so quiet chrome
-/// like the top-left header cluster doesn't compete with the text labels
-/// around it.
+/// [AppPalette.textPrimary] only while hovered, so quiet chrome doesn't
+/// compete with the labels around it.
 const double kIconButtonRestOpacity = 0.78;
 
-/// Icon-only toolbar button, single Cupertino dialect.
-///
-/// Icons render at [kIconButtonRestOpacity] when enabled and idle, brighten to
-/// full opacity on hover/press (the "active" state), and drop to a disabled
-/// grey (0.6 alpha) when [onPressed] is null.
+/// Icon-only toolbar button, single Cupertino dialect. Icons render at
+/// [kIconButtonRestOpacity] when idle, full opacity on hover/press, and a
+/// disabled grey (0.6 alpha) when [onPressed] is null.
 class AppIconButton extends StatefulWidget {
   const AppIconButton({
     super.key,

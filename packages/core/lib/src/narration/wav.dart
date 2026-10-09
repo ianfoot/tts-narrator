@@ -8,12 +8,11 @@ class WavFile {
 
   /// The `fmt ` chunk exactly as the encoder wrote it, id and size included.
   ///
-  /// Carried verbatim rather than decoded into sample rate and channel count
-  /// because nothing downstream needs those numbers: a combined file just has
-  /// to declare the same layout its samples actually have. Reusing the bytes
-  /// means the app never has to know or guess the rate, and a chunk shape it
-  /// does not model (a bit depth above 16, an extensible header) still
-  /// round-trips intact.
+  /// Carried verbatim rather than decoded, because nothing downstream needs the
+  /// numbers: a combined file just has to declare the same layout its samples
+  /// actually have. Reusing the bytes means the app never has to know or guess
+  /// the rate, and a chunk shape it does not model (a bit depth above 16, an
+  /// extensible header) still round-trips intact.
   final Uint8List formatChunk;
 
   /// Audio samples, without the surrounding container.
@@ -62,14 +61,11 @@ WavFile readWav(Uint8List bytes) {
 
 /// Builds a 44-byte WAV header for [dataBytes] of headerless samples.
 ///
-/// The counterpart to [writeWav] for the case where a provider returns raw
-/// samples instead of a container. The result is the same canonical layout every
-/// probed backend serves natively — 16-bit linear PCM — so a pcm-sourced file and
-/// a natively-served one are indistinguishable to a player.
-///
-/// [sampleRate] and [channels] come from the response rather than from config,
-/// because only the response knows them. 16-bit is the one thing assumed, and it
-/// is what every backend probed actually returns.
+/// The counterpart to [writeWav] for a provider returning raw samples instead of
+/// a container. The result is the same canonical layout every probed backend
+/// serves natively — 16-bit linear PCM — so a pcm-sourced file and a
+/// natively-served one are indistinguishable to a player. [sampleRate] and
+/// [channels] come from the response, the only place that knows them.
 Uint8List wavHeader({
   required int sampleRate,
   required int channels,

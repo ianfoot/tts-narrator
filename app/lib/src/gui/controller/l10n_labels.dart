@@ -6,9 +6,8 @@
 // reach `AppLocalizations`. This file is the other half of that contract — the
 // widget layer hands these extensions an `AppLocalizations` and gets text back.
 //
-// Each extension lives beside the data it renders. If you find yourself wanting
-// to add a getter to a controller that returns a `String` for display, add an
-// extension here instead.
+// Each extension lives beside the data it renders; to display a new piece of
+// controller state, add a getter here rather than a String on the controller.
 
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
@@ -68,16 +67,13 @@ extension ControllerErrorMessage on Object {
 /// A cost estimate as the status bar and the narration summary show it.
 ///
 /// Core formats the number (see `formatCostUsd`) and stops there. Announcing
-/// that a model costs nothing is this layer's word, not the number's, so the
-/// annotation is localized here and appended to a zero estimate.
-///
-/// Whether this is zero is asked of the *rendered* amount rather than of [this],
-/// so a sub-cent estimate that core rounds down to "$0.00" is annotated as free
-/// too. Comparing against a zero estimate rather than reimplementing core's
-/// rounding keeps the two from disagreeing about what counts as nothing.
+/// that a model costs nothing is this layer's word, so the annotation is
+/// localized here and appended to a zero estimate. Whether the estimate is zero
+/// is asked of the *rendered* amount, so a sub-cent estimate that core rounds
+/// down to "$0.00" is annotated as free too.
 ///
 /// Both callers interpolate the result as a pre-built `{cost}` placeholder in an
-/// l10n template, so the whole fragment has to exist before the template call.
+/// l10n template, so the fragment has to exist before the template call.
 extension CostUsdX on double {
   String costLabel(AppLocalizations l10n) {
     final formatted = formatCostUsd(this);

@@ -11,11 +11,11 @@ import 'quit_app.dart';
 /// The in-app menu bar for the platforms with no native one (Linux, Windows),
 /// mounted as the home widget's root above the editor by `AppRoot`.
 ///
-/// It renders the same commands as [buildMacMenu] — File, Edit and View — as
-/// real widgets, so unlike [PlatformMenuItem] (which has no enabled flag) each
-/// item can be *disabled* rather than silently swallowing taps: Narrate is
-/// disabled while [AppController.narrateBlockReason] is non-null, Clear unless
-/// [AppController.canClearText], and Clean Up unless
+/// Renders the same commands as [buildMacMenu] — File, Edit and View — as real
+/// widgets, so unlike [PlatformMenuItem] (which has no enabled flag) each item
+/// can be *disabled* rather than silently swallowing taps: Narrate while
+/// [AppController.narrateBlockReason] is non-null, Clear unless
+/// [AppController.canClearText], Clean Up unless
 /// [AppController.canCleanupSegments]. The macOS menu still guards inside its
 /// handlers for the same reason.
 ///
@@ -33,12 +33,11 @@ import 'quit_app.dart';
 ///    menu, which this bar has no equivalent for; the GTK/Qt convention puts
 ///    Quit at the end of File.
 ///
-/// Rebuilds on [AppController] rather than on a narrower notifier, because the
-/// menu items gate on document and run state ([AppController.canClearText],
-/// [AppController.narrateBlockReason], [AppController.canCleanupSegments]) as
-/// well as theme. The controller re-broadcasts all four inputs, so a single
-/// listen keeps a newly-available command from staying greyed out. The macOS bar
-/// needs no equivalent — the platform rebuilds its items each time a menu opens.
+/// Rebuilds on [AppController] rather than a narrower notifier, because the
+/// items gate on document and run state as well as theme; the controller
+/// re-broadcasts all four inputs, so one listen keeps a newly-available command
+/// from staying greyed out. The macOS bar needs no equivalent — the platform
+/// rebuilds its items each time a menu opens.
 class LinuxMenuBar extends StatelessWidget {
   const LinuxMenuBar({
     super.key,
@@ -187,8 +186,8 @@ class LinuxMenuBar extends StatelessWidget {
         tokens,
         l10n.gui_menu_narrate,
         accelerator: 'N',
-        // Disabled rather than guarded: unlike a platform menu item, a widget
-        // menu can show that the command is unavailable.
+        // Disabled rather than guarded: unlike a platform menu item, a widget menu can
+        // show that the command is unavailable.
         onSelected: narrateBlocked
             ? null
             : () => controller.commands.onNarrate?.call(),

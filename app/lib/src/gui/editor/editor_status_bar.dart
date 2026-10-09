@@ -23,9 +23,8 @@ class EditorStatusBar extends StatefulWidget {
 class _EditorStatusBarState extends State<EditorStatusBar> {
   static const _tickerDuration = Duration(milliseconds: 100);
 
-  /// Grouping separators follow the resolved locale so a locale with a
-  /// different decimal/group convention renders its own way. Callers are
-  /// expected to be mounted under an `AppLocalizations` delegate.
+  /// Grouping separators follow the resolved locale. Callers are expected to
+  /// be mounted under an `AppLocalizations` delegate.
   static NumberFormat _countFormatFor(BuildContext context) =>
       NumberFormat.decimalPattern(Localizations.localeOf(context).toString());
 
@@ -54,9 +53,8 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
   @override
   Widget build(BuildContext context) {
     final colors = tokens.colors;
-    // Readouts (word/char counts, output path, estimate) share one Tier 3
-    // metric style: monospace textSecondary at 75%, so the middle path matches
-    // the flanking metrics instead of blending into the footer.
+    // One metric style for all three readouts, so the middle path matches the
+    // flanking metrics instead of blending into the footer.
     final monoReadout = tokens.typography.mono.copyWith(
       color: colors.textSecondary.withValues(alpha: 0.75),
     );
@@ -141,10 +139,9 @@ class _EditorStatusBarState extends State<EditorStatusBar> {
   }
 }
 
-/// Returns [s] left-truncated with a leading ellipsis if it would not
-/// fit within [maxWidth] when rendered with [style]. The leaf (rightmost
-/// part) is preserved, so the actual folder name stays visible when the
-/// full path is too long for the status bar slot.
+/// Returns [s] left-truncated with a leading ellipsis if it would not fit
+/// within [maxWidth] when rendered with [style], preserving the leaf so the
+/// folder name stays visible.
 String _leftTruncate(String s, TextStyle style, double maxWidth) {
   if (maxWidth <= 0 || s.isEmpty) return s;
   final tp = TextPainter(

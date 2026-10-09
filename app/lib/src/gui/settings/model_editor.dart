@@ -45,9 +45,8 @@ class ModelEditor extends StatelessWidget {
         _Metadata(model: model),
         const SizedBox(height: AppMetrics.segmentGap),
         VoiceTable(
-          // Keyed by alias so switching models in the list discards the
-          // previous table's state, its last rejection message included. Without
-          // it the same state object is reused across models and fish's error
+          // Keyed by alias so switching models in the list discards the previous table's
+          // state, its last rejection message included — otherwise fish's error
           // would sit under gemini's table until the next edit replaced it.
           key: ValueKey('voiceTable_${model.alias}'),
           alias: model.alias,
@@ -102,11 +101,10 @@ class _Metadata extends StatelessWidget {
             l10n.gui_settings_fieldFormat,
             // Every format the model offers, not just the one in force: this is
             // the metadata view, so it documents what the model can serve. The
-            // user's current choice lives in the run-setup panel.
-            //
-            // A model that serves wav from headerless samples says so here,
-            // because that is the part a reader cannot infer from the format
-            // list — "wav" looks identical either way.
+            // user's current choice lives in the run-setup panel. A model serving
+            // wav from headerless samples says so here, because that is the part
+            // a reader cannot infer from the format list — "wav" looks identical
+            // either way.
             model.wavResponseFormat == TtsWavResponseFormat.pcm
                 ? '${model.formats.map((f) => f.wireValue).join(', ')} '
                       '(wav via ${model.wavResponseFormat.wireValue})'
@@ -146,17 +144,14 @@ class _Metadata extends StatelessWidget {
 }
 
 /// Discards the local override for one model. The downloaded file comes back
-/// immediately, because the overlay is the only copy of the user's edits and
-/// deleting it is the whole point of the button — so it is labelled as such
-/// rather than presented as a generic reset.
+/// immediately, because deleting the overlay is the whole point of the button —
+/// so it is labelled as such rather than presented as a generic reset.
 ///
 /// This is also the escape hatch out of a model file that does not parse, which
-/// is why it lives outside [VoiceTable] rather than inside it: the pane that
-/// fails to read is replaced by a message, not by a lost button. The delete can
-/// itself fail — a file the user has open, a read-only volume — so that is
-/// reported inline too instead of thrown out of the button's callback. Keyed by
-/// alias like [VoiceTable], for the same reason: a delete error belongs to the
-/// model it happened on.
+/// is why it lives outside [VoiceTable]: the pane that fails to read is replaced
+/// by a message, not by a lost button. The delete can itself fail — an open file,
+/// a read-only volume — so that is reported inline too. Keyed by alias like
+/// [VoiceTable], so a delete error stays with the model it happened on.
 class _RevertButton extends StatefulWidget {
   const _RevertButton({
     super.key,

@@ -5,14 +5,12 @@
 /// what the user reads. They deliberately live outside any l10n system
 /// (`package:flutter_gen` / ARB) and must never be added to one.
 ///
-/// The narrator-gender rewrite is the sharpest edge here.
-/// [SettingsController.applyNarratorGender] detects a gendered prefix by
-/// literal substring matching against [femalePhrase] and [malePhrase], and
-/// because `female narrator` *contains* `male narrator` as a substring it
-/// special-cases the overlap. Changing the wording of [passagePrefix],
-/// [femalePhrase], or [malePhrase] without updating that match silently breaks
-/// gender switching rather than failing loudly, so [assertPrefixCarriesGender]
-/// guards it in tests.
+/// The narrator-gender rewrite is the sharpest edge here:
+/// [SettingsController.applyNarratorGender] detects a gendered prefix by literal
+/// substring match against [femalePhrase] and [malePhrase], which overlap because
+/// `female narrator` contains `male narrator`, so the rewrite special-cases it.
+/// Changing the wording of any of those three without updating that match breaks
+/// gender switching silently, so [assertPrefixCarriesGender] guards it in tests.
 abstract final class PromptDefaults {
   /// Default accent description folded into every prompt.
   static const accent = 'southern British English, neutral and clear';
@@ -22,8 +20,8 @@ abstract final class PromptDefaults {
 
   /// Default preamble pooled in front of every paragraph.
   ///
-  /// Carries [femalePhrase] so the default state is gendered; the GUI swaps it
-  /// for [malePhrase] when the user selects a male voice.
+  /// Carries [femalePhrase] so the default is gendered; the GUI swaps in
+  /// [malePhrase] for a male voice.
   static const passagePrefix =
       'Narrate this passage for an audiobook. '
       'You are a warm, composed female narrator.';
@@ -49,8 +47,7 @@ abstract final class PromptDefaults {
 
   /// Whether [prefix] is recognized as gendered, i.e. contains either phrase.
   ///
-  /// A custom prefix that mentions neither is left alone by the gender
-  /// rewrite, which is intentional.
+  /// A prefix mentioning neither is deliberately left alone by the gender rewrite.
   static bool prefixCarriesGender(String prefix) =>
       prefix.contains(femalePhrase) || prefix.contains(malePhrase);
 

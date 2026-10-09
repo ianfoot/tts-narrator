@@ -1,25 +1,18 @@
-/// Helpers for reading a provider block's settings out of voice config.
+/// Reads a provider block's settings out of voice config.
 ///
-/// A provider block is an opaque `Map<String, String>` of settings
-/// (`base_url`, `api_key`, `default_voice`, ...). Settings are resolved without
-/// interpreting them -- how a `${ENV_VAR}` reference is expanded, and whether
-/// an unresolvable one is fatal, is what [resolveSettings] decides.
-///
-/// Only the three keys the clients themselves need are named here: the
-/// credential [resolveProviderApiKey] reads (`api_key`) and the two spellings
-/// of an endpoint [providerBaseUrl] accepts (`base_url`, `endpoint`). Everything
-/// else stays opaque.
+/// A provider block is an opaque `Map<String, String>`; only the keys the
+/// clients need are named here. Interpretation of `${ENV_VAR}` references is
+/// [resolveSettings]' job.
 library;
 
 /// Matches a `${ENV_NAME}` secret reference in a provider settings value.
 final _envRef = RegExp(r'^\$\{(\w+)\}$');
 
-/// The variable name a `${ENV_NAME}` secret reference names, or null when
-/// [value] is not such a reference (i.e. it is a literal).
+/// The variable a `${ENV_NAME}` reference names, or null when [value] is a
+/// literal.
 ///
-/// Shared so a caller reporting *where* a credential came from (the GUI's
-/// status line) classifies a value exactly as [resolveProviderApiKey] resolves
-/// it, instead of keeping a second copy of the pattern.
+/// Shared with [resolveProviderApiKey] so the GUI status line classifies a value
+/// exactly as resolution does.
 String? envRefName(String value) => _envRef.firstMatch(value)?.group(1);
 
 /// Whether [value] is a `${ENV_NAME}` secret reference rather than a literal.
@@ -28,19 +21,16 @@ bool isEnvReference(String value) => _envRef.hasMatch(value);
 /// Resolves the credential a provider block yields, or null when it has none.
 ///
 /// `api_key` is the only credential setting, and its value is either a literal
-/// or a `${ENV}` reference naming a variable to read from [env]. There is no
-/// separate "which variable" setting: the two spellings are unified here.
+/// or a `${ENV}` reference naming a variable to read from [env].
 ///
-/// A `${ENV}` reference the runtime cannot fulfil yields null rather than the
-/// reference itself, so an unset variable is indistinguishable from an absent
-/// key. Values are trimmed; empty or whitespace-only counts as missing.
+/// An unfulfillable reference yields null rather than the reference itself, so
+/// an unset variable is indistinguishable from an absent key. Values are
+/// trimmed; empty or whitespace-only counts as missing. Never throws: a run
+/// with no usable key sends no `Authorization` header and lets the server
+/// decide whether it needed one.
 ///
-/// Never throws on an unresolvable reference — a run with no usable key sends no
-/// `Authorization` header and lets the server decide whether it needed one.
-///
-/// [env] is required rather than defaulted: this module stays free of `dart:io`
-/// so environment access remains the caller's job, which is what lets tests
-/// resolve a credential hermetically.
+/// [env] is required rather than defaulted so this module stays free of
+/// `dart:io` and tests can resolve hermetically.
 String? resolveProviderApiKey(
   Map<String, String> settings, {
   required Map<String, String> env,
@@ -56,11 +46,9 @@ String? resolveProviderApiKey(
 /// The speech endpoint root declared by the provider block [settings], or null
 /// when the block names none.
 ///
-/// `base_url` is a **root**, not a full URL: the client appends `/audio/speech`
-/// (see `OpenAiSpeechClient`). `endpoint` is a documented alias for it.
-///
-/// Shared so the HTTP client and [narrate]'s up-front validation read the same
-/// key with the same precedence and cannot drift apart.
+/// `base_url` is a **root**, not a full URL: the client appends `/audio/speech`.
+/// `endpoint` is a documented alias for it. Shared so the HTTP client and
+/// [narrate]'s up-front validation cannot drift apart.
 String? providerBaseUrl(Map<String, String> settings) {
   final root = settings['base_url'] ?? settings['endpoint'];
   if (root == null || root.trim().isEmpty) return null;
@@ -69,15 +57,12 @@ String? providerBaseUrl(Map<String, String> settings) {
 
 /// Resolves a provider's raw settings map, applying the generic secret rule.
 ///
-/// A value matching `^\$\{(\w+)\}$` reads that environment variable (from [env],
-/// defaulting to an empty map) at resolution time — once when the run config is
-/// built, never per segment. Any other value passes through literal (so `api_key`
-/// literals and already-resolved values survive untouched).
+/// A `${ENV_VAR}` value reads that variable from [env] (empty by default) once
+/// when the run config is built, never per segment. Any other value passes
+/// through literal.
 ///
-/// Throws a [StateError] naming the variable when the referenced env var is
-/// missing or empty (an empty value counts as missing, matching the legacy
-/// `resolvedApiKey` behaviour); remaining environment access is the caller's
-/// job, so core stays provider-agnostic.
+/// Throws a [StateError] naming the variable when the reference is missing or
+/// empty (empty counts as missing, matching the legacy `resolvedApiKey`).
 Map<String, String> resolveSettings(
   Map<String, String> raw, {
   Map<String, String>? env,

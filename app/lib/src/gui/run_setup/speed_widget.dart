@@ -6,10 +6,9 @@ import '../theme/app_tokens.dart';
 import '../widgets/app_slider.dart';
 import 'run_setup_labels.dart';
 
-/// A speech-rate slider bound to the controller's `speed` setting. Rendered for
-/// models whose plugin declares a `speed` model option (e.g. kokoro); the value
-/// readout mirrors the min-words badge so the current rate stays visible under
-/// the macOS track-scaled knob.
+/// A speech-rate slider bound to the controller's `speed` setting, rendered for
+/// models whose plugin declares a `speed` model option. The value readout keeps
+/// the current rate visible under the macOS track-scaled knob.
 class SpeedWidget extends StatelessWidget {
   const SpeedWidget({super.key, required this.controller});
 

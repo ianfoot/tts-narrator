@@ -13,17 +13,14 @@ import 'run_setup_labels.dart';
 /// voice alias picker. Extracted from the model section so per-model panels can
 /// compose it independently of the model picker.
 ///
-/// Every control writes straight to [AppController], which notifies the editor
-/// so the status-bar estimate stays live. Values are re-read from the
-/// controller on every build, so a model switch landing in the parent section
-/// re-renders this picker with the new voice list.
+/// Values are re-read from the controller on every build, so a model switch
+/// landing in the parent section re-renders this picker with the new list.
 ///
-/// The label, gender filter and voice dropdown are all scoped to choosing a
-/// voice, so they disappear together for a model that sends no voice id and
-/// writes its narrator from prose instead — such a model has no rows to pick
-/// between, and an empty dropdown under a "Voice" label would be a lie. The
-/// language dropdown stays: it narrows the voice list, but it is also the
-/// `lang_code` a model synthesises in, so a voice-design model still needs it.
+/// The label, gender filter and voice dropdown disappear together for a model
+/// that sends no voice id and writes its narrator from prose instead — such a
+/// model has no rows to pick between, and an empty dropdown under a "Voice" label
+/// would be a lie. The language dropdown stays: it narrows the voice list, but it
+/// is also the `lang_code` a model synthesises in.
 class VoicePickerWidget extends StatelessWidget {
   const VoicePickerWidget({super.key, required this.controller});
 
@@ -84,8 +81,8 @@ class VoicePickerWidget extends StatelessWidget {
   ///
   /// Matched on the id alone. The label used to be the dropdown value, which made
   /// a model with two voices of one name (Kokoro has three Santas) select the
-  /// first of them however the reader clicked, and left the picker unable to show
-  /// a selection at all when a voice id was typed in directly.
+  /// first of them however the reader clicked, and left the picker unable to
+  /// show a selection when a voice id was typed in directly.
   String? get _selectedVoiceId {
     final voice = controller.voice;
     if (voice.isEmpty) return null;

@@ -12,20 +12,15 @@ import 'edit_actions.dart';
 /// instead, which mirrors these commands as widgets.
 ///
 /// Pure configuration over the controller's platform-neutral command slots and
-/// the app navigator: App (About/Settings/Services/Hide/Quit), File
-/// (Open/Save/Save As/Narrate), Edit (undo/redo/cut/copy/paste/select all,
-/// dispatched to the focused text field by [EditActions]), View (Appearance,
-/// Toggle Settings Panel, Full Screen) and Window (Minimize/Zoom/Front). The
-/// menu items are *not* widgets; they are sent to the platform over the menu
-/// channel, so there is no [enabled] flag — the Narrate item guards in its
-/// handler instead of graying out.
+/// the app navigator. The items are *not* widgets; they are sent to the platform
+/// over the menu channel, so there is no [enabled] flag — the gated items guard
+/// in their handlers instead of graying out.
 ///
-/// [l10n] is threaded in rather than read from a context because the menu items
-/// are plain values sent over the platform channel, not widgets — and the only
-/// context available here is the navigator overlay's, which sits below the
-/// `AppLocalizations` scope on some shells. The caller
-/// ([PlatformMenuBarHost] in `platform/app_root.dart`) resolves it once from
-/// its own context.
+/// [l10n] is threaded in rather than read from a context because the items are
+/// plain values, and the only context available here is the navigator overlay's,
+/// which sits below the `AppLocalizations` scope on some shells. The caller
+/// ([PlatformMenuBarHost] in `platform/app_root.dart`) resolves it once from its
+/// own context.
 List<PlatformMenu> buildMacMenu({
   required AppController controller,
   required GlobalKey<NavigatorState> navigatorKey,
@@ -114,7 +109,7 @@ PlatformMenu _fileMenu(
           shift: true,
         ),
         onSelected: () {
-          // Guard: only clear when there's text and not narrating.
+          // Only clear when there's text and not narrating.
           if (!controller.canClearText) return;
           controller.clearText();
         },

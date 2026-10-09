@@ -27,8 +27,8 @@ Brightness resolveBrightness(AppThemeMode mode, Brightness system) {
 ///
 /// Everything visual — colors, typography, spacing/shape metrics — resolves
 /// from [AppTokens] instead of inline literals, so the light and dark themes
-/// (and macOS vs Material platforms) stay consistent. Screens read the tokens
-/// for the ambient [Brightness] via [AppTokens.of].
+/// (and macOS vs Material platforms) stay consistent. Screens read the ambient
+/// [Brightness] via [AppTokens.of].
 ///
 /// Visual values (colors, type sizes, font weights) live in
 /// `app/assets/theme/tokens.json` and are emitted into the private
@@ -127,9 +127,8 @@ class AppPalette {
 
   /// Interactive control affordances: dropdown chevrons, disclosure arrows.
   ///
-  /// Sits between [textPrimary] and [textSecondary]: bright enough to signal
-  /// an interactable handle at a glance, but quiet enough that it never
-  /// competes with the control's label (which stays [textPrimary]).
+  /// Sits between [textPrimary] and [textSecondary]: signals a handle at a
+  /// glance without competing with the control's label.
   Color get textTertiary => _gen.textTertiary;
 
   /// Primary action buttons (`Narrate`), focus rings.
@@ -137,9 +136,8 @@ class AppPalette {
 
   /// Text and icons drawn on accent fills (e.g. `Narrate`, filled buttons).
   ///
-  /// Pure white in both modes because the accent palette is saturated enough
-  /// to hold white at any contrast environment; kept as a token so a future
-  /// accent change can't strand a hard-coded white on it.
+  /// White in both modes: the accent palette is saturated enough to hold it.
+  /// A token so a future accent change can't strand a hard-coded white.
   Color get textOnAccent => _gen.textOnAccent;
 
   /// Completed segment icons.
@@ -151,10 +149,8 @@ class AppPalette {
   /// Alerts, validation warnings.
   Color get accentError => _gen.accentError;
 
-  /// Muted scrim for subtle drop shadows on floating "surface" elements.
-  ///
-  /// Light uses a soft 8%-black; dark shadows need a touch more ink to stay
-  /// visible on the near-black surfaces.
+  /// Muted scrim for subtle drop shadows on floating "surface" elements. Dark
+  /// shadows need more ink to stay visible on the near-black surfaces.
   Color get overlayMuted => _gen.overlayMuted;
 
   /// Material 3 [ColorScheme.fromSeed] seed (theme-independent).
@@ -164,12 +160,11 @@ class AppPalette {
 /// Type scale + platform font stacks (spec §1).
 ///
 /// UI sans-serif text omits a family so the platform default system font
-/// renders (.SF NS on macOS, Segoe UI on Windows, Ubuntu etc. on Linux).
-///
-/// The editor body and the mono readouts are the exception: they pin a
-/// concrete family per platform (plus a metric-similar fallback chain) so the
-/// macOS and Linux builds render the same shapes instead of drifting to each
-/// platform's default.
+/// renders (.SF NS on macOS, Segoe UI on Windows, Ubuntu etc. on Linux). The
+/// editor body and the mono readouts are the exception: they pin a concrete
+/// family per platform, plus a metric-similar fallback chain, so the macOS and
+/// Linux builds render the same shapes instead of drifting to each platform's
+/// default.
 ///
 /// Type sizes and weights come from `app/assets/theme/tokens.json`; the
 /// platform-resolved family getters below stay in Dart because they depend
@@ -186,13 +181,9 @@ class AppTypography {
   static const _GeneratedTypography _t = _GeneratedTypography();
 
   /// Sans stack for the editor body, pinned on every platform so the two
-  /// desktop builds lay out identically instead of falling back to each
-  /// platform's default face.
-  ///
-  /// macOS/iOS → Helvetica, Windows → Arial, Linux → Nimbus Sans. Nimbus Sans
-  /// is the metric-compatible URW clone of Helvetica, so glyph advance widths
-  /// match the macOS build exactly; see [editorSansFallback] for the chains
-  /// used when the primary family is missing.
+  /// desktop builds lay out identically. macOS/iOS → Helvetica, Windows →
+  /// Arial, Linux → Nimbus Sans — the metric-compatible URW clone of
+  /// Helvetica, so glyph advance widths match the macOS build exactly.
   String? get editorSansFamily {
     switch (platform) {
       case TargetPlatform.macOS:
@@ -277,11 +268,9 @@ class AppTypography {
   );
 }
 
-/// Grid, shape, and dimension constants (spec §2).
-///
-/// Metrics are static so they read without a [BuildContext]; they are gathered
-/// here so screens never scatter magic numbers. Not generated from JSON —
-/// these are layout-grid constants that don't change with the brand.
+/// Grid, shape, and dimension constants (spec §2). Static so they read without
+/// a [BuildContext]; gathered here so screens never scatter magic numbers. Not
+/// generated from JSON — these are layout-grid constants.
 class AppMetrics {
   const AppMetrics._();
 

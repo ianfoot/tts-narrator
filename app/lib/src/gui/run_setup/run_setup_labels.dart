@@ -9,8 +9,7 @@ Widget runSetupFieldLabel(AppTokens tokens, String text) => Padding(
   child: Text(text, style: tokens.typography.body),
 );
 
-/// Inline control label (e.g. "Sample mode", "Skip completed segments") —
-/// Tier 2: 13pt Medium primary, matching the field titles so toggle labels
-/// (previously 14pt/bold) sit at the same visual weight.
+/// Inline control label (e.g. "Sample mode", "Skip completed segments") — Tier
+/// 2 like the field titles, so toggle labels sit at the same visual weight.
 Widget runSetupControlLabel(AppTokens tokens, String text) =>
     Text(text, style: tokens.typography.body);

@@ -13,29 +13,22 @@ import 'speech_client.dart';
 import 'wav.dart';
 
 /// Max characters per narration segment. Scenes (blank-line-separated
-/// paragraphs) are kept whole; only a scene longer than this cap is split at
-/// sentence boundaries. Balances call count vs per-call drift: Google
-/// recommends avoiding fragments (short segments lose voice lock-in) while
-/// keeping outputs under a few minutes.
+/// paragraphs) are kept whole; only a longer scene is split at sentence
+/// boundaries. Short segments lose voice lock-in, per Google's guidance.
 const _maxSegmentLength = 1500;
 
 /// Max characters for a single whole-file narration call
-/// ([NarrationConfig.sendWholeFile]). The whole document goes to the TTS
-/// engine in one request, so a runaway doc would otherwise be one unbounded
-/// call. Providers cap payload/token sizes and time out mid-run; the GUI
-/// hides the "Send whole file" toggle above this size and [planSegments]
-/// rejects the plan outright.
+/// ([NarrationConfig.sendWholeFile]). Providers cap payload sizes and time out
+/// mid-run, so the GUI hides the "Send whole file" toggle above this size and
+/// [planSegments] rejects the plan outright.
 const maxWholeFileLength = 60000;
 
 /// Segments source text into narration units.
 ///
-/// Paragraphs are split on blank lines. A paragraph shorter than
-/// [minWords] words is merged with a neighbour so tiny fragments don't get an
-/// isolated reading: a short paragraph accumulates into the following
-/// paragraph (a leading fragment has nowhere to glue to but forward), and the
-/// merged unit keeps growing until it holds at least [minWords] words. A
+/// Paragraphs are split on blank lines. A paragraph shorter than [minWords]
+/// words is merged forward so tiny fragments don't get an isolated reading; a
 /// trailing fragment with no following paragraph is kept as-is. Any resulting
-/// paragraph longer than [maxSegmentLength] chars is further split at sentence
+/// paragraph longer than [_maxSegmentLength] chars is further split at sentence
 /// boundaries. Returns non-empty, trimmed segments.
 List<String> segmentText(String text, {int minWords = 30}) {
   final raw = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
@@ -118,10 +111,9 @@ typedef NarrationProgress = void Function(
   bool resumed,
 });
 
-/// Completion callback: called once each segment's audio file is on disk,
-/// with the 0-based [index] and the absolute [filePath] of the written clip
-/// (including resumed segments). Lets a GUI enable per-segment playback as soon
-/// as a segment lands, rather than waiting for the whole run.
+/// Completion callback: called once each segment's audio file is on disk, with
+/// the 0-based [index] and the absolute [filePath] of the written clip (including
+/// resumed segments). Lets a GUI enable per-segment playback as each one lands.
 typedef NarrationSegmentComplete = void Function(
   int index,
   String filePath, {
@@ -182,8 +174,7 @@ String outDirBasename(String outDir) =>
 /// [NarrationConfig.nestOutputInInputSubdir] selects) the input stem is appended
 /// so several documents narrated into one folder stay separate — unless it is
 /// already the trailing component. With [inputPath] null or nesting off, [outDir]
-/// is returned untouched: there is no filename to name a folder after, so the run
-/// writes directly into the folder the caller chose.
+/// is returned untouched.
 ///
 /// Pure, so a GUI can display where a run will land without assembling a whole
 /// [NarrationConfig] (which requires a model and a voice).
@@ -209,8 +200,7 @@ String outputDirPath(NarrationConfig config) => resolveOutputDir(
 
 /// Narrates [config] paragraph by paragraph (reading [NarrationConfig.sourceText]
 /// when set, else the file at [config.inputPath]), writing WAV files and a
-/// manifest into [outputDirPath] (which defaults to `outDir` plus the input
-/// stem). The manifest is rewritten after every segment
+/// manifest into [outputDirPath]. The manifest is rewritten after every segment
 /// so a failed run can be resumed via `--resume`.
 ///
 /// [client] is the speech seam, injected by the entrypoint rather than resolved
@@ -218,8 +208,8 @@ String outputDirPath(NarrationConfig config) => resolveOutputDir(
 /// the app supplies, configured from [NarrationConfig.providerSettings] plus the
 /// [NarrationConfig.apiKey] the caller resolved.
 ///
-/// [abort], when given, is checked before each segment and thread through to the
-/// HTTP client; cancelling it throws [AbortException] and stops the run.
+/// [abort], when given, is checked before each segment and threaded through to
+/// the HTTP client; cancelling it throws [AbortException] and stops the run.
 Future<void> narrate(
   NarrationConfig config, {
   required SpeechClient client,
@@ -228,9 +218,8 @@ Future<void> narrate(
   AbortToken? abort,
 }) async {
   // Fail on an unusable provider block before any work happens. The client
-  // raises the same error, but only on segment 1 and after the output
-  // directory exists; naming the block here tells the user which connection in
-  // their config to fix.
+  // raises the same error, but only on segment 1 and after the output directory
+  // exists; naming the block here tells the user which connection to fix.
   if (providerBaseUrl(config.providerSettings) == null) {
     throw StateError(
       'TTS provider "${config.profile.provider}" is missing required setting '
@@ -268,8 +257,8 @@ Future<void> narrate(
     final audioFile =
         '${outDir.path}${Platform.pathSeparator}$baseName.$extension';
 
-    // Resume: reuse an identical prior segment (same index + prompt + format +
-    // file) and carry its record across, so a re-run doesn't re-bill it.
+    // Reuse an identical prior segment (same index + prompt + format + file),
+    // carrying its record across so a re-run doesn't re-bill it.
     final prior = resumeMatch(existing, index, input, dir, extension);
     if (prior != null) {
       records.add(prior);
@@ -304,8 +293,7 @@ Future<void> narrate(
     );
 
     // Every format arrives as a finished container except a wav run against a
-    // model that serves headerless samples, where the app writes the header it
-    // is missing so the file on disk is a real WAV.
+    // model serving headerless samples, where the app writes the missing header.
     final bytes = _asWav(config, audio);
     File(audioFile).writeAsBytesSync(bytes, flush: true);
 
@@ -322,9 +310,9 @@ Future<void> narrate(
     _writeManifest(outDir, config, records, paragraphs.length, count);
   }
 
-  // Every successful run leaves a single combined track next to the segments
-  // (same stem, `_full` suffix). Segments stay on disk by default; the GUI's
-  // "Clean Up Segments…" removes them afterwards via [cleanupSegmentFiles].
+  // Every successful run leaves a combined track next to the segments (same
+  // stem, `_full` suffix). Segments stay on disk by default; the GUI's
+  // "Clean Up Segments…" removes them afterwards.
   final segmentPaths = [
     for (final r in records)
       '${outDir.path}${Platform.pathSeparator}${r['wav']}',
@@ -353,14 +341,12 @@ Future<void> narrate(
 /// reuse it: same index, same [input] prompt, the audio file still exists, and
 /// it is in [extension].
 ///
-/// The format check is load-bearing rather than cosmetic. A run records each
-/// segment's filename, and the combined track is assembled from those recorded
-/// names using the *current* output format. Reusing segments written in the
-/// other format therefore has two bad outcomes: WAV segments handed to the MP3
-/// path are silently concatenated into an unplayable header-then-MP3 file, and
-/// MP3 segments handed to the WAV path throw once the whole run has already
-/// been billed. Refusing the match makes a format switch re-narrate instead,
-/// which costs money but never produces a broken file.
+/// The format check is load-bearing rather than cosmetic. The combined track is
+/// assembled from the recorded filenames using the *current* output format, so
+/// reusing segments written in the other format either yields an unplayable
+/// header-then-MP3 file or throws after the run has already been billed.
+/// Refusing the match makes a format switch re-narrate instead, which costs
+/// money but never produces a broken file.
 Map<String, Object?>? resumeMatch(
   List<Map<String, Object?>> existing,
   int index,
@@ -386,13 +372,11 @@ Map<String, Object?>? resumeMatch(
 /// A wav run against a model that serves headerless samples is the one case where
 /// the provider's bytes are not yet a file: they need a header saying what rate
 /// and channel layout they have, or nothing will play them. Everything else — mp3
-/// and natively-served wav — is already a finished container and is written
-/// through untouched.
+/// and natively-served wav — is already a finished container.
 ///
 /// The rate comes from the response rather than from config. A response that
-/// omits it is a hard error naming the model, because a header with an invented
-/// rate would produce a file that plays at the wrong pitch, which is worse than
-/// no file.
+/// omits it is a hard error naming the model, since a header with an invented rate
+/// plays at the wrong pitch, which is worse than no file.
 Uint8List _asWav(NarrationConfig config, GeneratedAudio audio) {
   final pcmSourced =
       config.outputFormat == TtsAudioFormat.wav &&
@@ -438,7 +422,7 @@ void _writeManifest(
     if (config.voiceLabel != null && config.voiceLabel != config.voice)
       'voice_label': config.voiceLabel,
     // Only what was actually sent: a model that ignores `lang_code` has no
-    // language to record, and an omitted field is what the manifest should say.
+    // language to record.
     if (config.profile.sendsLanguageField && config.language != null)
       'language': config.language,
     'format': config.outputFormat.wireValue,
