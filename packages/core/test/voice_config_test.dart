@@ -368,6 +368,7 @@ void main() {
       final (cfg, warnings) = load();
       expect(cfg.models, isEmpty);
       expect(warnings.first, contains('Skipped model "x"'));
+      expect(warnings.first, contains('"id"'));
     });
 
     test('skips a malformed model file and keeps the rest loading', () {
@@ -409,14 +410,6 @@ void main() {
       expect(warnings, isEmpty);
     });
 
-    test('a model file missing only its id still warns', () {
-      writeModel('x', '{}');
-      final (cfg, warnings) = load();
-      expect(cfg.models, isEmpty);
-      expect(warnings.first, contains('Skipped model "x"'));
-      expect(warnings.first, contains('"id"'));
-    });
-
     test('a wrong-typed model field is skipped with a warning', () {
       writeModel('x', '{"id": "a/b", "formats": "mp3"}');
       final (cfg, warnings) = load();
@@ -444,15 +437,6 @@ void main() {
       final (cfg, _) = load();
       expect(cfg.models.keys.toList(), ['alph', 'zebra']);
     });
-
-    test(
-      'accepts a directory with only an empty config.json and no models',
-      () {
-        writeRegistry('{}');
-        final (cfg, _) = rawLoad();
-        expect(cfg.isEmpty, isTrue);
-      },
-    );
 
     group('the provider registry', () {
       test('parses the provider names in order', () {
@@ -546,19 +530,6 @@ void main() {
         expect(cfg.models, isEmpty);
         expect(warnings, isEmpty);
       });
-
-      test(
-        'a provider file absent from the registry is ignored with a warning',
-        () {
-          writeRegistry('{"providers": ["alpha"]}');
-          writeProvider('alpha', '{"models": [], "settings": {}}');
-          writeProvider('stray', '{"models": [], "settings": {}}');
-
-          final (cfg, warnings) = rawLoad();
-          expect(cfg.providers.containsKey('stray'), isFalse);
-          expect(warnings.single, contains('stray.json'));
-        },
-      );
 
       test('a registered provider with no file on disk warns', () {
         writeRegistry('{"providers": ["alpha"]}');

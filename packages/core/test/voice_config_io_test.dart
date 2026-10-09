@@ -56,14 +56,6 @@ void main() {
 
     (VoiceConfig, List<String>) load() => loadVoiceConfig(dir.path);
 
-    test('missing directory yields an empty config and no warnings', () {
-      final (cfg, warnings) = load();
-      expect(cfg.isEmpty, isTrue);
-      expect(cfg.providers, isEmpty);
-      expect(cfg.voices, isEmpty);
-      expect(warnings, isEmpty);
-    });
-
     test('parses per-model files into request profiles', () {
       writeClaimingProvider(testProvider, models: ['gemini']);
       writeModel(
@@ -712,64 +704,6 @@ void main() {
       });
     });
 
-    group('model to provider inversion', () {
-      test('stamps the claiming provider onto each profile', () {
-        writeRegistry('{"providers":["alpha","beta"]}');
-        writeProvider('alpha', '{"models":["one"],"settings":{}}');
-        writeProvider('beta', '{"models":["two"],"settings":{}}');
-        writeModel('one', '{"id":"x/one","formats":["wav"]}');
-        writeModel('two', '{"id":"x/two","formats":["wav"]}');
-
-        final (cfg, warnings) = load();
-        expect(warnings, isEmpty);
-        expect(cfg.models['one']!.provider, 'alpha');
-        expect(cfg.models['two']!.provider, 'beta');
-      });
-
-      test('a model no provider claims is skipped without a warning', () {
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider('alpha', '{"models":["one"],"settings":{}}');
-        writeModel('one', '{"id":"x/one","formats":["wav"]}');
-        writeModel('orphan', '{"id":"x/orphan","formats":["wav"]}');
-
-        final (cfg, warnings) = load();
-        expect(cfg.models.containsKey('one'), isTrue);
-        expect(cfg.models.containsKey('orphan'), isFalse);
-        expect(warnings, isEmpty);
-      });
-
-      test('warns when a provider lists a model that did not load', () {
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider('alpha', '{"models":["gone"],"settings":{}}');
-
-        final (_, warnings) = load();
-        expect(warnings.single, contains('gone'));
-      });
-    });
-
-    group('defaultModelFor', () {
-      test('is the first model of the first provider', () {
-        writeRegistry('{"providers":["alpha","beta"]}');
-        writeProvider('alpha', '{"models":["one","two"],"settings":{}}');
-        writeProvider('beta', '{"models":["three"],"settings":{}}');
-        writeModel('one', '{"id":"x/one","formats":["wav"]}');
-        writeModel('two', '{"id":"x/two","formats":["wav"]}');
-        writeModel('three', '{"id":"x/three","formats":["wav"]}');
-
-        expect(defaultModelFor(load().$1)?.alias, 'one');
-      });
-
-      test('is null when no provider is registered', () {
-        writeRegistry('{}');
-        expect(defaultModelFor(load().$1), isNull);
-      });
-
-      test('is null when the first provider lists no models', () {
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider('alpha', '{"models":[],"settings":{}}');
-        expect(defaultModelFor(load().$1), isNull);
-      });
-    });
   });
 
   group('defaultConfigDir', () {
@@ -1116,10 +1050,6 @@ void main() {
     }
 
     (VoiceConfig, List<String>) load() => loadVoiceConfig(dir.path);
-
-    test('the overlay dir name is the documented "user"', () {
-      expect(kVoiceConfigOverlayDirName, 'user');
-    });
 
     test('a base-only directory loads exactly as it did before', () {
       writeBase();

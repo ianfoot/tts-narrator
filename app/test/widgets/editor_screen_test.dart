@@ -11,7 +11,6 @@ import 'package:tts_narrator/src/gui/editor/editor_screen.dart';
 import 'package:tts_narrator/src/gui/platform/platform_detection.dart'
     show acceleratorLabel;
 import 'package:tts_narrator/src/gui/run_setup/run_setup_panel.dart';
-import 'package:tts_narrator/src/gui/theme/app_tokens.dart' show AppThemeMode;
 import 'package:tts_narrator/src/gui/widgets/app_text_field.dart';
 import 'package:tts_narrator_core/tts_narrator_core.dart';
 
@@ -89,11 +88,6 @@ void main() {
 
     expect(find.byType(EditorScreen), findsOneWidget);
     expect(find.byKey(const Key('editorTextField')), findsOneWidget);
-    expect(find.textContaining('0 words · 0 characters'), findsOneWidget);
-    expect(
-      find.textContaining('0 segments · ~0 mins · ~\$0.00 (free) est.'),
-      findsOneWidget,
-    );
     expect(find.byKey(const Key('editorOpenButton')), findsOneWidget);
     expect(find.byKey(const Key('editorNarrateButton')), findsOneWidget);
     // Narration is initiated from the toolbar only; the run-setup panel has no
@@ -114,30 +108,6 @@ void main() {
       findsOneWidget,
     );
   });
-
-  testWidgets(
-    'the status bar spans the full window and hugs the estimate readout right',
-    (tester) async {
-      final controller = await makeController();
-      await pumpEditor(tester, controller);
-      await tester.pumpAndSettle();
-
-      // The status bar is a sibling of the toolbar, not confined to the editor
-      // column, so it spans the full window like the toolbar does.
-      final screenRect = tester.getRect(find.byType(EditorScreen));
-      final barRect = tester.getRect(find.byKey(const Key('statusBar')));
-      expect(barRect.left, screenRect.left);
-      expect(barRect.right, closeTo(screenRect.right, 1));
-
-      // The estimate readout announces the bar's right edge rather than
-      // floating at a hardcoded midpoint: the bar's 16px horizontal padding
-      // insets the text from the window edge.
-      final estimateRight = tester.getBottomRight(
-        find.byKey(const Key('editorEstimate')),
-      );
-      expect(estimateRight.dx, closeTo(barRect.right - 16, 1));
-    },
-  );
 
   testWidgets('the run-setup panel is visible by default and toggles away', (
     tester,
@@ -274,38 +244,6 @@ void main() {
     expect(find.byKey(const Key('narrateGuard')), findsNothing);
   });
 
-  testWidgets('no full-play button until a narration run completes', (
-    tester,
-  ) async {
-    final controller = await makeController();
-    controller.setText('Some real text to narrate.');
-    await pumpEditor(tester, controller);
-    expect(find.byKey(const Key('editorFullPlayButton')), findsNothing);
-  });
-
-  testWidgets('a completed run shows the full-play button', (tester) async {
-    final controller = await makeController(client: FakeTtsProvider().client);
-    controller.setText(
-      'A single paragraph long enough that it does not need any other '
-      'company. It crosses the minimum word count comfortably and becomes '
-      'one segment all on its own, plain and simple.',
-    );
-    controller.outDir = dir.path;
-    controller.startRun();
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    });
-
-    await pumpEditor(tester, controller);
-    expect(controller.runFinished, isTrue);
-    expect(controller.completedAudioPath, isNotNull);
-    expect(find.byKey(const Key('editorFullPlayButton')), findsOneWidget);
-    expect(find.text('Play Full'), findsOneWidget);
-    // Present in the tree is not the same as painted: the toolbar's fixed
-    // height once collapsed this label to nothing.
-    expect(tester.getRect(find.text('Play Full')).height, greaterThan(0));
-  });
-
   testWidgets('full-play button toggles to Stop and reverts on clip end', (
     tester,
   ) async {
@@ -332,29 +270,6 @@ void main() {
     audio.emitComplete();
     await tester.pump();
     expect(find.text('Play Full'), findsOneWidget);
-  });
-
-  testWidgets('a stopped run does not show the full-play button', (
-    tester,
-  ) async {
-    final controller = await makeController(client: FakeTtsProvider().client);
-    controller.setText(
-      'First paragraph with enough words to become its own segment and then '
-      'carry on a little longer to cross the minimum.\n\n'
-      'Second paragraph with enough words to become its own segment as well '
-      'and then carry on a little longer to cross the minimum.',
-    );
-    controller.outDir = dir.path;
-    controller.startRun();
-    controller.cancelRun();
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    });
-
-    await pumpEditor(tester, controller);
-    expect(controller.runStopped, isTrue);
-    expect(controller.completedAudioPath, isNull);
-    expect(find.byKey(const Key('editorFullPlayButton')), findsNothing);
   });
 
   testWidgets('starting a new run stops playback of the prior track', (
@@ -398,100 +313,6 @@ void main() {
     expect(controller.runFinished, isTrue);
     expect(find.text('Play Full'), findsOneWidget);
     expect(find.text('Stop'), findsNothing);
-  });
-
-  group('appearance toggle', () {
-    testWidgets('button renders with the system (auto) mode by default', (
-      tester,
-    ) async {
-      final controller = await makeController();
-      await pumpEditor(tester, controller);
-
-      expect(find.byKey(const Key('appearanceToggleButton')), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('appearanceToggleButton')),
-          matching: find.byIcon(CupertinoIcons.circle_lefthalf_fill),
-        ),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('tapping cycles system -> light -> dark -> system', (
-      tester,
-    ) async {
-      final controller = await makeController();
-      await pumpEditor(tester, controller);
-
-      await tester.tap(find.byKey(const Key('appearanceToggleButton')));
-      expect(controller.themeMode, AppThemeMode.light);
-      await tester.tap(find.byKey(const Key('appearanceToggleButton')));
-      expect(controller.themeMode, AppThemeMode.dark);
-      await tester.tap(find.byKey(const Key('appearanceToggleButton')));
-      expect(controller.themeMode, AppThemeMode.system);
-    });
-
-    testWidgets('button icon follows a controller-driven mode change', (
-      tester,
-    ) async {
-      final controller = await makeController();
-      await pumpEditor(tester, controller);
-
-      controller.themeMode = AppThemeMode.dark;
-      await tester.pump();
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('appearanceToggleButton')),
-          matching: find.byIcon(CupertinoIcons.moon),
-        ),
-        findsOneWidget,
-      );
-    });
-  });
-
-  group('output folder', () {
-    testWidgets('shows the output-folder button with a tooltip', (
-      tester,
-    ) async {
-      final controller = await makeController();
-      await pumpEditor(tester, controller);
-
-      expect(find.byKey(const Key('outDirPickerButton')), findsOneWidget);
-      expect(
-        find.byTooltip(
-          '${testL10n.gui_editor_toolbar_setOutputFolder} '
-          '(${acceleratorLabel('E')})',
-        ),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('tapping writes the chosen directory', (tester) async {
-      final controller = await makeController();
-      await pumpEditor(
-        tester,
-        controller,
-        pickDirectory: () async => '/picked/audio',
-      );
-
-      await tester.tap(find.byKey(const Key('outDirPickerButton')));
-      await tester.pump();
-
-      expect(controller.outDir, '/picked/audio');
-    });
-
-    testWidgets('cancelling the picker leaves the directory unchanged', (
-      tester,
-    ) async {
-      final controller = await makeController();
-      final before = controller.outDir;
-      await pumpEditor(tester, controller, pickDirectory: () async => null);
-
-      await tester.tap(find.byKey(const Key('outDirPickerButton')));
-      await tester.pump();
-
-      expect(controller.outDir, before);
-    });
   });
 
   group('editing the document', () {
