@@ -18,8 +18,12 @@ const testBaseUrl = 'https://example.invalid/v1';
 /// Records every [synthesize] call and returns configurable bytes, so tests can
 /// assert what `narrate` dispatches to the client without any network.
 class FakeTtsProvider {
-  FakeTtsProvider({List<int>? bytes, this.sampleRate, this.channels})
-    : bytes = bytes ?? 'fake-audio'.codeUnits;
+  FakeTtsProvider({
+    List<int>? bytes,
+    this.sampleRate,
+    this.channels,
+    this.bytesFactory,
+  }) : bytes = bytes ?? 'fake-audio'.codeUnits;
 
   /// Provider label recorded on the profile under test, so a profile and this
   /// fake name the same block. Not part of any interface — core no longer
@@ -36,6 +40,13 @@ class FakeTtsProvider {
 
   /// Channel count reported on the response, for the same reason.
   final int? channels;
+
+  /// Builds the payload for the call at [callIndex], overriding [bytes].
+  ///
+  /// Lets a test hand out a distinct payload per call — a differently shaped
+  /// container, say — so an output that is only right if every segment's bytes
+  /// were really consumed cannot pass by coincidence.
+  final List<int> Function(int callIndex)? bytesFactory;
 
   final List<
     ({
@@ -85,7 +96,7 @@ class FakeTtsProvider {
       apiKey: apiKey,
     ));
     return GeneratedAudio(
-      bytes: bytes,
+      bytes: bytesFactory?.call(calls.length - 1) ?? bytes,
       sampleRate: sampleRate,
       channels: channels,
     );

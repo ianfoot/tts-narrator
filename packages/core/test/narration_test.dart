@@ -3,13 +3,11 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
-import 'package:tts_narrator_core/src/narration/abort.dart';
 import 'package:tts_narrator_core/src/narration/audio_format.dart';
 import 'package:tts_narrator_core/src/narration/config.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 import 'package:tts_narrator_core/src/narration/narration.dart';
 import 'package:tts_narrator_core/src/narration/prompt.dart';
-import 'package:tts_narrator_core/src/narration/speech_client.dart';
 import 'package:tts_narrator_core/src/narration/wav.dart';
 
 import 'support/fake_provider.dart';
@@ -224,7 +222,9 @@ void main() {
     final input = writeInput(text: '$_inputText\n\n$_inputText');
     // Every segment gets its own payload, so the combined track can only be
     // right if the payloads really were pooled.
-    final wav = _SequencedWavProvider();
+    final wav = FakeTtsProvider(
+      bytesFactory: (i) => sequencedWav(i),
+    );
     final cfg = NarrationConfig(
       inputPath: input,
       profile: TtsModelProfile(
@@ -253,7 +253,10 @@ void main() {
     expect(combined.data, [...first, ...second]);
     // The combined header is copied from the first segment, so the sample
     // rate survives without core having to invent or be told one.
-    expect(combined.formatChunk, readWav(wav.files.first).formatChunk);
+    expect(
+      combined.formatChunk,
+      readWav(sequencedWav(0)).formatChunk,
+    );
   });
 
   test('omits the voice field when sendsVoiceField is false', () async {
@@ -709,31 +712,7 @@ void main() {
   });
 }
 
-/// A provider that returns a distinct WAV per call, so a pooled track can only
-/// come out right if every segment's payload was actually consumed.
-class _SequencedWavProvider {
-  final List<Uint8List> files = [];
-  int _next = 0;
-
-  SpeechClient get client => synthesize;
-
-  Future<GeneratedAudio> synthesize({
-    required String model,
-    required String? voice,
-    required String input,
-    required TtsAudioFormat responseFormat,
-    required TtsWavResponseFormat wavResponseFormat,
-    required Map<String, String> settings,
-    required double? speed,
-    String? language,
-    String? instruct,
-    String? apiKey,
-    AbortToken? abort,
-  }) async {
-    abort?.throwIfCancelled();
-    final bytes = wavFileBytes([_next + 1], sampleRate: 24000);
-    _next++;
-    files.add(bytes);
-    return GeneratedAudio(bytes: bytes);
-  }
-}
+/// The payload for call [n] of the segment-pooling tests: a WAV holding a
+/// single distinct sample value, so a pooled track can only come out right if
+/// every segment's payload was actually consumed.
+Uint8List sequencedWav(int n) => wavFileBytes([n + 1], sampleRate: 24000);

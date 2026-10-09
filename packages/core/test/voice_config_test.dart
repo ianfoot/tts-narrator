@@ -7,39 +7,35 @@ import 'package:tts_narrator_core/src/config/voice_config_io.dart';
 import 'package:tts_narrator_core/src/config/voice_config_queries.dart';
 import 'package:tts_narrator_core/src/narration/audio_format.dart';
 
+import 'support/config_fixture.dart';
+
 void main() {
   group('loadVoiceConfig', () {
     late Directory dir;
     final claimed = <String>[];
 
+    late ConfigFixture fx;
+
     setUp(() {
       dir = Directory.systemTemp.createTempSync('tts_config_test_');
+      fx = ConfigFixture(dir);
       claimed.clear();
     });
     tearDown(() => dir.deleteSync(recursive: true));
 
-    String at(String subdir, String file) =>
-        '${dir.path}${Platform.pathSeparator}$subdir'
-        '${Platform.pathSeparator}$file';
+    void writeRegistry(String contents) => fx.writeRegistry(contents);
 
-    void writeRegistry(String contents) =>
-        File('${dir.path}${Platform.pathSeparator}$kVoiceConfigRegistryName')
-            .writeAsStringSync(contents);
+    void writeProvider(String name, String contents) =>
+        fx.writeProvider(name, contents);
 
-    void writeProvider(String name, String contents) {
-      final file = File(at(kVoiceConfigProvidersDir, '$name.json'));
-      file.parent.createSync(recursive: true);
-      file.writeAsStringSync(contents);
-    }
-
+    /// Records the alias as claimed, so [load] can publish a provider block that
+    /// names every model written so far.
     void writeModel(
       String alias,
       String contents, {
       bool claimedByProvider = true,
     }) {
-      final file = File(at(kVoiceConfigModelsDir, '$alias.json'));
-      file.parent.createSync(recursive: true);
-      file.writeAsStringSync(contents);
+      fx.writeModel(alias, contents);
       if (claimedByProvider) claimed.add(alias);
     }
 

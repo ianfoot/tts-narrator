@@ -8,34 +8,29 @@ import 'package:tts_narrator_core/src/config/voice_config_queries.dart';
 import 'package:tts_narrator_core/src/narration/audio_format.dart';
 import 'package:tts_narrator_core/src/narration/model_profiles.dart';
 
+import 'support/config_fixture.dart';
 import 'support/fake_provider.dart';
 
 void main() {
   group('loadVoiceConfig', () {
+    late ConfigFixture fx;
     late Directory dir;
 
-    setUp(() => dir = Directory.systemTemp.createTempSync('tts_config_test_'));
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('tts_config_test_');
+      fx = ConfigFixture(dir);
+    });
     tearDown(() => dir.deleteSync(recursive: true));
 
-    String at(String dirName, String file) =>
-        '${dir.path}${Platform.pathSeparator}$dirName'
-        '${Platform.pathSeparator}$file';
+    String at(String dirName, String file) => fx.at(dirName, file);
 
-    void writeRegistry(String contents) =>
-        File('${dir.path}${Platform.pathSeparator}$kVoiceConfigRegistryName')
-            .writeAsStringSync(contents);
+    void writeRegistry(String contents) => fx.writeRegistry(contents);
 
-    void writeProvider(String name, String contents) {
-      final file = File(at(kVoiceConfigProvidersDir, '$name.json'));
-      file.parent.createSync(recursive: true);
-      file.writeAsStringSync(contents);
-    }
+    void writeProvider(String name, String contents) =>
+        fx.writeProvider(name, contents);
 
-    void writeModel(String alias, String contents) {
-      final file = File(at(kVoiceConfigModelsDir, '$alias.json'));
-      file.parent.createSync(recursive: true);
-      file.writeAsStringSync(contents);
-    }
+    void writeModel(String alias, String contents) =>
+        fx.writeModel(alias, contents);
 
     /// Registers [name] and writes a provider block claiming [models].
     void writeClaimingProvider(
@@ -56,6 +51,41 @@ void main() {
 
     (VoiceConfig, List<String>) load() => loadVoiceConfig(dir.path);
 
+    /// Writes [json] as the one and only model `m` and returns its profile,
+    /// ignoring any warning. For the tests whose subject is what a
+    /// well-formed model file yields.
+    TtsModelProfile loadProfile(String json) {
+      writeClaimingProvider(testProvider, models: ['m']);
+      writeModel('m', json);
+      return load().$1.models['m']!;
+    }
+
+    /// As [loadProfile] but refusing to swallow a warning: a test that reads a
+    /// field through here is also asserting the file was accepted whole.
+    VoiceConfig loadConfig(String json) {
+      writeClaimingProvider(testProvider, models: ['m']);
+      writeModel('m', json);
+      final (cfg, warnings) = load();
+      expect(warnings, isEmpty);
+      return cfg;
+    }
+
+    /// The shape of every "the loader refuses this model file" case below: the
+    /// file is written as the one and only model, and the warning it raises
+    /// must name the reason. Declared here so each case is one line of data
+    /// rather than six lines of arrange-act-assert.
+    void rejection(String name, String json, String warning) {
+      test(name, () {
+        writeClaimingProvider(testProvider, models: ['m']);
+        writeModel('m', json);
+        final (cfg, warnings) = load();
+        // Refused means dropped, not defaulted: a model the loader cannot
+        // honour must not reach the app with a field silently invented.
+        expect(cfg.models['m'], isNull);
+        expect(warnings.first, contains(warning));
+      });
+    }
+
     test('parses per-model files into request profiles', () {
       writeClaimingProvider(testProvider, models: ['gemini']);
       writeModel(
@@ -70,13 +100,6 @@ void main() {
     });
 
     group('output formats', () {
-      TtsModelProfile loadProfile(String json) {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', json);
-        final (cfg, warnings) = load();
-        return cfg.models['m']!;
-      }
-
       test('reads the formats list in order, first one the default', () {
         final m = loadProfile('{"id": "a/b", "formats": ["wav", "mp3"]}');
         expect(m.formats, const [TtsAudioFormat.wav, TtsAudioFormat.mp3]);
@@ -101,42 +124,34 @@ void main() {
         expect(m.wavResponseFormat, TtsWavResponseFormat.wav);
       });
 
-      test('skips a model that names no formats', () {
-        // There is no default container. What a model can produce is a property
-        // of its backend, so a file that stays silent about it is missing
-        // information the app cannot invent.
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', '{"id": "a/b"}');
-        final (cfg, warnings) = load();
-        expect(cfg.models['m'], isNull);
-        expect(warnings.first, contains('needs a "formats" list'));
-      });
+      // There is no default container. What a model can produce is a property
+      // of its backend, so a file that stays silent about it is missing
+      // information the app cannot invent.
+      rejection(
+        'skips a model that names no formats',
+        '{"id": "a/b"}',
+        'needs a "formats" list',
+      );
 
-      test('skips a model naming a format nobody can produce', () {
-        // A model we cannot serve audio for is worse than no model at all, so
-        // it is dropped with a warning rather than quietly falling back.
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', '{"id": "a/b", "formats": ["opus"]}');
-        final (cfg, warnings) = load();
-        expect(cfg.models['m'], isNull);
-        expect(warnings.first, contains('"formats"'));
-      });
+      // A model we cannot serve audio for is worse than no model at all, so
+      // it is dropped with a warning rather than quietly falling back.
+      rejection(
+        'skips a model naming a format nobody can produce',
+        '{"id": "a/b", "formats": ["opus"]}',
+        '"formats"',
+      );
 
-      test('skips a model with an empty formats list', () {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', '{"id": "a/b", "formats": []}');
-        final (cfg, warnings) = load();
-        expect(cfg.models['m'], isNull);
-        expect(warnings.first, contains('"formats"'));
-      });
+      rejection(
+        'skips a model with an empty formats list',
+        '{"id": "a/b", "formats": []}',
+        '"formats"',
+      );
 
-      test('skips a model whose formats value is not a list', () {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', '{"id": "a/b", "formats": "mp3"}');
-        final (cfg, warnings) = load();
-        expect(cfg.models['m'], isNull);
-        expect(warnings.first, contains('"formats"'));
-      });
+      rejection(
+        'skips a model whose formats value is not a list',
+        '{"id": "a/b", "formats": "mp3"}',
+        '"formats"',
+      );
 
       test('writes the formats list back out', () {
         writeVoiceConfig(
@@ -209,12 +224,6 @@ void main() {
     });
 
     group('wav_response_format', () {
-      TtsModelProfile loadProfile(String json) {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', json);
-        return load().$1.models['m']!;
-      }
-
       test('defaults to a wav container when the key is absent', () {
         expect(
           loadProfile('{"id":"a/b","formats":["wav"]}').wavResponseFormat,
@@ -231,53 +240,29 @@ void main() {
         );
       });
 
-      test('rejects a non-string', () {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel(
-          'm',
-          '{"id":"a/b","formats":["wav"],"wav_response_format":3}',
-        );
-        final (cfg, warnings) = load();
-        expect(cfg.models['m'], isNull);
-        expect(
-          warnings.first,
-          contains('"wav_response_format" must be a string'),
-        );
-      });
+      rejection(
+        'rejects a non-string',
+        '{"id":"a/b","formats":["wav"],"wav_response_format":3}',
+        '"wav_response_format" must be a string',
+      );
 
-      test('rejects an unknown wire value', () {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel(
-          'm',
-          '{"id":"a/b","formats":["wav"],"wav_response_format":"flac"}',
-        );
-        final (cfg, warnings) = load();
-        expect(cfg.models['m'], isNull);
-        expect(warnings.first, contains('"wav_response_format"'));
-      });
+      rejection(
+        'rejects an unknown wire value',
+        '{"id":"a/b","formats":["wav"],"wav_response_format":"flac"}',
+        '"wav_response_format"',
+      );
 
-      test('rejects declaring it for a model that cannot produce wav', () {
-        // Self-contradictory: the key only names the wire value used for a wav
-        // request, so a model that never gets asked for one would carry a
-        // setting that can never be used.
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel(
-          'm',
-          '{"id":"a/b","formats":["mp3"],"wav_response_format":"pcm"}',
-        );
-        final (cfg, warnings) = load();
-        expect(cfg.models['m'], isNull);
-        expect(warnings.first, contains('does not include "wav"'));
-      });
+      // Self-contradictory: the key only names the wire value used for a wav
+      // request, so a model that never gets asked for one would carry a
+      // setting that can never be used.
+      rejection(
+        'rejects declaring it for a model that cannot produce wav',
+        '{"id":"a/b","formats":["mp3"],"wav_response_format":"pcm"}',
+        'does not include "wav"',
+      );
     });
 
     group('speed capability', () {
-      TtsModelProfile loadProfile(String json) {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', json);
-        return load().$1.models['m']!;
-      }
-
       test('defaults to unsupported when the key is absent', () {
         expect(
           loadProfile('{"id":"x/y","formats":["wav"]}').supportsSpeed,
@@ -298,12 +283,11 @@ void main() {
         );
       });
 
-      test('rejects a non-bool', () {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', '{"id":"x/y","formats":["wav"],"speed":"yes"}');
-        final (_, warnings) = load();
-        expect(warnings.first, contains('"speed" must be a bool'));
-      });
+      rejection(
+        'rejects a non-bool',
+        '{"id":"x/y","formats":["wav"],"speed":"yes"}',
+        '"speed" must be a bool',
+      );
     });
 
     group('language table', () {
@@ -311,14 +295,6 @@ void main() {
           '{"id":"hexgrad/kokoro-82m","formats":["wav"],"sends_language":true,'
           '"default_language":"b","languages":{"b":"British English",'
           '"j":"Japanese"}}';
-
-      VoiceConfig loadConfig(String json) {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', json);
-        final (cfg, warnings) = load();
-        expect(warnings, isEmpty);
-        return cfg;
-      }
 
       test('reads the table, the default and the opt-in flag', () {
         final cfg = loadConfig(kokoroJson);
@@ -337,30 +313,24 @@ void main() {
         expect(cfg.defaultLanguageFor('m'), isNull);
       });
 
-      test('rejects a non-bool sends_language', () {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel(
-          'm',
-          '{"id":"x/y","formats":["wav"],"sends_language":"yes"}',
-        );
-        expect(load().$2.first, contains('"sends_language" must be a bool'));
-      });
+      rejection(
+        'rejects a non-bool sends_language',
+        '{"id":"x/y","formats":["wav"],"sends_language":"yes"}',
+        '"sends_language" must be a bool',
+      );
 
-      test('rejects a default_language the table does not declare', () {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel(
-          'm',
-          '{"id":"x/y","formats":["wav"],"languages":{"b":"British"},'
-              '"default_language":"z"}',
-        );
-        expect(load().$2.first, contains('"default_language" is "z"'));
-      });
+      rejection(
+        'rejects a default_language the table does not declare',
+        '{"id":"x/y","formats":["wav"],"languages":{"b":"British"},'
+            '"default_language":"z"}',
+        '"default_language" is "z"',
+      );
 
-      test('rejects a blank language label', () {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', '{"id":"x/y","formats":["wav"],"languages":{"b":""}}');
-        expect(load().$2.first, contains('"languages"'));
-      });
+      rejection(
+        'rejects a blank language label',
+        '{"id":"x/y","formats":["wav"],"languages":{"b":""}}',
+        '"languages"',
+      );
     });
 
     group('voice design', () {
@@ -369,13 +339,8 @@ void main() {
           '"formats":["wav"],"sends_instruct":true,"sends_voice":false,'
           '"default_instruct":"A calm, low British male narrator."}';
 
-      TtsModelProfile loadProfile(String modelJson) {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', modelJson);
-        final (cfg, warnings) = load();
-        expect(warnings, isEmpty);
-        return cfg.models['m']!;
-      }
+      TtsModelProfile loadProfile(String modelJson) =>
+          loadConfig(modelJson).models['m']!;
 
       test('reads the capability and its default prose', () {
         final profile = loadProfile(json);
@@ -390,23 +355,17 @@ void main() {
         expect(profile.defaultInstruct, isNull);
       });
 
-      test('rejects a non-bool sends_instruct', () {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel(
-          'm',
-          '{"id":"x/y","formats":["wav"],"sends_instruct":"yes"}',
-        );
-        expect(load().$2.first, contains('"sends_instruct" must be a bool'));
-      });
+      rejection(
+        'rejects a non-bool sends_instruct',
+        '{"id":"x/y","formats":["wav"],"sends_instruct":"yes"}',
+        '"sends_instruct" must be a bool',
+      );
 
-      test('rejects a non-string default_instruct', () {
-        writeClaimingProvider(testProvider, models: ['m']);
-        writeModel('m', '{"id":"x/y","formats":["wav"],"default_instruct":42}');
-        expect(
-          load().$2.first,
-          contains('"default_instruct" must be a string'),
-        );
-      });
+      rejection(
+        'rejects a non-string default_instruct',
+        '{"id":"x/y","formats":["wav"],"default_instruct":42}',
+        '"default_instruct" must be a string',
+      );
     });
 
     test(
@@ -968,50 +927,37 @@ void main() {
   });
 
   group('the user overlay', () {
+    late ConfigFixture fx;
     late Directory dir;
 
-    setUp(() => dir = Directory.systemTemp.createTempSync('tts_config_test_'));
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('tts_config_test_');
+      fx = ConfigFixture(dir);
+    });
     tearDown(() => dir.deleteSync(recursive: true));
 
-    String at(String dirName, String file) =>
-        '${dir.path}${Platform.pathSeparator}$dirName'
-        '${Platform.pathSeparator}$file';
+    /// The config root, where the downloaded starter files live.
+    const base = ConfigFixture.base;
 
-    void writeRegistry(String contents) =>
-        File('${dir.path}${Platform.pathSeparator}$kVoiceConfigRegistryName')
-            .writeAsStringSync(contents);
+    /// The overlay root, where everything the user authors lands.
+    const overlay = ConfigFixture.overlay;
+
+    void writeRegistry(String contents) => fx.writeRegistry(contents);
 
     /// The overlay's own registry: a second `config.json`, which the loader
     /// merges with the base rather than the overlay replacing it.
-    void writeOverlayRegistry(String contents) {
-      final file = File(
-        at(kVoiceConfigOverlayDirName, kVoiceConfigRegistryName),
-      );
-      file.parent.createSync(recursive: true);
-      file.writeAsStringSync(contents);
-    }
+    void writeOverlayRegistry(String contents) =>
+        fx.writeRegistry(contents, overlay);
 
     /// A file inside [layer]'s providers or models directory. [layer] is either
     /// the config root or the overlay root, so the two call sites below read as
     /// `writeModel(base, ...)` / `writeModel(overlay, ...)` rather than as
     /// duplicated path arithmetic.
-    void writeProvider(String layer, String name, String contents) {
-      final file = File(at('$layer/$kVoiceConfigProvidersDir', '$name.json'));
-      file.parent.createSync(recursive: true);
-      file.writeAsStringSync(contents);
-    }
+    void writeProvider(String layer, String name, String contents) =>
+        fx.writeProvider(name, contents, layer);
 
-    void writeModel(String layer, String alias, String contents) {
-      final file = File(at('$layer/$kVoiceConfigModelsDir', '$alias.json'));
-      file.parent.createSync(recursive: true);
-      file.writeAsStringSync(contents);
-    }
-
-    /// The config root, where the downloaded starter files live.
-    const base = '.';
-
-    /// The overlay root, where everything the user authors lands.
-    const overlay = kVoiceConfigOverlayDirName;
+    void writeModel(String layer, String alias, String contents) =>
+        fx.writeModel(alias, contents, layer);
 
     String modelJson(String id, {String? defaultVoice}) => jsonEncode({
       'id': id,
@@ -1472,20 +1418,12 @@ void main() {
     test('readModelJson prefers the overlay and falls back to the base', () {
       final dir = Directory.systemTemp.createTempSync('tts_config_test_');
       addTearDown(() => dir.deleteSync(recursive: true));
-      void write(String layer, String alias, String contents) {
-        final file = File(
-          '${dir.path}${Platform.pathSeparator}$layer'
-          '${Platform.pathSeparator}$kVoiceConfigModelsDir'
-          '${Platform.pathSeparator}$alias.json',
-        );
-        file.parent.createSync(recursive: true);
-        file.writeAsStringSync(contents);
-      }
+      final fx = ConfigFixture(dir);
 
-      write('.', 'one', '{"id":"one-base"}');
+      fx.writeModel('one', '{"id":"one-base"}');
       expect(readModelJson(dir.path, 'one')!['id'], 'one-base');
 
-      write(kVoiceConfigOverlayDirName, 'one', '{"id":"one-overlay"}');
+      fx.writeModel('one', '{"id":"one-overlay"}', ConfigFixture.overlay);
       expect(readModelJson(dir.path, 'one')!['id'], 'one-overlay');
 
       expect(readModelJson(dir.path, 'absent'), isNull);
