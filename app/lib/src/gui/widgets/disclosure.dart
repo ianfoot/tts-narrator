@@ -62,7 +62,6 @@ class Disclosure extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(padding: const EdgeInsets.only(top: 8), child: header),
-        // Collapsed: the caption stands in for the hidden child as a hint.
         if (!expanded && caption != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -73,7 +72,6 @@ class Disclosure extends StatelessWidget {
               ),
             ),
           ),
-        // Expanded: the child replaces the caption entirely.
         if (expanded) Padding(padding: const EdgeInsets.all(12), child: child),
       ],
     );

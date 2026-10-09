@@ -18,8 +18,7 @@ String settingsModelLabel(TtsModelProfile model, AppLocalizations l10n) {
 /// Display strings for the settings screen.
 ///
 /// Kept beside the screen rather than in `controller/l10n_labels.dart` because
-/// they are pure widget-side presentation for one view: the controllers that own
-/// the underlying data return ids, genders and aliases, never strings.
+/// they are pure widget-side presentation for one view.
 extension SettingsVoiceGenderX on VoiceGender? {
   /// Localized label for the gender column. Named `settingsLabel` rather than
   /// `label` because [VoiceGender.label] already exists in core as the raw

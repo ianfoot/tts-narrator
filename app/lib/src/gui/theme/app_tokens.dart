@@ -269,8 +269,7 @@ class AppTypography {
 }
 
 /// Grid, shape, and dimension constants (spec §2). Static so they read without
-/// a [BuildContext]; gathered here so screens never scatter magic numbers. Not
-/// generated from JSON — these are layout-grid constants.
+/// a [BuildContext]. Not generated from JSON — these are layout-grid constants.
 class AppMetrics {
   const AppMetrics._();
 

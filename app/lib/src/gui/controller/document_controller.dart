@@ -13,11 +13,8 @@ import 'controller_errors.dart';
 const untitledDocumentName = 'untitled.txt';
 
 /// Owns the in-memory document for the TTS Narrator GUI: the text, its backing
-/// path, the dirty flag, and the save/load surface.
-///
-/// [AppController] forwards its document surface to this controller and
-/// re-broadcasts notifications (the whole-file cap check lives there because it
-/// also reads narration settings).
+/// path, the dirty flag, and the save/load surface. The whole-file cap check
+/// lives in [AppController] because it also reads narration settings.
 class DocumentController extends ChangeNotifier {
   String _text = '';
   String? _documentPath;
@@ -112,7 +109,7 @@ class DocumentController extends ChangeNotifier {
 
   int get charCount => _text.length;
 
-  /// Clears the document text and marks dirty. Guard is handled by AppController.
+  /// Guard is handled by AppController.
   void clearText() {
     _text = '';
     _dirty = true;

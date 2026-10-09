@@ -8,10 +8,6 @@ import '../theme/app_tokens.dart' show AppThemeMode;
 /// both as a plain value and via [themeNotifier] for appearance-only widgets
 /// (e.g. the app root theme resolution) that should not rebuild on every other
 /// controller write.
-///
-/// [AppController] forwards its `themeMode` surface to this controller and
-/// re-broadcasts notifications, so existing call sites keep a single change
-/// stream.
 class ThemeController extends ChangeNotifier {
   AppThemeMode _themeMode = AppThemeMode.system;
 

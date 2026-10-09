@@ -142,10 +142,10 @@ class NarrationConfig {
 
   /// Bearer token for this run, or null when none is configured.
   ///
-  /// Null is normal and never an error: it means the request carries no
-  /// `Authorization` header, and whether the server requires one is the server's
-  /// decision. The GUI resolves this from the secure store, the config block, or
-  /// the environment; core just forwards it.
+  /// Null is normal and never an error: the request then carries no
+  /// `Authorization` header, and whether one was needed is the server's call (see
+  /// `resolveProviderApiKey`). The GUI resolves this from the secure store, the
+  /// config block, or the environment; core just forwards it.
   final String? apiKey;
 
   /// Copy of this config with [inputPath] replaced (used to narrate each file

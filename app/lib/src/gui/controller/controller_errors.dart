@@ -2,9 +2,9 @@
 /// on.
 ///
 /// Each carries only the data needed to render its message — never a
-/// pre-formatted sentence. The controllers have no `BuildContext`, so they
-/// cannot localize; the widget layer catches, matches the type, and resolves the
-/// text through `l10n`. See `settings_l10n.dart` for the translations.
+/// pre-formatted sentence, for the reason given in `l10n_labels.dart`. The widget
+/// layer catches, matches the type, and resolves the text through `l10n`. See
+/// `settings_l10n.dart` for the translations.
 ///
 /// Distinct types rather than pre-baked `StateError`/`FormatException` messages,
 /// so a catch site can tell "the user needs to pick a model" apart from an

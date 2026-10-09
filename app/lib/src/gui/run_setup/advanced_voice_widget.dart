@@ -23,9 +23,7 @@ class AdvancedVoiceWidget extends StatefulWidget {
 class _AdvancedVoiceWidgetState extends State<AdvancedVoiceWidget> {
   late final TextEditingController _voiceRaw;
 
-  /// Set while applying controller state into the local field; prevents the
-  /// controller notify -> field write -> onChanged -> controller write loop
-  /// from echoing.
+  /// See `ModelOptionsSection._syncing` for the same guard.
   bool _syncing = false;
 
   /// Whether the advanced voice id disclosure is expanded.

@@ -59,20 +59,16 @@ const Set<String> kVoiceConfigPlatformTags = {
 
 /// Loads a [VoiceConfig] from a config *directory* ([configDir]).
 ///
-/// Reads `config.json` for the ordered provider registry, then one
-/// `providers/<name>.json` per registered provider, then one
-/// `models/<alias>.json` per model those providers serve. A provider file lists
-/// the models it provides, so membership is stated once and the loader inverts it
-/// into the `provider` on each model profile.
-///
-/// Those three file kinds make the *shipped* layer. A second layer, read from
-/// [kVoiceConfigOverlayDirName] and shaped identically, is the user's: loaded on
-/// top, each file it holds replacing its counterpart, so the baseline stays
-/// untouched and re-downloadable. Overlay providers are registered first, which
-/// is how a user promotes one to the default. Everything is merged before the
-/// result is built, so a [VoiceConfig] cannot tell which layer a part came from
-/// — except in warning text, where an overlay problem is prefixed so it can be
-/// traced.
+/// Reads the three file kinds described on [kVoiceConfigOverlayDirName]'s
+/// sibling layout — registry, provider files, model files — with the user's
+/// overlay loaded on top and each file it holds replacing its counterpart, so the
+/// baseline stays untouched and re-downloadable. Overlay providers are registered
+/// first, which is how a user promotes one to the default. Everything is merged
+/// before the result is built, so a [VoiceConfig] cannot tell which layer a part
+/// came from — except in warning text, where an overlay problem is prefixed so it
+/// can be traced. A provider file lists the models it provides, so membership is
+/// stated once and the loader inverts it into the `provider` on each model
+/// profile.
 ///
 /// A missing `config.json` yields no providers, and therefore no models. A model
 /// file no provider claims is ignored silently — it is not configuration this

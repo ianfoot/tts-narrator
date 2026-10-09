@@ -49,9 +49,7 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   String? get modelAlias => _modelAlias;
 
-  /// The app's only writer for the config directory. Every write lands in the
-  /// `user/` overlay — the downloaded files are never rewritten, so a
-  /// re-download can restore them.
+  /// The app's only writer for the config directory. See [VoiceConfigStore].
   VoiceConfigStore get voiceConfigStore => _store;
   late final VoiceConfigStore _store = VoiceConfigStore(_loader.configDir);
 

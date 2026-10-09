@@ -25,8 +25,8 @@ class _RunSectionState extends State<RunSection> {
   late final TextEditingController _sampleLen;
 
   /// Set while applying controller state into the local fields; prevents the
-  /// controller notify -> field write -> onChanged -> controller write loop
-  /// from echoing.
+  /// controller notify -> field write -> onChanged -> controller write loop from
+  /// echoing. See `ModelOptionsSection._syncing` for the same guard.
   bool _syncing = false;
 
   /// Whether sample mode is on (revealing the inline segment count input).
@@ -55,8 +55,8 @@ class _RunSectionState extends State<RunSection> {
     super.dispose();
   }
 
-  /// Pushes controller changes back into the local fields. The rail is the
-  /// only writer to these values, so this mostly no-ops.
+  /// Pushes controller changes back into the local fields. See
+  /// `ModelOptionsSection._onControllerChanged`.
   void _onControllerChanged() {
     setState(() {
       _syncing = true;

@@ -32,7 +32,7 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
 
   /// Set while applying controller state into the local fields; prevents the
   /// controller notify -> field write -> onChanged -> controller write loop
-  /// from echoing.
+  /// from echoing. The other run-setup sections guard the same way.
   bool _syncing = false;
 
   /// The model-option keys this app version binds to narration settings.

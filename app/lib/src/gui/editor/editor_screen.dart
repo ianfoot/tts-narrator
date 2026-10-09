@@ -88,7 +88,7 @@ class _EditorScreenState extends State<EditorScreen> {
     if (existing != null) return existing;
     final player = AudioPlayer();
     // One player for the full track only (per-segment clips play on the run
-    // view). Reaching the end reverts the button from Stop back to Play.
+    // view).
     player.onPlayerComplete.listen((_) {
       if (mounted) setState(() => _playingFull = false);
     });

@@ -79,10 +79,10 @@ class VoicePickerWidget extends StatelessWidget {
   /// The voice entry currently selected in the picker, as the id the dropdown
   /// carries it under.
   ///
-  /// Matched on the id alone. The label used to be the dropdown value, which made
-  /// a model with two voices of one name (Kokoro has three Santas) select the
-  /// first of them however the reader clicked, and left the picker unable to
-  /// show a selection when a voice id was typed in directly.
+  /// Matched on the id alone, because a label cannot: a model may carry two voices
+  /// of one name (Kokoro has three Santas), and a label match would select the
+  /// first however the reader clicked. It also leaves the picker able to show a
+  /// selection when a voice id was typed in directly.
   String? get _selectedVoiceId {
     final voice = controller.voice;
     if (voice.isEmpty) return null;

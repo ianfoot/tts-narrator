@@ -47,13 +47,9 @@ class GeneratedAudio {
 /// `Authorization` header, not an error — whether one was *needed* is the
 /// server's judgement.
 ///
-/// [voice] and [speed] are capability-gated by the model profile and null when
-/// the model does not take them: [speed] is a speech-rate multiplier (1.0 =
-/// normal), sent only for a model declaring `"speed": true`. [language] is the
-/// short code the provider expects (Kokoro: `lang_code`, the first character of
-/// its voice ids), null unless `"sends_language": true`. [instruct] describes the
-/// voice in prose — the field Qwen3 Voice Design takes instead of a voice id —
-/// and is null unless `"sends_instruct": true`.
+/// [voice], [speed], [language] and [instruct] are capability-gated by the model
+  /// profile, and null when it does not take them; see `TtsModelProfile` for what
+  /// each means and which model flag gates it.
 ///
 /// [abort] is checked before the first attempt and between retries: an
 /// already-cancelled token throws [AbortException] without calling the API.

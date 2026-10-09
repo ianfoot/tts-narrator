@@ -16,9 +16,7 @@ import 'model_list.dart';
 ///
 /// A model list on the left, the selected model's voice table on the right.
 /// Everything shown is read from the same config directory the loader uses; the
-/// only writes go through [AppController.voiceConfigStore], which puts them in
-/// the `user/` overlay so a re-download of the starter configs cannot clobber a
-/// reader's own voice list.
+/// only writes go through [AppController.voiceConfigStore].
 ///
 /// A pushed route rather than a section in the run-setup panel: the panel is
 /// 320px wide, and a three-column voice table with per-row actions does not fit

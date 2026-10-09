@@ -109,8 +109,7 @@ class _ApiKeySectionState extends State<ApiKeySection> {
             runSetupFieldLabel(_tokens, _l10n.gui_run_setup_apiKeyStatusLabel),
             Text(
               _controller.apiKeySource.apiKeyStatusLabel(_l10n),
-              // Neutral whatever the state: the app does not decide whether a
-              // provider needs a key, so "Not set" is a fact, not a fault.
+              // Neutral whatever the state: "Not set" is a fact, not a fault.
               style: _tokens.typography.body.copyWith(
                 color: _tokens.colors.textSecondary,
               ),

@@ -29,8 +29,7 @@ class ModelEditor extends StatelessWidget {
 
   final TtsModelProfile model;
 
-  /// The writer every save goes through, so nothing lands in the downloaded
-  /// files.
+  /// The writer every save goes through.
   final VoiceConfigStore store;
 
   /// Called after a write changed something, so the host can re-read the config

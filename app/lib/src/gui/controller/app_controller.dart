@@ -71,10 +71,8 @@ class AppController extends ChangeNotifier {
   /// The provider owning the active model, or null when no model is configured.
   ///
   /// This is the name an API key is filed under, and the only thing gating the
-  /// run-setup panel's API-key section. Whether the provider *needs* a key is
-  /// not consulted — the section is offered for every provider, since the user
-  /// may hold a key the config does not mention and the server, not the app,
-  /// decides whether one is required.
+  /// run-setup panel's API-key section — which is offered for every provider,
+  /// since the user may hold a key the config never mentions.
   String? get activeProvider => _model.profile?.provider;
 
   /// The in-memory document (text, path, dirty flag, save/load surface).
@@ -108,8 +106,7 @@ class AppController extends ChangeNotifier {
   String? get modelAlias => _model.modelAlias;
 
   /// The app's writer for the config directory. The settings screen goes
-  /// through it, so every save lands in the `user/` overlay and the downloaded
-  /// files stay as they shipped.
+  /// through it. See [VoiceConfigStore].
   VoiceConfigStore get voiceConfigStore => _model.voiceConfigStore;
 
   /// Raw provider voice id; an empty string means "use the model default".
@@ -182,10 +179,7 @@ class AppController extends ChangeNotifier {
   /// voice-picker gender control in "Model & voice").
   bool get hasGenderTags => _model.hasGenderTags;
 
-  /// Selectable voices for the active model, narrowed to [voiceLanguage] and
-  /// [voiceGenderFilter]. Each entry is `(id, displayLabel)`: the id is the
-  /// dropdown's value because it alone tells two same-named voices apart, and
-  /// tagged voices get an ` (m)`/` (f)`/` (n)` suffix.
+  /// See [ModelProfileVoiceController.voiceItems].
   List<(String, String)> get voiceItems => _model.voiceItems;
 
   // --- Voice language ------------------------------------------------
@@ -405,12 +399,7 @@ class AppController extends ChangeNotifier {
   /// the app has no per-model UI knowledge of its own.
   ModelUiSpec get modelUiSpec => _model.modelUiSpec;
 
-  /// Assembles the run config for the current document + settings, narrating
-  /// from the in-memory [text] (`sourceText`) so typed/pasted content needs no
-  /// backing file. [inputPath] drives only output naming.
-  ///
-  /// Throws a [FormatException] when the active model has no voice selected and
-  /// no config default (mirrors the CLI's error).
+  /// See [SettingsController.buildConfig].
   NarrationConfig buildConfig() => _settings.buildConfig();
 
   // --- Document ------------------------------------------------------
@@ -516,17 +505,11 @@ class AppController extends ChangeNotifier {
   /// inspects this. Null before any run starts.
   String? get lastRunOutputDir => _run.lastRunOutputDir;
 
-  /// Whether the most recent run's per-segment audio files can still be
-  /// cleaned up (combined track exists, segments not yet deleted, and the run
-  /// is finished). Powers the File ▸ "Clean Up Segments…" command.
+  /// Whether [cleanupSegments] would do anything. Powers the File ▸
+  /// "Clean Up Segments…" command.
   bool get canCleanupSegments => _run.canCleanupSegments;
 
-  /// Deletes the last run's per-segment audio files, keeping the combined
-  /// track and the manifest (marked `segments_deleted: true`). Returns how
-  /// many files were removed; a later call is a harmless no-op. Guarded
-  /// against running while narration is active so the tiles' completed
-  /// indicators revert rather than dangle at deleted files. Throws a
-  /// [FileSystemException] when a segment cannot be removed.
+  /// See [RunController.cleanupSegments].
   Future<int> cleanupSegments() => _run.cleanupSegments();
 
   /// The segment plan for the active run; empty until [startRun] builds it.
@@ -561,14 +544,7 @@ class AppController extends ChangeNotifier {
 
   double get runEstimatedCostUsd => _run.runEstimatedCostUsd;
 
-  /// Launches narration of the current document with the current settings,
-  /// snapshotting the plan + config so the run view is stable even as the
-  /// editor keeps changing behind it. The plan runs synchronously (so a
-  /// missing/empty text surfaces [runPlanError] without a half-started run),
-  /// then narration proceeds in the background.
-  ///
-  /// Cancel via [cancelRun] throws [AbortException] (→ [runStopped]); any other
-  /// failure lands in [runError]. Delegated to [RunController].
+  /// See [RunController.startRun].
   void startRun() => _run.startRun();
 
   /// Requests cancellation of the active run (no-op when idle).

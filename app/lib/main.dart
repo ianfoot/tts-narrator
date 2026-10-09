@@ -293,7 +293,6 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
       return AppRoot(controller: _ensureController());
     }
 
-    // Waiting for user confirmation
     return CupertinoPageScaffold(
       child: Center(child: Text(l10n.gui_bootstrap_initializing)),
     );

@@ -8,8 +8,7 @@ import 'settings_controller.dart';
 /// Owns the narration-run lifecycle: the running flag, the snapshotted
 /// [runConfig] + segment plan, per-segment progress, cancellation, and the
 /// terminal run state (finished/stopped/error) plus the combined-track path and
-/// segment cleanup. [AppController] forwards this surface and re-broadcasts
-/// notifications, so callers keep a single change stream.
+/// segment cleanup.
 class RunController extends ChangeNotifier {
   RunController({
     required this._document,

@@ -33,8 +33,7 @@ class OpenAiSpeechClient {
 
   /// Bearer token for this call, or null to send no `Authorization` header.
   ///
-  /// Null is a legitimate outcome: whether a key is *required* is the server's
-  /// call, so the client never blocks a run over a missing credential. [settings]
+  /// Null is a legitimate outcome; see `resolveProviderApiKey`. [settings]
   /// is the run's resolved provider block.
   Future<GeneratedAudio> synthesize({
     required String model,

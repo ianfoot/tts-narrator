@@ -162,9 +162,7 @@ class ProviderConfig {
 ///                              optional name and gender tag)
 ///
 /// A provider lists the models it serves and a model file does not name a
-/// provider, so membership is stated in exactly one place. One file per provider
-/// and per model keeps the library modular: edit one model, drop in a new one, or
-/// copy a curated voice pack between machines.
+/// provider, so membership is stated in exactly one place.
 ///
 /// `config.json` orders providers; the first is the default provider, and the
 /// default model is the first model it lists. Ordering comes from the config, not

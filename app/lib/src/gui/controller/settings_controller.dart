@@ -29,8 +29,7 @@ enum ApiKeySource {
 /// Owns the narration settings and the editor's settings-panel visibility:
 /// accent/style, passage prefix, per-segment sizing, the whole-file/sample/
 /// out-dir/resume toggles, and the output folder persisted through
-/// [SharedPreferences]. [AppController] forwards these and re-broadcasts
-/// notifications, so callers keep a single change stream.
+/// [SharedPreferences].
 class SettingsController extends ChangeNotifier {
   SettingsController({
     required this._document,
@@ -438,8 +437,7 @@ class SettingsController extends ChangeNotifier {
   /// pooled credential belonging to someone else, while a keychain entry was
   /// typed by this user deliberately.
   ///
-  /// A null result is not an error — the request then carries no
-  /// `Authorization` header and the server decides whether it needed one.
+  /// A null result is not an error — see `resolveProviderApiKey`.
   String? _resolveApiKey(Map<String, String> raw, TtsModelProfile p) {
     final stored = apiKeyStore?.value(p.provider);
     if (stored != null && stored.isNotEmpty) return stored;
