@@ -61,13 +61,46 @@ class VoiceEdit {
 /// metadata are readable but not editable; adding a model or provider still
 /// means editing files by hand.
 class VoiceConfigStore {
-  const VoiceConfigStore(this.configDir);
+  const VoiceConfigStore(this.configDir, {this.platformTag});
 
   final String configDir;
+
+  /// Which platform's model files this store is reading and writing.
+  ///
+  /// A model can live in `models/` (everywhere) or in `models/<platform>/` (only
+  /// there), and an edit has to land in the user's layer at the same relative
+  /// place. Without the tag a macOS-only model would be written to the overlay
+  /// root and silently widen to every platform the next load read it.
+  final String? platformTag;
 
   /// The directory holding the user's layer.
   String get overlayDir =>
       '$configDir${Platform.pathSeparator}${io.kVoiceConfigOverlayDirName}';
+
+  /// The path of [alias] under `models/`, relative to the config root.
+  ///
+  /// Taken from the file the loader would actually read — the user's copy if there
+  /// is one, else the downloaded one — so an edit is written back over the model
+  /// it was made to. Falls back to the top-level placement for an alias with no
+  /// file yet.
+  String _relativePathOf(String alias) {
+    final candidates = io.modelFileCandidates(
+      configDir,
+      alias,
+      platformTag: platformTag,
+    );
+    final found = candidates.firstWhere(
+      (path) => File(path).existsSync(),
+      orElse: () => candidates.last,
+    );
+    // Kept from `models/` down, because that is the part both layers share: the
+    // overlay has to write the file back over the one the loader would read,
+    // and only the prefix above `models/` differs between them.
+    return found
+        .split(Platform.pathSeparator)
+        .skipWhile((part) => part != io.kVoiceConfigModelsDir)
+        .join(Platform.pathSeparator);
+  }
 
   /// Where a model file for [alias] lives, in the user's layer or the shipped
   /// one.
@@ -75,7 +108,8 @@ class VoiceConfigStore {
     final root = overlay
         ? '$overlayDir${Platform.pathSeparator}'
         : '$configDir${Platform.pathSeparator}';
-    return File('$root${io.kVoiceConfigModelsDir}/$alias.json');
+    final relative = _relativePathOf(alias);
+    return File('$root$relative');
   }
 
   /// Whether [alias] has a user file shadowing the downloaded one.
@@ -87,7 +121,7 @@ class VoiceConfigStore {
   /// Throws [VoiceConfigurationError] when the file is not a JSON object;
   /// returns null when no layer holds the model.
   Map<String, dynamic>? readModelJson(String alias) =>
-      io.readModelJson(configDir, alias);
+      io.readModelJson(configDir, alias, platformTag: platformTag);
 
   /// The downloaded model file for [alias], ignoring the user's layer.
   Map<String, dynamic>? readDownloadedModelJson(String alias) {

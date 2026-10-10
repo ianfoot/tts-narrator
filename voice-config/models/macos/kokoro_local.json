@@ -1,10 +1,11 @@
 {
   "id": "mlx-community/Kokoro-82M-bf16",
+  "provider": "local",
+  "display_name": "Kokoro 82M (local)",
   "formats": [
     "wav",
     "mp3"
   ],
-  "display_name": "Kokoro 82M (local)",
   "speed": true,
   "sends_language": true,
   "default_voice": "bm_george",

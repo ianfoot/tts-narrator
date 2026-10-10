@@ -20,12 +20,14 @@ and holds the single shared lockfile:
 - `app` — `tts_narrator`, the Flutter GUI (macOS, Linux, and Windows). Constructs the speech client and hands it to the
   run controller (`lib/main.dart`).
 - `voice-config/` — the shipped voice config, and the **only** copy of it:
-  `config.json` (the ordered provider registry), `providers/<name>.json` (one
-  per provider, with `${ENV}` references and no secrets),
-  `models/<alias>.json` (one per model), and `manifest.json` (bootstrap
-  machinery listing provider files and per-platform starter models). The app
-  downloads these from this repo into the platform config directory at first
-  run — nothing reads them in place. This tree used to have a
+  `config.json` (an empty marker — nothing lists anything here),
+  `providers/<name>.json` (one per provider, carrying settings only, with
+  `${ENV}` references and no secrets),
+  `models/<alias>.json` (one per model, naming the provider that serves it), and
+  `models/<platform>/<alias>.json` (the same, for one platform only). The app
+  discovers the file list from this repo at first run, via the git tree API, and
+  downloads it into the platform config directory — nothing reads it in place.
+  This tree used to have a
   `voice_config.example/` twin for documentation, but the two drifted (the copy
   was missing the `:free` model id and declared the wrong output format for
   MLX), so there is now just the one.
@@ -52,24 +54,26 @@ The app id comes from `PRODUCT_BUNDLE_IDENTIFIER` (macOS) and `APPLICATION_ID`
 `UserVoiceConfigLoader` as a required argument, so the GUI and the tests read the
 same directory by construction rather than by agreeing on a fallback.
 
-- `config.json` — the registry: an ordered list of provider names, nothing
-  else. The first entry is the default provider.
-- `providers/<name>.json` — one file per provider: a `models` block naming the
-  models that provider serves, and a `settings` block (secrets). `models` is
-  either a list, served on every platform, or a map keyed by platform tag (`macos` / `linux` / `windows`) naming what
-  each platform serves. The map is
-  for a provider whose models exist on only some platforms — `config.json` is one
-  global registry, so `providers/*.json` lands everywhere, and the gate is what
-  stops a platform that never downloaded those model files from reading as a
-  provider claiming models that are missing. `_parseProviderModels` in
-  `voice_config_io.dart` applies it, one layer at a time, and rejects any key
-  outside `kVoiceConfigPlatformTags` rather than serving an empty list for it.
-  With no platform tag passed, a map yields every platform's aliases.
-- `models/<alias>.json` — one file per model: `id`, `formats`,
+- `config.json` — a marker, and nothing else. Its presence is what makes a
+  directory a voice config directory at all; its contents are `{}` and carry no
+  meaning. Nothing in the config lists anything else, which is what makes adding
+  a model or a provider a single dropped file.
+- `providers/<name>.json` — one file per provider, holding a `settings` block
+  (secrets, endpoint) and nothing else. Which models a provider serves is
+  gathered from the model files themselves.
+- `models/<alias>.json` — one file per model: `id`, `provider`, `formats`,
   `wav_response_format`, `prompt_style`,
   `speed`, `sends_language`, `sends_instruct`,
   `default_instruct`, `sends_voice`, `default_voice`, `default_language`,
-  `pricing`, `languages`, and `voices`. `formats` is required — a model file that
+  `pricing`, `languages`, and `voices`. `provider` is required and names the
+  `providers/<name>.json` that answers for the model; a model naming a provider
+  with no file on disk is dropped with a warning. A model file sitting directly in
+  `models/` is served everywhere; one in `models/<platform>/` — where
+  `<platform>` is `macos`, `linux` or `windows` — is served on that platform only,
+  so a platform-specific model never needs the other platforms to have a copy of
+  it. A subdirectory under `models/` that is not a platform tag is reported and
+  its models ignored, rather than silently served nowhere. `formats` is
+  required — a model file that
   names none is skipped with a warning, because what a backend can produce is a
   property of the backend and there is no safe default to assume. It is an
   ordered list of `mp3`/`wav`, most-preferred first, and every name in it must
@@ -146,41 +150,22 @@ Merge rules, in the order they matter:
   read as the entire `fish` model. Partial overlays would mean every reader (the GUI table, a future importer)
   has to reconcile two half-files, and
   the failure mode is a voice that silently vanishes from the picker.
-- **Registries accumulate.** `user/config.json` is merged with the downloaded
-  one rather than replacing it, so naming one new provider there does not silently
-  drop the shipped ones. A provider named there moves to the front of the merged
-  list, and first means default — reordering the shipped order is a deliberate
-  thing for a user to do in writing, not a side effect of editing a file.
-- **A layer inherits the registry of the layer it shadows.** `_loadProviderLayer`
-  takes an `alsoRegistered` set, and the overlay passes the base's provider names,
-  so `user/providers/openrouter.json` overrides without needing a
-  `user/config.json` repeating the name. An inherited name is only *loaded* if
-  its file is actually present — otherwise every provider the overlay chose not
-  to override would produce a bogus "missing provider file" warning.
-- **Inheriting is not the same as promoting.** An inherited name that happens to
-  have an overlay file keeps its position in the *base* registry, because
-  `_ProviderLayer.promoted` holds only the names the layer's own `config.json`
-  listed. Otherwise `user/providers/local.json` — the documented way to change one
-  `base_url` — would promote `local` above `openrouter` and flip
-  `defaultModelFor`, so editing a URL would change which model the app starts on.
-  The corollary: a promotion naming a provider with no overlay file is dropped,
-  since there is nothing of the user's to promote.
-- **A redundant re-listing is not an error.** A name in the overlay's own
-  registry that is *also* in the base registry is served by the downloaded file
-  and must not warn, even though no `user/providers/<name>.json` exists. Copying
-  the shipped registry into `user/config.json` to append one entry is the natural
-  way to use it, and it would otherwise produce a warning about a file the user
-  never intended to override.
-- **Claims accumulate.** `claimedBy = {...base, ...overlay}`, so an overlay
-  provider that drops a model from its `models` list does not un-claim it: the
-  downloaded provider file still claims it. Changing who serves an alias needs a *same-named* provider file.
+- **A layer's providers replace the ones beside them.** `user/providers/openrouter.json`
+  overrides the downloaded file of the same name outright; a provider with no
+  overlay file is served from the downloaded layer. Provider order is computed
+  from the files alone — hosted providers (those whose settings carry an
+  `api_key`) first, then the rest, each alphabetical — so the default provider is
+  the first hosted one and nothing has to record that fact.
 - **A broken overlay file degrades, it does not brick.** The model layer catches
   a parse failure per file and keeps the downloaded parse, so a half-written
   override costs the user their edits rather than the model. Everything the
   loader complains about is returned as a warning string, and the overlay's are
   prefixed `Overlay: ` so the settings screen can show the provenance.
-- **The final "provider lists model X but models/X.json is missing" pass runs over
-  the merged provider list**, so an alias is reported once, not once per layer.
+- **A model is resolved through the same four candidates in both layers.** A
+  model can sit in four places — `user/models/<platform>/<alias>.json`,
+  `user/models/<alias>.json`, `models/<platform>/<alias>.json`,
+  `models/<alias>.json` — and `modelFileCandidates` names them in that order so
+  a writer and the reader cannot disagree about which one a model is.
 
 Read paths go through the store rather than through the filesystem, and
 `readModelJson` deliberately resolves **overlay first**: that is the order a
@@ -206,8 +191,8 @@ for a key whose absence would make the model unselectable.
 
 There is no whole-tree writer. Edits go through `VoiceConfigStore`, which rewrites
 one entry at a time and leaves unknown keys in place — a fixed-key writer would
-silently drop them, rewrite provider `api_key` literals, and destroy
-`manifest.json`.
+silently drop them, rewrite provider `api_key` literals, and destroy whatever else
+the tree holds.
 
 A `voices` entry has three accepted shapes (key is id / key is name with explicit
 id / plain string). Read and write share one codec so they cannot drift:
@@ -255,12 +240,12 @@ varies between providers is data:
   [mlx-audio](https://github.com/Blaizzy/mlx-audio) server at
   `http://localhost:8000`) needs no key — a keyless block simply sends no
   `Authorization` header. Its default preset ships as
-  `voice-config/models/kokoro_local.json`.
-- **Adding a provider** = a `providers/<name>.json` file (its `settings`, plus
-  the `models` it serves — a list, or a per-platform map if its models only exist
-  on some platforms) and the name added to the `config.json` registry. No
-  code. A model file on its own is inert: nothing reaches it until a provider
-  claims it.
+  `voice-config/models/macos/kokoro_local.json` — under `models/macos/` because
+  mlx-audio runs on Apple Silicon only.
+- **Adding a provider** = a `providers/<name>.json` file carrying its `settings`.
+  No code, and nothing else to edit. A model file on its own is inert until it
+  names a provider that exists, and a provider file with no models is simply
+  offered with nothing behind it.
 
 The four settings core understands:
 
@@ -285,19 +270,29 @@ of backoff), and abort support.
 
 ## Per-platform starter configs
 
-Which starter model files the first-run bootstrap downloads is decided by data,
-not code: `voice-config/manifest.json` carries a top-level `providers` list
-fetched on every platform, and maps a platform tag (`macos`/`linux`/`windows`)
-to the model files shipped there by default (e.g. Linux and Windows omit
-`kokoro_local.json`). `packages/core` fetches/parses the manifest (`ManifestVoiceConfig`, `fetchVoiceConfigManifest`)
-and the GUI caches a copy
-in its config dir, then only requires/downloads the current platform's list —
-provider files travel with them, and `config.json` is always fetched. The
-manifest holds bare file names; the downloader owns which subdirectory each
-lands in, so a path never has to be spelled with either separator. Every
-vendor is reachable on every platform — platform affinity lives entirely in
-the manifest, and a model whose provider has no `base_url` fails before the
-first segment.
+Platform affinity lives entirely in the directory tree, not in a file anyone has
+to keep in step. A model in `voice-config/models/` is a starter on every
+platform; a model in `voice-config/models/macos/` is a starter on macOS only
+(`models/kokoro_local.json`, `models/macos/qwen3_voicedesign.json`,
+`models/macos/fish_pro_8bit.json`).
+
+The bootstrap therefore needs no index file of its own. `packages/core` asks
+GitHub for the repository tree — `fetchVoiceConfigPaths`, one
+`GET /repos/<owner>/<repo>/git/trees/<branch>?recursive=1` — and keeps the
+`voice-config/` blobs ending in `.json`, which is the whole file list in a
+single request rather than one per directory. One call also sidesteps the
+unauthenticated GitHub rate limit, which a directory walk would sit right on top
+of. The result is not cached on disk: it is cheap, it changes whenever the repo
+does, and a stale copy would silently hide a newly added model.
+
+`downloadVoiceConfigFiles` then fetches each listed path from raw.githubusercontent,
+skipping files already on disk unless `overwrite` is set, and creating whatever
+subdirectories the path needs. `config.json` is always fetched whether or not the
+tree listed it. Failure is non-fatal throughout: an unreachable tree falls back
+to a built-in starter list for the prompt, and a file that will not download is
+skipped rather than aborting the rest. Every vendor is reachable on every
+platform — only the model list is platform-shaped — and a model whose provider
+has no `base_url` fails before the first segment.
 
 ## GUI internals
 

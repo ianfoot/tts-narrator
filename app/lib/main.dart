@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
@@ -10,19 +9,17 @@ import 'l10n/app_localizations.dart';
 import 'src/gui/controller/app_controller.dart';
 import 'src/gui/controller/config_loader.dart';
 import 'src/gui/platform/app_root.dart';
-import 'src/gui/platform/platform_detection.dart';
 
 /// Injectable config downloader (defaults to [downloadVoiceConfigFiles]);
 /// tests inject a controllable fake so the spinner is observable.
 ///
-/// [providers] is the manifest's provider file list: a model file is
-/// meaningless without the block that names it, so provider files travel with
-/// the models rather than in a separate download.
+/// [paths] are the repository-relative config paths to fetch, as
+/// [fetchVoiceConfigPaths] returns them — the whole of `voice-config/`, models
+/// and providers together, each keeping its own subdirectory.
 typedef VoiceConfigDownloader = Future<void> Function(
   String configDir,
-  List<String> files, {
-  List<String> providers,
-});
+  List<String> paths,
+);
 
 class BootstrapApp extends StatelessWidget {
   const BootstrapApp({
@@ -30,7 +27,7 @@ class BootstrapApp extends StatelessWidget {
     required this.configDir,
     required this.prefs,
     this.downloader,
-    this.manifestLoader,
+    this.indexLoader,
   });
   final String configDir;
   final SharedPreferences prefs;
@@ -39,9 +36,9 @@ class BootstrapApp extends StatelessWidget {
   /// tests inject a controllable fake so the spinner is observable.
   final VoiceConfigDownloader? downloader;
 
-  /// Injectable starter-manifest loader (defaults to a cached-fetch from
-  /// GitHub); tests inject a fake so the bootstrap is hermetic.
-  final Future<ManifestVoiceConfig?> Function()? manifestLoader;
+  /// Injectable config-path loader (defaults to a fetch from GitHub); tests
+  /// inject a fake so the bootstrap is hermetic.
+  final Future<List<String>?> Function()? indexLoader;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +61,7 @@ class BootstrapApp extends StatelessWidget {
         configDir: configDir,
         prefs: prefs,
         downloader: downloader,
-        manifestLoader: manifestLoader,
+        indexLoader: indexLoader,
       ),
     );
   }
@@ -77,8 +74,8 @@ class ConfigBootstrap extends StatefulWidget {
     super.key,
     required this.configDir,
     required this.prefs,
-    this.downloader,
-    this.manifestLoader,
+this.downloader,
+    this.indexLoader,
   });
   final String configDir;
   final SharedPreferences prefs;
@@ -86,9 +83,9 @@ class ConfigBootstrap extends StatefulWidget {
   /// Injectable config downloader (defaults to [downloadVoiceConfigFiles]).
   final VoiceConfigDownloader? downloader;
 
-  /// Injectable starter-manifest loader (defaults to a cached-fetch from
-  /// GitHub); tests inject a fake so the bootstrap is hermetic.
-  final Future<ManifestVoiceConfig?> Function()? manifestLoader;
+  /// Injectable config-path loader (defaults to a fetch from GitHub); tests
+  /// inject a fake so the bootstrap is hermetic.
+  final Future<List<String>?> Function()? indexLoader;
 
   @override
   State<ConfigBootstrap> createState() => _ConfigBootstrapState();
@@ -98,14 +95,11 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   bool _downloading = false;
   bool _ready = false;
 
-  /// The starter model files expected on this platform (from the manifest).
-  /// Populated before the download prompt; reused by the downloader.
-  List<String> _starterFiles = const [];
-
-  /// The provider files every platform needs (from the manifest). Kept apart
-  /// from [_starterFiles]: they travel with the models but are not models, so
-  /// naming them in the download prompt would be wrong.
-  List<String> _starterProviders = const [];
+  /// The repository's config paths, fetched once and used for both the "is
+  /// anything here already?" check and the download. Empty when GitHub cannot
+  /// be reached, which is the offline first run: the check then asks about
+  /// whatever is on disk rather than about files it cannot name.
+  List<String> _remotePaths = const [];
 
   /// Created once and reused across rebuilds (including hot reload), so the
   /// controller identity stays stable and widget listeners stay attached.
@@ -130,68 +124,54 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
     super.dispose();
   }
 
-  /// Loads the starter manifest: injectable loader, else a locally cached
-  /// `manifest.json` in the config dir, else a fetch from GitHub (cached for
-  /// offline later runs). Returns null when unavailable (offline first run).
-  Future<ManifestVoiceConfig?> _loadManifest() async {
-    final injected = widget.manifestLoader;
-    if (injected != null) return injected();
+  /// Loads the list of config paths the repository ships: the injected loader
+  /// when there is one, else the GitHub tree. Returns an empty list when GitHub
+  /// is unreachable (offline first run).
+  Future<List<String>> _loadIndex() async {
+    final injected = widget.indexLoader;
+    if (injected != null) return (await injected()) ?? const [];
 
-    final cacheFile = File('${widget.configDir}/$kVoiceConfigManifestName');
-    if (cacheFile.existsSync()) {
-      try {
-        return ManifestVoiceConfig.fromJson(
-          jsonDecode(await cacheFile.readAsString()) as Map<String, dynamic>,
-        );
-      } catch (_) {
-        // Corrupt cache: refetch below.
-      }
-    }
     try {
-      final manifest = await fetchVoiceConfigManifest();
-      await cacheFile.writeAsString(jsonEncode(manifest.toJson()));
-      return manifest;
+      return await fetchVoiceConfigPaths();
     } catch (_) {
-      return null;
+      return const [];
     }
   }
 
-  /// The starter model files for this platform: from the manifest when
-  /// available, else a platform-neutral fallback without macOS-only models
-  /// (offline first run still offers the cloud starters).
-  ///
-  /// Also records the manifest's provider files, which every platform needs
-  /// regardless of which models it starts with.
-  Future<List<String>> _loadStarterFiles() async {
-    final manifest = await _loadManifest();
-    _starterProviders = manifest?.providers ?? const [];
-    return manifest?.filesFor(platformTag) ?? _fallbackStarterFiles;
+  /// Whether `providers/` holds at least one file. Non-empty rather than
+  /// "the ones the index names": nothing lists them any more, so the question is
+  /// whether there are any, and a directory that exists but is empty has not
+  /// been downloaded.
+  bool _hasAnyProviderFile() {
+    final dir = Directory('${widget.configDir}/$kVoiceConfigProvidersDir');
+    if (!dir.existsSync()) return false;
+    return dir.listSync().any((e) => e is File && e.path.endsWith('.json'));
   }
 
-  /// Platform-neutral starter set used when the manifest is unreachable
-  /// (kokoro_local.json is macOS-only data, so it is never in this fallback).
-  /// No provider files here either — with no manifest there is nothing to
-  /// fetch, and the loader ignores models no provider claims anyway.
-  static const _fallbackStarterFiles = [
-    'fish.json',
-    'gemini.json',
-    'kokoro.json',
-  ];
-
-  /// Whether [file] exists under [subdir] of the config directory.
-  bool _existsIn(String subdir, String file) =>
-      File('${widget.configDir}/$subdir/$file').existsSync();
+  /// Whether `models/` holds at least one model file, counting any platform
+  /// subdirectory as well as the top-level files.
+  bool _hasAnyModelFile() {
+    final dir = Directory('${widget.configDir}/$kVoiceConfigModelsDir');
+    if (!dir.existsSync()) return false;
+    if (dir.listSync().any((e) => e is File && e.path.endsWith('.json'))) {
+      return true;
+    }
+    return dir.listSync().whereType<Directory>().any(
+      (sub) => sub
+          .listSync()
+          .any((e) => e is File && e.path.endsWith('.json')),
+    );
+  }
 
   void _checkConfig() async {
-    _starterFiles = await _loadStarterFiles();
-    final registry = File('${widget.configDir}/$kVoiceConfigRegistryName')
-        .existsSync();
-    // The loader reaches models through providers, so a missing provider file
-    // makes a downloaded model unusable: registry + providers + models all up.
-    final missing =
-        !registry ||
-        _starterProviders.any((f) => !_existsIn(kVoiceConfigProvidersDir, f)) ||
-        _starterFiles.any((f) => !_existsIn(kVoiceConfigModelsDir, f));
+    _remotePaths = await _loadIndex();
+    final hasMarker = File(
+      '${widget.configDir}/$kVoiceConfigRegistryName',
+    ).existsSync();
+    // With no index to compare against, the only honest question is whether the
+    // directory holds a usable config: the marker plus something to reach a
+    // provider with and something for it to serve.
+    final missing = !hasMarker || !_hasAnyProviderFile() || !_hasAnyModelFile();
 
     if (missing) {
       await _promptDownload();
@@ -208,9 +188,7 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
       builder: (context) => CupertinoAlertDialog(
         title: Text(l10n.gui_bootstrap_downloadTitle),
         content: Text(
-          l10n.gui_bootstrap_downloadPrompt(
-            _starterFiles.map(_starterDisplayName).join(', '),
-          ),
+          l10n.gui_bootstrap_downloadPrompt(_modelNamesToDisplay()),
         ),
         actions: [
           CupertinoDialogAction(
@@ -233,29 +211,39 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   }
 
   Future<void> _downloadWithSpinner() async {
-    final downloader =
-        widget.downloader ??
-        (
-          String configDir,
-          List<String> files, {
-          List<String> providers = const [],
-        }) => downloadVoiceConfigFiles(
-          configDir,
-          files: files,
-          providers: providers,
-        );
+    final downloader = widget.downloader ?? downloadVoiceConfigFiles;
     if (mounted) setState(() => _downloading = true);
     try {
-      await downloader(
-        widget.configDir,
-        _starterFiles,
-        providers: _starterProviders,
-      );
+      await downloader(widget.configDir, _remotePaths);
     } finally {
       if (mounted) setState(() => _downloading = false);
       if (mounted) setState(() => _ready = true);
     }
   }
+
+  /// The model names to name in the download prompt.
+  ///
+  /// Every model file in the index, this platform's directory included — the
+  /// download is of the whole config, so a prompt that listed only one platform's
+  /// would be describing something narrower than what happens. With no index
+  /// (offline first run) the cloud starters stand in, which are the ones that
+  /// need nothing running locally.
+  String _modelNamesToDisplay() {
+    final paths = _remotePaths.isEmpty ? _fallbackPaths : _remotePaths;
+    return paths
+        .where((p) => p.startsWith('$kVoiceConfigModelsDir/'))
+        .map((p) => _starterDisplayName(p.split('/').last))
+        .join(', ');
+  }
+
+  /// Platform-neutral starters used when the index is unreachable. No macOS-only
+  /// models here: those are files the index would have named, and a guess that
+  /// names a model this platform cannot run is worse than saying less.
+  static const _fallbackPaths = [
+    '$kVoiceConfigModelsDir/fish.json',
+    '$kVoiceConfigModelsDir/gemini.json',
+    '$kVoiceConfigModelsDir/kokoro.json',
+  ];
 
   /// 'kokoro_local.json' -> 'Kokoro Local'; 'fish.json' -> 'Fish'.
   static String _starterDisplayName(String file) {

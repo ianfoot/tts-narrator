@@ -111,8 +111,9 @@ whole folder.
 All platforms support local narration by pointing the app at your own
 OpenAI-compatible `/audio/speech` endpoint. The two bundled local model configs
 (`kokoro_local` and `qwen3_voicedesign`) are **example configurations for
-mlx-audio** (Apple Silicon only), which is why `voice-config/manifest.json`
-lists them under `"macos"` only — but that's just an example setup.
+mlx-audio** (Apple Silicon only), which is why they live in
+`voice-config/models/macos/` and are not served on Linux or Windows — but that's
+just an example setup.
 
 To narrate locally on Linux (or Windows), run your own OpenAI-compatible TTS
 server, point the app's **Endpoint** field at it, and configure a voice from

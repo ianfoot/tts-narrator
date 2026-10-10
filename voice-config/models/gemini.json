@@ -1,9 +1,12 @@
 {
   "id": "google/gemini-3.1-flash-tts-preview",
-  "formats": ["wav"],
+  "provider": "openrouter",
+  "display_name": "Gemini 3.1 Flash TTS",
+  "formats": [
+    "wav"
+  ],
   "wav_response_format": "pcm",
   "prompt_style": true,
-  "display_name": "Gemini 3.1 Flash TTS",
   "default_voice": "Charon",
   "pricing": {
     "input_usd_per_m_tokens": 1.0,

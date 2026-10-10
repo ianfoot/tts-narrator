@@ -12,13 +12,13 @@ bool get isLinux => defaultTargetPlatform == TargetPlatform.linux;
 /// True when running on Windows.
 bool get isWindows => defaultTargetPlatform == TargetPlatform.windows;
 
-/// Manifest platform tag matching the keys of `voice-config/manifest.json`
-/// (`macos` / `linux` / `windows`), sourced from the core constants that also
-/// define those keys.
+/// The platform tag naming the subdirectory under `voice-config/models/` that
+/// holds this platform's models (`macos` / `linux` / `windows`), sourced from
+/// the core constants that also define those names.
 ///
-/// Used to select which starter voice-config files ship on this platform:
-/// macOS-only models (e.g. `mlx_kokoro.json`) are excluded elsewhere. Unknown
-/// platforms fall back to the `linux` key (no macOS-only starters).
+/// The loader reads `models/<platformTag>/` in addition to `models/`, so a model
+/// sitting there is served here and nowhere else: macOS-only models
+/// (`kokoro_local.json`, `fish_pro_8bit.json`) are simply absent elsewhere.
 String get platformTag {
   if (isMac) return kPlatformTagMacos;
   if (isLinux) return kPlatformTagLinux;

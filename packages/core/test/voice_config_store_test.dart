@@ -33,34 +33,29 @@ class _Fixture {
 
   /// Writes a model file into the downloaded layer, replacing any earlier one.
   ///
-  /// Supplies a `formats` list when the body omits one. `formats` is required by
-  /// the schema, and these fixtures are about voice editing rather than formats,
-  /// so having each of them restate the same one-line declaration would be noise
-  /// rather than documentation.
+  /// Supplies `formats` and the `provider` that names it, both of which the
+  /// schema requires, so these fixtures can be about voice editing instead of
+  /// restating the same two declarations.
   void writeModel(String alias, Map<String, Object?> body) {
     final file = baseModel(alias);
     file.parent.createSync(recursive: true);
     file.writeAsStringSync(
       jsonEncode({
         'formats': const ['wav'],
+        'provider': 'local',
         ...body,
       }),
     );
   }
 
-  /// Writes the provider registry plus a `local` provider claiming [aliases],
-  /// so [loadVoiceConfig] keeps the fixtures.
-  void writeRegistry(List<String> aliases) {
-    File('${dir.path}/$kVoiceConfigRegistryName').writeAsStringSync(
-      jsonEncode({
-        'providers': ['local'],
-      }),
-    );
+  /// Writes the config marker plus a `local` provider, without which
+  /// [loadVoiceConfig] keeps nothing.
+  void writeMarker() {
+    File('${dir.path}/$kVoiceConfigRegistryName').writeAsStringSync('{}');
     final provider = File('${dir.path}/$kVoiceConfigProvidersDir/local.json');
     provider.parent.createSync(recursive: true);
     provider.writeAsStringSync(
       jsonEncode({
-        'models': aliases,
         'settings': {'base_url': 'http://localhost:8000/v1'},
       }),
     );
@@ -556,7 +551,7 @@ void main() {
         id: 'ccc',
         gender: VoiceGender.male,
       );
-      f.writeRegistry(const ['fish']);
+      f.writeMarker();
       final (cfg, warnings) = loadVoiceConfig(f.dir.path);
       expect(warnings, isEmpty);
       final voice = cfg.voices['fish']!['ccc']!;

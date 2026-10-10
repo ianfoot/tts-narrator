@@ -14,19 +14,22 @@ import 'spec_window.dart';
 /// takes only an [AppController], so a section-under-test is pumped directly
 /// (no full [RunSetupPanel]) on a panel-sized surface.
 ///
-/// Config layout helpers mirror the [UserVoiceConfigLoader] registry layout:
-/// `config.json` is the ordered list of providers, each `providers/<name>.json`
-/// carries that provider's `settings` plus the models it serves, and each
-/// `models/<alias>.json` holds a model plus its `defaults`/`pricing`/`voices`.
+/// Config layout helpers mirror the [UserVoiceConfigLoader] directory layout:
+/// `config.json` is a marker naming nothing, each `providers/<name>.json`
+/// carries that provider's `settings` and nothing else, and each
+/// `models/<alias>.json` holds a model plus its `defaults`/`pricing`/`voices`
+/// and names the provider that serves it.
 
-/// Writes the shared grouped config body onto the registry layout. Specs name
-/// their providers as `<name> -> settings`, and a provider may also carry a
-/// `models` list of the aliases it serves; anything nobody claims belongs to
-/// the first provider, so single-provider specs need no bookkeeping.
+/// Writes the shared grouped config body onto the directory layout. Specs name
+/// their providers as `<name> -> settings`, and each model says which provider
+/// serves it — a spec may spell that out with `"provider": "<name>"` in the
+/// model, and a model that says nothing belongs to the first provider, so
+/// single-provider specs need no bookkeeping.
 ///
-/// There is no `default_model` key. The default model is the first model of
-/// the first provider, so a spec that wants one says so by ordering: list the
-/// provider that should win first, and within it the alias to preselect.
+/// There is no `default_model` key, and nothing anywhere lists the models: the
+/// default model is the first model of the default provider, which is the first
+/// provider holding an `api_key`, and within it the alphabetically first alias.
+/// A spec that wants a different one says so by naming a different provider.
 void writeConfig(String configDir, Map<String, Object?> body) {
   final models = (body['models'] as Map<String, Object?>?) ?? {};
   final defaults = (body['defaults'] as Map<String, Object?>?) ?? {};
@@ -53,16 +56,14 @@ void writeConfig(String configDir, Map<String, Object?> body) {
   final claims = <String, List<String>>{};
   blocks.forEach((name, value) {
     final block = Map<String, Object?>.from(value as Map);
+    // A provider file states settings and nothing else. A spec may still say
+    // which models belong to it, but only so the models can be attributed
+    // without repeating the name on every one of them.
     final own = block.remove('models');
     settingsFor[name] = block;
     claims[name] = [if (own is List) ...own.whereType<String>()];
   });
-
-  final order = settingsFor.keys.toList();
-  final unclaimed = models.keys.where(
-    (alias) => !claims.values.any((list) => list.contains(alias)),
-  );
-  claims[order.first]!.addAll(unclaimed);
+  final names = settingsFor.keys.toList();
 
   void writeJson(String subdir, String name, Object? body) {
     final file = File('$configDir/$subdir/$name.json')
@@ -70,12 +71,19 @@ void writeConfig(String configDir, Map<String, Object?> body) {
     file.writeAsStringSync(const JsonEncoder().convert(body));
   }
 
-  writeJson('', 'config', {'providers': order});
-  for (final name in order) {
-    writeJson('providers', name, {
-      'models': claims[name],
-      'settings': settingsFor[name],
-    });
+  // The base layers are replaced wholesale, not merged: with nothing listing
+  // them any more, a model file left behind by an earlier call would keep being
+  // served, so a spec that narrows the config has to actually lose the models it
+  // no longer names. The overlay is the user's own and is left alone.
+  for (final subdir in ['models', 'providers']) {
+    final dir = Directory('$configDir/$subdir');
+    if (dir.existsSync()) dir.deleteSync(recursive: true);
+  }
+
+  // The marker names nothing at all; it only says this is a voice config dir.
+  writeJson('', 'config', <String, Object?>{});
+  for (final name in names) {
+    writeJson('providers', name, {'settings': settingsFor[name]});
   }
   models.forEach((alias, spec) {
     final m = Map<String, Object?>.from(spec as Map<String, Object?>);
@@ -85,8 +93,23 @@ void writeConfig(String configDir, Map<String, Object?> body) {
     if (dv is String) m['default_voice'] = dv;
     if (pr is Map) m['pricing'] = pr;
     if (vo is Map) m['voices'] = vo;
+    final named = m['provider'];
+    m['provider'] = named is String ? named : _providerFor(alias, claims, names);
     writeJson('models', alias, m);
   });
+}
+
+/// The provider a model spec names: the first one whose spec claims the alias,
+/// or the first provider at all when none of them does.
+String _providerFor(
+  String alias,
+  Map<String, List<String>> claims,
+  List<String> names,
+) {
+  for (final name in names) {
+    if (claims[name]!.contains(alias)) return name;
+  }
+  return names.first;
 }
 
 /// Builds a controller over [configDir]. Pass [client] to drive narration

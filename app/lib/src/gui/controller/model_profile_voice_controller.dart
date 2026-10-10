@@ -49,7 +49,10 @@ class ModelProfileVoiceController extends ChangeNotifier {
 
   /// The app's only writer for the config directory. See [VoiceConfigStore].
   VoiceConfigStore get voiceConfigStore => _store;
-  late final VoiceConfigStore _store = VoiceConfigStore(_loader.configDir);
+  late final VoiceConfigStore _store = VoiceConfigStore(
+    _loader.configDir,
+    platformTag: _loader.platformTag,
+  );
 
   /// Re-reads the config directory after the settings screen writes an overlay
   /// file, keeping the selected model and voice.

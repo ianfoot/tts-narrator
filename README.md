@@ -67,42 +67,40 @@ Everything user-facing — which providers exist, per-provider settings, models,
 per-model default voices, prices, and friendly voice aliases — lives in a config
 **directory** the app manages. Three kinds of file:
 
-- `config.json` — the provider registry: the names of the providers in use, in
-  order.
-- `providers/<name>.json` — one file per provider: the settings block (secrets, endpoint) and the models it
-  serves.
-- `models/<alias>.json` — one file per model: its id, the request wiring,
-  default voice, pricing, and friendly voice aliases.
+- `config.json` — a marker. Its presence is what makes the directory a voice
+  config at all; its contents are `{}` and mean nothing.
+- `providers/<name>.json` — one file per provider: the settings block (secrets,
+  endpoint) and nothing else.
+- `models/<alias>.json` — one file per model: its id, the provider that serves
+  it, the request wiring, default voice, pricing, and friendly voice aliases.
 
-Providers name the models they serve, not the other way round, so adding a
-model is a matter of dropping a file in `models/` and adding its alias to a
-provider's `models`. Order matters: the first provider in the registry is
-the default, and the first model in that provider's list is the model
-preselected on cold start.
+**Models name their provider, not the other way round**, and nothing lists
+anything. Adding a model is dropping one file into `models/`; adding a provider
+is dropping one file into `providers/`. Neither requires editing anything that
+already exists.
 
-`models` is normally a list, read the same on every platform. When a provider's
-models only exist on some platforms — the bundled `local` provider points at
-MLX backends, which are Apple-Silicon only — key it by platform instead, and each
-platform serves only its own entry:
+Which provider is the default is read off the files: providers whose settings
+carry an `api_key` are hosted, those come first, and the rest follow
+alphabetically. The default model is the first model of that provider,
+alphabetically.
 
-```json
-{
-  "models": {
-    "macos": [
-      "kokoro_local"
-    ],
-    "linux": [],
-    "windows": []
-  }
-}
+Platform scope is said by where a model file sits, not by anything inside it:
+
+```
+models/
+├── fish.json          ← every platform
+├── gemini.json        ← every platform
+└── macos/
+    ├── kokoro_local.json   ← macOS only
+    └── fish_pro_8bit.json  ← macOS only
 ```
 
-A platform the map does not name serves nothing, the same as an empty list. The
-keys must be `macos`, `linux`, or `windows`; anything else is reported rather
-than ignored, since a misspelled one would otherwise leave the provider serving
-nothing with nothing to say why. Use this only when the models genuinely differ
-per platform — the manifest already decides which model files each platform
-downloads, and the two must agree.
+The bundled `local` models are macOS-only because MLX is Apple-Silicon only, so
+they live in `models/macos/` and are simply not served on Linux or Windows — no
+copy is needed there, and nothing has to agree with a list. The subdirectory
+names must be `macos`, `linux`, or `windows`; anything else is reported rather
+than ignored, since a misspelled one would otherwise leave its models served
+nowhere with nothing to say why.
 
 The config directory, per platform:
 
@@ -122,26 +120,17 @@ never rewrites them. Your own changes live in a `user/` subdirectory alongside
 them, and shadow their counterparts by name — see
 [Your own overrides](#your-own-overrides) below.
 
-`<config_dir>/config.json`:
+`<config_dir>/config.json` — the marker, empty by design:
 
 ```json
-{
-  "providers": [
-    "openrouter",
-    "local"
-  ]
-}
+{}
 ```
 
-`<config_dir>/providers/openrouter.json`:
+`<config_dir>/providers/openrouter.json` — hosted, so it sorts ahead of `local`
+and is the default provider:
 
 ```json
 {
-  "models": [
-    "fish",
-    "gemini",
-    "kokoro"
-  ],
   "settings": {
     "base_url": "https://openrouter.ai/api/v1",
     "api_key": "${OPENROUTER_API_KEY}"
@@ -149,18 +138,12 @@ them, and shadow their counterparts by name — see
 }
 ```
 
-`<config_dir>/providers/local.json` — keyed by platform because its models are
-Apple-Silicon only:
+`<config_dir>/providers/local.json` — no `api_key`, so it sorts after
+`openrouter`. Which models it serves is read from the model files, each of
+which names it:
 
 ```json
 {
-  "models": {
-    "macos": [
-      "kokoro_local"
-    ],
-    "linux": [],
-    "windows": []
-  },
   "settings": {
     "base_url": "http://localhost:8000/v1"
   }
@@ -190,6 +173,7 @@ header and the server decides whether it needed one.
 ```json
 {
   "id": "fish-audio/s2.1-pro-free",
+  "provider": "openrouter",
   "formats": [
     "wav",
     "mp3"
@@ -208,6 +192,7 @@ header and the server decides whether it needed one.
 ```json
 {
   "id": "google/gemini-3.1-flash-tts-preview",
+  "provider": "openrouter",
   "formats": [
     "wav"
   ],
@@ -230,6 +215,7 @@ header and the server decides whether it needed one.
 ```json
 {
   "id": "hexgrad/kokoro-82m",
+  "provider": "openrouter",
   "formats": [
     "wav",
     "mp3"
@@ -358,9 +344,10 @@ aloud. You can clear the box and type a fresh description from scratch; while
 it is blank the run is blocked, because a voice-design model has no voice list
 to fall back on and the server would only be guessing.
 
-Add or swap a model by editing its `models/<alias>.json` file, and adding a new
-one by dropping it in `models/` and listing its alias in some provider's
-`models`. It then becomes selectable via the model dropdown in the UI.
+Add or swap a model by editing its `models/<alias>.json` file, and add a new one
+by dropping a file into `models/` — or `models/<platform>/` if it should only be
+served there — naming the `provider` that answers for it. It then becomes
+selectable via the model dropdown in the UI.
 
 ### Gemini voices
 
@@ -410,12 +397,13 @@ directory inside the same config directory:
 
 ```
 <config_dir>/
-├── config.json              ← downloaded
-├── manifest.json            ← downloaded
+├── config.json              ← downloaded (marker)
 ├── providers/               ← downloaded
 ├── models/                  ← downloaded
+│   ├── macos/                   ← macOS-only models
+│   ├── linux/
+│   └── windows/
 └── user/                    ← yours
-    ├── config.json              (optional)
     ├── providers/               (optional)
     └── models/                  (optional)
 ```
@@ -423,23 +411,21 @@ directory inside the same config directory:
 A file in `user/` **shadows** the downloaded file of the same name. To change one
 model's voices, `user/models/fish.json` is the only file you need to add — but it
 becomes the *whole* model file, so start by copying the downloaded one and editing
-the copy.
+the copy. For a model that ships under `models/<platform>/`, put your copy under
+`user/models/<platform>/` too; that placement is what marks it platform-specific.
 
 - **Model and provider files replace, they do not merge.** A `user/models/fish.json`
   is read as the entire `fish` model; nothing is carried over from the downloaded
   copy. That is deliberate: a voice list is easier to reason about when the file
   you edit says everything about the model than when two half-files have to agree.
-- **Registries add up.** A `user/config.json` is merged with the downloaded one, so
-  listing a provider name there registers it without dropping the others. The
-  first provider listed wins, so an override you add there takes precedence — and
-  that is also how you *reorder* providers, since overriding a provider file alone
-  deliberately does not move it.
 - **You do not need to re-list a provider you are only overriding.** Dropping
-  `user/providers/openrouter.json` next to the downloaded one is enough. Re-listing
-  a name the downloaded registry already has is harmless too; it just adds nothing.
-- A model still has to be claimed by some provider's `models` list, or it is
-  ignored. Overriding an existing model needs no change there; adding a brand new
-  one does.
+  `user/providers/openrouter.json` next to the downloaded one is enough.
+- A model still has to name a provider that exists, or it is dropped with a
+  warning. Overriding an existing model needs no change there; adding a brand new
+  one means writing its `"provider"`.
+- Provider order is computed from the files — hosted ones (with an `api_key`)
+  first, then the rest, alphabetical — so overriding a provider's settings never
+  moves it. There is no list to reorder.
 - Anything a hand-written file gets wrong is reported in the app's **Config
   warnings** banner rather than failing the launch, and a malformed override
   falls back to the downloaded file.

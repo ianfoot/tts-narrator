@@ -1,8 +1,12 @@
 {
   "id": "microsoft/mai-voice-2.1-flash",
-  "formats": ["wav", "mp3"],
-  "wav_response_format": "pcm",
+  "provider": "openrouter",
   "display_name": "Microsoft MAI Voice 2.1 Flash",
+  "formats": [
+    "wav",
+    "mp3"
+  ],
+  "wav_response_format": "pcm",
   "default_voice": "en-US-Harper:MAI-Voice-2.1-Flash",
   "default_language": "en-US",
   "languages": {
@@ -36,102 +40,490 @@
     "zh-CN": "Mandarin Chinese"
   },
   "voices": {
-    "cs-CZ-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "cs-CZ", "gender": "male"},
-    "cs-CZ-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "cs-CZ", "gender": "female"},
-    "da-DK-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "da-DK", "gender": "male"},
-    "da-DK-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "da-DK", "gender": "female"},
-    "de-DE-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "de-DE", "gender": "male"},
-    "de-DE-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "de-DE", "gender": "female"},
-    "de-DE-Klaus:MAI-Voice-2.1-Flash": {"name": "Klaus", "language": "de-DE", "gender": "male"},
-    "de-DE-Mia:MAI-Voice-2.1-Flash": {"name": "Mia", "language": "de-DE", "gender": "female"},
-    "en-AU-Isla:MAI-Voice-2.1-Flash": {"name": "Isla", "language": "en-AU", "gender": "female"},
-    "en-GB-Emily:MAI-Voice-2.1-Flash": {"name": "Emily", "language": "en-GB", "gender": "female"},
-    "en-GB-Harry:MAI-Voice-2.1-Flash": {"name": "Harry", "language": "en-GB", "gender": "male"},
-    "en-IN-Dhruv:MAI-Voice-2.1-Flash": {"name": "Dhruv", "language": "en-IN", "gender": "male"},
-    "en-IN-Priya:MAI-Voice-2.1-Flash": {"name": "Priya", "language": "en-IN", "gender": "female"},
-    "en-US-Ethan:MAI-Voice-2.1-Flash": {"name": "Ethan", "language": "en-US", "gender": "male"},
-    "en-US-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "en-US", "gender": "male"},
-    "en-US-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "en-US", "gender": "female"},
-    "en-US-Iris:MAI-Voice-2.1-Flash": {"name": "Iris", "language": "en-US", "gender": "female"},
-    "en-US-Jasper:MAI-Voice-2.1-Flash": {"name": "Jasper", "language": "en-US", "gender": "male"},
-    "en-US-Olivia:MAI-Voice-2.1-Flash": {"name": "Olivia", "language": "en-US", "gender": "female"},
-    "en-US-Sage:MAI-Voice-2.1-Flash": {"name": "Sage", "language": "en-US", "gender": "male"},
-    "es-ES-Marta:MAI-Voice-2.1-Flash": {"name": "Marta", "language": "es-ES", "gender": "female"},
-    "es-MX-Alejo:MAI-Voice-2.1-Flash": {"name": "Alejo", "language": "es-MX", "gender": "male"},
-    "es-MX-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "es-MX", "gender": "male"},
-    "es-MX-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "es-MX", "gender": "female"},
-    "es-MX-Valeria:MAI-Voice-2.1-Flash": {"name": "Valeria", "language": "es-MX", "gender": "female"},
-    "fi-FI-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "fi-FI", "gender": "male"},
-    "fi-FI-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "fi-FI", "gender": "female"},
-    "fr-FR-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "fr-FR", "gender": "male"},
-    "fr-FR-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "fr-FR", "gender": "female"},
-    "fr-FR-Marc:MAI-Voice-2.1-Flash": {"name": "Marc", "language": "fr-FR", "gender": "male"},
-    "fr-FR-Soleil:MAI-Voice-2.1-Flash": {"name": "Soleil", "language": "fr-FR", "gender": "female"},
-    "hi-IN-Arjun:MAI-Voice-2.1-Flash": {"name": "Arjun", "language": "hi-IN", "gender": "male"},
-    "hi-IN-Dhruv:MAI-Voice-2.1-Flash": {"name": "Dhruv", "language": "hi-IN", "gender": "male"},
-    "hi-IN-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "hi-IN", "gender": "male"},
-    "hi-IN-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "hi-IN", "gender": "female"},
-    "hi-IN-Kavya:MAI-Voice-2.1-Flash": {"name": "Kavya", "language": "hi-IN", "gender": "female"},
-    "hi-IN-Priya:MAI-Voice-2.1-Flash": {"name": "Priya", "language": "hi-IN", "gender": "female"},
-    "hu-HU-Bence:MAI-Voice-2.1-Flash": {"name": "Bence", "language": "hu-HU", "gender": "male"},
-    "hu-HU-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "hu-HU", "gender": "male"},
-    "hu-HU-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "hu-HU", "gender": "female"},
-    "hu-HU-Levente:MAI-Voice-2.1-Flash": {"name": "Levente", "language": "hu-HU", "gender": "male"},
-    "hu-HU-Lilla:MAI-Voice-2.1-Flash": {"name": "Lilla", "language": "hu-HU", "gender": "female"},
-    "hu-HU-Reka:MAI-Voice-2.1-Flash": {"name": "Reka", "language": "hu-HU", "gender": "female"},
-    "id-ID-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "id-ID", "gender": "male"},
-    "id-ID-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "id-ID", "gender": "female"},
-    "it-IT-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "it-IT", "gender": "male"},
-    "it-IT-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "it-IT", "gender": "female"},
-    "it-IT-Luca:MAI-Voice-2.1-Flash": {"name": "Luca", "language": "it-IT", "gender": "male"},
-    "it-IT-Rosa:MAI-Voice-2.1-Flash": {"name": "Rosa", "language": "it-IT", "gender": "female"},
-    "ko-KR-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "ko-KR", "gender": "male"},
-    "ko-KR-Haena:MAI-Voice-2.1-Flash": {"name": "Haena", "language": "ko-KR", "gender": "female"},
-    "ko-KR-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "ko-KR", "gender": "female"},
-    "ko-KR-Junho:MAI-Voice-2.1-Flash": {"name": "Junho", "language": "ko-KR", "gender": "male"},
-    "nb-NO-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "nb-NO", "gender": "male"},
-    "nb-NO-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "nb-NO", "gender": "female"},
-    "nl-NL-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "nl-NL", "gender": "male"},
-    "nl-NL-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "nl-NL", "gender": "female"},
-    "nl-NL-Sander:MAI-Voice-2.1-Flash": {"name": "Sander", "language": "nl-NL", "gender": "male"},
-    "pl-PL-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "pl-PL", "gender": "male"},
-    "pl-PL-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "pl-PL", "gender": "female"},
-    "pt-BR-Caio:MAI-Voice-2.1-Flash": {"name": "Caio", "language": "pt-BR", "gender": "male"},
-    "pt-BR-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "pt-BR", "gender": "male"},
-    "pt-BR-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "pt-BR", "gender": "female"},
-    "pt-BR-Luana:MAI-Voice-2.1-Flash": {"name": "Luana", "language": "pt-BR", "gender": "female"},
-    "pt-BR-Pedro:MAI-Voice-2.1-Flash": {"name": "Pedro", "language": "pt-BR", "gender": "male"},
-    "pt-BR-Rafael:MAI-Voice-2.1-Flash": {"name": "Rafael", "language": "pt-BR", "gender": "male"},
-    "pt-PT-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "pt-PT", "gender": "male"},
-    "pt-PT-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "pt-PT", "gender": "female"},
-    "pt-PT-Rui:MAI-Voice-2.1-Flash": {"name": "Rui", "language": "pt-PT", "gender": "male"},
-    "ro-RO-Andrei:MAI-Voice-2.1-Flash": {"name": "Andrei", "language": "ro-RO", "gender": "male"},
-    "ro-RO-Elena:MAI-Voice-2.1-Flash": {"name": "Elena", "language": "ro-RO", "gender": "female"},
-    "ro-RO-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "ro-RO", "gender": "male"},
-    "ro-RO-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "ro-RO", "gender": "female"},
-    "ro-RO-Ioana:MAI-Voice-2.1-Flash": {"name": "Ioana", "language": "ro-RO", "gender": "female"},
-    "ro-RO-Radu:MAI-Voice-2.1-Flash": {"name": "Radu", "language": "ro-RO", "gender": "male"},
-    "ru-RU-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "ru-RU", "gender": "male"},
-    "ru-RU-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "ru-RU", "gender": "female"},
-    "ru-RU-Lev:MAI-Voice-2.1-Flash": {"name": "Lev", "language": "ru-RU", "gender": "male"},
-    "ru-RU-Masha:MAI-Voice-2.1-Flash": {"name": "Masha", "language": "ru-RU", "gender": "female"},
-    "sv-SE-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "sv-SE", "gender": "male"},
-    "sv-SE-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "sv-SE", "gender": "female"},
-    "th-TH-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "th-TH", "gender": "male"},
-    "th-TH-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "th-TH", "gender": "female"},
-    "th-TH-Krit:MAI-Voice-2.1-Flash": {"name": "Krit", "language": "th-TH", "gender": "male"},
-    "th-TH-Nattapong:MAI-Voice-2.1-Flash": {"name": "Nattapong", "language": "th-TH", "gender": "male"},
-    "tr-TR-Aydin:MAI-Voice-2.1-Flash": {"name": "Aydin", "language": "tr-TR", "gender": "male"},
-    "tr-TR-Elif:MAI-Voice-2.1-Flash": {"name": "Elif", "language": "tr-TR", "gender": "female"},
-    "tr-TR-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "tr-TR", "gender": "male"},
-    "tr-TR-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "tr-TR", "gender": "female"},
-    "vi-VN-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "vi-VN", "gender": "male"},
-    "vi-VN-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "vi-VN", "gender": "female"},
-    "zh-CN-Bo:MAI-Voice-2.1-Flash": {"name": "Bo", "language": "zh-CN", "gender": "male"},
-    "zh-CN-Grant:MAI-Voice-2.1-Flash": {"name": "Grant", "language": "zh-CN", "gender": "male"},
-    "zh-CN-Harper:MAI-Voice-2.1-Flash": {"name": "Harper", "language": "zh-CN", "gender": "female"},
-    "zh-CN-Lan:MAI-Voice-2.1-Flash": {"name": "Lan", "language": "zh-CN", "gender": "female"},
-    "zh-CN-Mei:MAI-Voice-2.1-Flash": {"name": "Mei", "language": "zh-CN", "gender": "female"},
-    "zh-CN-Wei:MAI-Voice-2.1-Flash": {"name": "Wei", "language": "zh-CN", "gender": "male"}
+    "cs-CZ-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "cs-CZ",
+      "gender": "male"
+    },
+    "cs-CZ-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "cs-CZ",
+      "gender": "female"
+    },
+    "da-DK-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "da-DK",
+      "gender": "male"
+    },
+    "da-DK-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "da-DK",
+      "gender": "female"
+    },
+    "de-DE-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "de-DE",
+      "gender": "male"
+    },
+    "de-DE-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "de-DE",
+      "gender": "female"
+    },
+    "de-DE-Klaus:MAI-Voice-2.1-Flash": {
+      "name": "Klaus",
+      "language": "de-DE",
+      "gender": "male"
+    },
+    "de-DE-Mia:MAI-Voice-2.1-Flash": {
+      "name": "Mia",
+      "language": "de-DE",
+      "gender": "female"
+    },
+    "en-AU-Isla:MAI-Voice-2.1-Flash": {
+      "name": "Isla",
+      "language": "en-AU",
+      "gender": "female"
+    },
+    "en-GB-Emily:MAI-Voice-2.1-Flash": {
+      "name": "Emily",
+      "language": "en-GB",
+      "gender": "female"
+    },
+    "en-GB-Harry:MAI-Voice-2.1-Flash": {
+      "name": "Harry",
+      "language": "en-GB",
+      "gender": "male"
+    },
+    "en-IN-Dhruv:MAI-Voice-2.1-Flash": {
+      "name": "Dhruv",
+      "language": "en-IN",
+      "gender": "male"
+    },
+    "en-IN-Priya:MAI-Voice-2.1-Flash": {
+      "name": "Priya",
+      "language": "en-IN",
+      "gender": "female"
+    },
+    "en-US-Ethan:MAI-Voice-2.1-Flash": {
+      "name": "Ethan",
+      "language": "en-US",
+      "gender": "male"
+    },
+    "en-US-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "en-US",
+      "gender": "male"
+    },
+    "en-US-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "en-US",
+      "gender": "female"
+    },
+    "en-US-Iris:MAI-Voice-2.1-Flash": {
+      "name": "Iris",
+      "language": "en-US",
+      "gender": "female"
+    },
+    "en-US-Jasper:MAI-Voice-2.1-Flash": {
+      "name": "Jasper",
+      "language": "en-US",
+      "gender": "male"
+    },
+    "en-US-Olivia:MAI-Voice-2.1-Flash": {
+      "name": "Olivia",
+      "language": "en-US",
+      "gender": "female"
+    },
+    "en-US-Sage:MAI-Voice-2.1-Flash": {
+      "name": "Sage",
+      "language": "en-US",
+      "gender": "male"
+    },
+    "es-ES-Marta:MAI-Voice-2.1-Flash": {
+      "name": "Marta",
+      "language": "es-ES",
+      "gender": "female"
+    },
+    "es-MX-Alejo:MAI-Voice-2.1-Flash": {
+      "name": "Alejo",
+      "language": "es-MX",
+      "gender": "male"
+    },
+    "es-MX-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "es-MX",
+      "gender": "male"
+    },
+    "es-MX-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "es-MX",
+      "gender": "female"
+    },
+    "es-MX-Valeria:MAI-Voice-2.1-Flash": {
+      "name": "Valeria",
+      "language": "es-MX",
+      "gender": "female"
+    },
+    "fi-FI-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "fi-FI",
+      "gender": "male"
+    },
+    "fi-FI-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "fi-FI",
+      "gender": "female"
+    },
+    "fr-FR-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "fr-FR",
+      "gender": "male"
+    },
+    "fr-FR-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "fr-FR",
+      "gender": "female"
+    },
+    "fr-FR-Marc:MAI-Voice-2.1-Flash": {
+      "name": "Marc",
+      "language": "fr-FR",
+      "gender": "male"
+    },
+    "fr-FR-Soleil:MAI-Voice-2.1-Flash": {
+      "name": "Soleil",
+      "language": "fr-FR",
+      "gender": "female"
+    },
+    "hi-IN-Arjun:MAI-Voice-2.1-Flash": {
+      "name": "Arjun",
+      "language": "hi-IN",
+      "gender": "male"
+    },
+    "hi-IN-Dhruv:MAI-Voice-2.1-Flash": {
+      "name": "Dhruv",
+      "language": "hi-IN",
+      "gender": "male"
+    },
+    "hi-IN-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "hi-IN",
+      "gender": "male"
+    },
+    "hi-IN-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "hi-IN",
+      "gender": "female"
+    },
+    "hi-IN-Kavya:MAI-Voice-2.1-Flash": {
+      "name": "Kavya",
+      "language": "hi-IN",
+      "gender": "female"
+    },
+    "hi-IN-Priya:MAI-Voice-2.1-Flash": {
+      "name": "Priya",
+      "language": "hi-IN",
+      "gender": "female"
+    },
+    "hu-HU-Bence:MAI-Voice-2.1-Flash": {
+      "name": "Bence",
+      "language": "hu-HU",
+      "gender": "male"
+    },
+    "hu-HU-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "hu-HU",
+      "gender": "male"
+    },
+    "hu-HU-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "hu-HU",
+      "gender": "female"
+    },
+    "hu-HU-Levente:MAI-Voice-2.1-Flash": {
+      "name": "Levente",
+      "language": "hu-HU",
+      "gender": "male"
+    },
+    "hu-HU-Lilla:MAI-Voice-2.1-Flash": {
+      "name": "Lilla",
+      "language": "hu-HU",
+      "gender": "female"
+    },
+    "hu-HU-Reka:MAI-Voice-2.1-Flash": {
+      "name": "Reka",
+      "language": "hu-HU",
+      "gender": "female"
+    },
+    "id-ID-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "id-ID",
+      "gender": "male"
+    },
+    "id-ID-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "id-ID",
+      "gender": "female"
+    },
+    "it-IT-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "it-IT",
+      "gender": "male"
+    },
+    "it-IT-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "it-IT",
+      "gender": "female"
+    },
+    "it-IT-Luca:MAI-Voice-2.1-Flash": {
+      "name": "Luca",
+      "language": "it-IT",
+      "gender": "male"
+    },
+    "it-IT-Rosa:MAI-Voice-2.1-Flash": {
+      "name": "Rosa",
+      "language": "it-IT",
+      "gender": "female"
+    },
+    "ko-KR-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "ko-KR",
+      "gender": "male"
+    },
+    "ko-KR-Haena:MAI-Voice-2.1-Flash": {
+      "name": "Haena",
+      "language": "ko-KR",
+      "gender": "female"
+    },
+    "ko-KR-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "ko-KR",
+      "gender": "female"
+    },
+    "ko-KR-Junho:MAI-Voice-2.1-Flash": {
+      "name": "Junho",
+      "language": "ko-KR",
+      "gender": "male"
+    },
+    "nb-NO-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "nb-NO",
+      "gender": "male"
+    },
+    "nb-NO-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "nb-NO",
+      "gender": "female"
+    },
+    "nl-NL-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "nl-NL",
+      "gender": "male"
+    },
+    "nl-NL-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "nl-NL",
+      "gender": "female"
+    },
+    "nl-NL-Sander:MAI-Voice-2.1-Flash": {
+      "name": "Sander",
+      "language": "nl-NL",
+      "gender": "male"
+    },
+    "pl-PL-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "pl-PL",
+      "gender": "male"
+    },
+    "pl-PL-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "pl-PL",
+      "gender": "female"
+    },
+    "pt-BR-Caio:MAI-Voice-2.1-Flash": {
+      "name": "Caio",
+      "language": "pt-BR",
+      "gender": "male"
+    },
+    "pt-BR-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "pt-BR",
+      "gender": "male"
+    },
+    "pt-BR-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "pt-BR",
+      "gender": "female"
+    },
+    "pt-BR-Luana:MAI-Voice-2.1-Flash": {
+      "name": "Luana",
+      "language": "pt-BR",
+      "gender": "female"
+    },
+    "pt-BR-Pedro:MAI-Voice-2.1-Flash": {
+      "name": "Pedro",
+      "language": "pt-BR",
+      "gender": "male"
+    },
+    "pt-BR-Rafael:MAI-Voice-2.1-Flash": {
+      "name": "Rafael",
+      "language": "pt-BR",
+      "gender": "male"
+    },
+    "pt-PT-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "pt-PT",
+      "gender": "male"
+    },
+    "pt-PT-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "pt-PT",
+      "gender": "female"
+    },
+    "pt-PT-Rui:MAI-Voice-2.1-Flash": {
+      "name": "Rui",
+      "language": "pt-PT",
+      "gender": "male"
+    },
+    "ro-RO-Andrei:MAI-Voice-2.1-Flash": {
+      "name": "Andrei",
+      "language": "ro-RO",
+      "gender": "male"
+    },
+    "ro-RO-Elena:MAI-Voice-2.1-Flash": {
+      "name": "Elena",
+      "language": "ro-RO",
+      "gender": "female"
+    },
+    "ro-RO-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "ro-RO",
+      "gender": "male"
+    },
+    "ro-RO-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "ro-RO",
+      "gender": "female"
+    },
+    "ro-RO-Ioana:MAI-Voice-2.1-Flash": {
+      "name": "Ioana",
+      "language": "ro-RO",
+      "gender": "female"
+    },
+    "ro-RO-Radu:MAI-Voice-2.1-Flash": {
+      "name": "Radu",
+      "language": "ro-RO",
+      "gender": "male"
+    },
+    "ru-RU-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "ru-RU",
+      "gender": "male"
+    },
+    "ru-RU-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "ru-RU",
+      "gender": "female"
+    },
+    "ru-RU-Lev:MAI-Voice-2.1-Flash": {
+      "name": "Lev",
+      "language": "ru-RU",
+      "gender": "male"
+    },
+    "ru-RU-Masha:MAI-Voice-2.1-Flash": {
+      "name": "Masha",
+      "language": "ru-RU",
+      "gender": "female"
+    },
+    "sv-SE-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "sv-SE",
+      "gender": "male"
+    },
+    "sv-SE-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "sv-SE",
+      "gender": "female"
+    },
+    "th-TH-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "th-TH",
+      "gender": "male"
+    },
+    "th-TH-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "th-TH",
+      "gender": "female"
+    },
+    "th-TH-Krit:MAI-Voice-2.1-Flash": {
+      "name": "Krit",
+      "language": "th-TH",
+      "gender": "male"
+    },
+    "th-TH-Nattapong:MAI-Voice-2.1-Flash": {
+      "name": "Nattapong",
+      "language": "th-TH",
+      "gender": "male"
+    },
+    "tr-TR-Aydin:MAI-Voice-2.1-Flash": {
+      "name": "Aydin",
+      "language": "tr-TR",
+      "gender": "male"
+    },
+    "tr-TR-Elif:MAI-Voice-2.1-Flash": {
+      "name": "Elif",
+      "language": "tr-TR",
+      "gender": "female"
+    },
+    "tr-TR-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "tr-TR",
+      "gender": "male"
+    },
+    "tr-TR-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "tr-TR",
+      "gender": "female"
+    },
+    "vi-VN-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "vi-VN",
+      "gender": "male"
+    },
+    "vi-VN-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "vi-VN",
+      "gender": "female"
+    },
+    "zh-CN-Bo:MAI-Voice-2.1-Flash": {
+      "name": "Bo",
+      "language": "zh-CN",
+      "gender": "male"
+    },
+    "zh-CN-Grant:MAI-Voice-2.1-Flash": {
+      "name": "Grant",
+      "language": "zh-CN",
+      "gender": "male"
+    },
+    "zh-CN-Harper:MAI-Voice-2.1-Flash": {
+      "name": "Harper",
+      "language": "zh-CN",
+      "gender": "female"
+    },
+    "zh-CN-Lan:MAI-Voice-2.1-Flash": {
+      "name": "Lan",
+      "language": "zh-CN",
+      "gender": "female"
+    },
+    "zh-CN-Mei:MAI-Voice-2.1-Flash": {
+      "name": "Mei",
+      "language": "zh-CN",
+      "gender": "female"
+    },
+    "zh-CN-Wei:MAI-Voice-2.1-Flash": {
+      "name": "Wei",
+      "language": "zh-CN",
+      "gender": "male"
+    }
   }
 }

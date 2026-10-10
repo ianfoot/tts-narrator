@@ -12,46 +12,30 @@ import 'support/config_fixture.dart';
 void main() {
   group('loadVoiceConfig', () {
     late Directory dir;
-    final claimed = <String>[];
 
     late ConfigFixture fx;
 
     setUp(() {
       dir = Directory.systemTemp.createTempSync('tts_config_test_');
       fx = ConfigFixture(dir);
-      claimed.clear();
     });
     tearDown(() => dir.deleteSync(recursive: true));
 
-    void writeRegistry(String contents) => fx.writeRegistry(contents);
-
-    void writeProvider(String name, String contents) =>
-        fx.writeProvider(name, contents);
-
-    /// Records the alias as claimed, so [load] can publish a provider block that
-    /// names every model written so far.
-    void writeModel(
-      String alias,
-      String contents, {
-      bool claimedByProvider = true,
-    }) {
-      fx.writeModel(alias, contents);
-      if (claimedByProvider) claimed.add(alias);
+    /// Writes a model file. Every model names the provider that serves it, which
+    /// is what makes it available at all, so [provider] is written into the file
+    /// rather than collected somewhere the model could disagree with.
+    void writeModel(String alias, String contents, {String provider = 'alpha'}) {
+      fx.writeModel(alias, _withProvider(contents, provider));
     }
 
-    /// Publishes the registry and a single provider claiming every model
-    /// written so far, then loads. Model files only exist to a provider that
-    /// names them, so the registry has to agree with the fixture.
+    /// Publishes the marker and one provider, then loads. The marker names
+    /// nothing, so a test that wants a model present writes the model file and
+    /// the provider file it names.
     (VoiceConfig, List<String>) load({String provider = 'alpha'}) {
-      writeRegistry(
-        jsonEncode({
-          'providers': [provider],
-        }),
-      );
-      writeProvider(
+      fx.writeMarker();
+      fx.writeProvider(
         provider,
         jsonEncode({
-          'models': claimed,
           'settings': {'base_url': 'https://example.invalid/v1'},
         }),
       );
@@ -337,41 +321,32 @@ void main() {
 
     test('skips a malformed model file and keeps the rest loading', () {
       writeModel('good', '{"id": "a/b", "formats": ["wav"]}');
-      writeModel('bad', '{not json');
+      fx.writeModel('bad', '{not json');
       final (cfg, warnings) = load();
       expect(cfg.models.keys, ['good']);
       expect(warnings.first, contains('Skipped model "bad"'));
     });
 
-    test('an unrelated json file beside the models is ignored silently', () {
+    test('an unrelated json file beside the marker is ignored silently', () {
       // The GUI config dir is also its application-support dir, so on Linux
-      // `shared_preferences.json` lands beside the config. No provider names
-      // it, so it must not raise a warning.
+      // `shared_preferences.json` lands beside the config. Nothing reads the
+      // config root, so it must not raise a warning.
       writeModel('fish', '{"id": "a/b", "formats": ["wav"]}');
-      writeModel(
-        'shared_preferences',
-        '{"flutter.appearance": "system"}',
-        claimedByProvider: false,
-      );
+      File('${dir.path}${Platform.pathSeparator}shared_preferences.json')
+          .writeAsStringSync('{"flutter.appearance": "system"}');
       final (cfg, warnings) = load();
       expect(cfg.models.keys, ['fish']);
       expect(warnings, isEmpty);
     });
 
-    test('a non-object json file beside the models is ignored silently', () {
-      writeModel('whatever', '[1, 2, 3]', claimedByProvider: false);
+    test('a json file in models/ that is not a model file is warned about', () {
+      // `models/` is only ever read for models now, so a stray file there is a
+      // mistake worth naming rather than something to pass over in silence.
+      writeModel('fish', '{"id": "a/b", "formats": ["wav"]}');
+      fx.writeModel('shared_preferences', '{"flutter.appearance": "system"}');
       final (cfg, warnings) = load();
-      expect(cfg.models, isEmpty);
-      expect(warnings, isEmpty);
-    });
-
-    test('a json file sharing no key with the model schema is ignored', () {
-      // Being named by a provider is the only candidacy test now, so this one
-      // is judged on that rather than on which keys it happens to carry.
-      writeModel('x', '{"totally": "unrelated"}', claimedByProvider: false);
-      final (cfg, warnings) = load();
-      expect(cfg.models, isEmpty);
-      expect(warnings, isEmpty);
+      expect(cfg.models.keys, ['fish']);
+      expect(warnings.single, contains('Skipped model "shared_preferences"'));
     });
 
     test('an unmodelled key such as a stale sample_rate is ignored', () {
@@ -394,54 +369,15 @@ void main() {
       expect(cfg.models.keys.toList(), ['alph', 'zebra']);
     });
 
-    group('the provider registry', () {
-      test('the first registered provider is the default one', () {
-        // The order the names come in is proved in voice_config_io_test.dart;
-        // what only a real load can show is that it reaches the getter.
-        writeRegistry('{"providers": ["beta", "alpha"]}');
-        writeProvider('beta', '{"models": [], "settings": {}}');
-        writeProvider('alpha', '{"models": [], "settings": {}}');
-        expect(rawLoad().$1.defaultProvider?.name, 'beta');
-      });
-
-      // Nothing downstream can recover from a registry it cannot read, so each
-      // way of getting it wrong has to be a loud throw rather than a warning.
-      for (final (name, registry) in <(String, String)>[
-        ('a non-list providers entry', '{"providers": {"alpha": {}}}'),
-        ('a non-string provider name', '{"providers": [42]}'),
-        ('a blank provider name', '{"providers": ["  "]}'),
-        ('malformed JSON', '{not json'),
-        ('a non-object top level', '[1,2,3]'),
-      ]) {
-        test('rejects $name', () {
-          writeRegistry(registry);
-          expect(rawLoad, throwsA(isA<VoiceConfigurationError>()));
-        });
-      }
-
-      test('an empty registry leaves the config empty', () {
-        writeRegistry('{"providers": []}');
-        final (cfg, warnings) = rawLoad();
-        expect(cfg.isEmpty, isTrue);
-        expect(warnings, isEmpty);
-      });
-    });
-
     group('the model to provider relation', () {
-      test('stamps the claiming provider onto each profile', () {
-        writeModel(
-          'gemini',
-          '{"id": "a/b", "formats": ["wav"]}',
-          claimedByProvider: false,
-        );
-        writeModel(
-          'fish',
-          '{"id": "c/d", "formats": ["wav"]}',
-          claimedByProvider: false,
-        );
-        writeRegistry('{"providers": ["google", "alpha"]}');
-        writeProvider('google', '{"models": ["gemini"], "settings": {}}');
-        writeProvider('alpha', '{"models": ["fish"], "settings": {}}');
+      test('stamps the provider each model file names', () {
+        writeModel('gemini', '{"id": "a/b", "formats": ["wav"]}',
+            provider: 'google');
+        writeModel('fish', '{"id": "c/d", "formats": ["wav"]}',
+            provider: 'alpha');
+        fx.writeMarker();
+        fx.writeProvider('google', '{"settings": {}}');
+        fx.writeProvider('alpha', '{"settings": {}}');
 
         final (cfg, warnings) = rawLoad();
         expect(warnings, isEmpty);
@@ -449,35 +385,54 @@ void main() {
         expect(cfg.models['fish']?.provider, 'alpha');
       });
 
-      test('a model no provider names is skipped without a warning', () {
-        writeModel(
-          'x',
-          '{"id": "a/b", "formats": ["wav"]}',
-          claimedByProvider: false,
-        );
-        writeRegistry('{"providers": ["alpha"]}');
-        writeProvider('alpha', '{"models": [], "settings": {}}');
+      test('each provider lists the models that name it', () {
+        writeModel('zebra', '{"id": "z/a", "formats": ["wav"]}');
+        writeModel('alph', '{"id": "a/b", "formats": ["wav"]}');
+        writeModel('mid', '{"id": "m/n", "formats": ["wav"]}',
+            provider: 'beta');
+        fx.writeMarker();
+        fx.writeProvider('alpha', '{"settings": {}}');
+        fx.writeProvider('beta', '{"settings": {}}');
 
+        final (cfg, _) = rawLoad();
+        expect(cfg.providers['alpha']?.models, ['alph', 'zebra']);
+        expect(cfg.providers['beta']?.models, ['mid']);
+      });
+
+      test('a model naming a provider with no file on disk warns and drops', () {
+        writeModel('x', '{"id": "a/b", "formats": ["wav"]}',
+            provider: 'ghost');
+        fx.writeMarker();
         final (cfg, warnings) = rawLoad();
         expect(cfg.models, isEmpty);
-        expect(warnings, isEmpty);
+        expect(warnings.single, contains('ghost'));
       });
 
-      test('a registered provider with no file on disk warns', () {
-        writeRegistry('{"providers": ["alpha"]}');
+      test('a model naming no provider at all warns and drops', () {
+        fx.writeModel('x', '{"id": "a/b", "formats": ["wav"]}');
+        fx.writeMarker();
+        fx.writeProvider('alpha', '{"settings": {}}');
         final (cfg, warnings) = rawLoad();
-        expect(cfg.providers, isEmpty);
-        expect(warnings.first, contains('providers/alpha.json is missing'));
+        expect(cfg.models, isEmpty);
+        expect(warnings.single, contains('"provider"'));
       });
 
-      test('a provider naming a model that never loaded warns', () {
-        writeRegistry('{"providers": ["alpha"]}');
-        writeProvider('alpha', '{"models": ["gone"], "settings": {}}');
-
-        final (_, warnings) = rawLoad();
-        expect(warnings.single, contains('gone'));
+      test('a provider no model names is still loaded, with no models', () {
+        fx.writeMarker();
+        fx.writeProvider('alpha', '{"settings": {"base_url": "http://x"}}');
+        final (cfg, warnings) = rawLoad();
+        expect(warnings, isEmpty);
+        expect(cfg.providers.keys, ['alpha']);
+        expect(cfg.providers['alpha']?.models, isEmpty);
       });
     });
+  });
+}
 
-    });
+/// Adds `"provider": <provider>` to the model JSON [contents], so a test can
+/// write the model it is really about and still make it routable.
+String _withProvider(String contents, String provider) {
+  final decoded = jsonDecode(contents);
+  if (decoded is! Map<String, dynamic>) return contents;
+  return jsonEncode({...decoded, 'provider': provider});
 }

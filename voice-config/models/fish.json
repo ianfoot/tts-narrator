@@ -1,11 +1,12 @@
 {
   "id": "fish-audio/s2.1-pro-free:free",
+  "provider": "openrouter",
+  "display_name": "Fish Audio S2.1 (Free)",
   "formats": [
     "wav",
     "mp3"
   ],
   "wav_response_format": "pcm",
-  "display_name": "Fish Audio S2.1 (Free)",
   "voices_editable": true,
   "default_voice": "7da08ad79a8a4492b2c6b54091499922",
   "default_language": "en-gb",

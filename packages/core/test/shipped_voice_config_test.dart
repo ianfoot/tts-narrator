@@ -8,8 +8,8 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 ///
 /// Every other test in this package builds its own fixture, so nothing else
 /// would notice a typo in `voice-config/`, a `default_voice` pointing at a voice
-/// that is not in the same file, or a manifest naming a starter file that does
-/// not exist. Those are the states a user meets on first launch, and they are
+/// that is not in the same file, or a model naming a provider that no longer
+/// exists. Those are the states a user meets on first launch, and they are
 /// invisible to the rest of the suite: a fixture that hand-sets
 /// `voices_editable: true` passes whether or not the shipped file says so.
 ///
@@ -19,8 +19,8 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 /// This is schema validation only. It deliberately does not assert policy (which
 /// model is editable, which format is the default) or vendor behaviour (what a
 /// backend actually serves), because neither can be checked without pinning the
-/// file to a value that changes the moment a model is added. Adding a model to an
-/// existing provider requires no change here.
+/// file to a value that changes the moment a model is added. Adding a model is
+/// adding a file, and nothing here needs to change when one appears.
 void main() {
   final shipped = _findShippedConfig();
 
@@ -44,147 +44,212 @@ void main() {
       }
     });
 
+    test('every model names a provider that is shipped', () {
+      // The one link between the two directories. Nothing else states it, so a
+      // model naming a provider that is not there loads and then turns out to
+      // serve nothing -- the warning is the only sign, and it reads as if the
+      // model were at fault rather than the provider name being stale.
+      for (final file in shipped.modelFiles) {
+        final json =
+            jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+        final provider = json['provider'];
+        expect(
+          provider,
+          isA<String>(),
+          reason: '${file.path} must name its provider',
+        );
+        expect(
+          shipped.providerFileNames,
+          contains(provider),
+          reason:
+              '${file.path} names provider "$provider", which has no file in '
+              '$kVoiceConfigProvidersDir/',
+        );
+      }
+    });
+
+    test('every provider file is reached by at least one model', () {
+      // The other direction, and the reason a provider cannot be configured
+      // ahead of the models it serves: an unreachable one is dead weight the
+      // settings screen will happily offer.
+      final named = shipped.modelFiles
+          .map(
+            (f) =>
+                (jsonDecode(f.readAsStringSync())
+                        as Map<String, dynamic>)['provider']
+                    as String?,
+          )
+          .whereType<String>()
+          .toSet();
+      for (final name in shipped.providerFileNames) {
+        expect(
+          named,
+          contains(name),
+          reason: 'providers/$name.json is loaded but no model names it',
+        );
+      }
+    });
+
+    test('no provider file states which models it serves', () {
+      // Membership moved into the model files. A leftover "models" key would be
+      // read by nobody, so it would fail silently on the next edit made to it.
+      for (final file in shipped.providerFiles) {
+        final json =
+            jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+        expect(
+          json.containsKey('models'),
+          isFalse,
+          reason:
+              '${file.path} still lists models; membership belongs in the '
+              'model files, by "provider"',
+        );
+      }
+    });
+
+    test('every models/ subdirectory is a platform tag', () {
+      // A subdirectory named anything else is ignored by the loader, so a model
+      // dropped into it would simply not appear -- which is what the loader's own
+      // warning is for, but a typo caught here names the file that caused it.
+      final modelsDir = Directory('${shipped.path}/$kVoiceConfigModelsDir');
+      for (final child in modelsDir.listSync().whereType<Directory>()) {
+        final name = child.path.split(Platform.pathSeparator).last;
+        expect(
+          kVoiceConfigPlatformTags,
+          contains(name),
+          reason: 'models/$name is not a platform tag',
+        );
+      }
+    });
+
     test('loads through the real loader with no warnings at all', () {
       final (config, warnings) = loadVoiceConfig(shipped.path);
       expect(warnings, isEmpty);
       expect(config.models, isNotEmpty);
     });
-
-    test('every provider keys its models by a known platform, or by none', () {
-      // A provider file may key `models` by platform, and a key that is not a
-      // real tag is rejected by the loader -- so a typo here would skip the
-      // provider outright. It is worth checking directly because the loads above
-      // cannot see it: an untagged read unions every entry, so the misspelled
-      // key's models still appear, and a tagged read for the tag the author
-      // meant is never made.
-      for (final file in shipped.providerFiles) {
-        final json =
-            jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
-        final models = json['models'];
-        if (models is! Map) continue;
-        for (final tag in models.keys) {
-          expect(
-            kVoiceConfigPlatformTags,
-            contains(tag),
-            reason: '${file.path} keys its models by unknown platform "$tag"',
-          );
-        }
-      }
-    });
   });
 
-  group('the shipped config as a first download leaves it', () {
-    // The directory a user actually has is not the repository: it is the subset
-    // `downloadVoiceConfigFiles` writes, which fetches config.json, every
-    // provider file, and only the model files the manifest lists for the running
-    // platform. Providers are fetched globally, so a provider file is present on
-    // platforms that cannot run any of its models.
-    //
-    // That makes the two layers disagree unless each provider says which of its
-    // models this platform may claim. When they did disagree, Linux -- which
-    // fetches providers/local.json but not the macOS-only MLX model files behind
-    // it -- loaded a provider claiming models that were correctly absent and
-    // warned about each one. The warnings described a state that could not exist.
-    //
-    // Deriving the file set from the shipped manifest rather than naming files
-    // here is what makes this a guard: it fails if the manifest and the provider
-    // files drift apart, which is the only way the bug can come back.
-
-    late Directory dir;
-
-    setUp(() {
-      dir = Directory.systemTemp.createTempSync('tts_first_download_');
-    });
-    tearDown(() => dir.deleteSync(recursive: true));
-
-    /// Copies the registry, every provider, and only [platform]'s model files.
-    ///
-    /// The subdirectories are created rather than assumed, because a fresh
-    /// download writes into them: that the write needs a directory is the
-    /// download step's business, and this fixture is not testing it.
-    void writeFirstDownloadFor(ManifestVoiceConfig manifest, String platform) {
-      void write(String subdir, String name, String from) {
-        final file = File('${dir.path}/$subdir/$name');
-        file.parent.createSync(recursive: true);
-        file.writeAsStringSync(File(from).readAsStringSync());
-      }
-
-      write('', kVoiceConfigRegistryName, shipped.registry.path);
-      for (final provider in manifest.providers) {
-        write(
-          kVoiceConfigProvidersDir,
-          provider,
-          '${shipped.path}/$kVoiceConfigProvidersDir/$provider',
-        );
-      }
-      for (final model in manifest.filesFor(platform)) {
-        write(
-          kVoiceConfigModelsDir,
-          model,
-          '${shipped.path}/$kVoiceConfigModelsDir/$model',
-        );
-      }
-    }
-
+  group('the shipped config on each platform', () {
+    // The directory a user has is the whole of what the repository ships, since
+    // the download fetches everything in the tree; what a platform tag changes is
+    // only which model files count. So a platform bug is a model file in the
+    // wrong directory, and these reads are what catches one.
     for (final platform in const [
       kPlatformTagMacos,
       kPlatformTagLinux,
       kPlatformTagWindows,
     ]) {
       test('loads on $platform with no warnings at all', () {
-        final manifest = ManifestVoiceConfig.fromJson(
-          jsonDecode(shipped.manifest.readAsStringSync())
-              as Map<String, dynamic>,
-        );
-        writeFirstDownloadFor(manifest, platform);
-
         final (config, warnings) = loadVoiceConfig(
-          dir.path,
+          shipped.path,
           platformTag: platform,
         );
         expect(
           warnings,
           isEmpty,
-          reason: 'a first $platform download is clean',
+          reason: 'a shipped $platform config is clean',
         );
         expect(config.models, isNotEmpty, reason: 'on $platform');
       });
-    }
-  });
 
-  group('the shipped manifest', () {
-    late ManifestVoiceConfig manifest;
-
-    setUp(() {
-      manifest = ManifestVoiceConfig.fromJson(
-        jsonDecode(shipped.manifest.readAsStringSync()) as Map<String, dynamic>,
-      );
-    });
-
-    test('names a starter file that exists, for every platform', () {
-      for (final platform in const ['macos', 'linux', 'windows']) {
-        expect(
-          manifest.hasPlatform(platform),
-          isTrue,
-          reason: '$platform is a shipped platform',
+      test('a model in models/$platform is served only on $platform', () {
+        final platformDir = Directory(
+          '${shipped.path}/$kVoiceConfigModelsDir/$platform',
         );
-        for (final name in manifest.filesFor(platform)) {
+        if (!platformDir.existsSync()) return;
+
+        final here = loadVoiceConfig(
+          shipped.path,
+          platformTag: platform,
+        ).$1.models.keys.toSet();
+        final elsewhere = <String>{
+          for (final other in kVoiceConfigPlatformTags)
+            if (other != platform)
+              ...loadVoiceConfig(
+                shipped.path,
+                platformTag: other,
+              ).$1.models.keys,
+        };
+
+        for (final file in platformDir.listSync().whereType<File>()) {
+          final alias = file.path
+              .split(Platform.pathSeparator)
+              .last
+              .replaceAll('.json', '');
           expect(
-            File('${shipped.path}/models/$name').existsSync(),
-            isTrue,
-            reason: 'manifest lists $name for $platform but the file is absent',
+            here,
+            contains(alias),
+            reason: 'models/$platform/$alias.json must be served on $platform',
+          );
+          expect(
+            elsewhere,
+            isNot(contains(alias)),
+            reason:
+                'models/$platform/$alias.json is $platform-only, so another '
+                'platform must not see it',
           );
         }
+      });
+    }
+
+    test('an untagged read sees every platform\'s models', () {
+      // The union is for a caller inspecting the config as data; if it lost a
+      // platform the settings screen and the shipped-config guards would both be
+      // looking at less than the repository holds.
+      final all = loadVoiceConfig(shipped.path).$1.models.keys.toSet();
+      for (final platform in kVoiceConfigPlatformTags) {
+        final here = loadVoiceConfig(
+          shipped.path,
+          platformTag: platform,
+        ).$1.models.keys.toSet();
+        expect(
+          all,
+          containsAll(here),
+          reason: 'the union must include everything $platform serves',
+        );
       }
     });
 
-    test('names a provider file that exists', () {
-      for (final name in manifest.providers) {
+    test('the first provider is a hosted one, so the app opens reachable', () {
+      // Precedence is derived rather than declared: the provider holding an
+      // api_key sorts ahead of the ones needing a local server. If every
+      // provider were local the app would open on a model it cannot reach.
+      for (final platform in kVoiceConfigPlatformTags) {
+        final config = loadVoiceConfig(
+          shipped.path,
+          platformTag: platform,
+        ).$1;
+        expect(config.providers, isNotEmpty, reason: 'on $platform');
+        final first = config.providers.values.first;
         expect(
-          File('${shipped.path}/providers/$name').existsSync(),
-          isTrue,
-          reason: 'manifest lists provider $name but the file is absent',
+          first.settings,
+          contains('api_key'),
+          reason:
+              'on $platform the first provider is "${first.name}", which has no '
+              'api_key and so needs a server that may not be running',
         );
+      }
+    });
+
+    test('every provider\'s models list is what its model files say', () {
+      // ProviderConfig.models is gathered from the files, not read from anything,
+      // so this is the check that a model file's "provider" is what decides who
+      // serves it.
+      for (final platform in const [kPlatformTagMacos, null]) {
+        final config = loadVoiceConfig(
+          shipped.path,
+          platformTag: platform,
+        ).$1;
+        for (final provider in config.providers.values) {
+          for (final alias in provider.models) {
+            expect(
+              config.models[alias]?.provider,
+              provider.name,
+              reason:
+                  'provider "${provider.name}" lists $alias, which the model '
+                  'file assigns elsewhere',
+            );
+          }
+        }
       }
     });
   });
@@ -261,21 +326,40 @@ void main() {
 
 /// The repository's `voice-config/` directory.
 class _ShippedConfig {
-  _ShippedConfig(this.path) : manifest = File('$path/manifest.json');
+  _ShippedConfig(this.path);
 
   final String path;
 
-  /// The manifest naming the starter files to fetch.
-  final File manifest;
-
-  /// The provider registry, fetched on every platform.
+  /// The marker file whose presence says this is a voice config directory.
   File get registry => File('$path/$kVoiceConfigRegistryName');
 
-  List<File> get modelFiles => _filesIn(kVoiceConfigModelsDir);
+  /// Every model file, at the top level and in each platform subdirectory.
+  ///
+  /// Walking the subdirectories is the point: a model file in `models/macos/`
+  /// ships exactly as much as one in `models/`, and a scanner that stopped at the
+  /// top level would quietly stop guarding the macOS-only ones.
+  List<File> get modelFiles => [
+    ..._filesIn(kVoiceConfigModelsDir),
+    for (final sub in _subdirsOfModels())
+      ..._filesIn('$kVoiceConfigModelsDir/$sub'),
+  ];
+
+  List<String> get providerFileNames => providerFiles
+      .map((f) => f.path.split(Platform.pathSeparator).last)
+      .map((f) => f.replaceAll('.json', ''))
+      .toList()
+    ..sort();
 
   List<File> get providerFiles => _filesIn(kVoiceConfigProvidersDir);
 
   List<File> get allConfigFiles => [...modelFiles, ...providerFiles];
+
+  List<String> _subdirsOfModels() => Directory('$path/$kVoiceConfigModelsDir')
+      .listSync()
+      .whereType<Directory>()
+      .map((d) => d.path.split(Platform.pathSeparator).last)
+      .toList()
+    ..sort();
 
   List<File> _filesIn(String subdir) =>
       Directory('$path/$subdir')

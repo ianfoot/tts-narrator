@@ -903,12 +903,15 @@ void main() {
     void writeOverlayModel(String alias, Map<String, Object?> body) {
       File('$configDir/user/models/$alias.json')
         ..parent.createSync(recursive: true)
-        ..writeAsStringSync(
-          jsonEncode({
-            'formats': ['mp3'],
-            ...body,
-          }),
-        );
+..writeAsStringSync(
+        jsonEncode({
+          'formats': ['mp3'],
+          // A model file names its provider now, so an overlay file has to too
+          // or it is skipped as unroutable.
+          'provider': 'alpha',
+          ...body,
+        }),
+      );
     }
 
     test('a voice added in the overlay shows up without a restart', () {

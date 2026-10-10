@@ -4,156 +4,124 @@ import 'dart:io';
 import 'voice_config_io.dart';
 
 const _repoUrl = 'https://github.com/ianfoot/tts-narrator';
+const _apiUrl = 'https://api.github.com';
 const _branch = 'main';
 const _voiceConfigDir = 'voice-config';
 
-/// Name of the per-platform starter manifest file inside the voice config
-/// directory (both in the repo and when cached locally).
-const kVoiceConfigManifestName = 'manifest.json';
-
-/// Starter file lists, parsed from the repo's `voice-config/manifest.json`.
+/// The paths of every config file the repository ships, relative to its
+/// `voice-config/` directory — `config.json`, `providers/local.json`,
+/// `models/kokoro.json`, `models/macos/kokoro_local.json`.
 ///
-/// Two kinds of file ship by default:
-///   * `providers` — fetched for every platform, since a model file is
-///     meaningless without the block that names it.
-///   * `platforms` — a platform tag (`macos` / `linux` / `windows`) mapped to
-///     the starter `<alias>.json` model files to fetch there.
+/// Read out of the git tree rather than out of a file the repository would have
+/// to maintain: the tree already is the answer, so listing a model is the same
+/// act as adding one, and there is no index to fall out of step with the
+/// directories beside it.
 ///
-/// Entries are bare file names, never paths: the subdirectory each kind lives in
-/// is the downloader's business, which keeps a manifest free of platform path
-/// separators.
+/// One request covers the whole directory. Walking the contents API instead
+/// would cost a request per subdirectory and then one per file to download,
+/// against an unauthenticated rate limit of sixty an hour that nothing here
+/// holds a token for.
 ///
-/// `config.json` is always downloaded and is listed in neither. A platform with
-/// no starter files omits its key entirely (filesFor then returns an empty
-/// list), and `platforms` may be omitted altogether.
-class ManifestVoiceConfig {
-  ManifestVoiceConfig._(Map<String, List<String>> platforms, this.providers)
-    : _platforms = platforms;
-
-  factory ManifestVoiceConfig.fromJson(Map<String, dynamic> json) {
-    final platforms = <String, List<String>>{};
-    final raw = json['platforms'];
-    if (raw != null) {
-      if (raw is! Map<String, dynamic>) {
-        throw const FormatException(
-          'manifest.json "platforms" must be an object',
-        );
-      }
-      raw.forEach((tag, entries) {
-        if (entries is! List) {
-          throw FormatException(
-            'manifest platform "$tag" must be a list of files',
-          );
-        }
-        platforms[tag] = [
-          for (final e in entries)
-            if (e is! String || e.isEmpty)
-              throw FormatException(
-                'manifest platform "$tag" has a non-string entry',
-              )
-            else
-              e,
-        ];
-      });
-    }
-    final rawProviders = json['providers'];
-    if (rawProviders != null && rawProviders is! List) {
-      throw const FormatException('manifest.json "providers" must be a list');
-    }
-    final providers = <String>[];
-    for (final e in (rawProviders ?? const [])) {
-      if (e is! String || e.isEmpty) {
-        throw const FormatException(
-          'manifest.json "providers" has a non-string entry',
-        );
-      }
-      providers.add(e);
-    }
-    return ManifestVoiceConfig._(platforms, providers);
-  }
-
-  final Map<String, List<String>> _platforms;
-
-  /// Provider file names to fetch on every platform (e.g. `['alpha.json']`).
-  final List<String> providers;
-
-  /// The starter model file names (e.g. `['fish.json', 'kokoro.json']`) for
-  /// [platformTag], or an empty list when the platform has no manifest entry.
-  List<String> filesFor(String platformTag) =>
-      _platforms[platformTag] ?? const [];
-
-  /// Whether [platformTag] has an explicit entry in the manifest.
-  bool hasPlatform(String platformTag) => _platforms.containsKey(platformTag);
-
-  /// Round-trips back to the canonical manifest shape for local caching.
-  Map<String, dynamic> toJson() => {
-    'providers': providers,
-    'platforms': {
-      for (final entry in _platforms.entries) entry.key: entry.value,
-    },
-  };
-}
-
-/// Fetches the per-platform starter manifest from the repo's voice-config
-/// directory.
-///
-/// Throws on network failure or an unparseable manifest; callers decide how to
-/// degrade (the GUI falls back to no starter model files).
-Future<ManifestVoiceConfig> fetchVoiceConfigManifest({
+/// Throws on network failure or an unreadable response; callers decide how to
+/// degrade, which for the GUI means running on whatever is already on disk.
+Future<List<String>> fetchVoiceConfigPaths({
   HttpClient Function()? clientFactory,
   String? repoUrl,
+  String? apiUrl,
   String? branch,
 }) async {
   final httpClient =
       (clientFactory ??
       () => HttpClient()..connectionTimeout = const Duration(seconds: 5))();
   try {
-    final base = repoUrl ?? _repoUrl;
     final br = branch ?? _branch;
-    final url = '$base/raw/$br/$_voiceConfigDir/$kVoiceConfigManifestName';
+    final base = (apiUrl ?? _apiUrl).replaceFirst(RegExp(r'/+$'), '');
+    final url =
+        '$base/repos/${_repoSlug(repoUrl)}/git/trees/$br?recursive=1';
     final request = await httpClient.getUrl(Uri.parse(url));
     final response = await request.close();
     if (response.statusCode != 200) {
       throw HttpException(
-        'Failed to fetch voice config manifest (HTTP ${response.statusCode})',
+        'Failed to list voice config (HTTP ${response.statusCode})',
       );
     }
     final content = await response.transform(utf8.decoder).join();
-    return ManifestVoiceConfig.fromJson(
-      jsonDecode(content) as Map<String, dynamic>,
-    );
+    return voiceConfigPathsFromTree(content);
   } finally {
     httpClient.close(force: true);
   }
 }
 
-/// Downloads voice config files from the GitHub repository into [configDir]
-/// when they don't exist locally.
+/// Extracts the `voice-config/` paths from a git tree response body.
 ///
-/// [files] names the model files to fetch (e.g. `['fish.json']`, typically the
-/// platform's starter list from a [ManifestVoiceConfig]); [providers] names the
-/// provider files to fetch alongside them. `config.json` is always fetched.
+/// Exposed for tests: the response is the contract, and a fake tree is a better
+/// test than a fake HTTP client.
+List<String> voiceConfigPathsFromTree(String body) {
+  final decoded = jsonDecode(body);
+  if (decoded is! Map<String, dynamic>) {
+    throw const FormatException('git tree response must be a JSON object');
+  }
+  final tree = decoded['tree'];
+  if (tree is! List) {
+    throw const FormatException('git tree response has no "tree" list');
+  }
+  final prefix = '$_voiceConfigDir/';
+  final paths = <String>[];
+  for (final entry in tree) {
+    if (entry is! Map<String, dynamic>) continue;
+    if (entry['type'] != 'blob') continue;
+    final path = entry['path'];
+    if (path is! String || !path.startsWith(prefix)) continue;
+    if (!path.toLowerCase().endsWith('.json')) continue;
+    // POSIX in, POSIX out: the tree is a git path list, never a local one.
+    final relative = path.substring(prefix.length);
+    if (relative.split('/').contains('..')) continue;
+    paths.add(relative);
+  }
+  paths.sort();
+  return paths;
+}
+
+/// `owner/repo` out of a repository URL, so one [repoUrl] can serve both the API
+/// and the raw downloads.
+String _repoSlug(String? repoUrl) {
+  final base = (repoUrl ?? _repoUrl).replaceFirst(RegExp(r'/+$'), '');
+  final match = RegExp(
+    r'^https?://[^/]+/([^/]+/[^/]+?)(?:\.git)?$',
+  ).firstMatch(base);
+  if (match == null) {
+    throw FormatException('Not a repository URL: $base');
+  }
+  return match.group(1)!;
+}
+
+/// Downloads voice config files from the GitHub repository into [configDir].
 ///
-/// Files land in the subdirectory their kind belongs to: providers in
-/// `providers/`, models in `models/`.
+/// [paths] are the repo-relative paths from [fetchVoiceConfigPaths] — relative to
+/// `voice-config/`, not to the config directory — and each keeps its own
+/// subdirectory, so `models/macos/kokoro_local.json` lands there rather than
+/// flattened into `models/`. `config.json` is fetched whether or not the tree
+/// lists it, since its absence is what marks a directory as not yet a config.
+///
+/// A file already on disk is left alone unless [overwrite] is set, which is what
+/// a re-sync wants: the user's `user/` layer is a separate directory and is never
+/// touched here.
 ///
 /// Downloads are best-effort: a failure for one file continues with the rest.
 Future<void> downloadVoiceConfigFiles(
   String configDir, {
-  List<String>? files,
-  List<String>? providers,
+  List<String>? paths,
+  bool overwrite = false,
   HttpClient Function()? clientFactory,
   String? repoUrl,
   String? branch,
 }) async {
   final separator = Platform.pathSeparator;
-  // A set keyed by destination path, so a name in both lists is fetched once.
+  // A set keyed by destination path, so a path named twice is fetched once.
   final all = <String>{
     '$configDir$separator$kVoiceConfigRegistryName',
-    for (final f in providers ?? const <String>[])
-      '$configDir$separator$kVoiceConfigProvidersDir$separator$f',
-    for (final f in files ?? const <String>[])
-      '$configDir$separator$kVoiceConfigModelsDir$separator$f',
+    for (final p in paths ?? const <String>[])
+      '$configDir$separator${p.split('/').join(separator)}',
   };
 
   final dir = Directory(configDir);
@@ -167,25 +135,24 @@ Future<void> downloadVoiceConfigFiles(
   try {
     for (final localPath in all) {
       final localFile = File(localPath);
-      if (!localFile.existsSync()) {
-        final base = repoUrl ?? _repoUrl;
-        final br = branch ?? _branch;
-        final remote = localPath
-            .substring(configDir.length + 1)
-            .split(separator)
-            .join('/');
-        final url = '$base/raw/$br/$_voiceConfigDir/$remote';
-        try {
-          final request = await httpClient.getUrl(Uri.parse(url));
-          final response = await request.close();
-          if (response.statusCode == 200) {
-            final content = await response.transform(utf8.decoder).join();
-            await localFile.parent.create(recursive: true);
-            await localFile.writeAsString(content);
-          }
-        } catch (_) {
-          // Best-effort: carry on with the rest.
+      if (localFile.existsSync() && !overwrite) continue;
+      final base = repoUrl ?? _repoUrl;
+      final br = branch ?? _branch;
+      final remote = localPath
+          .substring(configDir.length + 1)
+          .split(separator)
+          .join('/');
+      final url = '$base/raw/$br/$_voiceConfigDir/$remote';
+      try {
+        final request = await httpClient.getUrl(Uri.parse(url));
+        final response = await request.close();
+        if (response.statusCode == 200) {
+          final content = await response.transform(utf8.decoder).join();
+          await localFile.parent.create(recursive: true);
+          await localFile.writeAsString(content);
         }
+      } catch (_) {
+        // Best-effort: carry on with the rest.
       }
     }
   } finally {

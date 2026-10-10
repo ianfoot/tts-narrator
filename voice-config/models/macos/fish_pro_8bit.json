@@ -1,10 +1,11 @@
 {
   "id": "mlx-community/fish-audio-s2-pro-8bit",
+  "provider": "local",
+  "display_name": "Fish Audio S2 Pro 8bit (Local)",
   "formats": [
     "wav",
     "mp3"
   ],
-  "display_name": "Fish Audio S2 Pro 8bit (Local)",
   "speed": true,
   "sends_language": true,
   "default_language": "en-us",
@@ -26,7 +27,7 @@
       "gender": "male"
     },
     "default-2": {
-      "name": "Voice 2", 
+      "name": "Voice 2",
       "gender": "female"
     },
     "default-3": {

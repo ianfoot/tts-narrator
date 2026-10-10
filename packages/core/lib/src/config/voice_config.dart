@@ -125,8 +125,8 @@ class VoiceOption {
 /// One configured provider: the settings it is reached with, and the models
 /// it serves.
 ///
-/// A provider file owns the relationship to its models, so a block is described
-/// once no matter how many models sit behind it. [models] is ordered; the first
+/// A provider file states only [settings]; membership is gathered from the model
+/// files that name this provider. [models] is ordered alphabetically, so the first
 /// is the default model.
 class ProviderConfig {
   const ProviderConfig({
@@ -151,22 +151,24 @@ class ProviderConfig {
 /// *directory*.
 ///
 /// Layout:
-///   config.json                ordered provider registry — `providers`
-///   providers/`name`.json      per-provider — `models` (aliases, in order) +
-///                              `settings` (opaque string map)
-///   models/`alias`.json        per-model — id, formats (mp3 and/or wav, first
-///                              is the default), prompt_style, sends_voice,
-///                              sends_language,
+///   config.json                marker: the directory is a voice config
+///   providers/`name`.json      per-provider — `settings` (opaque string map)
+///   models/`alias`.json        per-model, every platform — id, provider,
+///                              formats (mp3 and/or wav, first is the default),
+///                              prompt_style, sends_voice, sends_language,
 ///                              default_voice, default_language, languages,
 ///                              pricing, voices (each keyed by its id, with an
 ///                              optional name and gender tag)
+///   models/`platform`/…       the same, for one platform only
 ///
-/// A provider lists the models it serves and a model file does not name a
-/// provider, so membership is stated in exactly one place.
+/// Nothing lists the others: a model file names the provider that serves it, and
+/// where the file sits says which platforms it runs on. Adding a model is adding
+/// a file, and adding a provider is adding a file.
 ///
-/// `config.json` orders providers; the first is the default provider, and the
-/// default model is the first model it lists. Ordering comes from the config, not
-/// the filesystem, so it does not depend on which name happens to sort first.
+/// A provider file holding `api_key` is hosted and sorts ahead of one that needs
+/// a server running locally, so the app opens on something reachable; within each
+/// group the order is alphabetical. The first is the default provider, and the
+/// default model is its first model.
 class VoiceConfig {
   const VoiceConfig({
     this.providers = const {},

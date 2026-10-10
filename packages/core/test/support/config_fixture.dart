@@ -35,15 +35,31 @@ class ConfigFixture {
     file.writeAsStringSync(contents);
   }
 
-  /// The `config.json` registry for [layer].
-  void writeRegistry(String contents, [String layer = base]) =>
-      _write(_under(layer, kVoiceConfigRegistryName), contents);
+  /// The `config.json` marker for [layer].
+  ///
+  /// The marker only: nothing lists the providers or the models any more, so a
+  /// test that wants one has to write the file, and `{}` is the whole of it.
+  void writeMarker([String layer = base]) =>
+      _write(_under(layer, kVoiceConfigRegistryName), '{}');
 
   /// A `providers/<name>.json` block in [layer].
   void writeProvider(String name, String contents, [String layer = base]) =>
       _write(_under(layer, '$kVoiceConfigProvidersDir/$name.json'), contents);
 
-  /// A `models/<alias>.json` file in [layer].
-  void writeModel(String alias, String contents, [String layer = base]) =>
-      _write(_under(layer, '$kVoiceConfigModelsDir/$alias.json'), contents);
+  /// A model file in [layer], at the top level of `models/` unless [platformTag]
+  /// names one — which is how a test says "this model is macOS only" without
+  /// anything in the file saying so.
+  void writeModel(
+    String alias,
+    String contents, [
+    String layer = base,
+    String? platformTag,
+  ]) => _write(
+    _under(
+      layer,
+      '$kVoiceConfigModelsDir${platformTag == null ? '' : '/$platformTag'}'
+      '/$alias.json',
+    ),
+    contents,
+  );
 }

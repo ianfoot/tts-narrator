@@ -1,9 +1,4 @@
 {
-  "models": {
-    "macos":["kokoro_local", "qwen3_voicedesign", "fish_pro_8bit"],
-    "linux": [],
-    "windows": []
-  },
   "settings": {
     "base_url": "http://localhost:8000/v1"
   }

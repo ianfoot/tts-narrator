@@ -5,11 +5,12 @@ voice from a list — it reads a sentence describing the narrator and synthesise
 one. The description is sent as the request body's `instruct` field, and there is
 no `voice` field at all.
 
-The shipped file is `voice-config/models/qwen3_voicedesign.json`:
+The shipped file is `voice-config/models/macos/qwen3_voicedesign.json`:
 
 ```json
 {
   "id": "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",
+  "provider": "local",
   "display_name": "Qwen3 TTS 1.7B Voice Design (Local)",
   "formats": ["wav", "mp3"],
   "sends_voice": false,
@@ -39,8 +40,9 @@ mlx_audio.server --host 0.0.0.0 --port 8000
 ```
 
 The model then appears under the `local` provider and is selectable in the model
-dropdown. Apple Silicon only, which is why the file is in the macOS list of
-`manifest.json` and not the Linux or Windows ones.
+dropdown. Apple Silicon only, which is why the file sits in
+`voice-config/models/macos/` and nowhere else — a model in a platform
+subdirectory is served on that platform and no other.
 
 Output is **WAV by default**. mlx-audio needs `ffmpeg` on the path to encode MP3;
 WAV needs nothing extra, so the file declares `"formats": ["wav", "mp3"]` with WAV

@@ -6,23 +6,28 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tts_narrator/main.dart';
-import 'package:tts_narrator_core/tts_narrator_core.dart';
 
 import '../support/l10n_test_support.dart';
 
-final _linuxManifest = ManifestVoiceConfig.fromJson({
-  'providers': ['alpha.json'],
-  'platforms': {
-    'linux': ['fish.json', 'gemini.json', 'kokoro.json'],
-  },
-});
+/// The whole of `voice-config/` as the tree API reports it: the marker, the
+/// providers, and every model with the platform it belongs to.
+const _linuxIndex = <String>[
+  'config.json',
+  'providers/alpha.json',
+  'models/fish.json',
+  'models/gemini.json',
+  'models/kokoro.json',
+];
 
-final _macosManifest = ManifestVoiceConfig.fromJson({
-  'providers': ['alpha.json', 'local.json'],
-  'platforms': {
-    'macos': ['fish.json', 'gemini.json', 'kokoro.json', 'kokoro_local.json'],
-  },
-});
+const _macosIndex = <String>[
+  'config.json',
+  'providers/alpha.json',
+  'providers/local.json',
+  'models/fish.json',
+  'models/gemini.json',
+  'models/kokoro.json',
+  'models/macos/kokoro_local.json',
+];
 
 void main() {
   SharedPreferences.setMockInitialValues({});
@@ -42,36 +47,22 @@ void main() {
     Future<void> pumpBootstrap(
       WidgetTester tester, {
       VoiceConfigDownloader? downloader,
-      Future<ManifestVoiceConfig?> Function()? manifestLoader,
+      Future<List<String>?> Function()? indexLoader,
     }) async {
       await tester.pumpWidget(
         BootstrapApp(
           configDir: tempDir,
           prefs: await SharedPreferences.getInstance(),
           downloader: downloader,
-          manifestLoader: manifestLoader,
+          indexLoader: indexLoader,
         ),
       );
-    }
-
-    // Runs [body] under a target-platform override, resetting it before the
-    // binding's invariant check (which runs before test teardowns).
-    Future<void> withPlatform(
-      TargetPlatform target,
-      Future<void> Function() body,
-    ) async {
-      debugDefaultTargetPlatformOverride = target;
-      try {
-        await body();
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-      }
     }
 
     testWidgets('shows confirmation dialog when config files missing', (
       tester,
     ) async {
-      await pumpBootstrap(tester, manifestLoader: () async => _linuxManifest);
+      await pumpBootstrap(tester, indexLoader: () async => _linuxIndex);
 
       await tester.pumpAndSettle();
 
@@ -85,12 +76,11 @@ void main() {
       File('$tempDir/providers/alpha.json')
         ..parent.createSync(recursive: true)
         ..writeAsStringSync('{}');
-      Directory('$tempDir/models').createSync(recursive: true);
-      File('$tempDir/models/fish.json').writeAsStringSync('{}');
-      File('$tempDir/models/gemini.json').writeAsStringSync('{}');
-      File('$tempDir/models/kokoro.json').writeAsStringSync('{}');
+      File('$tempDir/models/fish.json')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('{}');
 
-      await pumpBootstrap(tester, manifestLoader: () async => _linuxManifest);
+      await pumpBootstrap(tester, indexLoader: () async => _linuxIndex);
       await tester.pumpAndSettle();
 
       // No dialog, no spinner — straight to the app.
@@ -100,20 +90,16 @@ void main() {
 
     testWidgets('shows a spinner during a confirmed download', (tester) async {
       final gate = Completer<void>();
-      final calls = <(String, List<String>, List<String>)>[];
-      Future<void> downloader(
-        String configDir,
-        List<String> files, {
-        List<String> providers = const [],
-      }) async {
-        calls.add((configDir, files, providers));
+      final calls = <(String, List<String>)>[];
+      Future<void> downloader(String configDir, List<String> paths) async {
+        calls.add((configDir, paths));
         await gate.future;
       }
 
       await pumpBootstrap(
         tester,
         downloader: downloader,
-        manifestLoader: () async => _linuxManifest,
+        indexLoader: () async => _linuxIndex,
       );
 
       // Dialog is up; confirm the download.
@@ -135,26 +121,19 @@ void main() {
       expect(find.byType(CupertinoActivityIndicator), findsNothing);
       expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsNothing);
       expect(calls.single.$1, tempDir);
-      expect(calls.single.$2, ['fish.json', 'gemini.json', 'kokoro.json']);
-      // Provider files travel with the models but are not models, so they
-      // must not have leaked into the list the dialog offers.
-      expect(calls.single.$3, ['alpha.json']);
+      expect(calls.single.$2, _linuxIndex);
     });
 
     testWidgets('skipping the download proceeds to the app', (tester) async {
       var downloaded = false;
-      Future<void> downloader(
-        String configDir,
-        List<String> files, {
-        List<String> providers = const [],
-      }) async {
+      Future<void> downloader(String configDir, List<String> paths) async {
         downloaded = true;
       }
 
       await pumpBootstrap(
         tester,
         downloader: downloader,
-        manifestLoader: () async => _linuxManifest,
+        indexLoader: () async => _linuxIndex,
       );
 
       await tester.pumpAndSettle();
@@ -166,53 +145,33 @@ void main() {
       expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsNothing);
     });
 
-    for (final (platform, manifest, listed) in [
-      (TargetPlatform.macOS, _macosManifest, true),
-      (TargetPlatform.linux, _linuxManifest, false),
-    ]) {
-      testWidgets('on ${platform.name} the Kokoro Local starter is '
-          '${listed ? 'listed' : 'omitted'}', (tester) async {
-        await withPlatform(platform, () async {
-          await pumpBootstrap(tester, manifestLoader: () async => manifest);
+    testWidgets('the dialog names the models, not the providers', (
+      tester,
+    ) async {
+      // Providers travel in the same list as models, so the copy has to pick
+      // the models out of it.
+      await pumpBootstrap(tester, indexLoader: () async => _macosIndex);
+      await tester.pumpAndSettle();
 
-          await tester.pumpAndSettle();
+      expect(find.textContaining('Kokoro Local'), findsOneWidget);
+      expect(find.textContaining('Alpha'), findsNothing);
+    });
 
-          expect(
-            find.text(testL10n.gui_bootstrap_downloadTitle),
-            findsOneWidget,
-          );
-          expect(
-            find.textContaining('Kokoro Local'),
-            listed ? findsOneWidget : findsNothing,
-          );
-        });
-      });
-    }
-
-    testWidgets('entire flow: manifest drives dialog, download lands on disk, '
+    testWidgets('entire flow: index drives dialog, download lands on disk, '
         'relaunch skips straight to the app', (tester) async {
-      // Partial state: two starters present, registry + fish.json missing
-      // -> the dialog must appear listing the manifest starters.
+      // Partial state: two starters present, marker + fish.json missing
+      // -> the dialog must appear listing the indexed starters.
       File('$tempDir/models/gemini.json')
         ..parent.createSync(recursive: true)
         ..writeAsStringSync('{}');
       File('$tempDir/models/kokoro.json').writeAsStringSync('{}');
 
-      // Downloader mirrors downloadVoiceConfigFiles semantics: the registry
-      // always, plus each provider and model file in its own subdirectory.
-      Future<void> downloader(
-        String configDir,
-        List<String> files, {
-        List<String> providers = const [],
-      }) async {
+      // Downloader mirrors downloadVoiceConfigFiles semantics: every path keeps
+      // the subdirectory it was indexed under.
+      Future<void> downloader(String configDir, List<String> paths) async {
         File('$configDir/config.json').writeAsStringSync('{}');
-        for (final file in providers) {
-          File('$configDir/providers/$file')
-            ..parent.createSync(recursive: true)
-            ..writeAsStringSync('{}');
-        }
-        for (final file in files) {
-          File('$configDir/models/$file')
+        for (final path in paths.where((p) => p != 'config.json')) {
+          File('$configDir/$path')
             ..parent.createSync(recursive: true)
             ..writeAsStringSync('{}');
         }
@@ -221,11 +180,11 @@ void main() {
       await pumpBootstrap(
         tester,
         downloader: downloader,
-        manifestLoader: () async => _linuxManifest,
+        indexLoader: () async => _linuxIndex,
       );
       await tester.pumpAndSettle();
 
-      // The manifest names the starters for the dialog copy.
+      // The index names the starters for the dialog copy.
       expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsOneWidget);
       expect(find.textContaining('Fish, Gemini, Kokoro'), findsOneWidget);
 
@@ -241,11 +200,53 @@ void main() {
       await pumpBootstrap(
         tester,
         downloader: downloader,
-        manifestLoader: () async => _linuxManifest,
+        indexLoader: () async => _linuxIndex,
       );
       await tester.pumpAndSettle();
       expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsNothing);
       expect(find.byType(CupertinoActivityIndicator), findsNothing);
+    });
+
+    testWidgets('a platform-specific starter keeps its subdirectory on disk', (
+      tester,
+    ) async {
+      // The whole reason a model sits in models/macos/ is that only macOS gets
+      // it, so the download has to place it there rather than flatten it.
+      Future<void> downloader(String configDir, List<String> paths) async {
+        File('$configDir/config.json').writeAsStringSync('{}');
+        for (final path in paths.where((p) => p != 'config.json')) {
+          File('$configDir/$path')
+            ..parent.createSync(recursive: true)
+            ..writeAsStringSync('{}');
+        }
+      }
+
+      await pumpBootstrap(
+        tester,
+        downloader: downloader,
+        indexLoader: () async => _macosIndex,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(testL10n.gui_bootstrap_download));
+      await tester.pumpAndSettle();
+
+      expect(
+        File('$tempDir/models/macos/kokoro_local.json').existsSync(),
+        isTrue,
+      );
+      expect(File('$tempDir/models/kokoro_local.json').existsSync(), isFalse);
+    });
+
+    testWidgets('an unreachable index still offers the built-in starters', (
+      tester,
+    ) async {
+      // No network, no cached index: the prompt must still name what it would
+      // fetch rather than degrade to an empty list.
+      await pumpBootstrap(tester, indexLoader: () async => null);
+      await tester.pumpAndSettle();
+
+      expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsOneWidget);
+      expect(find.textContaining('Fish, Gemini, Kokoro'), findsOneWidget);
     });
   });
 }

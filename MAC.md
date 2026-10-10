@@ -68,7 +68,6 @@ If you prefer a file-based approach, edit the provider file directly:
 
 ```json
 {
-  "models": ["fish", "gemini", "kokoro"],
   "settings": {
     "base_url": "https://vendor.example/api/v1",
     "api_key": "your-api-key-here"
@@ -76,11 +75,12 @@ If you prefer a file-based approach, edit the provider file directly:
 }
 ```
 
-The `models` list names the model files in `tts-narrator/models/` that this
-provider serves. The first provider listed in `config.json` is the default,
-and the first model in its list is the one preselected on launch — so to make
-this provider the default, `config.json` should read
-`{"providers": ["alpha"]}`.
+Nothing else needs editing. A model file serves this provider by naming it —
+`"provider": "alpha"` — so drop the model file in `tts-narrator/models/` and the
+provider picks it up. Providers carrying an `api_key` are treated as hosted and
+sort ahead of the ones that are not, so this one becomes the default provider by
+having a key at all; its default model is the first of its models,
+alphabetically.
 
 ✅ Works for both double-click and CLI launches
 ✅ Read fresh on every launch, so editing the file is enough — no reinstall
@@ -218,7 +218,6 @@ directory (`~/Library/Application Support/com.wyrdness.tts-narrator/`):
 
 ```json
 {
-  "models": ["kokoro_local", "qwen3_voicedesign"],
   "settings": { "base_url": "http://localhost:8000/v1" }
 }
 ```
@@ -227,7 +226,9 @@ directory (`~/Library/Application Support/com.wyrdness.tts-narrator/`):
 do not include that part. No API key is needed for the local server. The starter
 config already ships this block, so if
 `~/Library/Application Support/com.wyrdness.tts-narrator/providers/local.json`
-contains it you can skip this step.
+contains it you can skip this step. The models it serves are the ones naming
+`"provider": "local"`, which is why they live in `models/macos/` — they only run
+on Apple Silicon.
 
 `kokoro_local` speaks all 54 Kokoro-82M voices across 9 languages. Pick one in the
 Run Setup panel's **Language** dropdown (British English by default) and then a

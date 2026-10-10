@@ -21,29 +21,33 @@ void main() {
     });
     tearDown(() => dir.deleteSync(recursive: true));
 
-    void writeRegistry(String contents) => fx.writeRegistry(contents);
-
     void writeProvider(String name, String contents) =>
         fx.writeProvider(name, contents);
 
-    void writeModel(String alias, String contents) =>
-        fx.writeModel(alias, contents);
+    /// Writes a model file naming [testProvider], unless the model names another
+    /// one itself, and places it in `models/<platformTag>/` when [platformTag] is
+    /// given — which is the only thing that makes a model platform-specific.
+    void writeModel(
+      String alias,
+      String contents, {
+      String provider = testProvider,
+      String? platformTag,
+    }) => fx.writeModel(
+      alias,
+      _withProvider(contents, provider),
+      ConfigFixture.base,
+      platformTag,
+    );
 
-    /// Registers [name] and writes a provider block claiming [models].
+    /// Publishes the marker and a provider block, which is all it takes to make
+    /// the models already written on disk available.
     void writeClaimingProvider(
       String name, {
       List<String> models = const [],
       String settings = '{"base_url":"$testBaseUrl"}',
     }) {
-      writeRegistry(
-        jsonEncode({
-          'providers': [name],
-        }),
-      );
-      writeProvider(
-        name,
-        jsonEncode({'models': models, 'settings': jsonDecode(settings)}),
-      );
+      fx.writeMarker();
+      writeProvider(name, jsonEncode({'settings': jsonDecode(settings)}));
     }
 
     (VoiceConfig, List<String>) load() => loadVoiceConfig(dir.path);
@@ -303,9 +307,9 @@ void main() {
     });
 
     test(
-      'accepts a directory with only an empty config.json and no models',
+      'accepts a directory with only a marker and no models',
       () {
-        writeRegistry('{}');
+        fx.writeMarker();
         final (cfg, warnings) = load();
         expect(cfg.isEmpty, isTrue);
         expect(warnings, isEmpty);
@@ -313,19 +317,20 @@ void main() {
     );
 
     group('provider files', () {
-      test('reads the settings block and the claimed model list', () {
-        writeRegistry('{"providers":["alpha","beta"]}');
+      test('reads the settings block and the models that name it', () {
+        fx.writeMarker();
         writeProvider(
           'alpha',
-          '{"models":["one","two"],"settings":{"base_url":"https://a/v1",'
+          '{"settings":{"base_url":"https://a/v1",'
               r'"api_key":"${A_KEY}"}}',
         );
-        writeProvider('beta', '{"models":[],"settings":{}}');
-        writeModel('one', '{"id":"x/one","formats":["wav"]}');
-        writeModel('two', '{"id":"x/two","formats":["wav"]}');
+        writeProvider('beta', '{"settings":{}}');
+        writeModel('one', '{"id":"x/one","formats":["wav"]}', provider: 'alpha');
+        writeModel('two', '{"id":"x/two","formats":["wav"]}', provider: 'alpha');
 
         final (cfg, warnings) = load();
         expect(warnings, isEmpty);
+        // Hosted first, so the one holding the api key is the default provider.
         expect(cfg.providers.keys, ['alpha', 'beta']);
         final alpha = cfg.providers['alpha']!;
         expect(alpha.name, 'alpha');
@@ -334,263 +339,178 @@ void main() {
         expect(alpha.settings['base_url'], 'https://a/v1');
       });
 
-      test('keeps the registry order, not the filename order', () {
-        writeRegistry('{"providers":["zeta","alpha"]}');
-        writeProvider('zeta', '{"models":[],"settings":{}}');
-        writeProvider('alpha', '{"models":[],"settings":{}}');
-        expect(load().$1.providers.keys, ['zeta', 'alpha']);
-      });
-
-      test('a provider file missing from the registry is ignored loudly', () {
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider('alpha', '{"models":[],"settings":{}}');
-        writeProvider('stray', '{"models":[],"settings":{}}');
-
-        final (cfg, warnings) = load();
-        expect(cfg.providers.containsKey('stray'), isFalse);
-        expect(warnings.single, contains('stray.json'));
-        expect(warnings.single, contains('not listed in config.json'));
+      test('hosts first, then the rest alphabetically', () {
+        fx.writeMarker();
+        writeProvider('beta', '{"settings":{}}');
+        writeProvider('alpha', '{"settings":{}}');
+        writeProvider('gamma', '{"settings":{"api_key":"k"}}');
+        expect(load().$1.providers.keys, ['gamma', 'alpha', 'beta']);
       });
 
       test('rejects a non-object settings entry', () {
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider('alpha', '{"models":[],"settings":{"base_url":1}}');
+        fx.writeMarker();
+        writeProvider('alpha', '{"settings":{"base_url":1}}');
         final (_, warnings) = load();
         expect(
           warnings.join('\n'),
           contains('"settings.base_url" must be a string'),
         );
       });
-
-      test(
-        'rejects a models entry that is neither a list nor a platform map',
-        () {
-          writeRegistry('{"providers":["alpha"]}');
-          writeProvider('alpha', '{"models":"one","settings":{}}');
-          final (_, warnings) = load();
-          expect(warnings.join('\n'), contains('"models" must be a list'));
-        },
-      );
     });
 
-    group('per-platform provider models', () {
-      // A provider file may key its models by platform instead of listing them
-      // flat, which is how a provider that ships everywhere -- config.json is one
-      // global registry, so providers/*.json lands on every platform -- can say
-      // which of its models each platform may actually serve.
+    group('models by platform directory', () {
+      // Which platform a model belongs to is said by where its file sits, not by
+      // anything it carries: `models/one.json` is everywhere, and
+      // `models/macos/one.json` is macOS only. Nothing else has to be edited to
+      // move a model between them.
+      const everyTag = [
+        kPlatformTagMacos,
+        kPlatformTagLinux,
+        kPlatformTagWindows,
+      ];
 
-      test('a bare list serves every platform', () {
-        for (final tag in [
-          kPlatformTagMacos,
-          kPlatformTagLinux,
-          kPlatformTagWindows,
-        ]) {
-          writeRegistry('{"providers":["alpha"]}');
-          writeProvider('alpha', '{"models":["one"],"settings":{}}');
-          writeModel('one', '{"id":"x/one","formats":["wav"]}');
+      test('a top-level model is served on every platform', () {
+        fx.writeMarker();
+        writeProvider(testProvider, '{"settings":{}}');
+        writeModel('one', '{"id":"x/one","formats":["wav"]}');
 
+        for (final tag in everyTag) {
           final (cfg, warnings) = loadVoiceConfig(dir.path, platformTag: tag);
           expect(warnings, isEmpty, reason: 'on $tag');
-          expect(cfg.models['one']!.provider, 'alpha', reason: 'on $tag');
+          expect(cfg.models['one']?.provider, testProvider, reason: 'on $tag');
         }
       });
 
-      test('a platform map serves only the named platform', () {
-        for (final tag in [
-          kPlatformTagMacos,
-          kPlatformTagLinux,
-          kPlatformTagWindows,
-        ]) {
-          writeRegistry('{"providers":["alpha"]}');
-          writeProvider(
-            'alpha',
-            '{"models":{"$kPlatformTagMacos":["mac_only"]},'
-                '"settings":{}}',
-          );
-          writeModel('mac_only', '{"id":"x/mac","formats":["wav"]}');
+      test('a model in models/<tag>/ is served only on that platform', () {
+        fx.writeMarker();
+        writeProvider(testProvider, '{"settings":{}}');
+        writeModel(
+          'mac_only',
+          '{"id":"x/mac","formats":["wav"]}',
+          platformTag: kPlatformTagMacos,
+        );
 
+        for (final tag in everyTag) {
           final (cfg, warnings) = loadVoiceConfig(dir.path, platformTag: tag);
           expect(warnings, isEmpty, reason: 'on $tag');
           if (tag == kPlatformTagMacos) {
-            expect(
-              cfg.models['mac_only']!.provider,
-              'alpha',
-              reason: 'on $tag',
-            );
+            expect(cfg.models['mac_only']?.provider, testProvider,
+                reason: 'on $tag');
           } else {
-            // The file is present but the platform may not claim the model, so
+            // The file is on disk but the platform it sits in is not this one, so
             // it is not loaded -- and, crucially, not warned about either.
-            expect(
-              cfg.models.containsKey('mac_only'),
-              isFalse,
-              reason: 'on $tag',
-            );
+            expect(cfg.models.containsKey('mac_only'), isFalse, reason: 'on $tag');
           }
         }
       });
 
-      test('a platform the map does not name serves nothing', () {
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider(
-          'alpha',
-          '{"models":{"$kPlatformTagMacos":["mac_only"]},"settings":{}}',
-        );
+      test('a platform directory for another platform serves nothing', () {
+        fx.writeMarker();
+        writeProvider(testProvider, '{"settings":{}}');
 
         final (cfg, warnings) = loadVoiceConfig(
           dir.path,
           platformTag: kPlatformTagLinux,
         );
         expect(warnings, isEmpty);
-        expect(cfg.providers['alpha']!.models, isEmpty);
+        expect(cfg.providers[testProvider]?.models, isEmpty);
       });
 
-      test('an explicitly empty platform list serves nothing', () {
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider(
-          'alpha',
-          '{"models":{"$kPlatformTagMacos":["mac_only"],'
-              '"$kPlatformTagLinux":[]},"settings":{}}',
+      test('a platform-specific file shadows a top-level one of the same name',
+          () {
+        // The one place the two placements can disagree, and the specific one
+        // wins: a user who drops a model into their own models/macos/ overrides
+        // the shipped top-level file rather than duplicating it.
+        fx.writeMarker();
+        writeProvider(testProvider, '{"settings":{}}');
+        writeModel('x', '{"id":"x/base","formats":["wav"]}');
+        writeModel(
+          'x',
+          '{"id":"x/mac","formats":["wav"]}',
+          platformTag: kPlatformTagMacos,
         );
-        writeModel('mac_only', '{"id":"x/mac","formats":["wav"]}');
 
         final (mac, macWarnings) = loadVoiceConfig(
           dir.path,
           platformTag: kPlatformTagMacos,
         );
+        expect(macWarnings, isEmpty);
+        expect(mac.models['x']?.id, 'x/mac');
+
         final (linux, linuxWarnings) = loadVoiceConfig(
           dir.path,
           platformTag: kPlatformTagLinux,
         );
-
-        expect(macWarnings, isEmpty);
         expect(linuxWarnings, isEmpty);
-        expect(mac.models['mac_only']!.provider, 'alpha');
-        expect(linux.providers['alpha']!.models, isEmpty);
+        expect(linux.models['x']?.id, 'x/base');
       });
 
-      test('each platform entry is validated as a list of aliases', () {
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider(
-          'alpha',
-          '{"models":{"$kPlatformTagLinux":"one"},"settings":{}}',
+      test('a shared alias across placements appears once', () {
+        fx.writeMarker();
+        writeProvider(testProvider, '{"settings":{}}');
+        writeModel('shared', '{"id":"x/shared","formats":["wav"]}');
+        writeModel(
+          'mac_only',
+          '{"id":"x/mac","formats":["wav"]}',
+          platformTag: kPlatformTagMacos,
         );
-        final (_, warnings) = loadVoiceConfig(
-          dir.path,
+        writeModel(
+          'linux_only',
+          '{"id":"x/linux","formats":["wav"]}',
           platformTag: kPlatformTagLinux,
         );
-        expect(warnings.join('\n'), contains('"models" must be a list'));
+
+        final (cfg, warnings) = loadVoiceConfig(dir.path);
+        expect(warnings, isEmpty);
+        expect(cfg.providers[testProvider]?.models, [
+          'linux_only',
+          'mac_only',
+          'shared',
+        ]);
       });
 
-      test('an unknown platform key is rejected by name', () {
-        // A misspelled tag is the failure mode worth guarding: it reads the same
-        // as "serves nothing", so the provider silently claims no models on
-        // every platform -- including the one the key was written for -- and
-        // nothing anywhere reports why.
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider(
-          'alpha',
-          '{"models":{"macOS":["mac_only"]},"settings":{}}',
+      test('no platform tag unions every platform directory', () {
+        // A caller inspecting the config as data has no platform in hand. The
+        // union keeps such a caller seeing the whole picture.
+        fx.writeMarker();
+        writeProvider(testProvider, '{"settings":{}}');
+        writeModel(
+          'mac_only',
+          '{"id":"x/mac","formats":["wav"]}',
+          platformTag: kPlatformTagMacos,
         );
-        writeModel('mac_only', '{"id":"x/mac","formats":["wav"]}');
+        writeModel(
+          'linux_only',
+          '{"id":"x/linux","formats":["wav"]}',
+          platformTag: kPlatformTagLinux,
+        );
+
+        final (cfg, warnings) = loadVoiceConfig(dir.path);
+        expect(warnings, isEmpty);
+        expect(cfg.providers[testProvider]?.models, ['linux_only', 'mac_only']);
+      });
+
+      test('a models/ subdirectory that is not a platform tag warns', () {
+        // A misspelled tag is the failure mode worth guarding: it reads the same
+        // as "serves nothing", so the model in it is silently unreachable and
+        // nothing anywhere reports why. `osx`, not `macOS` — the default macOS
+        // filesystem is case-insensitive, so that spelling would collide with
+        // the real tag's directory and quietly test the wrong thing.
+        fx.writeMarker();
+        writeProvider(testProvider, '{"settings":{}}');
+        writeModel(
+          'mac_only',
+          '{"id":"x/mac","formats":["wav"]}',
+          platformTag: 'osx',
+        );
 
         for (final tag in [kPlatformTagMacos, null]) {
           final (cfg, warnings) = loadVoiceConfig(dir.path, platformTag: tag);
           final joined = warnings.join('\n');
-          expect(joined, contains('Skipped provider "alpha"'));
-          expect(joined, contains('unknown platform "macOS"'));
-          expect(
-            cfg.providers.containsKey('alpha'),
-            isFalse,
-            reason: 'on ${tag ?? 'an untagged read'}',
-          );
+          expect(joined, contains('is not a platform tag'), reason: '$tag');
+          expect(joined, contains('osx'));
+          expect(cfg.models, isEmpty, reason: '$tag');
         }
-      });
-
-      test('an empty alias in a platform entry is rejected', () {
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider(
-          'alpha',
-          '{"models":{"$kPlatformTagLinux":["  "]},"settings":{}}',
-        );
-        final (_, warnings) = loadVoiceConfig(
-          dir.path,
-          platformTag: kPlatformTagLinux,
-        );
-        expect(warnings.join('\n'), contains('"models" must hold non-empty'));
-      });
-
-      test('no platform tag unions every platform entry', () {
-        // A caller inspecting the config as data has no platform in hand. The
-        // union keeps such a caller seeing the whole picture -- and keeps the
-        // shipped-config test, which loads without a tag, resolving the map.
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider(
-          'alpha',
-          '{"models":{"$kPlatformTagMacos":["mac_only"],'
-              '"$kPlatformTagLinux":["linux_only"]},"settings":{}}',
-        );
-        writeModel('mac_only', '{"id":"x/mac","formats":["wav"]}');
-        writeModel('linux_only', '{"id":"x/linux","formats":["wav"]}');
-
-        final (cfg, warnings) = loadVoiceConfig(dir.path);
-        expect(warnings, isEmpty);
-        expect(cfg.providers['alpha']!.models, ['mac_only', 'linux_only']);
-      });
-
-      test('a shared alias in two platform entries appears once', () {
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider(
-          'alpha',
-          '{"models":{"$kPlatformTagMacos":["shared","mac_only"],'
-              '"$kPlatformTagLinux":["shared","linux_only"]},"settings":{}}',
-        );
-
-        final (cfg, _) = loadVoiceConfig(dir.path);
-        expect(cfg.providers['alpha']!.models, [
-          'shared',
-          'mac_only',
-          'linux_only',
-        ]);
-      });
-
-      test('a per-platform gate also silences the missing-model warning', () {
-        // The regression this shape exists for: on Linux the download step
-        // fetches providers/local.json but not its macOS-only model files, so a
-        // provider claiming them unconditionally reads as broken.
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider(
-          'alpha',
-          '{"models":{"$kPlatformTagMacos":["mac_only"]},"settings":{}}',
-        );
-
-        final (unaware, unawareWarnings) = loadVoiceConfig(dir.path);
-        expect(unawareWarnings.join('\n'), contains('lists model "mac_only"'));
-        expect(unaware.providers['alpha']!.models, ['mac_only']);
-
-        final (linux, linuxWarnings) = loadVoiceConfig(
-          dir.path,
-          platformTag: kPlatformTagLinux,
-        );
-        expect(linuxWarnings, isEmpty);
-      });
-
-      test('a bare provider file is unaffected by the platform', () {
-        // The backward-compatibility half of the same rule: the flat shape keeps
-        // meaning "every platform", so no shipped provider needs rewriting.
-        writeRegistry('{"providers":["alpha"]}');
-        writeProvider('alpha', '{"models":["one"],"settings":{}}');
-        writeModel('one', '{"id":"x/one","formats":["wav"]}');
-
-        final (mac, _) = loadVoiceConfig(
-          dir.path,
-          platformTag: kPlatformTagMacos,
-        );
-        final (linux, _) = loadVoiceConfig(
-          dir.path,
-          platformTag: kPlatformTagLinux,
-        );
-        expect(mac.providers['alpha']!.models, ['one']);
-        expect(linux.providers['alpha']!.models, ['one']);
       });
     });
   });
@@ -652,4 +572,12 @@ void main() {
       expect(decoded.voice!.gender, isNull);
     });
   });
+}
+
+/// Adds `"provider": <provider>` to the model JSON [contents], so a test can
+/// write the model it is really about and still make it routable.
+String _withProvider(String contents, String provider) {
+  final decoded = jsonDecode(contents);
+  if (decoded is! Map<String, dynamic>) return contents;
+  return jsonEncode({...decoded, 'provider': provider});
 }
