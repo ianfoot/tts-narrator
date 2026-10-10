@@ -232,9 +232,9 @@ on Apple Silicon.
 
 `kokoro_local` speaks all 54 Kokoro-82M voices across 9 languages. Pick one in the
 Run Setup panel's **Language** dropdown (British English by default) and then a
-voice by name from the list below it — the dropdown shows names like `Emma`,
-and the id behind the name is what gets sent. The app adds the matching
-`lang_code` to the request. See [docs/KOKORO.md](docs/KOKORO.md) for the full
+   voice by name from the list below it — the dropdown shows names like `Emma`,
+   and the id behind the name is what gets sent. The app adds the matching
+   `lang_code` to the request. See [KOKORO.md](KOKORO.md) for the full
 voice table.
 
 ### `qwen3_voicedesign` on the same server
@@ -248,7 +248,7 @@ It works differently from `kokoro_local`: there is no voice dropdown, because
 this model has no voices. It writes the narrator from a description instead,
 which you get as a multiline **Voice design** box in Model options, prefilled
 with a short calm-narrator description. Edit it freely, or paste in one of the
-examples in [docs/QWEN3_VOICEDESIGN.md](docs/QWEN3_VOICEDESIGN.md). You can
+   examples in [QWEN3_VOICEDESIGN.md](QWEN3_VOICEDESIGN.md). You can
 clear it and start over, but the run stays blocked while it is blank.
 
 The **Language** dropdown is still there and still matters — for this model the

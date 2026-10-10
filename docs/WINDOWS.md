@@ -1,5 +1,7 @@
 # tts-narrator — Windows Setup
 
+For an overview of the project, see the [README](../README.md).
+
 Getting the app running on Windows from a clean machine: the C++ toolchain
 Flutter needs, FVM, and the pinned Flutter SDK this repo expects.
 

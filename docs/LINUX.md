@@ -1,5 +1,7 @@
 # tts-narrator — Linux Setup
 
+For an overview of the project, see the [README](../README.md).
+
 Getting the app running on Linux from a clean machine: the build toolchain
 Flutter needs, FVM, and the pinned Flutter SDK this repo expects.
 

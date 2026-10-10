@@ -1,6 +1,6 @@
 # tts-narrator — Developer Guide
 
-For end-user documentation (install, usage, voice configuration), see **[README.md](README.md)**.
+For end-user documentation (install, usage, voice configuration), see the **[README](../README.md)**.
 
 ## Requirements
 
@@ -523,7 +523,7 @@ title.
   returns `NarrationBlockReason.emptyVoiceDesign` while the prose is blank, since
   `OpenAiSpeechClient` drops an empty `instruct` and the vendor has no voice list
   to guess from. The one shipped example is `qwen3_voicedesign`; see
-  [docs/QWEN3_VOICEDESIGN.md](docs/QWEN3_VOICEDESIGN.md).
+   [QWEN3_VOICEDESIGN.md](QWEN3_VOICEDESIGN.md).
 - Multilingual models opt in with `sends_language: true`, which is what puts
   `lang_code` in the request body — the same gating shape as `speed`. The codes
   themselves are data: `languages` is a `{code: label}` table (its declaration
