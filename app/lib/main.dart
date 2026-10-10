@@ -28,6 +28,7 @@ class BootstrapApp extends StatelessWidget {
     required this.prefs,
     this.downloader,
     this.indexLoader,
+    this.repoUrl,
   });
   final String configDir;
   final SharedPreferences prefs;
@@ -39,6 +40,16 @@ class BootstrapApp extends StatelessWidget {
   /// Injectable config-path loader (defaults to a fetch from GitHub); tests
   /// inject a fake so the bootstrap is hermetic.
   final Future<List<String>?> Function()? indexLoader;
+
+  /// Where the config is fetched from. Null in the app — the public repository,
+  /// which is the default inside [downloadVoiceConfigFiles].
+  ///
+  /// This exists so a test can point the *real* download at a loopback server
+  /// and drive the fallback branch for real. Injecting a fake downloader
+  /// instead would skip that branch entirely, which is how a signature mismatch
+  /// in it survived a suite of 312 passing tests and a first run that could not
+  /// download anything.
+  final String? repoUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -60,8 +71,9 @@ class BootstrapApp extends StatelessWidget {
       home: ConfigBootstrap(
         configDir: configDir,
         prefs: prefs,
-        downloader: downloader,
+downloader: downloader,
         indexLoader: indexLoader,
+        repoUrl: repoUrl,
       ),
     );
   }
@@ -74,8 +86,9 @@ class ConfigBootstrap extends StatefulWidget {
     super.key,
     required this.configDir,
     required this.prefs,
-this.downloader,
+    this.downloader,
     this.indexLoader,
+    this.repoUrl,
   });
   final String configDir;
   final SharedPreferences prefs;
@@ -86,6 +99,9 @@ this.downloader,
   /// Injectable config-path loader (defaults to a fetch from GitHub); tests
   /// inject a fake so the bootstrap is hermetic.
   final Future<List<String>?> Function()? indexLoader;
+
+  /// Where the fallback download fetches from. See [BootstrapApp.repoUrl].
+  final String? repoUrl;
 
   @override
   State<ConfigBootstrap> createState() => _ConfigBootstrapState();
@@ -211,10 +227,22 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   }
 
   Future<void> _downloadWithSpinner() async {
-    final downloader = widget.downloader ?? downloadVoiceConfigFiles;
+    // A closure rather than the tear-off of `downloadVoiceConfigFiles`: that
+    // takes `paths` as a *named* argument while [VoiceConfigDownloader] takes it
+    // positionally, so the two share no call signature. `?? downloadVoiceConfigFiles`
+    // therefore left the result a bare `Function` and the call dispatched
+    // dynamically — a NoSuchMethodError on first run that 312 passing tests
+    // could not see, because every one of them injected `downloader` and none
+    // reached this branch.
+    final download = widget.downloader ?? (configDir, paths) =>
+        downloadVoiceConfigFiles(
+          configDir,
+          paths: paths,
+          repoUrl: widget.repoUrl,
+        );
     if (mounted) setState(() => _downloading = true);
     try {
-      await downloader(widget.configDir, _remotePaths);
+      await download(widget.configDir, _remotePaths);
     } finally {
       if (mounted) setState(() => _downloading = false);
       if (mounted) setState(() => _ready = true);
