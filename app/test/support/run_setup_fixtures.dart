@@ -204,6 +204,30 @@ void writeVoiceDesignConfig(String configDir) {
   });
 }
 
+/// Writes a voice-cloning config: a model that keeps its own preset voices but
+/// can also speak in a voice taken from a reference clip, the way Fish Audio
+/// does against a local mlx-audio server.
+///
+/// Both halves matter. The voices and `default_voice` are there because a
+/// cloning model is still usable without a clip, and the picker must keep
+/// working; `sends_reference_audio` is what makes the cloning control appear at
+/// all.
+void writeReferenceAudioConfig(String configDir) {
+  writeConfig(configDir, {
+    'models': {
+      'fish': {
+        'id': 'mlx-community/fish-audio-s2-pro-8bit',
+        'formats': ['wav'],
+        'sends_reference_audio': true,
+      },
+    },
+    'defaults': {'fish': 'Anne'},
+    'voices': {
+      'fish': {'Anne': '7da08ad79a8a4492b2c6b54091499922'},
+    },
+  });
+}
+
 /// Pumps the given run-setup section on a tall panel-sized surface and restores
 /// the default test surface afterwards. The height is not the spec default
 /// because a run-setup column is meant to scroll.

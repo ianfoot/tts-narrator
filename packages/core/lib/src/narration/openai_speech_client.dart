@@ -45,6 +45,8 @@ class OpenAiSpeechClient {
     required double? speed,
     String? language,
     String? instruct,
+    String? refAudio,
+    String? refText,
     String? apiKey,
     AbortToken? abort,
   }) async {
@@ -81,6 +83,15 @@ class OpenAiSpeechClient {
     // the field.
     if (instruct != null && instruct.trim().isNotEmpty) {
       body['instruct'] = instruct.trim();
+    }
+    // Voice cloning from a reference clip. `ref_audio` is a path on the
+    // provider's filesystem, not the clip's bytes. The transcript is optional:
+    // omitting it asks the provider to transcribe the clip itself.
+    if (refAudio != null && refAudio.isNotEmpty) {
+      body['ref_audio'] = refAudio;
+      if (refText != null && refText.trim().isNotEmpty) {
+        body['ref_text'] = refText.trim();
+      }
     }
 
     var attempt = 0;

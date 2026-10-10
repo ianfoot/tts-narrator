@@ -157,7 +157,7 @@ abstract class AppLocalizations {
   /// Raised when the active model has neither a selected nor a default voice.
   ///
   /// In en, this message translates to:
-  /// **'No voice selected for \"{modelAlias}\" — pick an alias or set a default in the voice config.'**
+  /// **'No voice selected for \"{modelAlias}\" — pick a voice or set a default in the voice config.'**
   String gui_controller_errors_noVoiceSelected(String modelAlias);
 
   /// No description provided for @gui_controller_errors_cannotOpenTextFile.
@@ -336,7 +336,7 @@ abstract class AppLocalizations {
   /// No description provided for @gui_run_setup_voiceAliasLabel.
   ///
   /// In en, this message translates to:
-  /// **'Voice alias'**
+  /// **'Voice'**
   String get gui_run_setup_voiceAliasLabel;
 
   /// No description provided for @gui_run_setup_advancedVoiceId.
@@ -348,7 +348,7 @@ abstract class AppLocalizations {
   /// No description provided for @gui_run_setup_overridesSelectedAlias.
   ///
   /// In en, this message translates to:
-  /// **'Overrides selected alias'**
+  /// **'Overrides the selected voice'**
   String get gui_run_setup_overridesSelectedAlias;
 
   /// No description provided for @gui_run_setup_freeFormVoiceHint.
@@ -392,6 +392,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Male'**
   String get gui_run_setup_genderMale;
+
+  /// No description provided for @gui_run_setup_audioFileTypeGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get gui_run_setup_audioFileTypeGroup;
+
+  /// No description provided for @gui_run_setup_voiceCloningLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice cloning'**
+  String get gui_run_setup_voiceCloningLabel;
+
+  /// No description provided for @gui_run_setup_voiceCloningTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Narrate in a voice from a reference clip instead of a preset'**
+  String get gui_run_setup_voiceCloningTooltip;
+
+  /// No description provided for @gui_run_setup_voiceCloningCaptionOverrides.
+  ///
+  /// In en, this message translates to:
+  /// **'Overrides the selected voice with a clip'**
+  String get gui_run_setup_voiceCloningCaptionOverrides;
+
+  /// No description provided for @gui_run_setup_voiceCloningCaptionCloned.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloned from {clip}'**
+  String gui_run_setup_voiceCloningCaptionCloned(String clip);
+
+  /// No description provided for @gui_run_setup_referenceClipLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference clip'**
+  String get gui_run_setup_referenceClipLabel;
+
+  /// No description provided for @gui_run_setup_referenceClipChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose clip...'**
+  String get gui_run_setup_referenceClipChoose;
+
+  /// No description provided for @gui_run_setup_referenceClipClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get gui_run_setup_referenceClipClear;
+
+  /// No description provided for @gui_run_setup_referenceTextLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference transcript'**
+  String get gui_run_setup_referenceTextLabel;
+
+  /// No description provided for @gui_run_setup_referenceTextHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Transcribe the whole clip exactly, including the final word. Leave blank to have the provider transcribe it.'**
+  String get gui_run_setup_referenceTextHint;
 
   /// No description provided for @gui_run_setup_modelOptionsSection.
   ///

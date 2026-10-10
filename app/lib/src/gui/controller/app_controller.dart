@@ -123,7 +123,10 @@ class AppController extends ChangeNotifier {
     _model.reloadConfig();
     // A reload that had to fall back to the default model changed the model
     // under the reader, so a voice-design override goes with it.
-    if (_model.modelAlias != before) _settings.resetInstruct();
+    if (_model.modelAlias != before) {
+      _settings.resetInstruct();
+      _settings.resetReferenceAudio();
+    }
     notifyListeners();
   }
 
@@ -134,8 +137,10 @@ class AppController extends ChangeNotifier {
     if (alias == _model.modelAlias) return;
     _model.changeModel(alias);
     // Voice design is per-model prose: an override written for the old model
-    // describes a narrator the new one would not produce.
+    // describes a narrator the new one would not produce. A reference clip is
+    // chosen to match one voice too, so it goes for the same reason.
     _settings.resetInstruct();
+    _settings.resetReferenceAudio();
     notifyListeners();
   }
 
@@ -175,6 +180,11 @@ class AppController extends ChangeNotifier {
   /// writes its voice from prose, which has nothing to pick (drives whether the
   /// voice dropdown is shown in "Model & voice").
   bool get takesVoice => _model.takesVoice;
+
+  /// Whether the active model accepts a reference clip (drives whether the
+  /// voice-cloning control is shown in "Model & voice").
+  bool get takesReferenceAudio =>
+      _model.profile?.sendsReferenceAudioField ?? false;
 
   /// Whether the active model tags any of its voices with a gender (drives the
   /// voice-picker gender control in "Model & voice").
@@ -316,6 +326,22 @@ class AppController extends ChangeNotifier {
 
   set instruct(String value) {
     _settings.instruct = value;
+  }
+
+  /// Reference clip for a model that declares `"sends_reference_audio": true`,
+  /// or null while the model should use one of its own voices.
+  String? get referenceAudioPath => _settings.referenceAudioPath;
+
+  set referenceAudioPath(String? value) {
+    _settings.referenceAudioPath = value;
+  }
+
+  /// Verbatim transcript of [referenceAudioPath]; blank asks the provider to
+  /// transcribe the clip itself.
+  String get referenceAudioText => _settings.referenceAudioText;
+
+  set referenceAudioText(String value) {
+    _settings.referenceAudioText = value;
   }
 
   /// Speech-rate multiplier (1.0 = normal, clamped 0.25-2.0 by

@@ -149,6 +149,15 @@ class SettingsController extends ChangeNotifier {
   /// nothing to the next.
   String? _instruct;
 
+  /// Path to a reference clip the user picked for voice cloning, or null when
+  /// they are using the model's own voices. Per-run only: the clip describes
+  /// this narration, not the app, so it is never persisted.
+  String? _referenceAudioPath;
+
+  /// Verbatim transcript of [referenceAudioPath]. Blank is allowed — mlx-audio
+  /// transcribes the clip itself when the field is absent.
+  String? _referenceAudioText;
+
   /// The user's output-format choice per model alias, keyed rather than held as
   /// one value so switching models and coming back keeps each model's own
   /// choice. Read through [outputFormat], which clamps to what the active model
@@ -223,6 +232,35 @@ class SettingsController extends ChangeNotifier {
   /// switch's own write owns the single broadcast.
   void resetInstruct() {
     _instruct = null;
+  }
+
+  /// Reference clip for a model that declares `"sends_reference_audio": true`,
+  /// or null when the model should use one of its own voices. Sent as
+  /// `ref_audio` and supersedes the voice id for the length of a run.
+  String? get referenceAudioPath => _referenceAudioPath;
+
+  set referenceAudioPath(String? value) {
+    if (value == _referenceAudioPath) return;
+    _referenceAudioPath = value;
+    notifyListeners();
+  }
+
+  /// Transcript of [referenceAudioPath], or '' when the provider should
+  /// transcribe the clip itself.
+  String get referenceAudioText => _referenceAudioText ?? '';
+
+  set referenceAudioText(String value) {
+    if (value == _referenceAudioText) return;
+    _referenceAudioText = value;
+    notifyListeners();
+  }
+
+  /// Drops the clip and its transcript on a model switch: a clip picked to match
+  /// one model's voice means nothing to the next. Does not notify, for the same
+  /// reason as [resetInstruct].
+  void resetReferenceAudio() {
+    _referenceAudioPath = null;
+    _referenceAudioText = null;
   }
 
   /// Speech-rate multiplier (1.0 = normal), clamped to the run-setup panel's
@@ -523,6 +561,8 @@ class SettingsController extends ChangeNotifier {
       style: style,
       passagePrefix: passagePrefix,
       instruct: instruct,
+      referenceAudioPath: p.sendsReferenceAudioField ? referenceAudioPath : null,
+      referenceAudioText: p.sendsReferenceAudioField ? referenceAudioText : null,
       minWords: minWords,
       sendWholeFile: sendWholeFile,
       sampleLen: sampleLen,

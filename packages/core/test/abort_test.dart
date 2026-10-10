@@ -102,6 +102,9 @@ void main() {
           ),
           outputFormat: TtsAudioFormat.mp3,
           voice: 'v',
+          // narrate() creates the output directory before it checks the token,
+          // so an unset outDir would leave an empty tree in the package root.
+          outDir: '${dir.path}/out',
           providerSettings: const {'base_url': testBaseUrl},
         );
 

@@ -17,6 +17,8 @@ class NarrationConfig {
     this.style = PromptDefaults.style,
     this.passagePrefix = PromptDefaults.passagePrefix,
     this.instruct,
+    this.referenceAudioPath,
+    this.referenceAudioText,
     this.minWords = PromptDefaults.minWords,
     this.sendWholeFile = false,
     this.sampleLen,
@@ -99,6 +101,22 @@ class NarrationConfig {
   /// voice list, so prose is the only way to choose a voice.
   final String? instruct;
 
+  /// Path, on the provider's filesystem, of a reference clip to clone the voice
+  /// from; sent as `ref_audio` for a model whose profile declares
+  /// [TtsModelProfile.sendsReferenceAudioField], and null for every other model
+  /// and whenever the user picked no clip.
+  ///
+  /// A path rather than bytes, because core does no file handling: the GUI owns
+  /// the picker and passes on what came back. Setting it supersedes [voice].
+  final String? referenceAudioPath;
+
+  /// Verbatim transcript of [referenceAudioPath], sent as `ref_text`.
+  ///
+  /// Blank is a real option: the provider falls back to transcribing the clip
+  /// itself. Supplying it skips that step, and a transcript that stops short of
+  /// the clip's end degrades the clone, so this is free-text on purpose.
+  final String? referenceAudioText;
+
   /// If set, only narrate this many paragraphs (smoke test).
   final int? sampleLen;
 
@@ -163,6 +181,8 @@ class NarrationConfig {
     style: style,
     passagePrefix: passagePrefix,
     instruct: instruct,
+    referenceAudioPath: referenceAudioPath,
+    referenceAudioText: referenceAudioText,
     minWords: minWords,
     sendWholeFile: sendWholeFile,
     sampleLen: sampleLen,

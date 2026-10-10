@@ -85,6 +85,25 @@ command is unavailable; Quit (⌃Q on Linux/Windows, ⌘Q natively) ends the app
 Saving writes the document to a `.txt`; once saved, narration names its output
 subdirectory from the real filename.
 
+## Voice cloning
+
+A model whose file sets `"sends_reference_audio": true` — currently the local
+`fish_pro_8bit` — offers a **Voice cloning** disclosure under Model & voice.
+Expand it, click **Choose clip…** and pick a short recording of the voice you
+want. The clip's *file name* is sent to the provider, not the audio, so this
+only works against a TTS server on the same machine as the app (the `local`
+provider running [mlx-audio](MAC.md#optional-run-a-local-tts-server-mlx-audio)).
+A hosted provider never sees your file.
+
+The **Reference transcript** box is optional. Leave it blank and the provider
+transcribes the clip itself; fill it in for a more faithful clone. Either way,
+transcribe the *whole* clip including the final word — a transcript that stops
+early is a known cause of the model drifting off the speaker partway through.
+
+Choosing a clip replaces the voice rather than adding to it, so the voice picker
+and its raw-id field hide while one is set. **Clear** puts them back. The choice
+is per-run and is not remembered between launches.
+
 ## Notes / current behaviour
 
 - Output format is `mp3` or `wav`, chosen per model, and a model file must declare

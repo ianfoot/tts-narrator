@@ -261,6 +261,19 @@ and WAV needs nothing extra. If you have `ffmpeg` and would rather have MP3, the
 MP3 button — the same way `kokoro_local` works. The model file declares both
 (`"formats": ["wav", "mp3"]`), and your pick is remembered per model.
 
+### Cloning a voice with `fish_pro_8bit`
+
+`fish_pro_8bit` also carries the same 16 voices as the cloud fish model, and can
+go further: expand **Voice cloning** under Model & voice, click **Choose clip…**
+and pick a short recording of the voice you want.
+
+This only works because the app and the server run on the same Mac. The app
+sends the clip's *path*, not the audio, so the server can read it off your disk;
+a hosted provider never sees your file. The optional **Reference transcript**
+box overrides the server's own transcription of the clip, and covering the
+whole clip including the last word makes for a steadier clone. See
+[USAGE.md](USAGE.md#voice-cloning).
+
 ---
 
 ## Building from source

@@ -85,6 +85,8 @@ Future<GeneratedAudio> _speak(
   double? speed = 1.0,
   String? language,
   String? instruct,
+  String? refAudio,
+  String? refText,
   String? apiKey,
   AbortToken? abort,
   bool immediateBackoff = false,
@@ -101,6 +103,8 @@ Future<GeneratedAudio> _speak(
       speed: speed,
       language: language,
       instruct: instruct,
+      refAudio: refAudio,
+      refText: refText,
       apiKey: apiKey,
       abort: abort,
     );
@@ -271,6 +275,61 @@ void main() {
 
       expect(audio.generationId, 'gen-1');
       expect(utf8.decode(audio.bytes), 'audio');
+    });
+
+    // `ref_audio` is a path on the provider's filesystem, not an upload, so the
+    // client forwards the string it is handed and never touches the file.
+    test('carries ref_audio and its transcript for a cloning model', () async {
+      final server = await _serve(_audio);
+      addTearDown(server.close);
+
+      await _speak(
+        server,
+        model: 'mlx-community/fish-audio-s2-pro-8bit',
+        format: TtsAudioFormat.wav,
+        refAudio: '/Users/ian/clips/sample.wav',
+        refText: '  The quick brown fox jumps over the lazy dog.  ',
+      );
+
+      expect(server.requests.single.body['ref_audio'], '/Users/ian/clips/sample.wav');
+      expect(
+        server.requests.single.body['ref_text'],
+        'The quick brown fox jumps over the lazy dog.',
+      );
+    });
+
+    test('omits ref_text when the transcript is blank', () async {
+      // Blank is a real option: it asks the provider to transcribe the clip
+      // itself, which is not the same request as sending an empty transcript.
+      final server = await _serve(_audio);
+      addTearDown(server.close);
+
+      for (final refText in [null, '', '   ']) {
+        await _speak(
+          server,
+          format: TtsAudioFormat.wav,
+          refAudio: '/clips/sample.wav',
+          refText: refText,
+        );
+      }
+
+      expect(server.requests, hasLength(3));
+      for (final request in server.requests) {
+        expect(request.body['ref_audio'], '/clips/sample.wav');
+        expect(request.body.containsKey('ref_text'), isFalse);
+      }
+    });
+
+    test('sends neither field without a reference clip', () async {
+      // The transcript only travels with a clip; on its own it describes nothing.
+      final server = await _serve(_audio);
+      addTearDown(server.close);
+
+      await _speak(server, refText: 'An orphan transcript.');
+
+      final body = server.requests.single.body;
+      expect(body.containsKey('ref_audio'), isFalse);
+      expect(body.containsKey('ref_text'), isFalse);
     });
   });
 

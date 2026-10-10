@@ -82,7 +82,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String gui_controller_errors_noVoiceSelected(String modelAlias) {
-    return 'No voice selected for \"$modelAlias\" — pick an alias or set a default in the voice config.';
+    return 'No voice selected for \"$modelAlias\" — pick a voice or set a default in the voice config.';
   }
 
   @override
@@ -189,13 +189,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_format_wav => 'WAV';
 
   @override
-  String get gui_run_setup_voiceAliasLabel => 'Voice alias';
+  String get gui_run_setup_voiceAliasLabel => 'Voice';
 
   @override
   String get gui_run_setup_advancedVoiceId => 'Advanced Voice ID';
 
   @override
-  String get gui_run_setup_overridesSelectedAlias => 'Overrides selected alias';
+  String get gui_run_setup_overridesSelectedAlias =>
+      'Overrides the selected voice';
 
   @override
   String get gui_run_setup_freeFormVoiceHint =>
@@ -218,6 +219,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gui_run_setup_genderMale => 'Male';
+
+  @override
+  String get gui_run_setup_audioFileTypeGroup => 'Audio';
+
+  @override
+  String get gui_run_setup_voiceCloningLabel => 'Voice cloning';
+
+  @override
+  String get gui_run_setup_voiceCloningTooltip =>
+      'Narrate in a voice from a reference clip instead of a preset';
+
+  @override
+  String get gui_run_setup_voiceCloningCaptionOverrides =>
+      'Overrides the selected voice with a clip';
+
+  @override
+  String gui_run_setup_voiceCloningCaptionCloned(String clip) {
+    return 'Cloned from $clip';
+  }
+
+  @override
+  String get gui_run_setup_referenceClipLabel => 'Reference clip';
+
+  @override
+  String get gui_run_setup_referenceClipChoose => 'Choose clip...';
+
+  @override
+  String get gui_run_setup_referenceClipClear => 'Clear';
+
+  @override
+  String get gui_run_setup_referenceTextLabel => 'Reference transcript';
+
+  @override
+  String get gui_run_setup_referenceTextHint =>
+      'Transcribe the whole clip exactly, including the final word. Leave blank to have the provider transcribe it.';
 
   @override
   String get gui_run_setup_modelOptionsSection => 'Model options';

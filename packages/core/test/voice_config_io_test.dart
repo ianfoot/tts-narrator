@@ -306,6 +306,34 @@ void main() {
       );
     });
 
+    group('voice cloning', () {
+      const json =
+          '{"id":"mlx-community/fish-audio-s2-pro-8bit",'
+          '"formats":["wav"],"sends_reference_audio":true}';
+
+      TtsModelProfile loadProfile(String modelJson) =>
+          loadConfig(modelJson).models['m']!;
+
+      test('reads the capability', () {
+        expect(loadProfile(json).sendsReferenceAudioField, isTrue);
+      });
+
+      test('a model without the key cannot clone', () {
+        // Cloning sends a filesystem path the provider must be able to read, so
+        // it stays off unless a model file asks for it.
+        expect(
+          loadProfile('{"id":"x/y","formats":["wav"]}').sendsReferenceAudioField,
+          isFalse,
+        );
+      });
+
+      rejection(
+        'rejects a non-bool sends_reference_audio',
+        '{"id":"x/y","formats":["wav"],"sends_reference_audio":"yes"}',
+        '"sends_reference_audio" must be a bool',
+      );
+    });
+
     test(
       'accepts a directory with only a marker and no models',
       () {

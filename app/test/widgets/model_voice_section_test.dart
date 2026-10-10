@@ -80,7 +80,7 @@ void main() {
       expect(find.byKey(const Key('voiceAdvancedDisclosure')), findsOneWidget);
       // The advanced voice id is collapsed by default.
       expect(find.byKey(const Key('voiceRawField')), findsNothing);
-      expect(find.text('Overrides selected alias'), findsOneWidget);
+      expect(find.text('Overrides the selected voice'), findsOneWidget);
     });
   });
 
@@ -185,12 +185,12 @@ void main() {
       await pumpSection(tester, c);
 
       expect(find.byKey(const Key('voiceRawField')), findsNothing);
-      expect(find.text('Overrides selected alias'), findsOneWidget);
+      expect(find.text('Overrides the selected voice'), findsOneWidget);
 
       await expandVoiceRaw(tester);
 
       expect(find.byKey(const Key('voiceRawField')), findsOneWidget);
-      expect(find.text('Overrides selected alias'), findsNothing);
+      expect(find.text('Overrides the selected voice'), findsNothing);
 
       await tester.tap(find.text('Advanced Voice ID'));
       await tester.pump();
@@ -499,6 +499,105 @@ void main() {
       c.changeModel('local');
       await tester.pumpAndSettle();
       expect(c.outputFormat, TtsAudioFormat.mp3);
+    });
+  });
+
+  group('voice cloning', () {
+    testWidgets('offers no cloning control for a model that cannot clone', (
+      tester,
+    ) async {
+      writeConfig(configDir, {
+        'models': {'kokoro': {'id': 'hexgrad/kokoro-82m', 'formats': ['mp3']}},
+      });
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
+
+      expect(find.byKey(const Key('referenceAudioDisclosure')), findsNothing);
+    });
+
+    testWidgets('a cloning model offers the control, collapsed, saying what '
+        'it overrides', (tester) async {
+      writeReferenceAudioConfig(configDir);
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
+
+      expect(find.byKey(const Key('referenceAudioDisclosure')), findsOneWidget);
+      // The clip controls only appear once the disclosure is opened.
+      expect(find.byKey(const Key('referenceAudioChooseButton')), findsNothing);
+      expect(
+        find.text('Overrides the selected voice with a clip'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a chosen clip is named and takes the voice picker with it', (
+      tester,
+    ) async {
+      writeReferenceAudioConfig(configDir);
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
+
+      c.referenceAudioPath = '${dir.path}/sample.wav';
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cloned from sample.wav'), findsOneWidget);
+      // The provider clones the speaker in the clip, so there is no voice left
+      // to pick — nor a raw id to override.
+      expect(find.byKey(const Key('voiceDropdown')), findsNothing);
+      expect(
+        find.byKey(const Key('voiceAdvancedDisclosure')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('clearing the clip brings the voice picker back', (
+      tester,
+    ) async {
+      writeReferenceAudioConfig(configDir);
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
+
+      c.referenceAudioPath = '${dir.path}/sample.wav';
+      await tester.pumpAndSettle();
+      c.referenceAudioPath = null;
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('voiceDropdown')), findsOneWidget);
+      expect(
+        find.text('Overrides the selected voice with a clip'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('switching model drops the clip, which described one voice', (
+      tester,
+    ) async {
+      writeConfig(configDir, {
+        'models': {
+          'fish': {
+            'id': 'mlx-community/fish-audio-s2-pro-8bit',
+            'formats': ['wav'],
+            'sends_reference_audio': true,
+          },
+          'kokoro': {'id': 'hexgrad/kokoro-82m', 'formats': ['mp3']},
+        },
+        'defaults': {'fish': 'Anne'},
+        'voices': {
+          'fish': {'Anne': '7da08ad79a8a4492b2c6b54091499922'},
+        },
+      });
+      final c = makeController(configDir);
+      await pumpSection(tester, c);
+
+      c.referenceAudioPath = '${dir.path}/sample.wav';
+      c.referenceAudioText = 'The quick brown fox.';
+      await tester.pumpAndSettle();
+
+      c.changeModel('kokoro');
+      await tester.pumpAndSettle();
+
+      expect(c.referenceAudioPath, isNull);
+      expect(c.referenceAudioText, isEmpty);
     });
   });
 }

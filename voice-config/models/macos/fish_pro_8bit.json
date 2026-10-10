@@ -8,6 +8,9 @@
   ],
   "speed": true,
   "sends_language": true,
+  "sends_reference_audio": true,
+  "voices_editable": true,
+  "default_voice": "7da08ad79a8a4492b2c6b54091499922",
   "default_language": "en-us",
   "languages": {
     "en-us": "US English",
@@ -22,17 +25,85 @@
     "zh-tw": "Traditional Chinese"
   },
   "voices": {
-    "default-1": {
-      "name": "Voice 1",
-      "gender": "male"
+    "c76716de6df1435f8aef86a4e890c8a5": {
+      "name": "Albert",
+      "gender": "male",
+      "language": "en-gb"
     },
-    "default-2": {
-      "name": "Voice 2",
-      "gender": "female"
+    "d44a955f8f7b4b05b3b34a134356c1ae": {
+      "name": "Brian",
+      "gender": "male",
+      "language": "en-gb"
     },
-    "default-3": {
-      "name": "Voice 3",
-      "gender": "neutral"
+    "f77b35b0fdc74d82a26dd84642dd69db": {
+      "name": "Charles",
+      "gender": "male",
+      "language": "en-gb"
+    },
+    "ed7c228dec7b45f2ae9e2ba9f6f8a2b6": {
+      "name": "Douglas",
+      "gender": "male",
+      "language": "en-gb"
+    },
+    "8ed868734d7944a2a324301078b9cb20": {
+      "name": "Ewan",
+      "gender": "male",
+      "language": "en-gb"
+    },
+    "7da08ad79a8a4492b2c6b54091499922": {
+      "name": "Anne",
+      "gender": "female",
+      "language": "en-gb"
+    },
+    "614f8afd83f841048c040b2c6234d2c1": {
+      "name": "Beatrice",
+      "gender": "female",
+      "language": "en-gb"
+    },
+    "9811db8e43714d55a06e3839253495f5": {
+      "name": "Claire",
+      "gender": "female",
+      "language": "en-gb"
+    },
+    "22fa3b1346f5428dbf2fc2e6e4839e55": {
+      "name": "Diana",
+      "gender": "female",
+      "language": "en-gb"
+    },
+    "933563129e564b19a115bedd57b7406a": {
+      "name": "Sarah",
+      "gender": "female",
+      "language": "en-us"
+    },
+    "bf322df2096a46f18c579d0baa36f41d": {
+      "name": "Adrian",
+      "gender": "male",
+      "language": "en-us"
+    },
+    "79d0bd3e4e5444b18f7b6d89b5927bf1": {
+      "name": "Jordan",
+      "gender": "male",
+      "language": "en-us"
+    },
+    "412a7bebb63345b6becf50f9da63ed5d": {
+      "name": "Hannah",
+      "gender": "female",
+      "language": "en-us"
+    },
+    "b347db033a6549378b48d00acb0d06cd": {
+      "name": "Selene",
+      "gender": "female",
+      "language": "en-us"
+    },
+    "cd3b00723b114873918c0870b0a87843": {
+      "name": "Ethan",
+      "gender": "male",
+      "language": "en-us"
+    },
+    "e3cd384158934cc9a01029cd7d278634": {
+      "name": "Laura",
+      "gender": "female",
+      "language": "en-us"
     }
   }
 }

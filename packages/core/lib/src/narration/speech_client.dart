@@ -47,9 +47,13 @@ class GeneratedAudio {
 /// `Authorization` header, not an error — whether one was *needed* is the
 /// server's judgement.
 ///
-/// [voice], [speed], [language] and [instruct] are capability-gated by the model
-  /// profile, and null when it does not take them; see `TtsModelProfile` for what
-  /// each means and which model flag gates it.
+/// [voice], [speed], [language], [instruct], [refAudio] and [refText] are
+  /// capability-gated by the model profile, and null when it does not take them;
+  /// see `TtsModelProfile` for what each means and which model flag gates it.
+  ///
+/// [refAudio] is a path on the provider's filesystem, not the clip's bytes: core
+  /// stays free of file handling and the GUI owns what the user picked. It
+  /// supersedes [voice] when present.
 ///
 /// [abort] is checked before the first attempt and between retries: an
 /// already-cancelled token throws [AbortException] without calling the API.
@@ -70,6 +74,8 @@ typedef SpeechClient = Future<GeneratedAudio> Function({
   required double? speed,
   String? language,
   String? instruct,
+  String? refAudio,
+  String? refText,
   String? apiKey,
   AbortToken? abort,
 });

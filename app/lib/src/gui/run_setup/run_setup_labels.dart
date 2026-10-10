@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../theme/app_tokens.dart';
 
-/// Tier 2 field title (e.g. "Model", "Voice alias"): 13pt Medium primary,
+/// Tier 2 field title (e.g. "Model", "Voice"): 13pt Medium primary,
 /// sitting 4px above its control and 12px below the preceding one.
 Widget runSetupFieldLabel(AppTokens tokens, String text) => Padding(
   padding: const EdgeInsets.only(bottom: 4, top: 12),

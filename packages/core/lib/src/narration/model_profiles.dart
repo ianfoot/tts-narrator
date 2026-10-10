@@ -23,6 +23,7 @@ class TtsModelProfile {
     this.supportsSpeed = false,
     this.sendsLanguageField = false,
     this.sendsInstructField = false,
+    this.sendsReferenceAudioField = false,
     required this.provider,
     this.displayName,
     this.defaultInstruct,
@@ -97,6 +98,16 @@ class TtsModelProfile {
   /// voice-design model is described, not selected.
   final bool sendsInstructField;
 
+  /// Whether the model accepts `ref_audio` and `ref_text` to clone a voice from a
+  /// reference clip instead of selecting a preset one.
+  ///
+  /// `ref_audio` is a path on the *provider's* filesystem, not an upload, so this
+  /// only works where the TTS server shares a filesystem with the app — which is
+  /// exactly the `local` provider case. Opt-in per model
+  /// (`"sends_reference_audio": true`) for the same reason as [sendsInstructField]:
+  /// a hosted vendor with no such field would reject the request.
+  final bool sendsReferenceAudioField;
+
   /// Name of the `providers.<name>` block that serves this model. Required in
   /// the model config file, and opaque to core: it is a lookup key into user
   /// config, never a vendor the code knows about.
@@ -136,6 +147,7 @@ class TtsModelProfile {
     supportsSpeed: supportsSpeed,
     sendsLanguageField: sendsLanguageField,
     sendsInstructField: sendsInstructField,
+    sendsReferenceAudioField: sendsReferenceAudioField,
     provider: provider ?? this.provider,
     displayName: displayName,
     defaultInstruct: defaultInstruct,

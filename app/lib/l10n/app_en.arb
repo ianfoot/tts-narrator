@@ -36,7 +36,7 @@
   },
 
   "gui_controller_errors_noModelConfigured": "No voice model is configured. Download the starter configs, or add model files to the voice config directory.",
-  "gui_controller_errors_noVoiceSelected": "No voice selected for \"{modelAlias}\" — pick an alias or set a default in the voice config.",
+  "gui_controller_errors_noVoiceSelected": "No voice selected for \"{modelAlias}\" — pick a voice or set a default in the voice config.",
   "@gui_controller_errors_noVoiceSelected": {
     "description": "Raised when the active model has neither a selected nor a default voice.",
     "placeholders": { "modelAlias": { "type": "String", "example": "fish" } }
@@ -101,9 +101,9 @@
   "gui_run_setup_outputFormatLabel": "Output format",
   "gui_format_mp3": "MP3",
   "gui_format_wav": "WAV",
-  "gui_run_setup_voiceAliasLabel": "Voice alias",
+  "gui_run_setup_voiceAliasLabel": "Voice",
   "gui_run_setup_advancedVoiceId": "Advanced Voice ID",
-  "gui_run_setup_overridesSelectedAlias": "Overrides selected alias",
+  "gui_run_setup_overridesSelectedAlias": "Overrides the selected voice",
   "gui_run_setup_freeFormVoiceHint": "free-form id or provider voice",
   "gui_run_setup_selectVoiceHint": "Select a Voice...",
   "gui_run_setup_languageLabel": "Language",
@@ -111,6 +111,19 @@
   "gui_run_setup_genderAny": "Any",
   "gui_run_setup_genderFemale": "Female",
   "gui_run_setup_genderMale": "Male",
+  "gui_run_setup_audioFileTypeGroup": "Audio",
+  "gui_run_setup_voiceCloningLabel": "Voice cloning",
+  "gui_run_setup_voiceCloningTooltip": "Narrate in a voice from a reference clip instead of a preset",
+  "gui_run_setup_voiceCloningCaptionOverrides": "Overrides the selected voice with a clip",
+  "gui_run_setup_voiceCloningCaptionCloned": "Cloned from {clip}",
+  "@gui_run_setup_voiceCloningCaptionCloned": {
+    "placeholders": { "clip": { "type": "String" } }
+  },
+  "gui_run_setup_referenceClipLabel": "Reference clip",
+  "gui_run_setup_referenceClipChoose": "Choose clip...",
+  "gui_run_setup_referenceClipClear": "Clear",
+  "gui_run_setup_referenceTextLabel": "Reference transcript",
+  "gui_run_setup_referenceTextHint": "Transcribe the whole clip exactly, including the final word. Leave blank to have the provider transcribe it.",
   "gui_run_setup_modelOptionsSection": "Model options",
   "gui_run_setup_speedLabel": "Speed",
   "gui_run_setup_speedTooltip": "Speech rate multiplier (1.0 = normal)",

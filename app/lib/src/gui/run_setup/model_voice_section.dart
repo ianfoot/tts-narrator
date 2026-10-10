@@ -9,6 +9,7 @@ import '../widgets/app_section.dart';
 import '../widgets/segmented_control.dart';
 import 'advanced_voice_widget.dart';
 import 'run_setup_labels.dart';
+import 'reference_audio_widget.dart';
 import 'voice_picker_widget.dart';
 
 /// The "Model & voice" section of the run-setup panel: the active model picker
@@ -67,10 +68,14 @@ class _ModelVoiceSectionState extends State<ModelVoiceSection> {
             onChanged: (alias) => _controller.changeModel(alias),
           ),
           VoicePickerWidget(controller: _controller),
+          // Only for a model that clones from a reference clip; with one chosen
+          // the clip replaces the voice, so the picker hides its dropdown.
+          ReferenceAudioWidget(controller: _controller),
           // The raw-voice override is a sibling of the picker rather than part
           // of it, so it needs the same gate: a model that sends no voice id has
-          // nothing for a custom id to override.
-          if (_controller.takesVoice)
+          // nothing for a custom id to override. A chosen clip counts as no
+          // voice, for the same reason the dropdown disappears.
+          if (_controller.takesVoice && _controller.referenceAudioPath == null)
             AdvancedVoiceWidget(controller: _controller),
           // Only for a model that declares more than one format: a single option
           // is not a choice, and the format is then part of the model's identity

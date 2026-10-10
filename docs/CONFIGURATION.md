@@ -296,6 +296,26 @@ aloud. You can clear the box and type a fresh description from scratch; while
 it is blank the run is blocked, because a voice-design model has no voice list
 to fall back on and the server would only be guessing.
 
+A model that declares `"sends_reference_audio": true` gets a **Voice cloning**
+disclosure in Model & voice, with a **Choose clip…** button and an optional
+**Reference transcript** box. The chosen clip travels as the request body's
+`ref_audio` field, and the transcript as `ref_text`.
+
+Two things about that are worth stating plainly. First, `ref_audio` is a **path on
+the provider's filesystem, not the clip's bytes**: the app sends the path it
+picked and never uploads anything. This works only where the app and the TTS
+server share a filesystem — in practice the `local` provider, i.e. an MLX Audio
+server on the same Mac. A hosted provider cannot read a path on your disk, which
+is why the flag is opt-in per model and why it is off everywhere else.
+
+Second, the transcript is optional. Leave it blank and the provider transcribes
+the clip itself. Supplying one is usually better: a transcript that stops short
+of the clip's final word degrades the clone.
+
+The clip replaces the voice rather than adding to it, so choosing one hides the
+voice picker and the raw-voice-id field. Clearing it brings both back; a model
+that declares the flag keeps working on its own voices with no clip at all.
+
 ### Gemini voices
 
 Voices are the named ones on the OpenRouter page (e.g. `Charon`, `Zephyr`,

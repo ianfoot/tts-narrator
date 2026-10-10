@@ -20,6 +20,8 @@ class FakeTtsProvider {
       double? speed,
       String? language,
       String? instruct,
+      String? refAudio,
+      String? refText,
       String? apiKey,
     })
   >
@@ -40,6 +42,8 @@ class FakeTtsProvider {
     required double? speed,
     String? language,
     String? instruct,
+    String? refAudio,
+    String? refText,
     String? apiKey,
     AbortToken? abort,
   }) async {
@@ -61,6 +65,8 @@ class FakeTtsProvider {
       speed: speed,
       language: language,
       instruct: instruct,
+      refAudio: refAudio,
+      refText: refText,
       apiKey: apiKey,
     ));
     return GeneratedAudio(bytes: bytes);

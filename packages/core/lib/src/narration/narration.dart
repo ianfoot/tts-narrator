@@ -273,22 +273,32 @@ Future<void> narrate(
     }
 
     onProgress?.call(i, count, paragraph);
+    final profile = config.profile;
+    // A reference clip replaces the voice: the provider clones the speaker it
+    // hears in the clip, so a voice id alongside it would be ignored at best.
+    final referenceAudio = profile.sendsReferenceAudioField
+        ? config.referenceAudioPath
+        : null;
     final audio = await client(
-      model: config.profile.id,
-      voice: config.profile.sendsVoiceField ? config.voice : null,
+      model: profile.id,
+      voice: profile.sendsVoiceField && (referenceAudio?.isEmpty ?? true)
+          ? config.voice
+          : null,
       responseFormat: config.outputFormat,
-      wavResponseFormat: config.profile.wavResponseFormat,
+      wavResponseFormat: profile.wavResponseFormat,
       settings: config.providerSettings,
       apiKey: config.apiKey,
       input: input,
-      speed: config.profile.supportsSpeed ? config.speed : null,
-      language: config.profile.sendsLanguageField ? config.language : null,
+      speed: profile.supportsSpeed ? config.speed : null,
+      language: profile.sendsLanguageField ? config.language : null,
       // Voice design: the model reads the prose instead of a voice id. Falls
       // back to the profile's default so a model that declares the capability
       // never sends an undescribed request the vendor cannot fulfil.
-      instruct: config.profile.sendsInstructField
-          ? (config.instruct ?? config.profile.defaultInstruct)
+      instruct: profile.sendsInstructField
+          ? (config.instruct ?? profile.defaultInstruct)
           : null,
+      refAudio: referenceAudio,
+      refText: config.referenceAudioText,
       abort: abort,
     );
 

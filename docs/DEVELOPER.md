@@ -64,7 +64,8 @@ same directory by construction rather than by agreeing on a fallback.
 - `models/<alias>.json` — one file per model: `id`, `provider`, `formats`,
   `wav_response_format`, `prompt_style`,
   `speed`, `sends_language`, `sends_instruct`,
-  `default_instruct`, `sends_voice`, `default_voice`, `default_language`,
+  `default_instruct`, `sends_reference_audio`, `sends_voice`, `default_voice`,
+  `default_language`,
   `pricing`, `languages`, and `voices`. `provider` is required and names the
   `providers/<name>.json` that answers for the model; a model naming a provider
   with no file on disk is dropped with a warning. A model file sitting directly in
@@ -524,6 +525,17 @@ title.
   `OpenAiSpeechClient` drops an empty `instruct` and the vendor has no voice list
   to guess from. The one shipped example is `qwen3_voicedesign`; see
    [QWEN3_VOICEDESIGN.md](QWEN3_VOICEDESIGN.md).
+- Cloning models opt in with `sends_reference_audio: true`, which is what puts
+  `ref_audio` in the request body. The value is a **path**, not bytes: the GUI
+  owns the file picker and core never touches a file, so the field only works
+  where the app and the TTS server share a filesystem — the `local` provider. A
+  vendor that wanted the clip uploaded instead would need a second wire format,
+  and the `SpeechClient` typedef would grow a transport enum; nothing here
+  assumes the path form is the only possible one. `ref_text` rides along only
+  when it is non-blank, since a blank transcript is the request that asks the
+  provider to transcribe the clip itself. `NarrationConfig.referenceAudioPath`
+  wins over `voice` in `narrate()`, and both `VoicePickerWidget` and the
+  advanced raw-id field hide while a clip is chosen.
 - Multilingual models opt in with `sends_language: true`, which is what puts
   `lang_code` in the request body — the same gating shape as `speed`. The codes
   themselves are data: `languages` is a `{code: label}` table (its declaration

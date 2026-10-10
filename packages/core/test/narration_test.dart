@@ -50,6 +50,9 @@ void main() {
     bool sendsInstructField = false,
     String? defaultInstruct,
     String? instruct,
+    bool sendsReferenceAudioField = false,
+    String? referenceAudioPath,
+    String? referenceAudioText,
     Map<String, String> providerSettings = const {'api_key': 'sk-test'},
   }) {
     return NarrationConfig(
@@ -64,6 +67,7 @@ void main() {
         sendsLanguageField: sendsLanguageField,
         sendsInstructField: sendsInstructField,
         defaultInstruct: defaultInstruct,
+        sendsReferenceAudioField: sendsReferenceAudioField,
         provider: testProvider,
       ),
       outputFormat: outputFormat,
@@ -71,6 +75,8 @@ void main() {
       voiceLabel: 'Voice One',
       language: language,
       instruct: instruct,
+      referenceAudioPath: referenceAudioPath,
+      referenceAudioText: referenceAudioText,
       speed: speed,
       // `narrate` validates the block before the first segment, so every test
       // needs a base URL; a test may still override or extend the map.
@@ -374,6 +380,52 @@ void main() {
       );
 
       expect(provider.calls.single.instruct, isNull);
+    });
+  });
+
+  group('voice cloning', () {
+    test('sends the clip and its transcript, and drops the voice', () async {
+      final input = writeInput();
+      await narrate(
+        config(
+          input,
+          sendsReferenceAudioField: true,
+          referenceAudioPath: '/clips/sample.wav',
+          referenceAudioText: 'The quick brown fox.',
+        ),
+        client: provider.client,
+      );
+
+      final call = provider.calls.single;
+      expect(call.refAudio, '/clips/sample.wav');
+      expect(call.refText, 'The quick brown fox.');
+      // The provider clones the speaker it hears in the clip, so a voice id
+      // alongside it would be ignored at best.
+      expect(call.voice, isNull);
+    });
+
+    test('keeps the voice when no clip is chosen', () async {
+      final input = writeInput();
+      await narrate(
+        config(input, sendsReferenceAudioField: true),
+        client: provider.client,
+      );
+
+      final call = provider.calls.single;
+      expect(call.voice, 'VoiceOne');
+      expect(call.refAudio, isNull);
+    });
+
+    test('drops the clip for a model that does not take one', () async {
+      // The gate is the capability: a stray path on a model with no such field
+      // must not reach the wire.
+      final input = writeInput();
+      await narrate(
+        config(input, referenceAudioPath: '/clips/sample.wav'),
+        client: provider.client,
+      );
+
+      expect(provider.calls.single.refAudio, isNull);
     });
   });
 

@@ -462,6 +462,105 @@ void main() {
     });
   });
 
+  group('voice cloning', () {
+    /// A model that can narrate in a voice taken from a reference clip.
+    void writeCloningConfig() => writeConfig({
+      'models': {
+        'fish': {
+          'id': 'mlx-community/fish-audio-s2-pro-8bit',
+          'formats': ['wav'],
+          'sends_reference_audio': true,
+        },
+      },
+      'defaults': {'fish': 'Anne'},
+      'voices': {
+        'fish': {'Anne': '7da08ad79a8a4492b2c6b54091499922'},
+      },
+    });
+
+    test('the clip and its transcript reach the run', () {
+      writeCloningConfig();
+      final c = makeController();
+      c.changeModel('fish');
+      c.referenceAudioPath = '/clips/sample.wav';
+      c.referenceAudioText = 'The quick brown fox.';
+
+      final cfg = c.buildConfig();
+      expect(cfg.referenceAudioPath, '/clips/sample.wav');
+      expect(cfg.referenceAudioText, 'The quick brown fox.');
+      // The selected voice stays on the config; dropping it is the narration
+      // layer's call, made against the model profile.
+      expect(cfg.voice, '7da08ad79a8a4492b2c6b54091499922');
+    });
+
+    test('a cloning model with no clip runs on its own voices', () {
+      // Cloning is an option, not a requirement: the preset voices still work.
+      writeCloningConfig();
+      final c = makeController();
+      c.changeModel('fish');
+      c.setText('A paragraph to narrate.');
+
+      final cfg = c.buildConfig();
+      expect(cfg.referenceAudioPath, isNull);
+      expect(cfg.voice, '7da08ad79a8a4492b2c6b54091499922');
+      expect(c.narrateBlockReason(), isNull);
+    });
+
+    test('a model that cannot clone never carries a clip', () {
+      // The gate is the capability: a stray clip on a model with no such field
+      // must not reach the provider, whose filesystem has never heard of it.
+      writeConfig({
+        'models': {
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'formats': ['mp3'],
+          },
+        },
+        'defaults': {'kokoro': 'Emma'},
+        'voices': {
+          'kokoro': {'Emma': 'bf_emma'},
+        },
+      });
+      final c = makeController();
+      c.changeModel('kokoro');
+      c.referenceAudioPath = '/clips/sample.wav';
+      c.referenceAudioText = 'The quick brown fox.';
+
+      final cfg = c.buildConfig();
+      expect(cfg.referenceAudioPath, isNull);
+      expect(cfg.referenceAudioText, isNull);
+    });
+
+    test('a model switch drops the clip and its transcript', () {
+      writeConfig({
+        'models': {
+          'fish': {
+            'id': 'mlx-community/fish-audio-s2-pro-8bit',
+            'formats': ['wav'],
+            'sends_reference_audio': true,
+          },
+          'kokoro': {
+            'id': 'hexgrad/kokoro-82m',
+            'formats': ['mp3'],
+          },
+        },
+        'defaults': {'fish': 'Anne', 'kokoro': 'Emma'},
+        'voices': {
+          'fish': {'Anne': '7da08ad79a8a4492b2c6b54091499922'},
+          'kokoro': {'Emma': 'bf_emma'},
+        },
+      });
+      final c = makeController();
+      c.changeModel('fish');
+      c.referenceAudioPath = '/clips/sample.wav';
+      c.referenceAudioText = 'The quick brown fox.';
+
+      c.changeModel('kokoro');
+      expect(c.referenceAudioPath, isNull);
+      expect(c.referenceAudioText, isEmpty);
+    });
+  });
+
   group('API key secure-store fallback', () {
     /// Writes the fish config whose alpha block references a `${ENV}`
     /// that is guaranteed absent — the exact double-click scenario the

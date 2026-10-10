@@ -30,7 +30,10 @@ class VoicePickerWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final tokens = AppTokens.of(context);
-    final takesVoice = controller.takesVoice;
+    // A reference clip replaces the voice: the model clones the speaker it hears
+    // in the clip, so the voice id has nowhere to go. The language dropdown
+    // stays — it is `lang_code`, not a voice.
+    final takesVoice = controller.takesVoice && controller.referenceAudioPath == null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
