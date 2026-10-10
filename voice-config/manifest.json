@@ -6,6 +6,7 @@
   "platforms": {
     "macos": [
       "fish.json",
+      "fish_pro_8bit.json",
       "gemini.json",
       "kokoro.json",
       "kokoro_local.json",

@@ -1,0 +1,37 @@
+{
+  "id": "mlx-community/fish-audio-s2-pro-8bit",
+  "formats": [
+    "wav",
+    "mp3"
+  ],
+  "display_name": "Fish Audio S2 Pro 8bit (Local)",
+  "speed": true,
+  "sends_language": true,
+  "default_language": "en-us",
+  "languages": {
+    "en-us": "US English",
+    "en-gb": "British English",
+    "fr-fr": "French",
+    "es-es": "Spanish",
+    "de-de": "German",
+    "it-it": "Italian",
+    "ja-jp": "Japanese",
+    "ko-kr": "Korean",
+    "zh-cn": "Simplified Chinese",
+    "zh-tw": "Traditional Chinese"
+  },
+  "voices": {
+    "default-1": {
+      "name": "Voice 1",
+      "gender": "male"
+    },
+    "default-2": {
+      "name": "Voice 2", 
+      "gender": "female"
+    },
+    "default-3": {
+      "name": "Voice 3",
+      "gender": "neutral"
+    }
+  }
+}

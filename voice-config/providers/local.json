@@ -1,6 +1,6 @@
 {
   "models": {
-    "macos": ["kokoro_local", "qwen3_voicedesign"],
+    "macos":["kokoro_local", "qwen3_voicedesign", "fish_pro_8bit"],
     "linux": [],
     "windows": []
   },
