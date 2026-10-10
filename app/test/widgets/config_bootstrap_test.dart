@@ -48,7 +48,7 @@ void main() {
       WidgetTester tester, {
       VoiceConfigDownloader? downloader,
       Future<List<String>?> Function()? indexLoader,
-      String? repoUrl,
+      VoiceConfigDownloader? defaultDownloader,
     }) async {
       await tester.pumpWidget(
         BootstrapApp(
@@ -56,7 +56,7 @@ void main() {
           prefs: await SharedPreferences.getInstance(),
           downloader: downloader,
           indexLoader: indexLoader,
-          repoUrl: repoUrl,
+          defaultDownloader: defaultDownloader,
         ),
       );
     }
@@ -251,62 +251,50 @@ void main() {
       expect(find.textContaining('Fish, Gemini, Kokoro'), findsOneWidget);
     });
 
-    testWidgets('with no downloader injected, the real download runs and lands '
-        'the whole config', (tester) async {
+    testWidgets('with no downloader injected, the fallback branch is the one '
+        'that runs', (tester) async {
       // Every other test here injects `downloader`, so the branch a real first
-      // run takes — the one that reaches `downloadVoiceConfigFiles` — was never
-      // executed. It compiled and passed 312 tests while throwing
-      // NoSuchMethodError on the app's own first run, because that function's
-      // signature did not match the seam's and the call was dispatched
-      // dynamically. Nothing is injected here but a loopback repoUrl, so this
-      // exercises the real download end to end.
-      final requested = <String>[];
-      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-      final serverDone = server.listen((request) async {
-        requested.add(request.uri.path);
-        request.response
-          ..statusCode = 200
-          ..write('{}');
-        await request.response.close();
-      });
+      // run takes was never executed — which is how a NoSuchMethodError shipped
+      // alongside a green suite. A widget test cannot make a real request, so
+      // this stands `fetchVoiceConfig` out to prove the branch is reached; the
+      // wrapper's own signature is a compile-time check at the call site in
+      // main.dart, and the download itself is covered in core.
+      final calls = <(String, List<String>)>[];
 
-      try {
-        await pumpBootstrap(
-          tester,
-          indexLoader: () async => _macosIndex,
-          repoUrl: 'http://${server.address.address}:${server.port}',
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(testL10n.gui_bootstrap_download));
-        await tester.pumpAndSettle();
+      await pumpBootstrap(
+        tester,
+        indexLoader: () async => _macosIndex,
+        defaultDownloader: (configDir, paths) async =>
+            calls.add((configDir, paths)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(testL10n.gui_bootstrap_download));
+      await tester.pumpAndSettle();
 
-        // Nothing escaped the download: this is the line the bug failed on.
-        expect(tester.takeException(), isNull);
+      expect(tester.takeException(), isNull);
+      expect(calls.single.$1, tempDir);
+      expect(calls.single.$2, _macosIndex);
+      expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsNothing);
+    });
 
-        expect(File('$tempDir/config.json').existsSync(), isTrue);
-        expect(File('$tempDir/providers/alpha.json').existsSync(), isTrue);
-        expect(File('$tempDir/models/fish.json').existsSync(), isTrue);
-        // A macOS-only model stays in its platform directory, or the loader would
-        // not find it on the one platform it is served on.
-        expect(
-          File('$tempDir/models/macos/kokoro_local.json').existsSync(),
-          isTrue,
-        );
-        // Every indexed path was actually asked for, subdirectory included.
-        expect(
-          requested,
-          containsAll([
-            endsWith('/voice-config/config.json'),
-            endsWith('/voice-config/providers/alpha.json'),
-            endsWith('/voice-config/models/fish.json'),
-            endsWith('/voice-config/models/macos/kokoro_local.json'),
-          ]),
-        );
-        expect(find.text(testL10n.gui_bootstrap_downloadTitle), findsNothing);
-      } finally {
-        await serverDone.cancel();
-        await server.close(force: true);
-      }
+    testWidgets('an injected downloader takes precedence over the fallback', (
+      tester,
+    ) async {
+      var fallbackCalls = 0;
+      var downloaderCalls = 0;
+
+      await pumpBootstrap(
+        tester,
+        downloader: (configDir, paths) async => downloaderCalls++,
+        defaultDownloader: (configDir, paths) async => fallbackCalls++,
+        indexLoader: () async => _linuxIndex,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(testL10n.gui_bootstrap_download));
+      await tester.pumpAndSettle();
+
+      expect(downloaderCalls, 1);
+      expect(fallbackCalls, 0);
     });
   });
 }

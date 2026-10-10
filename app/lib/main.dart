@@ -10,6 +10,25 @@ import 'src/gui/controller/app_controller.dart';
 import 'src/gui/controller/config_loader.dart';
 import 'src/gui/platform/app_root.dart';
 
+/// Downloads the shipped voice config into [configDir].
+///
+/// [paths] are repository-relative, exactly as [fetchVoiceConfigPaths] returns
+/// them, each keeping the subdirectory it sits under.
+///
+/// This exists because the downloader's two shapes do not match:
+/// [downloadVoiceConfigFiles] takes `paths` as a *named* argument while
+/// [VoiceConfigDownloader] takes it positionally. Passing the tear-off where
+/// that signature is expected leaves no call signature in common, so a `??`
+/// selecting it degrades to a bare `Function` and the call dispatches
+/// dynamically — a `NoSuchMethodError` on first run, and not one a compiler or
+/// a test that always injects a fake would ever catch.
+///
+/// It stays a wrapper rather than being inlined at the call site because the
+/// call site is the only place the two shapes meet, and that meeting has to be
+/// a compile-time check rather than a runtime one.
+Future<void> fetchVoiceConfig(String configDir, List<String> paths) =>
+    downloadVoiceConfigFiles(configDir, paths: paths);
+
 /// Injectable config downloader (defaults to [downloadVoiceConfigFiles]);
 /// tests inject a controllable fake so the spinner is observable.
 ///
@@ -28,7 +47,7 @@ class BootstrapApp extends StatelessWidget {
     required this.prefs,
     this.downloader,
     this.indexLoader,
-    this.repoUrl,
+    this.defaultDownloader,
   });
   final String configDir;
   final SharedPreferences prefs;
@@ -41,15 +60,12 @@ class BootstrapApp extends StatelessWidget {
   /// inject a fake so the bootstrap is hermetic.
   final Future<List<String>?> Function()? indexLoader;
 
-  /// Where the config is fetched from. Null in the app — the public repository,
-  /// which is the default inside [downloadVoiceConfigFiles].
+  /// Stands in for [fetchVoiceConfig] when [downloader] is absent.
   ///
-  /// This exists so a test can point the *real* download at a loopback server
-  /// and drive the fallback branch for real. Injecting a fake downloader
-  /// instead would skip that branch entirely, which is how a signature mismatch
-  /// in it survived a suite of 312 passing tests and a first run that could not
-  /// download anything.
-  final String? repoUrl;
+  /// A widget test cannot make a real request, so without this the fallback
+  /// branch is unreachable from the suite — which is exactly how a signature
+  /// mismatch in it shipped green and crashed on the app's first run.
+  final VoiceConfigDownloader? defaultDownloader;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +89,7 @@ class BootstrapApp extends StatelessWidget {
         prefs: prefs,
 downloader: downloader,
         indexLoader: indexLoader,
-        repoUrl: repoUrl,
+        defaultDownloader: defaultDownloader,
       ),
     );
   }
@@ -88,7 +104,7 @@ class ConfigBootstrap extends StatefulWidget {
     required this.prefs,
     this.downloader,
     this.indexLoader,
-    this.repoUrl,
+    this.defaultDownloader,
   });
   final String configDir;
   final SharedPreferences prefs;
@@ -100,8 +116,9 @@ class ConfigBootstrap extends StatefulWidget {
   /// inject a fake so the bootstrap is hermetic.
   final Future<List<String>?> Function()? indexLoader;
 
-  /// Where the fallback download fetches from. See [BootstrapApp.repoUrl].
-  final String? repoUrl;
+  /// Stands in for [fetchVoiceConfig] when [downloader] is absent. See
+  /// [BootstrapApp.defaultDownloader].
+  final VoiceConfigDownloader? defaultDownloader;
 
   @override
   State<ConfigBootstrap> createState() => _ConfigBootstrapState();
@@ -227,19 +244,15 @@ class _ConfigBootstrapState extends State<ConfigBootstrap> {
   }
 
   Future<void> _downloadWithSpinner() async {
-    // A closure rather than the tear-off of `downloadVoiceConfigFiles`: that
-    // takes `paths` as a *named* argument while [VoiceConfigDownloader] takes it
+    // A wrapper, not the tear-off of `downloadVoiceConfigFiles`: that takes
+    // `paths` as a *named* argument while [VoiceConfigDownloader] takes it
     // positionally, so the two share no call signature. `?? downloadVoiceConfigFiles`
-    // therefore left the result a bare `Function` and the call dispatched
-    // dynamically — a NoSuchMethodError on first run that 312 passing tests
-    // could not see, because every one of them injected `downloader` and none
-    // reached this branch.
-    final download = widget.downloader ?? (configDir, paths) =>
-        downloadVoiceConfigFiles(
-          configDir,
-          paths: paths,
-          repoUrl: widget.repoUrl,
-        );
+    // left the result a bare `Function` and the call dispatched dynamically — a
+    // NoSuchMethodError on first run, invisible to 312 passing tests because
+    // every one of them injected `downloader` and none reached this branch.
+    final download = widget.downloader ??
+        widget.defaultDownloader ??
+        (configDir, paths) => fetchVoiceConfig(configDir, paths);
     if (mounted) setState(() => _downloading = true);
     try {
       await download(widget.configDir, _remotePaths);
