@@ -49,4 +49,4 @@ To run the application in development:
 | [Custom voices](docs/CUSTOM_VOICES.md) | Designing a voice, saving it, and narrating with it |
 | [Developer guide](docs/DEVELOPER.md) | Repository structure, provider architecture, GUI internals |
 | [macOS](docs/MAC.md) · [Linux](docs/LINUX.md) · [Windows](docs/WINDOWS.md) | Platform toolchain, setup, and build instructions |
-| [Kokoro](docs/KOKORO.md) · [Qwen3 VoiceDesign](docs/QWEN3_VOICEDESIGN.md) | Notes for the local Kokoro and Qwen3 voice-design backends |
+| [Kokoro](docs/KOKORO.md) · [Qwen3 VoiceDesign](docs/QWEN3_VOICEDESIGN.md) · [Fish Audio](docs/FISH_AUDIO.md) | Notes for the local Kokoro and voice-design backends, and the hosted Fish service |

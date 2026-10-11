@@ -10,6 +10,7 @@ export 'src/config/voice_config_download.dart';
 export 'src/config/voice_config_io.dart';
 export 'src/config/voice_config_queries.dart';
 export 'src/config/voice_config_store.dart';
+export 'src/diagnostics/http_debug.dart';
 export 'src/narration/abort.dart';
 export 'src/narration/audio_format.dart';
 export 'src/narration/config.dart';

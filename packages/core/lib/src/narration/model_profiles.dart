@@ -116,9 +116,17 @@ class TtsModelProfile {
   /// description. mlx-audio's Fish Audio S2 Pro has no such field: asked for one
   /// it reads it out loud, so the narration opens with the instruction spoken
   /// instead of the text. It takes the description as a bracketed prefix on the
-  /// words themselves — `[a calm male narrator] The harbour lights…` — and
-  /// nothing else, which is why [inputForWire] prepends and [sendsInstructField]
-  /// still governs only whether the app offers the Voice design box.
+  /// words themselves — `[male, calm, low voice, steady tone] Will you walk a
+  /// little faster?…` — and nothing else, which is why [inputForWire] prepends
+  /// and [sendsInstructField] still governs only whether the app offers the Voice
+  /// design box.
+  ///
+  /// What goes in the brackets is keywords rather than prose. A sentence such as
+  /// "A calm male narrator with a low, steady voice" is parsed as text to read,
+  /// not as traits to apply, so it does not change the voice. Comma-separated
+  /// descriptors do: `[male, calm, low voice]`. They cover delivery, emotion and
+  /// timbre, and nothing else — not accent, and not speaker identity, since there
+  /// is no reference audio here to carry either.
   ///
   /// Opt-in per model (`"instruct_as_input_prefix": true`) because this is a
   /// property of one server rather than of the protocol — there is no documented

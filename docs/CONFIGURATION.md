@@ -117,17 +117,32 @@ header and the server decides whether it needed one.
 
 ```json
 {
-  "id": "fish-audio/s2.1-pro-free",
+  "id": "fish-audio/s2.1-pro-free:free",
   "provider": "openrouter",
+  "display_name": "Fish Audio S2.1 (Free)",
   "formats": [
     "wav",
     "mp3"
   ],
   "wav_response_format": "pcm",
-  "default_voice": "British Female Narrator",
+  "voices_editable": true,
+  "default_voice": "7da08ad79a8a4492b2c6b54091499922",
+  "default_language": "en-gb",
+  "languages": {
+    "en-us": "US English",
+    "en-gb": "British English"
+  },
   "voices": {
-    "British Female Narrator": "89f41ea230034706881f85a8227d6ab9",
-    "British War": "2fd511bd06904a21a971c6551dfb853a"
+    "c76716de6df1435f8aef86a4e890c8a5": {
+      "name": "Albert",
+      "gender": "male",
+      "language": "en-gb"
+    },
+    "7da08ad79a8a4492b2c6b54091499922": {
+      "name": "Anne",
+      "gender": "female",
+      "language": "en-gb"
+    }
   }
 }
 ```
@@ -232,12 +247,12 @@ schemas advertise values their providers reject. `packages/core/test/shipped_voi
 pins the result, so a model file that drifts from what its backend serves fails
 the tests rather than the first run.
 
-Default voice per model: `fish`=`89f41ea230034706881f85a8227d6ab9` ("British
-Female Narrator", the free default), `gemini`=Charon, `kokoro`=`bf_emma` ("Emma"),
-`kokoro_local`=`bm_george` ("George"). The voice can be selected in the GUI
-Run Setup panel. `qwen3_voicedesign` has no default voice and no voice dropdown:
-it declares `"sends_voice": false` and describes the narrator in prose instead
-(see [QWEN3_VOICEDESIGN.md](QWEN3_VOICEDESIGN.md)).
+Default voice per model: `fish`=`7da08ad79a8a4492b2c6b54091499922` ("Anne"),
+`gemini`=Charon, `kokoro`=`bf_emma` ("Emma"), `kokoro_local`=`bm_george`
+("George"). The voice can be selected in the GUI Run Setup panel.
+`qwen3_voicedesign` has no default voice and no voice dropdown: it declares
+`"sends_voice": false` and describes the narrator in prose instead (see
+[QWEN3_VOICEDESIGN.md](QWEN3_VOICEDESIGN.md)).
 
 Add or swap a model by editing its `models/<alias>.json` file, and add a new one
 by dropping a file into `models/` — or `models/<platform>/` if it should only be
@@ -343,19 +358,8 @@ panel.
 
 ### Fish voices
 
-Voices are free-form 32-hex fish.audio ids naming the hosted service's voice
-library — `voice-config/models/fish.json` ships 16 of them and picks
-`7da08ad79a8a4492b2c6b54091499922` as its default. Any id the service accepts
-works; they are just ids, so more can be added from the settings screen or by
-hand in `user/models/fish.json` (copy the downloaded file first; see [Your own
-overrides](#your-own-overrides)). The shipped list is an example set, not a
-limit. An unlisted id also still works via the raw-id field in the Run Setup
-panel.
-
-This is specific to the hosted service. The local `models/macos/fish_pro_8bit.json`
-serves mlx-audio instead, which discards the `voice` and `lang_code` fields
-rather than resolving them, so that model lists no voices and declares
-`"sends_voice": false`. See [MAC.md](MAC.md#cloning-a-voice-with-fish_pro_8bit).
+The hosted `fish` model's voices are free-form 32-hex fish.audio ids, and it
+lists no voices at all. Both are covered in [FISH_AUDIO.md](FISH_AUDIO.md).
 
 ## Your own overrides
 
@@ -478,4 +482,4 @@ not the key, so such a model keeps working.
 - [Custom voices](CUSTOM_VOICES.md) — designing a voice, saving it, and narrating with it
 - [Developer guide](DEVELOPER.md) — how the loader and GUI implement all of this
 - [macOS setup](MAC.md) — running a local mlx-audio server (Apple Silicon)
-- [Kokoro voices](KOKORO.md) · [Qwen3 voice design](QWEN3_VOICEDESIGN.md)
+- [Kokoro voices](KOKORO.md) · [Qwen3 voice design](QWEN3_VOICEDESIGN.md) · [Fish Audio](FISH_AUDIO.md)

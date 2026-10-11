@@ -1,10 +1,11 @@
 # Custom voices
 
 Some text-to-speech models do not choose a voice from a list. You describe the
-narrator in prose — *a calm male narrator with a low, steady voice* — and the
-model invents one from that description. Qwen3 VoiceDesign and the local Fish
-Audio S2 Pro are both like this. See
-[QWEN3_VOICEDESIGN.md](QWEN3_VOICEDESIGN.md) for how the description is built.
+narrator and the model invents one from that description. Qwen3 VoiceDesign and
+the local Fish Audio S2 Pro are both like this, though they want the description
+in different shapes — Qwen reads prose, Fish reads comma-separated keywords. See
+[QWEN3_VOICEDESIGN.md](QWEN3_VOICEDESIGN.md) for the prose model and
+[FISH_AUDIO.md](FISH_AUDIO.md) for the keyword one.
 
 The problem is that the voice is invented fresh each time. The same description
 does not give you the same voice, and there is no id you can send back to ask
@@ -34,7 +35,7 @@ The design panel holds four things:
 |---------|------------|
 | **Model** | Every model declaring `sends_instruct: true`, so the list grows with your config rather than being compiled in |
 | **Language** | The languages that model declares, or any language if it declares none |
-| **Voice design** | The prose describing the narrator, prefilled from the model's `default_instruct` |
+| **Voice design** | The description of the narrator, prefilled from the model's `default_instruct` |
 | **Passage** | The fixed text every voice is read from, shown but not editable |
 
 Five things are worth knowing about that panel.
@@ -45,12 +46,15 @@ only means something if the words are identical, so the passage is constant and
 read-only. It is also stored with every voice you save, because a model adopting
 your clip needs to know what was said in it.
 
-**The voice design is not spoken.** Like any `instruct` value, it describes the
-narrator to the model rather than being read aloud. See
-[QWEN3_VOICEDESIGN.md](QWEN3_VOICEDESIGN.md) for what makes a good description.
+**The voice design is not spoken.** It describes the narrator to the model rather
+than being read aloud — either as its own `instruct` field, or for Fish as a
+bracketed prefix on the words, which the model applies rather than reads. What
+form each model wants differs: Qwen3 VoiceDesign takes prose, Fish takes
+comma-separated keywords. See [QWEN3_VOICEDESIGN.md](QWEN3_VOICEDESIGN.md) and
+[FISH_AUDIO.md](FISH_AUDIO.md).
 
-**The panel stays editable while you listen.** Editing the prose changes what the
-next Generate will produce, not what you are currently hearing.
+**The panel stays editable while you listen.** Editing the description changes
+what the next Generate will produce, not what you are currently hearing.
 
 ## Judging a voice
 
@@ -68,17 +72,17 @@ few before one lands. The draft card offers four ways forward:
 | **Generate again** | Re-roll the same description, which gives a different voice |
 | **Save** | Keep it, after naming it |
 
-The card shows the prose the clip was actually generated from. Without that,
-**Generate again** would look like it rolls the clip you are judging rather than
-the description above it — a real ambiguity, because the panel is editable in the
-meantime.
+The card shows the description the clip was actually generated from. Without
+that, **Generate again** would look like it rolls the clip you are judging rather
+than the description above it — a real ambiguity, because the panel is editable in
+the meantime.
 
 An attempt counter sits alongside the caption. It rises each time you re-roll
 the same description and resets when the description changes, so it reads as
 "this design has taken four tries", not as a running total.
 
-Editing the prose and pressing Generate is the natural way to explore: a
-different description, and the counter starts over.
+Editing the description and pressing Generate is the natural way to explore: a
+different one, and the counter starts over.
 
 ## Saved voices
 
@@ -189,6 +193,7 @@ imitate something while inventing it.
 ## See also
 
 - [QWEN3_VOICEDESIGN.md](QWEN3_VOICEDESIGN.md) — how to write the description
+- [FISH_AUDIO.md](FISH_AUDIO.md) — the keyword form, and cloning a designed voice
 - [MAC.md](MAC.md) — running the local models that can design a voice
 - [CONFIGURATION.md](CONFIGURATION.md) — the config directory and its files
 - [USAGE.md](USAGE.md) — the editor and the rest of the run setup
