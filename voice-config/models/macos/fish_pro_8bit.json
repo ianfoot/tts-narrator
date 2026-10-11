@@ -6,7 +6,7 @@
     "wav",
     "mp3"
   ],
-  "speed": true,
+  "speed": false,
   "sends_voice": false,
   "sends_reference_audio": true,
   "sends_instruct": true,

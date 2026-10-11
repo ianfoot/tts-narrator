@@ -20,7 +20,12 @@ class _Fixture {
   late final FakeTtsProvider provider;
   late final AppController controller;
 
+  /// The installed audio platform, so a test can see what the player was
+  /// actually asked to load.
+  late final FakeAudioPlatform audio;
+
   _Fixture({bool withConsumer = false}) {
+    audio = installFakeAudioPlatform();
     dir = Directory.systemTemp.createTempSync('tts_voice_library_test_');
     // One writeConfig call, never two: it rewrites `models/` wholesale, so a
     // second call would silently drop the model the first one declared.
@@ -55,6 +60,12 @@ class _Fixture {
 
   CustomVoiceStore get store => CustomVoiceStore(dir.path);
 
+  /// The temporary file the screen writes so a draft can be played.
+  File get previewFile => File(
+    '${Directory.systemTemp.path}${Platform.pathSeparator}'
+    'tts-narrator-voice-draft.wav',
+  );
+
   /// Whether anything at all has been written under the voice directory.
   bool get anythingPersisted {
     final voices = store.voicesDir;
@@ -62,7 +73,19 @@ class _Fixture {
     return Directory(voices).listSync().isNotEmpty;
   }
 
-  void dispose() => dir.deleteSync(recursive: true);
+  /// Clears the preview the screen leaves behind, so one test cannot pass on
+  /// the file another wrote.
+  void clearPreview() {
+    final file = previewFile;
+    if (file.existsSync()) file.deleteSync();
+  }
+
+  void dispose() {
+    dir.deleteSync(recursive: true);
+    // The preview lives outside the fixture's directory, so nothing else would
+    // remove it.
+    clearPreview();
+  }
 }
 
 Future<void> _pumpLibrary(WidgetTester tester, _Fixture fixture) async {
@@ -119,7 +142,10 @@ void main() {
     // real `AudioPlayer`; without a platform behind it every later `await
     // player.stop()` never completes, and since cancel, re-roll and save all
     // stop playback first they would silently do nothing.
-    installFakeAudioPlatform();
+    //
+    // The fixture installs its own and keeps the handle: a test needs to see what
+    // the player was actually asked to load, not merely that it stopped
+    // complaining.
     fixture = _Fixture();
   });
   tearDown(() => fixture.dispose());
@@ -144,6 +170,37 @@ void main() {
       );
       final preview = tester.widget<Text>(find.textContaining('harbour'));
       expect(preview.data, isNotNull);
+    });
+
+    // The whole screen used to stretch to the window, which left each control a
+    // wide bar with its label marooned in the middle. Capping the column is what
+    // keeps a label and the control it labels visibly a pair.
+    testWidgets('caps the content column instead of stretching to the window',
+        (tester) async {
+      await _pumpLibrary(tester, fixture);
+
+      final width = tester.getSize(
+        find.byKey(const Key('designVoiceInstructField')),
+      ).width;
+      expect(width, lessThanOrEqualTo(720));
+      // And centred, not left-flush against a 1200px window.
+      expect(width, lessThan(tester.view.physicalSize.width / tester.view.devicePixelRatio));
+    });
+
+    // The dropdown label centred inside a full-width button read as body text
+    // with a chevron beside it rather than as a control. Asserting the widget's
+    // alignment rather than the pixels, because a rendered-coordinate check
+    // would pass just as happily if the button had merely shrunk.
+    testWidgets('left-aligns the dropdown labels', (tester) async {
+      await _pumpLibrary(tester, fixture);
+
+      final button = tester.widget<CupertinoButton>(
+        find.descendant(
+          of: find.byKey(const Key('designVoiceModelDropdown')),
+          matching: find.byType(CupertinoButton),
+        ),
+      );
+      expect(button.alignment, Alignment.centerLeft);
     });
   });
 
@@ -189,7 +246,7 @@ void main() {
       await _generate(tester);
       expect(fixture.controller.customVoices.draft!.attempts, 1);
 
-      await _tap(tester, 'voiceDraftRegenerateButton');
+      await _tap(tester, 'designVoiceGenerateButton');
       await tester.pumpAndSettle();
 
       expect(fixture.provider.callCount, 2);
@@ -209,6 +266,54 @@ void main() {
       expect(fixture.controller.customVoices.draft, isNull);
       expect(find.byKey(const Key('voiceDraftSaveButton')), findsNothing);
       expect(fixture.anythingPersisted, isFalse);
+    });
+
+    // The preview file is a workaround for playback, not a save. It has to be
+    // named like audio or the platform cannot decode it, and it has to stay out
+    // of the library or "nothing is written until you press Save" stops meaning
+    // anything the user can rely on.
+    testWidgets('writes the preview to a wav outside the voice library', (
+      tester,
+    ) async {
+      await _pumpLibrary(tester, fixture);
+      await _generate(tester);
+
+      final preview = fixture.previewFile;
+      expect(preview.existsSync(), isTrue);
+      expect(preview.uri.pathSegments.last, endsWith('.wav'));
+      expect(preview.parent.path, Directory.systemTemp.path);
+      expect(fixture.anythingPersisted, isFalse);
+    });
+
+    // Generating must be silent. The clip is written so that pressing Play has
+    // something to hand the platform, but sound that starts on its own
+    // interrupts whatever the user was doing, and they did not ask for it.
+    testWidgets('generating on its own plays nothing', (tester) async {
+      await _pumpLibrary(tester, fixture);
+      await _generate(tester);
+
+      expect(fixture.controller.customVoices.draft, isNotNull);
+      expect(fixture.audio.requestedUrls, isEmpty);
+      expect(fixture.audio.byteSourceCount, 0);
+    });
+
+    // The bug this pins down is specific: passing the clip as bytes reads like
+    // an in-memory play, but audioplayers writes those bytes to a temp file
+    // named by a content hash with no extension, which the platform then
+    // cannot decode. Nothing throws; the button just does nothing. Asserting
+    // the request the platform actually receives is the only way to see it.
+    testWidgets('hands the player a decodable file rather than raw bytes', (
+      tester,
+    ) async {
+      await _pumpLibrary(tester, fixture);
+      await _generate(tester);
+      await _tap(tester, 'voiceDraftPlayButton');
+
+      expect(fixture.audio.byteSourceCount, 0);
+      expect(fixture.audio.requestedUrls, isNotEmpty);
+      final requested = fixture.audio.requestedUrls.last;
+      expect(requested.url, endsWith('.wav'));
+      expect(requested.mimeType, 'audio/wav');
     });
   });
 

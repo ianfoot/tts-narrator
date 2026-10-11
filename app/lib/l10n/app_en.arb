@@ -355,7 +355,6 @@
   "gui_voiceLibrary_play": "Play",
   "gui_voiceLibrary_stop": "Stop",
   "gui_voiceLibrary_cancel": "Cancel",
-  "gui_voiceLibrary_generateAgain": "Generate again",
   "gui_voiceLibrary_save": "Save",
   "gui_voiceLibrary_savedTitle": "SAVED VOICES",
   "gui_voiceLibrary_emptyTitle": "No voices designed yet.",
