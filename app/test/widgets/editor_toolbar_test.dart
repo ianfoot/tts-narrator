@@ -130,6 +130,43 @@ void main() {
     });
   });
 
+  group('design voice button', () {
+    // The button stays visible when nothing can design a voice, so the two
+    // cases below are the same tap under two different configs rather than a
+    // present control and an absent one.
+    testWidgets('invokes controller.onDesignVoice when a model can design',
+        (tester) async {
+      fixtures.writeVoiceDesignConfig(configDir);
+      final controller =
+          AppController(loader: UserVoiceConfigLoader(configDir: configDir));
+      var opened = false;
+      controller.commands.onDesignVoice = () => opened = true;
+      await pumpToolbar(tester, controller);
+      await tester.tap(find.byKey(const Key('editorDesignVoiceButton')));
+      await tester.pump();
+      expect(opened, isTrue);
+    });
+
+    testWidgets(
+      'blocked invokes onShowGuard and does not call onDesignVoice',
+      (tester) async {
+        final controller = makeController();
+        String? guardReason;
+        var opened = false;
+        controller.commands.onDesignVoice = () => opened = true;
+        await pumpToolbar(
+          tester,
+          controller,
+          onShowGuard: (msg) => guardReason = msg,
+        );
+        await tester.tap(find.byKey(const Key('editorDesignVoiceButton')));
+        await tester.pump();
+        expect(guardReason, contains('model'));
+        expect(opened, isFalse);
+      },
+    );
+  });
+
   group('settings button', () {
     testWidgets('settingsButton invokes controller.onSettings', (tester) async {
       final controller = makeController();

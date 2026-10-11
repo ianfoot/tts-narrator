@@ -13,6 +13,9 @@ class PlatformCommands {
 
   VoidCallback? onSettings;
 
+  /// Opens the voice library, where a voice can be designed and saved.
+  VoidCallback? onDesignVoice;
+
   /// Mirrors the toolbar toggle so non-macOS platforms can bind the same
   /// action to an in-app control.
   VoidCallback? onToggleRunSetupPanel;

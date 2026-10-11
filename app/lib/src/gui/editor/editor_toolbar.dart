@@ -203,6 +203,37 @@ class _EditorToolbarState extends State<EditorToolbar> {
     );
   }
 
+  Widget _buildDesignVoiceButton(AppTokens tokens) {
+    final available = controller.customVoices.canDesign;
+    return Tooltip(
+      message: available
+          ? _l10n.gui_editor_toolbar_designVoiceTooltip
+          : _l10n.gui_editor_toolbar_designVoiceUnavailable,
+      child: AppButton(
+        key: const Key('editorDesignVoiceButton'),
+        style: .outlined,
+        // Kept enabled rather than hidden: a user who cannot see the button has
+        // no way to find out that the feature needs a model the app has not
+        // loaded. The guard says what is missing instead.
+        onPressed: () {
+          if (!available) {
+            widget.onShowGuard?.call(
+              _l10n.gui_editor_toolbar_designVoiceUnavailable,
+            );
+            return;
+          }
+          controller.commands.onDesignVoice?.call();
+        },
+        compact: true,
+        icon: const Icon(CupertinoIcons.waveform, size: 18),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [Text(_l10n.gui_editor_toolbar_designVoice)],
+        ),
+      ),
+    );
+  }
+
   Widget _buildNarrateButton(AppTokens tokens) {
     return Tooltip(
       message: '${_l10n.gui_editor_toolbar_narrate} (${acceleratorLabel('N')})',
@@ -282,6 +313,8 @@ class _EditorToolbarState extends State<EditorToolbar> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              _buildDesignVoiceButton(tokens),
+              const SizedBox(width: 8),
               _buildNarrateButton(tokens),
               if (fullPlay != null) ...[const SizedBox(width: 8), fullPlay],
               if (controller.canCleanupSegments) ...[

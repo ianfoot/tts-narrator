@@ -24,3 +24,6 @@ export 'src/narration/prompt.dart';
 export 'src/narration/prompt_strings.dart';
 export 'src/narration/speech_client.dart';
 export 'src/narration/wav.dart';
+export 'src/voice_library/custom_voice.dart';
+export 'src/voice_library/custom_voice_store.dart';
+export 'src/voice_library/voice_design.dart';

@@ -104,6 +104,25 @@ Choosing a clip replaces the voice rather than adding to it, so the voice picker
 and its raw-id field hide while one is set. **Clear** puts them back. The choice
 is per-run and is not remembered between launches.
 
+## Custom voices
+
+A **Design Voice…** button sits immediately left of **Narrate** in the editor
+toolbar. It opens a library where you describe a narrator in prose, hear the
+voice that description produces, and save the ones worth keeping as wav files.
+
+Those files are then ordinary reference clips: pick one with **Use** and it takes
+exactly the place of a clip chosen by hand under **Voice cloning**, transcript
+included. Because that is all it is, any model declaring
+`"sends_reference_audio": true` can speak in a saved voice, and a saved voice
+does not appear in any model's voice picker — it is a clip, not a voice entry.
+
+Designing is a loop rather than a single step, because a design model invents a
+new voice every time it is asked. Nothing reaches disk until you press **Save**;
+**Cancel** and **Generate again** cost nothing.
+
+See [Custom voices](CUSTOM_VOICES.md) for the full flow, where the files are
+stored, and how to script it.
+
 ## Notes / current behaviour
 
 - Output format is `mp3` or `wav`, chosen per model, and a model file must declare
@@ -127,5 +146,6 @@ is per-run and is not remembered between launches.
 
 - [README](../README.md) — project overview
 - [Configuration](CONFIGURATION.md) — voice config files, providers, models, voices
+- [Custom voices](CUSTOM_VOICES.md) — designing and saving a voice of your own
 - [Developer guide](DEVELOPER.md) — architecture and internals
 - [macOS](MAC.md), [Linux](LINUX.md), [Windows](WINDOWS.md) — platform setup

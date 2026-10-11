@@ -278,6 +278,12 @@ box overrides the server's own transcription of the clip, and covering the
 whole clip including the last word makes for a steadier clone. See
 [USAGE.md](USAGE.md#voice-cloning).
 
+A clip you designed yourself works here too. **Design Voice…** in the editor
+toolbar writes a wav under the app's config directory and hands you the matching
+transcript, so pressing **Use** on a saved voice sets both boxes above for you —
+same path, same reason it works: it is a file on this Mac. See
+[Custom voices](CUSTOM_VOICES.md).
+
 ---
 
 ## Building from source

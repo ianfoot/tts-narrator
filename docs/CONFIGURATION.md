@@ -374,7 +374,8 @@ directory inside the same config directory:
 │   └── windows/
 └── user/                    ← yours
     ├── providers/               (optional)
-    └── models/                  (optional)
+    ├── models/                  (optional)
+    └── voices/                   (the voice library)
 ```
 
 A file in `user/` **shadows** the downloaded file of the same name. To change one
@@ -398,6 +399,30 @@ the copy. For a model that ships under `models/<platform>/`, put your copy under
 - Anything a hand-written file gets wrong is reported in the app's **Config
   warnings** banner rather than failing the launch, and a malformed override
   falls back to the downloaded file.
+
+### The voice library is not voice config
+
+`user/voices/` holds the voices you designed yourself, and nothing in this
+section applies to it.
+
+```
+user/voices/
+├── voices.json              ← the registry
+└── <id>.wav                 ← one clip per entry
+```
+
+A saved voice is **an audio clip, not a `voices` entry**. The two look alike and
+behave nothing alike: a `voices` entry is an id a provider recognises and the
+picker lists, while a saved voice is a wav file plus the words it was read from,
+which a model adopts as a reference clip. The config loader walks only
+`providers/` and `models/`, so nothing here can appear in a model, shade a
+downloaded file, or affect which models load.
+
+Writes are atomic and leave a plain JSON file, and any key the app does not
+recognise is carried across untouched — so the registry is as much yours to edit
+by hand as a model file is. A registry that is missing or unreadable reads as an
+empty library rather than an error, so it can never stop you narrating. See
+[Custom voices](CUSTOM_VOICES.md).
 
 ### Editing voices in the app
 
@@ -450,6 +475,7 @@ not the key, so such a model keeps working.
 ## Related
 
 - [Usage & output](USAGE.md) — output files, manifests, playback, segmentation
+- [Custom voices](CUSTOM_VOICES.md) — designing a voice, saving it, and narrating with it
 - [Developer guide](DEVELOPER.md) — how the loader and GUI implement all of this
 - [macOS setup](MAC.md) — running a local mlx-audio server (Apple Silicon)
 - [Kokoro voices](KOKORO.md) · [Qwen3 voice design](QWEN3_VOICEDESIGN.md)

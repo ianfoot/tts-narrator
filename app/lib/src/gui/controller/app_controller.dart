@@ -8,6 +8,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import '../theme/app_tokens.dart' show AppThemeMode;
 import 'api_key_store.dart';
 import 'config_loader.dart';
+import 'custom_voice_controller.dart';
 import 'document_controller.dart';
 import 'model_profile_voice_controller.dart';
 import 'platform_commands.dart';
@@ -27,9 +28,9 @@ export 'run_controller.dart' show NarrationSegment;
 /// the pipeline reads them.
 ///
 /// The sub-controllers ([DocumentController], [ThemeController],
-/// [ModelProfileVoiceController], [SettingsController], [RunController]) own the
-/// state; this one forwards their surfaces and re-broadcasts their notifications
-/// so callers keep a single change stream.
+/// [ModelProfileVoiceController], [SettingsController], [RunController],
+/// [CustomVoiceController]) own the state; this one forwards their surfaces and
+/// re-broadcasts their notifications so callers keep a single change stream.
 class AppController extends ChangeNotifier {
   AppController({
     required UserVoiceConfigLoader loader,
@@ -54,10 +55,18 @@ class AppController extends ChangeNotifier {
       model: _model,
       client: client,
     );
+    // Shares the run's client, so a design and a narration cannot disagree about
+    // which provider they are talking to or how its failures are retried.
+    _customVoices = CustomVoiceController(
+      model: _model,
+      settings: _settings,
+      client: client ?? OpenAiSpeechClient().synthesize,
+    );
     _document.addListener(_onDocumentChanged);
     _theme.addListener(_onThemeChanged);
     _settings.addListener(_onSettingsChanged);
     _run.addListener(_onRunChanged);
+    _customVoices.addListener(_onCustomVoicesChanged);
     _apiKeyStore.addListener(_onSettingsChanged);
   }
 
@@ -87,6 +96,9 @@ class AppController extends ChangeNotifier {
 
   /// The narration-run lifecycle and per-run progress.
   late final RunController _run;
+
+  /// The saved custom voices and the one being auditioned.
+  late final CustomVoiceController _customVoices;
 
   /// The platform-dispatched command slots (menu bar, toolbar bindings).
   final PlatformCommands commands = PlatformCommands();
@@ -181,10 +193,22 @@ class AppController extends ChangeNotifier {
   /// voice dropdown is shown in "Model & voice").
   bool get takesVoice => _model.takesVoice;
 
+  /// The voices the user designed, and whichever one is being auditioned.
+  CustomVoiceController get customVoices => _customVoices;
+
   /// Whether the active model accepts a reference clip (drives whether the
   /// voice-cloning control is shown in "Model & voice").
   bool get takesReferenceAudio =>
       _model.profile?.sendsReferenceAudioField ?? false;
+
+  /// Whether the active model can speak with a clip from the voice library.
+  ///
+  /// The same question [takesReferenceAudio] asks, reached from the library
+  /// rather than from the run-setup panel: a saved voice is a reference clip
+  /// under a different name, so a model that takes one can take the other. Kept
+  /// as its own getter so "use" can say why it is unavailable rather than
+  /// leaving a dead button.
+  bool get usesCustomVoices => takesReferenceAudio;
 
   /// Whether the active model tags any of its voices with a gender (drives the
   /// voice-picker gender control in "Model & voice").
@@ -344,6 +368,23 @@ class AppController extends ChangeNotifier {
     _settings.referenceAudioText = value;
   }
 
+  /// Narrows the active run to [voice], or releases it with a null argument.
+  ///
+  /// A saved custom voice is a reference clip plus the words it was read from,
+  /// which is exactly the pair `ref_audio` and `ref_text` want. Adopting it is
+  /// therefore the same act as picking a clip in the run-setup panel, and going
+  /// through the same setters is what keeps that panel honest: it re-renders
+  /// showing the library's clip by name rather than quietly narrating with a
+  /// voice nothing on screen mentions.
+  void useCustomVoice(CustomVoice? voice) {
+    if (voice == null) {
+      _settings.resetReferenceAudio();
+      return;
+    }
+    _settings.referenceAudioPath = _customVoices.clipPathFor(voice);
+    _settings.referenceAudioText = voice.transcript;
+  }
+
   /// Speech-rate multiplier (1.0 = normal, clamped 0.25-2.0 by
   /// [SettingsController.speed]).
   double get speed => _settings.speed;
@@ -477,6 +518,11 @@ class AppController extends ChangeNotifier {
 
   /// Forwards a [RunController] notification.
   void _onRunChanged() {
+    notifyListeners();
+  }
+
+  /// Forwards a [CustomVoiceController] notification.
+  void _onCustomVoicesChanged() {
     notifyListeners();
   }
 

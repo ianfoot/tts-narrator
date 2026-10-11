@@ -114,6 +114,24 @@ template.
 > slow and tranquil pace, a deeply calming and reassuring emotional delivery, and
 > a soft British accent.
 
+### Keeping a voice you like
+
+This model invents a different voice every time it reads the same description, so
+a run that sounds right cannot be reproduced: the next run asks again and gets
+something else.
+
+To keep one, use **Design Voice…** in the editor toolbar. It runs the description
+into a short standard passage, plays the result, and lets you **Save** the clip as
+a wav — with the words it was read from stored alongside, because a model that
+adopts the clip later needs both. **Generate again** re-rolls the same prose for
+another variation, and **New variation** on a saved voice reseeds the description
+so you can start a family of them from one line of prose.
+
+A saved voice is then an ordinary reference clip: any model declaring
+`"sends_reference_audio": true` — `fish_pro_8bit` on the same local server, for
+one — can speak in it, with no re-recording and no per-character work. See
+[Custom voices](CUSTOM_VOICES.md).
+
 ## Languages
 
 Ten, natively, and **the `lang_code` is the language's full name** — `English`,
