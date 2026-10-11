@@ -164,12 +164,13 @@ void main() {
     testWidgets('shows the standard passage as read-only text', (tester) async {
       await _pumpLibrary(tester, fixture);
 
-      expect(
+      // Against the constant rather than a word from it: swapping the passage
+      // is a routine editorial choice, and pinning a fragment here would break
+      // the test each time the words change.
+      final preview = tester.widget<Text>(
         find.byKey(const Key('voiceDesignPassagePreview')),
-        findsOneWidget,
       );
-      final preview = tester.widget<Text>(find.textContaining('harbour'));
-      expect(preview.data, isNotNull);
+      expect(preview.data, kVoiceDesignPassage.trim());
     });
 
     // The whole screen used to stretch to the window, which left each control a

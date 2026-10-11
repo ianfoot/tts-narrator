@@ -50,6 +50,7 @@ void main() {
     bool sendsInstructField = false,
     String? defaultInstruct,
     String? instruct,
+    bool instructAsInputPrefix = false,
     bool sendsReferenceAudioField = false,
     String? referenceAudioPath,
     String? referenceAudioText,
@@ -67,6 +68,7 @@ void main() {
         sendsLanguageField: sendsLanguageField,
         sendsInstructField: sendsInstructField,
         defaultInstruct: defaultInstruct,
+        instructAsInputPrefix: instructAsInputPrefix,
         sendsReferenceAudioField: sendsReferenceAudioField,
         provider: testProvider,
       ),
@@ -380,6 +382,31 @@ void main() {
       );
 
       expect(provider.calls.single.instruct, isNull);
+    });
+
+    // One model build has no `instruct` field and reads whatever arrives there
+    // aloud, so the description rides on the front of the input instead -- on
+    // the run path as well as when designing a clip.
+    test('prefixes the input for a model that takes it that way', () async {
+      final input = writeInput();
+      await narrate(
+        config(
+          input,
+          sendsVoiceField: false,
+          sendsInstructField: true,
+          instructAsInputPrefix: true,
+          instruct: 'A calm, low British male narrator.',
+        ),
+        client: provider.client,
+      );
+
+      final call = provider.calls.single;
+      expect(
+        call.input,
+        startsWith('[A calm, low British male narrator.] '),
+      );
+      expect(call.input, endsWith(_inputText));
+      expect(call.instruct, isNull);
     });
   });
 

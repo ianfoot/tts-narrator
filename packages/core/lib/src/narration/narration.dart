@@ -6,6 +6,7 @@ import 'abort.dart';
 import 'concat.dart';
 import 'config.dart';
 import 'manifest.dart';
+import 'model_profiles.dart';
 import 'prompt.dart';
 import 'speech_client.dart';
 import 'wav.dart';
@@ -286,13 +287,19 @@ Future<void> narrate(
       wavResponseFormat: profile.wavResponseFormat,
       settings: config.providerSettings,
       apiKey: config.apiKey,
-      input: input,
+      input: inputForWire(
+        profile,
+        input,
+        config.instruct ?? profile.defaultInstruct,
+      ),
       speed: profile.supportsSpeed ? config.speed : null,
       language: profile.sendsLanguageField ? config.language : null,
       // Voice design: the model reads the prose instead of a voice id. Falls
       // back to the profile's default so a model that declares the capability
-      // never sends an undescribed request the vendor cannot fulfil.
-      instruct: profile.sendsInstructField
+      // never sends an undescribed request the vendor cannot fulfil. A model
+      // that takes the description on `input` instead is sent none at all --
+      // asking it for an `instruct` gets the prose read out loud.
+      instruct: profile.sendsInstructField && !profile.instructAsInputPrefix
           ? (config.instruct ?? profile.defaultInstruct)
           : null,
       refAudio: referenceAudio,

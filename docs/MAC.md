@@ -284,6 +284,22 @@ transcript, so pressing **Use** on a saved voice sets both boxes above for you �
 same path, same reason it works: it is a file on this Mac. See
 [Custom voices](CUSTOM_VOICES.md).
 
+One quirk of this model is worth knowing about: it has **no `instruct` field**.
+Given one it reads the description aloud, so the narration would open with "A calm
+male narrator with a low, steady voice" and never reach the text. It takes the
+description as a bracketed prefix on the words themselves instead —
+
+```
+"input": "[a calm male narrator] The harbour lights came on one by one…"
+```
+
+— and the app does that for you: you type the prose in the **Voice design** box
+normally, never see the brackets, and the description is prepended to the input
+rather than sent as a field. `fish_pro_8bit.json` records this with
+`"instruct_as_input_prefix": true`. That is a property of this mlx-audio build
+rather than something the protocol documents, so if a future build grows a real
+`instruct` field, delete that one line.
+
 ---
 
 ## Building from source

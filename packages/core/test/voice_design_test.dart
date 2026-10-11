@@ -10,6 +10,7 @@ TtsModelProfile _profile({
   TtsWavResponseFormat wavResponseFormat = TtsWavResponseFormat.wav,
   bool sendsLanguage = true,
   bool supportsSpeed = true,
+  bool instructAsInputPrefix = false,
 }) =>
     TtsModelProfile(
       alias: 'design',
@@ -21,6 +22,7 @@ TtsModelProfile _profile({
       sendsInstructField: true,
       sendsLanguageField: sendsLanguage,
       supportsSpeed: supportsSpeed,
+      instructAsInputPrefix: instructAsInputPrefix,
       defaultInstruct: 'A calm male narrator.',
     );
 
@@ -42,6 +44,54 @@ void main() {
     // comparison meaningless.
     test('is fixed, so the same prose always yields the same reading', () {
       expect(kVoiceDesignPassage, same(kVoiceDesignPassage));
+    });
+  });
+
+  group('a description that rides on the input', () {
+    // mlx-audio's Fish Audio has no `instruct` field: given one it reads the
+    // description aloud, so the clip opens with the instruction spoken instead
+    // of the passage. It takes the description as a bracketed prefix on the
+    // words themselves, which is the only shape it understands.
+    test('prefixes the passage in brackets for a model that wants that', () {
+      expect(
+        inputForWire(
+          _profile(instructAsInputPrefix: true),
+          'The harbour lights.',
+          'A smoker.',
+        ),
+        '[A smoker.] The harbour lights.',
+      );
+    });
+
+    test('leaves the input alone for a model that reads a description', () {
+      expect(
+        inputForWire(_profile(), 'The harbour lights.', 'A smoker.'),
+        'The harbour lights.',
+      );
+    });
+
+    // No description means nothing to direct, and a leading `[]` would be a
+    // malformed direction rather than an absent one.
+    test('sends the passage bare when the description is blank', () {
+      expect(
+        inputForWire(
+          _profile(instructAsInputPrefix: true),
+          'The harbour lights.',
+          '   ',
+        ),
+        'The harbour lights.',
+      );
+    });
+
+    test('sends the passage bare when there is no description at all', () {
+      expect(
+        inputForWire(
+          _profile(instructAsInputPrefix: true),
+          'The harbour lights.',
+          null,
+        ),
+        'The harbour lights.',
+      );
     });
   });
 
@@ -72,6 +122,25 @@ void main() {
       );
 
       expect(provider.calls.single.instruct, 'A gravelly smoker.');
+    });
+
+    // A model that takes its description on the input must not also be sent an
+    // `instruct`: it has no such field and reads whatever arrives there aloud,
+    // so the clip would open with the description spoken and carry it twice.
+    test('puts the description on the input and sends no instruct', () async {
+      final provider = FakeTtsProvider();
+
+      await generateVoiceSample(
+        client: provider.client,
+        profile: _profile(instructAsInputPrefix: true),
+        instruct: 'A gravelly smoker.',
+        providerSettings: settings,
+        attempts: 1,
+      );
+
+      final call = provider.calls.single;
+      expect(call.input, '[A gravelly smoker.] $kVoiceDesignPassage');
+      expect(call.instruct, isNull);
     });
 
     // A design model writes the voice rather than selecting one. Sending an id

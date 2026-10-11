@@ -16,14 +16,20 @@ import '../narration/wav.dart';
 /// *same* text every time. Comparing two designs only means something if the
 /// difference between them is the voice, not the reading.
 ///
-/// Sized for the 15 to 20 seconds a cloning model wants: long enough to settle
-/// into a natural rhythm and show range, short enough that re-rolling is
-/// quick enough to be worth doing several times.
+/// Sized by what it has to do rather than by a number of seconds: long enough
+/// that a cloning model settles into a natural rhythm and has some range to
+/// show, short enough that re-rolling is quick enough to be worth doing
+/// several times.
+///
+/// The words themselves are the whiting and the snail from Lewis Carroll's
+/// Alice's Adventures in Wonderland (1865), which is out of copyright. Public
+/// domain, and already well known enough that a voice saying it sounds like a
+/// voice saying something rather than reciting filler.
 const String kVoiceDesignPassage = '''
-The harbour lights came on one by one as the evening settled over the water.
-A gull turned above the pier, and somewhere along the quay a door closed
-softly. She walked the length of the wall without hurrying, listening to the
-noise of the town grow quieter with every step, and did not once look back.
+Will you walk a little faster? said a whiting to a snail. There's a porpoise
+close behind us, and he's treading on my tail. See how eagerly the lobsters
+and the turtles all advance! They are waiting on the shingle, will you come
+and join the dance?
 ''';
 
 /// The audio for one designed voice, ready to audition or save.
@@ -67,14 +73,17 @@ Future<VoiceSample> generateVoiceSample({
   final audio = await client(
     model: profile.id,
     voice: null,
-    input: passage,
+    input: inputForWire(profile, passage, instruct),
     responseFormat: TtsAudioFormat.wav,
     wavResponseFormat: profile.wavResponseFormat,
     settings: providerSettings,
     apiKey: apiKey,
     speed: profile.supportsSpeed ? speed : null,
     language: profile.sendsLanguageField ? language : null,
-    instruct: instruct,
+    // Sent only to a model with somewhere to put it: one that takes the
+    // description on `input` reads an `instruct` out loud instead, so asking
+    // for both would put the description in the clip twice, spoken.
+    instruct: profile.instructAsInputPrefix ? null : instruct,
     abort: abort,
   );
   return VoiceSample(
