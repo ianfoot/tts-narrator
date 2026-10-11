@@ -343,17 +343,19 @@ panel.
 
 ### Fish voices
 
-Voices are free-form 32-hex fish.audio ids (the default is
-`89f41ea230034706881f85a8227d6ab9`, "British Female Narrator"). Any id is
-accepted; a curated British voice list lives on the "Text to Speech" Logseq
-page and in `voice-config/models/fish.json`.
+Voices are free-form 32-hex fish.audio ids naming the hosted service's voice
+library — `voice-config/models/fish.json` ships 16 of them and picks
+`7da08ad79a8a4492b2c6b54091499922` as its default. Any id the service accepts
+works; they are just ids, so more can be added from the settings screen or by
+hand in `user/models/fish.json` (copy the downloaded file first; see [Your own
+overrides](#your-own-overrides)). The shipped list is an example set, not a
+limit. An unlisted id also still works via the raw-id field in the Run Setup
+panel.
 
-Fish is the model to reach for when you want more voices than ship by default:
-they are just ids, so any the service accepts can be added — from the
-settings screen, or by hand in `user/models/fish.json` (copy the downloaded
-file first; see [Your own overrides](#your-own-overrides)). The curated 27 are
-an example set, not a limit. An unlisted id also still works via the raw-id
-field in the Run Setup panel.
+This is specific to the hosted service. The local `models/macos/fish_pro_8bit.json`
+serves mlx-audio instead, which discards the `voice` and `lang_code` fields
+rather than resolving them, so that model lists no voices and declares
+`"sends_voice": false`. See [MAC.md](MAC.md#cloning-a-voice-with-fish_pro_8bit).
 
 ## Your own overrides
 

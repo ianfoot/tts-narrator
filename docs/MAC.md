@@ -263,9 +263,13 @@ MP3 button — the same way `kokoro_local` works. The model file declares both
 
 ### Cloning a voice with `fish_pro_8bit`
 
-`fish_pro_8bit` also carries the same 16 voices as the cloud fish model, and can
-go further: expand **Voice cloning** under Model & voice, click **Choose clip…**
-and pick a short recording of the voice you want.
+Unlike the hosted fish model, `fish_pro_8bit` carries no voice ids at all —
+mlx-audio drops the `voice` and `lang_code` fields without reading them — so it
+declares `"sends_voice": false` and the voice dropdown is not offered. Its
+narrator comes from two places instead: the **Voice design** box under Model &
+voice, where you describe it in prose, and the clone: expand **Voice
+cloning**, click **Choose clip…** and pick a short recording of the voice you
+want.
 
 This only works because the app and the server run on the same Mac. The app
 sends the clip's *path*, not the audio, so the server can read it off your disk;
