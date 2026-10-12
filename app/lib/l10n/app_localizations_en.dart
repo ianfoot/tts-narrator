@@ -381,9 +381,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_run_setup_prefixFieldTooltip =>
       'Text prepended to each paragraph';
 
-  @override
-  String get gui_run_setup_instructFieldTooltip =>
-      'Describe the narrator in prose; the model designs the voice from it';
+  
 
   @override
   String get gui_run_setup_sampleLenFieldTooltip =>
@@ -736,9 +734,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get gui_voiceLibrary_instructLabel => 'Voice design';
 
-  @override
-  String get gui_voiceLibrary_instructHint =>
-      'Describe the narrator in prose: persona and age, pitch and timbre, pace, emotional tone, accent.';
+  
 
   @override
   String get gui_voiceLibrary_passageLabel => 'Standard passage';

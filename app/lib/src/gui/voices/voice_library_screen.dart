@@ -514,7 +514,7 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
             key: const Key('designVoiceInstructField'),
             controller: _instruct,
             maxLines: 4,
-            hintText: l10n.gui_voiceLibrary_instructHint,
+            hintText: model == null ? null : voiceDesignHint(model),
           ),
         ),
         const SizedBox(height: 12),

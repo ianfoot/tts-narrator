@@ -166,7 +166,7 @@
   "gui_run_setup_accentFieldTooltip": "Voice accent description (e.g., 'southern British English')",
   "gui_run_setup_styleFieldTooltip": "Voice style personality (e.g., 'warm, composed')",
   "gui_run_setup_prefixFieldTooltip": "Text prepended to each paragraph",
-  "gui_run_setup_instructFieldTooltip": "Describe the narrator in prose; the model designs the voice from it",
+  
   "gui_run_setup_sampleLenFieldTooltip": "Number of paragraphs to narrate in sample mode",
   "gui_run_setup_genderControlTooltip": "Filter voices by gender",
   "gui_run_setup_languageDropdownTooltip": "Language sent to the model (lang_code)",
@@ -343,7 +343,7 @@
   "gui_voiceLibrary_languageLabel": "Language",
   "gui_voiceLibrary_languageAny": "Model default",
   "gui_voiceLibrary_instructLabel": "Voice design",
-  "gui_voiceLibrary_instructHint": "Describe the narrator in prose: persona and age, pitch and timbre, pace, emotional tone, accent.",
+  
   "gui_voiceLibrary_passageLabel": "Standard passage",
   "gui_voiceLibrary_passageHint": "Every designed voice is read from this same passage, so two designs differ only by the voice. It travels with the saved clip because cloning models need the words as well as the audio.",
   "gui_voiceLibrary_generate": "Generate",

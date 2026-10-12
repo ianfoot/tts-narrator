@@ -148,7 +148,7 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
                 'accent' => l10n.gui_run_setup_accentFieldTooltip,
                 'style' => l10n.gui_run_setup_styleFieldTooltip,
                 'passagePrefix' => l10n.gui_run_setup_prefixFieldTooltip,
-                'instruct' => l10n.gui_run_setup_instructFieldTooltip,
+                'instruct' => _instructTooltip(),
                 _ => null,
               },
               controller: _modelOptionController(option.key),
@@ -161,6 +161,11 @@ class _ModelOptionsSectionState extends State<ModelOptionsSection> {
       case ModelUiOptionType.speed:
         return SpeedWidget(controller: _controller);
     }
+  }
+
+  String? _instructTooltip() {
+    final p = _controller.profile;
+    return p == null ? null : voiceDesignHint(p);
   }
 
   TextEditingController _modelOptionController(String key) {

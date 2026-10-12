@@ -663,11 +663,7 @@ abstract class AppLocalizations {
   /// **'Text prepended to each paragraph'**
   String get gui_run_setup_prefixFieldTooltip;
 
-  /// No description provided for @gui_run_setup_instructFieldTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Describe the narrator in prose; the model designs the voice from it'**
-  String get gui_run_setup_instructFieldTooltip;
+  
 
   /// No description provided for @gui_run_setup_sampleLenFieldTooltip.
   ///
@@ -1306,11 +1302,7 @@ abstract class AppLocalizations {
   /// **'Voice design'**
   String get gui_voiceLibrary_instructLabel;
 
-  /// No description provided for @gui_voiceLibrary_instructHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Describe the narrator in prose: persona and age, pitch and timbre, pace, emotional tone, accent.'**
-  String get gui_voiceLibrary_instructHint;
+  
 
   /// No description provided for @gui_voiceLibrary_passageLabel.
   ///
