@@ -663,8 +663,6 @@ abstract class AppLocalizations {
   /// **'Text prepended to each paragraph'**
   String get gui_run_setup_prefixFieldTooltip;
 
-  
-
   /// No description provided for @gui_run_setup_sampleLenFieldTooltip.
   ///
   /// In en, this message translates to:
@@ -1302,8 +1300,6 @@ abstract class AppLocalizations {
   /// **'Voice design'**
   String get gui_voiceLibrary_instructLabel;
 
-  
-
   /// No description provided for @gui_voiceLibrary_passageLabel.
   ///
   /// In en, this message translates to:
@@ -1394,18 +1390,6 @@ abstract class AppLocalizations {
   /// **'Describe a narrator above and generate. Every generation sounds different, so keep the ones you like.'**
   String get gui_voiceLibrary_emptyCaption;
 
-  /// No description provided for @gui_voiceLibrary_use.
-  ///
-  /// In en, this message translates to:
-  /// **'Use'**
-  String get gui_voiceLibrary_use;
-
-  /// No description provided for @gui_voiceLibrary_useUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'The selected model cannot speak from a clip. Choose one that supports voice cloning to use this voice.'**
-  String get gui_voiceLibrary_useUnavailable;
-
   /// No description provided for @gui_voiceLibrary_newVariation.
   ///
   /// In en, this message translates to:
@@ -1465,12 +1449,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Designed with {model}'**
   String gui_voiceLibrary_designedWith(Object model);
-
-  /// No description provided for @gui_voiceLibrary_useInRun.
-  ///
-  /// In en, this message translates to:
-  /// **'\"{name}\" is now the reference clip for the next run.'**
-  String gui_voiceLibrary_useInRun(Object name);
 }
 
 class _AppLocalizationsDelegate

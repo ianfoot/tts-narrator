@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -221,13 +222,22 @@ void main() {
   });
 
   group('discarding a draft', () {
-    test('throws the clip away and still writes nothing', () async {
+    test('generating again drops the clip it replaces', () async {
       final voices = fixture.controller.customVoices;
       await voices.generate('A gravelly smoker.');
 
-      voices.discardDraft();
+      final gate = Completer<void>();
+      fixture.provider.gate = gate;
+      final rolling = voices.generate('A gravelly smoker.');
+      await Future<void>.delayed(Duration.zero);
 
       expect(voices.draft, isNull);
+      expect(voices.generating, isTrue);
+
+      gate.complete();
+      await rolling;
+
+      expect(voices.draft?.attempts, 2);
       expect(fixture.anythingPersisted, isFalse);
       expect(fixture.store.read().isEmpty, isTrue);
     });
@@ -351,55 +361,79 @@ void main() {
     });
   });
 
-  group('adopting a voice into a run', () {
+  group('choosing a voice for the run', () {
     // A saved custom voice is a reference clip plus the words it was read from,
-    // which is exactly the pair `ref_audio` and `ref_text` already want. So
-    // adopting one is the same act as picking a clip by hand, and the run-setup
-    // panel shows it without knowing any of this happened.
-    test('sets the clip and its transcript on the run', () async {
+    // which is exactly the pair `ref_audio` and `ref_text` already want. So it
+    // rides the voice dropdown as one more row, and picking either kind of row
+    // has to clear the other: a clip takes the voice field's place on the wire.
+    _Fixture cloning() {
       final run = _Fixture(withDesignModel: true, withConsumer: true);
       addTearDown(run.dispose);
       run.controller.changeModel('fish');
+      return run;
+    }
+
+    Future<String> saveOne(_Fixture run, String name) async {
       final voices = run.controller.customVoices;
       await voices.generate('A gravelly smoker.');
-      voices.saveDraft('Gravelly');
-      final saved = voices.library.voices.single;
+      voices.saveDraft(name);
+      return name;
+    }
 
-      run.controller.useCustomVoice(saved);
+    test('a saved voice is offered as a row of the voice dropdown', () async {
+      final run = cloning();
+      await saveOne(run, 'Gravelly');
 
-      expect(run.controller.takesReferenceAudio, isTrue);
-      expect(
-        run.controller.referenceAudioPath,
-        run.store.wavFile(saved.id.value).path,
-      );
-      expect(run.controller.referenceAudioText, kVoiceDesignPassage);
+      final labels = run.controller.voiceItems.map((e) => e.$2);
+
+      expect(labels, contains('Gravelly'));
     });
 
-    test('releases the run when handed nothing', () async {
-      final run = _Fixture(withDesignModel: true, withConsumer: true);
-      addTearDown(run.dispose);
-      run.controller.changeModel('fish');
-      final voices = run.controller.customVoices;
-      await voices.generate('A gravelly smoker.');
-      voices.saveDraft('Gravelly');
-      run.controller.useCustomVoice(voices.library.voices.single);
-      expect(run.controller.referenceAudioPath, isNotNull);
+    test('a model that cannot clone is offered no saved voice', () async {
+      await saveOne(cloning(), 'Gravelly');
 
-      run.controller.useCustomVoice(null);
+      expect(fixture.controller.voiceItems.map((e) => e.$2),
+          isNot(contains('Gravelly')));
+    });
+
+    test('picking a saved voice sets the clip and its transcript', () async {
+      final run = cloning();
+      await saveOne(run, 'Gravelly');
+      final saved = run.controller.customVoices.library.voices.single;
+      final id = run.controller.voiceItems
+          .firstWhere((e) => e.$2 == 'Gravelly')
+          .$1;
+
+      run.controller.selectVoice(id);
+
+      expect(run.controller.referenceAudioPath,
+          run.store.wavFile(saved.id.value).path);
+      expect(run.controller.referenceAudioText, kVoiceDesignPassage);
+      expect(run.controller.selectedCustomVoiceId, id);
+    });
+
+    test('picking one of the model\'s own voices drops the clip', () async {
+      final run = cloning();
+      await saveOne(run, 'Gravelly');
+      final id = run.controller.voiceItems
+          .firstWhere((e) => e.$2 == 'Gravelly')
+          .$1;
+      run.controller.selectVoice(id);
+      final own = run.controller.voiceItems
+          .firstWhere((e) => e.$2 != 'Gravelly')
+          .$1;
+
+      run.controller.selectVoice(own);
 
       expect(run.controller.referenceAudioPath, isNull);
       expect(run.controller.referenceAudioText, isEmpty);
+      expect(run.controller.selectedCustomVoiceId, isNull);
     });
 
-    test('reports that the active model cannot use one', () {
-      expect(fixture.controller.usesCustomVoices, isFalse);
-    });
+    test('a hand-picked clip is not reported as a saved voice', () {
+      fixture.controller.referenceAudioPath = '${fixture.dir.path}/a.wav';
 
-    test('reports that a cloning model can use one', () {
-      final run = _Fixture(withDesignModel: true, withConsumer: true);
-      addTearDown(run.dispose);
-      run.controller.changeModel('fish');
-      expect(run.controller.usesCustomVoices, isTrue);
+      expect(fixture.controller.selectedCustomVoiceId, isNull);
     });
   });
 
@@ -424,7 +458,7 @@ void main() {
     });
   });
 
-  test('a saved voice is absent from the model voice list', () async {
+  test('a saved voice sits beside the model voices without replacing them', () async {
     final run = _Fixture(withDesignModel: true, withConsumer: true);
     addTearDown(run.dispose);
     run.controller.changeModel('fish');
@@ -432,11 +466,11 @@ void main() {
     await voices.generate('A gravelly smoker.');
     voices.saveDraft('Gravelly');
 
-    // The library lives outside the directories the config loader walks, so a
-    // saved clip can never appear as a voice the model claims to have.
-    expect(
-      run.controller.voiceItems.any((e) => e.$2.contains('Gravelly')),
-      isFalse,
-    );
+    final labels = run.controller.voiceItems.map((e) => e.$2);
+
+    // The library lives outside the directories the config loader walks, so the
+    // saved clip arrives beside the model's own voices rather than as one.
+    expect(labels, containsAll(<String>['Anne', 'Gravelly']));
+    expect(labels, hasLength(2));
   });
 }

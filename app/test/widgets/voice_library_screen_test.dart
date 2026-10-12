@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
@@ -255,17 +256,25 @@ void main() {
       expect(fixture.anythingPersisted, isFalse);
     });
 
-    testWidgets('cancelling the draft discards it without writing anything', (
+    testWidgets('regenerating clears the draft while the new one is still coming', (
       tester,
     ) async {
       await _pumpLibrary(tester, fixture);
       await _generate(tester);
+      expect(find.byKey(const Key('voiceDraftSaveButton')), findsOneWidget);
 
-      await _tap(tester, 'voiceDraftCancelButton');
-      await tester.pumpAndSettle();
+      final gate = Completer<void>();
+      fixture.provider.gate = gate;
+      await _tap(tester, 'designVoiceGenerateButton');
+      await tester.pump();
 
       expect(fixture.controller.customVoices.draft, isNull);
       expect(find.byKey(const Key('voiceDraftSaveButton')), findsNothing);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(fixture.controller.customVoices.draft!.attempts, 2);
       expect(fixture.anythingPersisted, isFalse);
     });
 
@@ -341,7 +350,8 @@ void main() {
       final id = library.voices.single.id.value;
       expect(fixture.store.wavFile(id).existsSync(), isTrue);
       expect(fixture.controller.customVoices.draft, isNull);
-      expect(find.byKey(Key('voiceUse_$id')), findsOneWidget);
+      // The library stops here: what speaks the run is picked in run-setup.
+      expect(find.text('Use'), findsNothing);
     });
 
     // A second variation of the same design must not overwrite the first: the
@@ -433,34 +443,8 @@ void main() {
     });
   });
 
-  group('adopting a voice into a run', () {
-    testWidgets('a design-only model cannot adopt one, and says so', (
-      tester,
-    ) async {
-      await _pumpLibrary(tester, fixture);
-      await _generate(tester);
-      await _tap(tester, 'voiceDraftSaveButton');
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byKey(const Key('saveVoiceNameField')),
-        'Gravelly',
-      );
-      await tester.tap(find.byKey(const Key('saveVoiceDialogSaveButton')));
-      await tester.pumpAndSettle();
-      final id = fixture.store.read().voices.single.id.value;
-
-      expect(
-        fixture.controller.usesCustomVoices,
-        isFalse,
-        reason: 'qwen sends no reference audio',
-      );
-      // Disabled with the reason beside it, not hidden: a missing button would
-      // read as an empty library rather than a fixable mismatch.
-      expect(find.byKey(Key('voiceUse_$id')), findsOneWidget);
-      expect(find.text('Use'), findsOneWidget);
-    });
-
-    testWidgets('a cloning model adopts the clip and its transcript', (
+  group('sending a saved voice to a run', () {
+    testWidgets('is done from the run-setup voice dropdown, not here', (
       tester,
     ) async {
       fixture.dispose();
@@ -475,17 +459,11 @@ void main() {
       );
       await tester.tap(find.byKey(const Key('saveVoiceDialogSaveButton')));
       await tester.pumpAndSettle();
-      final voice = fixture.store.read().voices.single;
 
-      expect(fixture.controller.usesCustomVoices, isTrue);
-      await _tap(tester, 'voiceUse_${voice.id.value}');
-      await tester.pumpAndSettle();
-
-      expect(
-        fixture.controller.referenceAudioPath,
-        fixture.store.wavFile(voice.id.value).path,
-      );
-      expect(fixture.controller.referenceAudioText, kVoiceDesignPassage);
+      // The library's job ends at saving. Adopting a clip is a run-setup choice
+      // because that is where the clip travels from.
+      expect(find.text('Use'), findsNothing);
+      expect(find.textContaining('reference clip'), findsNothing);
     });
   });
 }

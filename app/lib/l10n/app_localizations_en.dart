@@ -381,8 +381,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_run_setup_prefixFieldTooltip =>
       'Text prepended to each paragraph';
 
-  
-
   @override
   String get gui_run_setup_sampleLenFieldTooltip =>
       'Number of paragraphs to narrate in sample mode';
@@ -734,8 +732,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get gui_voiceLibrary_instructLabel => 'Voice design';
 
-  
-
   @override
   String get gui_voiceLibrary_passageLabel => 'Standard passage';
 
@@ -789,13 +785,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Describe a narrator above and generate. Every generation sounds different, so keep the ones you like.';
 
   @override
-  String get gui_voiceLibrary_use => 'Use';
-
-  @override
-  String get gui_voiceLibrary_useUnavailable =>
-      'The selected model cannot speak from a clip. Choose one that supports voice cloning to use this voice.';
-
-  @override
   String get gui_voiceLibrary_newVariation => 'New variation';
 
   @override
@@ -827,10 +816,5 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String gui_voiceLibrary_designedWith(Object model) {
     return 'Designed with $model';
-  }
-
-  @override
-  String gui_voiceLibrary_useInRun(Object name) {
-    return '\"$name\" is now the reference clip for the next run.';
   }
 }

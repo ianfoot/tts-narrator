@@ -359,8 +359,6 @@
   "gui_voiceLibrary_savedTitle": "SAVED VOICES",
   "gui_voiceLibrary_emptyTitle": "No voices designed yet.",
   "gui_voiceLibrary_emptyCaption": "Describe a narrator above and generate. Every generation sounds different, so keep the ones you like.",
-  "gui_voiceLibrary_use": "Use",
-  "gui_voiceLibrary_useUnavailable": "The selected model cannot speak from a clip. Choose one that supports voice cloning to use this voice.",
   "gui_voiceLibrary_newVariation": "New variation",
   "gui_voiceLibrary_rename": "Rename",
   "gui_voiceLibrary_delete": "Delete",
@@ -370,6 +368,5 @@
   "gui_voiceLibrary_saveNameLabel": "Name",
   "gui_voiceLibrary_deleteTitle": "Delete voice",
   "gui_voiceLibrary_deleteMessage": "\"{name}\" and its clip will be removed from the library.",
-  "gui_voiceLibrary_designedWith": "Designed with {model}",
-  "gui_voiceLibrary_useInRun": "\"{name}\" is now the reference clip for the next run."
+  "gui_voiceLibrary_designedWith": "Designed with {model}"
 }

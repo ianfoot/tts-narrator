@@ -122,6 +122,8 @@ class CustomVoiceController extends ChangeNotifier {
 
   /// Generates a clip from [instruct] and puts it up for audition.
   ///
+  /// Any existing draft is thrown away first, so the card leaves as soon as a
+  /// new generation starts rather than sitting under the request being made.
   /// The attempt counter rises when the same prose is re-rolled and resets when
   /// the prose changes, so the card can tell the user which of the two they are
   /// looking at.
@@ -136,7 +138,9 @@ class CustomVoiceController extends ChangeNotifier {
       return;
     }
 
-    final sameProse = _draft != null && _draft!.instruct == trimmed;
+    final previous = _draft;
+    final sameProse = previous != null && previous.instruct == trimmed;
+    _draft = null;
     _generating = true;
     _error = null;
     notifyListeners();
@@ -150,7 +154,7 @@ class CustomVoiceController extends ChangeNotifier {
         providerSettings: request.settings,
         apiKey: request.apiKey,
         language: _designLanguage,
-        attempts: sameProse ? _draft!.attempts + 1 : 1,
+        attempts: sameProse ? previous.attempts + 1 : 1,
       );
       _draft = VoiceDraft(
         bytes: sample.bytes as Uint8List,
@@ -161,20 +165,13 @@ class CustomVoiceController extends ChangeNotifier {
         language: _designLanguage,
       );
     } on AbortException {
-      // Cancelled on purpose; the draft already on screen stays.
+      // Cancelled on purpose, and the draft it replaced is already gone.
     } catch (e) {
       _error = '$e';
     } finally {
       _generating = false;
       notifyListeners();
     }
-  }
-
-  /// Throws the current clip away without touching the disk.
-  void discardDraft() {
-    if (_draft == null) return;
-    _draft = null;
-    notifyListeners();
   }
 
   /// Keeps the current clip under [name] and clears the draft.
@@ -226,9 +223,7 @@ class CustomVoiceController extends ChangeNotifier {
   /// Called after a config reload so a registry hand-edited while the app was
   /// open is picked up.
   void refresh() {
-    final next = _store.read();
-    if (next.voices.length == _library.voices.length) return;
-    _library = next;
+    _library = _store.read();
     notifyListeners();
   }
 

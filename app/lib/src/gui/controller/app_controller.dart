@@ -32,6 +32,10 @@ export 'run_controller.dart' show NarrationSegment;
 /// [CustomVoiceController]) own the state; this one forwards their surfaces and
 /// re-broadcasts their notifications so callers keep a single change stream.
 class AppController extends ChangeNotifier {
+  /// Marks a [voiceItems] id as naming a saved voice rather than one of the
+  /// model's own, so the two cannot collide in a provider's id space.
+  static const String _customVoiceIdPrefix = 'custom:';
+
   AppController({
     required UserVoiceConfigLoader loader,
     SharedPreferences? prefs,
@@ -201,21 +205,31 @@ class AppController extends ChangeNotifier {
   bool get takesReferenceAudio =>
       _model.profile?.sendsReferenceAudioField ?? false;
 
-  /// Whether the active model can speak with a clip from the voice library.
-  ///
-  /// The same question [takesReferenceAudio] asks, reached from the library
-  /// rather than from the run-setup panel: a saved voice is a reference clip
-  /// under a different name, so a model that takes one can take the other. Kept
-  /// as its own getter so "use" can say why it is unavailable rather than
-  /// leaving a dead button.
-  bool get usesCustomVoices => takesReferenceAudio;
-
   /// Whether the active model tags any of its voices with a gender (drives the
   /// voice-picker gender control in "Model & voice").
   bool get hasGenderTags => _model.hasGenderTags;
 
-  /// See [ModelProfileVoiceController.voiceItems].
-  List<(String, String)> get voiceItems => _model.voiceItems;
+  /// See [ModelProfileVoiceController.voiceItems], plus one row per saved voice
+  /// when the model can take a clip.
+  ///
+  /// A saved voice is a wav file, so it rides the `ref_audio` field rather than
+  /// the `voice` field the rows above carry. One list rather than two, because
+  /// the choice between them is the same choice: which voice speaks this run.
+  List<(String, String)> get voiceItems {
+    if (!takesReferenceAudio) return _model.voiceItems;
+    final saved = _customVoices.library.voices;
+    if (saved.isEmpty) return _model.voiceItems;
+    return [
+      ..._model.voiceItems,
+      for (final voice in saved)
+        ('$_customVoiceIdPrefix${voice.id.value}', voice.name.value),
+    ];
+  }
+
+  /// Whether the voice dropdown has anything worth showing: the model's own
+  /// voices, or the saved voices it could clone from.
+  bool get showVoicePicker =>
+      takesVoice || (takesReferenceAudio && _customVoices.library.isNotEmpty);
 
   // --- Voice language ------------------------------------------------
 
@@ -368,21 +382,50 @@ class AppController extends ChangeNotifier {
     _settings.referenceAudioText = value;
   }
 
-  /// Narrows the active run to [voice], or releases it with a null argument.
+  /// Narrows the active run to [voice].
   ///
   /// A saved custom voice is a reference clip plus the words it was read from,
-  /// which is exactly the pair `ref_audio` and `ref_text` want. Adopting it is
-  /// therefore the same act as picking a clip in the run-setup panel, and going
-  /// through the same setters is what keeps that panel honest: it re-renders
-  /// showing the library's clip by name rather than quietly narrating with a
-  /// voice nothing on screen mentions.
-  void useCustomVoice(CustomVoice? voice) {
-    if (voice == null) {
-      _settings.resetReferenceAudio();
-      return;
-    }
+  /// which is exactly the pair `ref_audio` and `ref_text` want.
+  void useCustomVoice(CustomVoice voice) {
     _settings.referenceAudioPath = _customVoices.clipPathFor(voice);
     _settings.referenceAudioText = voice.transcript;
+  }
+
+  /// The id of the saved voice the run is cloning, in the form [voiceItems]
+  /// carries it; null when the active clip is not a saved voice.
+  String? get selectedCustomVoiceId {
+    final path = _settings.referenceAudioPath;
+    if (path == null || path.isEmpty) return null;
+    for (final voice in _customVoices.library.voices) {
+      if (_customVoices.clipPathFor(voice) == path) {
+        return '$_customVoiceIdPrefix${voice.id.value}';
+      }
+    }
+    return null;
+  }
+
+  /// Applies a row picked from [voiceItems], which may name either one of the
+  /// model's own voices or a saved one.
+  ///
+  /// Picking one of the model's own voices drops any clip: a clip takes the
+  /// voice field's place on the wire, so leaving it set would let the row say
+  /// one voice while another speaks.
+  void selectVoice(String id) {
+    final savedId = id.startsWith(_customVoiceIdPrefix)
+        ? id.substring(_customVoiceIdPrefix.length)
+        : null;
+    if (savedId != null) {
+      final voice = _customVoices.library.byId(savedId);
+      if (voice != null) {
+        useCustomVoice(voice);
+        notifyListeners();
+        return;
+      }
+    }
+    applyVoiceId(id);
+    _settings.referenceAudioPath = null;
+    _settings.referenceAudioText = '';
+    notifyListeners();
   }
 
   /// Speech-rate multiplier (1.0 = normal, clamped 0.25-2.0 by

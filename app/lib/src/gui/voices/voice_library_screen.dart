@@ -324,20 +324,6 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
     _voices.delete(voice.id.value);
   }
 
-  /// Adopts [voice] as the active run's reference clip and closes.
-  ///
-  /// Returns to the editor rather than staying put, because the point of the
-  /// choice is the run that follows it. The run-setup panel is revealed on the
-  /// way out so the reference clip it now points at is visible rather than a
-  /// setting the user changed and cannot see.
-  void _use(CustomVoice voice) {
-    _controller.useCustomVoice(voice);
-    if (!_controller.runSetupPanelVisible) {
-      _controller.toggleRunSetupPanel();
-    }
-    Navigator.of(context).maybePop();
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -675,17 +661,6 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
                         : l10n.gui_voiceLibrary_play,
                   ),
                 ),
-                // Plain rather than destructive: throwing a generation away is
-                // the ordinary move, not a mistake to be confirmed.
-                AppButton(
-                  key: const Key('voiceDraftCancelButton'),
-                  compact: true,
-                  onPressed: () async {
-                    await _stop();
-                    _voices.discardDraft();
-                  },
-                  child: Text(l10n.gui_voiceLibrary_cancel),
-                ),
                 AppButton(
                   key: const Key('voiceDraftSaveButton'),
                   style: AppButtonStyle.filled,
@@ -706,7 +681,6 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
     CustomVoice voice,
   ) {
     final playing = _playing == voice.id.value;
-    final usable = _controller.usesCustomVoices;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -757,17 +731,6 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
                 ),
               ),
               AppButton(
-                key: Key('voiceUse_${voice.id.value}'),
-                style: AppButtonStyle.filled,
-                compact: true,
-                // Disabled rather than hidden, with the reason underneath:
-                // a model that cannot take a clip is the common case here, and a
-                // missing button would read as an empty library rather than as
-                // a mismatch the user can fix in the panel.
-                onPressed: usable ? () => _use(voice) : null,
-                child: Text(l10n.gui_voiceLibrary_use),
-              ),
-              AppButton(
                 key: Key('voiceVariation_${voice.id.value}'),
                 style: AppButtonStyle.outlined,
                 compact: true,
@@ -793,15 +756,6 @@ class _VoiceLibraryScreenState extends State<VoiceLibraryScreen> {
               ),
             ],
           ),
-          if (!usable) ...[
-            const SizedBox(height: 8),
-            Text(
-              l10n.gui_voiceLibrary_useUnavailable,
-              style: tokens.typography.mono.copyWith(
-                color: tokens.colors.textSecondary,
-              ),
-            ),
-          ],
         ],
       ),
     );
