@@ -530,7 +530,7 @@ void main() {
       );
     });
 
-    testWidgets('a chosen clip is named and takes the voice picker with it', (
+    testWidgets('a chosen clip is named and still answers the picker', (
       tester,
     ) async {
       writeReferenceAudioConfig(configDir);
@@ -541,9 +541,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Cloned from sample.wav'), findsOneWidget);
-      // The provider clones the speaker in the clip, so there is no voice left
-      // to pick — nor a raw id to override.
-      expect(find.byKey(const Key('voiceDropdown')), findsNothing);
+      // The picker stays: the clip and a model voice are one choice, so the way
+      // to go back to a model voice is to pick one.
+      expect(find.byKey(const Key('voiceDropdown')), findsOneWidget);
       expect(
         find.byKey(const Key('voiceAdvancedDisclosure')),
         findsNothing,

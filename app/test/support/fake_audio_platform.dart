@@ -12,6 +12,20 @@ class FakeAudioPlatform extends AudioplayersPlatformInterface {
   final Map<String, StreamController<AudioEvent>> _streams = {};
   final List<StreamController<AudioEvent>> _creationOrder = [];
 
+  /// Every clip the player was asked to load, in order.
+  ///
+  /// Recorded rather than merely played: a screen can pass perfectly valid
+  /// audio to the platform and still hand it something undecodable, and the
+  /// difference between those two is only visible in what was actually
+  /// requested.
+  final List<({String url, String? mimeType})> requestedUrls = [];
+
+  /// How often the in-memory path was taken.
+  ///
+  /// Zero is the healthy value for a desktop screen, where every clip should
+  /// arrive as a real file with a real extension.
+  int byteSourceCount = 0;
+
   /// The stream of the most recently created player (the screens use one).
   StreamController<AudioEvent> get lastStream => _creationOrder.last;
 
@@ -24,6 +38,17 @@ class FakeAudioPlatform extends AudioplayersPlatformInterface {
     final stream = StreamController<AudioEvent>.broadcast();
     _streams[playerId] = stream;
     _creationOrder.add(stream);
+    // Every real platform reports `prepared` the moment the player exists.
+    // `AudioPlayer.play()` subscribes for that event before it asks for a
+    // source, so a `create` that stays silent leaves `play()` waiting on a
+    // signal nothing is ever going to send.
+    scheduleMicrotask(() {
+      if (!stream.isClosed) {
+        stream.add(
+          const AudioEvent(eventType: AudioEventType.prepared, isPrepared: true),
+        );
+      }
+    });
   }
 
   @override
@@ -42,9 +67,19 @@ class FakeAudioPlatform extends AudioplayersPlatformInterface {
     bool? isLocal,
     String? mimeType,
   }) async {
-    _streams[playerId]?.add(
-      const AudioEvent(eventType: AudioEventType.prepared, isPrepared: true),
-    );
+    requestedUrls.add((url: url, mimeType: mimeType));
+    // Queued rather than added inline. A real platform answers after this call
+    // returns, and audioplayers only listens for the event once the call has
+    // unwound -- emitting here synchronously loses it on the floor, leaving
+    // `play()` to wait out its full preparation timeout on every single clip.
+    scheduleMicrotask(() {
+      final stream = _streams[playerId];
+      if (stream != null && !stream.isClosed) {
+        stream.add(
+          const AudioEvent(eventType: AudioEventType.prepared, isPrepared: true),
+        );
+      }
+    });
   }
 
   @override
@@ -52,7 +87,9 @@ class FakeAudioPlatform extends AudioplayersPlatformInterface {
     String playerId,
     Uint8List bytes, {
     String? mimeType,
-  }) async {}
+  }) async {
+    byteSourceCount++;
+  }
 
   @override
   Future<void> pause(String playerId) async {}

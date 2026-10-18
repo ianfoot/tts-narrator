@@ -12,6 +12,7 @@ class AppDropdown<T> extends StatelessWidget {
     required this.onChanged,
     this.hint,
     this.tooltip,
+    this.alignment = Alignment.center,
   });
 
   final T? value;
@@ -21,6 +22,16 @@ class AppDropdown<T> extends StatelessWidget {
   /// Placeholder shown when no item is selected.
   final String? hint;
   final String? tooltip;
+
+  /// Where the label sits inside the button.
+  ///
+  /// Centred by default, which is right when the button hugs its label -- the
+  /// case in the run-setup rail, where the dropdown is as wide as the rail and
+  /// the label is most of it. A wide dropdown wants [Alignment.centerLeft]
+  /// instead: a label marooned in the middle of a full-width control reads as
+  /// body text that happens to have a chevron beside it, rather than as a
+  /// control.
+  final AlignmentGeometry alignment;
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +64,7 @@ class AppDropdown<T> extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           borderRadius: BorderRadius.circular(AppMetrics.controlRadius),
           pressedOpacity: 0.6,
+          alignment: alignment,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

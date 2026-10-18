@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'audio_format.dart';
+import 'speech_client.dart';
+
 /// A WAV file split into the two parts a concatenation needs: the `fmt ` chunk
 /// describing the audio layout, and the `data` chunk holding the audio.
 class WavFile {
@@ -112,6 +115,48 @@ void writeWav({
   final file = File(path);
   file.parent.createSync(recursive: true);
   file.writeAsBytesSync(header.takeBytes(), flush: true);
+}
+
+/// [audio] as the bytes to write for [format].
+///
+/// A wav run against a model that serves headerless samples is the one case where
+/// the provider's bytes are not yet a file: they need a header saying what rate
+/// and channel layout they have, or nothing will play them. Everything else — mp3
+/// and natively-served wav — is already a finished container.
+///
+/// The rate comes from the response rather than from config. A response that
+/// omits it is a hard error naming [modelId], since a header with an invented rate
+/// plays at the wrong pitch, which is worse than no file.
+///
+/// Shared by narration and voice design so a generated voice clip obeys the same
+/// rule as a narrated segment: a custom voice that will be handed to a cloning
+/// model must be a playable file, not a headerless blob.
+Uint8List asWavBytes({
+  required TtsAudioFormat format,
+  required TtsWavResponseFormat wavResponseFormat,
+  required String modelId,
+  required GeneratedAudio audio,
+}) {
+  final pcmSourced =
+      format == TtsAudioFormat.wav && wavResponseFormat == TtsWavResponseFormat.pcm;
+  if (!pcmSourced) return Uint8List.fromList(audio.bytes);
+
+  final rate = audio.sampleRate;
+  if (rate == null) {
+    throw StateError(
+      'Model "$modelId" returned raw samples without a sample '
+      'rate, so a WAV header cannot be written. Set "wav_response_format" to '
+      '"wav" if the provider serves WAV containers directly.',
+    );
+  }
+  return Uint8List.fromList([
+    ...wavHeader(
+      sampleRate: rate,
+      channels: audio.channels ?? 1,
+      dataBytes: audio.bytes.length,
+    ),
+    ...audio.bytes,
+  ]);
 }
 
 Uint8List _asciiEncode(String s) => Uint8List.fromList(s.codeUnits);

@@ -104,6 +104,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gui_editor_toolbar_narrate => 'Narrate';
 
   @override
+  String get gui_editor_toolbar_designVoice => 'Design Voice...';
+
+  @override
+  String get gui_editor_toolbar_designVoiceTooltip =>
+      'Design a voice and keep it as a clip other models can speak with';
+
+  @override
+  String get gui_editor_toolbar_designVoiceUnavailable =>
+      'No voice design model is configured, so there is nothing to design with.';
+
+  @override
   String get gui_editor_toolbar_playFull => 'Play Full';
 
   @override
@@ -369,10 +380,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get gui_run_setup_prefixFieldTooltip =>
       'Text prepended to each paragraph';
-
-  @override
-  String get gui_run_setup_instructFieldTooltip =>
-      'Describe the narrator in prose; the model designs the voice from it';
 
   @override
   String get gui_run_setup_sampleLenFieldTooltip =>
@@ -703,4 +710,111 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gui_settings_voiceDialogCancel => 'Cancel';
+
+  @override
+  String get gui_voiceLibrary_title => 'Voice Library';
+
+  @override
+  String get gui_voiceLibrary_close => 'Close';
+
+  @override
+  String get gui_voiceLibrary_designSection => 'DESIGN A VOICE';
+
+  @override
+  String get gui_voiceLibrary_modelLabel => 'Design model';
+
+  @override
+  String get gui_voiceLibrary_languageLabel => 'Language';
+
+  @override
+  String get gui_voiceLibrary_languageAny => 'Model default';
+
+  @override
+  String get gui_voiceLibrary_instructLabel => 'Voice design';
+
+  @override
+  String get gui_voiceLibrary_passageLabel => 'Standard passage';
+
+  @override
+  String get gui_voiceLibrary_passageHint =>
+      'Every designed voice is read from this same passage, so two designs differ only by the voice. It travels with the saved clip because cloning models need the words as well as the audio.';
+
+  @override
+  String get gui_voiceLibrary_generate => 'Generate';
+
+  @override
+  String get gui_voiceLibrary_generating => 'Generating...';
+
+  @override
+  String get gui_voiceLibrary_noDesignModels =>
+      'No voice design model is configured. Add one to the voice config to design voices here.';
+
+  @override
+  String get gui_voiceLibrary_draftTitle => 'New voice';
+
+  @override
+  String gui_voiceLibrary_draftAttempts(Object count) {
+    return 'Attempt $count';
+  }
+
+  @override
+  String gui_voiceLibrary_draftFrom(Object instruct) {
+    return 'Designed as: $instruct';
+  }
+
+  @override
+  String get gui_voiceLibrary_play => 'Play';
+
+  @override
+  String get gui_voiceLibrary_stop => 'Stop';
+
+  @override
+  String get gui_voiceLibrary_cancel => 'Cancel';
+
+  @override
+  String get gui_voiceLibrary_save => 'Save';
+
+  @override
+  String get gui_voiceLibrary_savedTitle => 'SAVED VOICES';
+
+  @override
+  String get gui_voiceLibrary_emptyTitle => 'No voices designed yet.';
+
+  @override
+  String get gui_voiceLibrary_emptyCaption =>
+      'Describe a narrator above and generate. Every generation sounds different, so keep the ones you like.';
+
+  @override
+  String get gui_voiceLibrary_newVariation => 'New variation';
+
+  @override
+  String get gui_voiceLibrary_rename => 'Rename';
+
+  @override
+  String get gui_voiceLibrary_delete => 'Delete';
+
+  @override
+  String get gui_voiceLibrary_renameTitle => 'Rename voice';
+
+  @override
+  String get gui_voiceLibrary_renameLabel => 'Name';
+
+  @override
+  String get gui_voiceLibrary_saveNameTitle => 'Save voice';
+
+  @override
+  String get gui_voiceLibrary_saveNameLabel => 'Name';
+
+  @override
+  String get gui_voiceLibrary_deleteTitle => 'Delete voice';
+
+  @override
+  String gui_voiceLibrary_deleteMessage(Object name) {
+    return '\"$name\" and its clip will be removed from the library.';
+  }
+
+  @override
+  String gui_voiceLibrary_designedWith(Object model) {
+    return 'Designed with $model';
+  }
 }

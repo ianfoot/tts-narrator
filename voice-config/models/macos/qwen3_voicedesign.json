@@ -7,7 +7,7 @@
     "mp3"
   ],
   "sends_voice": false,
-  "speed": true,
+  "speed": false,
   "sends_language": true,
   "sends_instruct": true,
   "default_instruct": "A calm male narrator with a low, steady voice.",

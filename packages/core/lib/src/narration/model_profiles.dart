@@ -24,6 +24,7 @@ class TtsModelProfile {
     this.sendsLanguageField = false,
     this.sendsInstructField = false,
     this.sendsReferenceAudioField = false,
+    this.instructAsInputPrefix = false,
     required this.provider,
     this.displayName,
     this.defaultInstruct,
@@ -108,6 +109,31 @@ class TtsModelProfile {
   /// a hosted vendor with no such field would reject the request.
   final bool sendsReferenceAudioField;
 
+  /// Whether the voice description is prepended to `input` in brackets rather
+  /// than sent in `instruct`.
+  ///
+  /// Most voice-design models take prose in `instruct` and use it as a
+  /// description. mlx-audio's Fish Audio S2 Pro has no such field: asked for one
+  /// it reads it out loud, so the narration opens with the instruction spoken
+  /// instead of the text. It takes the description as a bracketed prefix on the
+  /// words themselves — `[male, calm, low voice, steady tone] Will you walk a
+  /// little faster?…` — and nothing else, which is why [inputForWire] prepends
+  /// and [sendsInstructField] still governs only whether the app offers the Voice
+  /// design box.
+  ///
+  /// What goes in the brackets is keywords rather than prose. A sentence such as
+  /// "A calm male narrator with a low, steady voice" is parsed as text to read,
+  /// not as traits to apply, so it does not change the voice. Comma-separated
+  /// descriptors do: `[male, calm, low voice]`. They cover delivery, emotion and
+  /// timbre, and nothing else — not accent, and not speaker identity, since there
+  /// is no reference audio here to carry either.
+  ///
+  /// Opt-in per model (`"instruct_as_input_prefix": true`) because this is a
+  /// property of one server rather than of the protocol — there is no documented
+  /// field for it, only this build's behaviour. A model that starts wanting a
+  /// real `instruct` field is one line of config away from no longer asking.
+  final bool instructAsInputPrefix;
+
   /// Name of the `providers.<name>` block that serves this model. Required in
   /// the model config file, and opaque to core: it is a lookup key into user
   /// config, never a vendor the code knows about.
@@ -148,9 +174,27 @@ class TtsModelProfile {
     sendsLanguageField: sendsLanguageField,
     sendsInstructField: sendsInstructField,
     sendsReferenceAudioField: sendsReferenceAudioField,
+    instructAsInputPrefix: instructAsInputPrefix,
     provider: provider ?? this.provider,
     displayName: displayName,
     defaultInstruct: defaultInstruct,
     voicesEditable: voicesEditable,
   );
+}
+
+/// The `input` to send for [profile], given the text [input] to speak.
+///
+/// Models that take their voice description as a bracketed prefix get it
+/// prepended here, because there is no separate field for it: the description
+/// has to sit on the front of the words being spoken to be read as a direction
+/// rather than as something to say out loud. A blank description is left off
+/// entirely rather than sending a bare `[]`.
+///
+/// Every other model gets [input] untouched, which is the whole behaviour for
+/// all but [TtsModelProfile.instructAsInputPrefix].
+String inputForWire(TtsModelProfile profile, String input, String? instruct) {
+  if (!profile.instructAsInputPrefix) return input;
+  final description = instruct?.trim() ?? '';
+  if (description.isEmpty) return input;
+  return '[$description] $input';
 }

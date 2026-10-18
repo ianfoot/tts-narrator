@@ -267,9 +267,11 @@ Unlike the hosted fish model, `fish_pro_8bit` carries no voice ids at all —
 mlx-audio drops the `voice` and `lang_code` fields without reading them — so it
 declares `"sends_voice": false` and the voice dropdown is not offered. Its
 narrator comes from two places instead: the **Voice design** box under Model &
-voice, where you describe it in prose, and the clone: expand **Voice
-cloning**, click **Choose clip…** and pick a short recording of the voice you
-want.
+voice, where you describe it in comma-separated keywords, and the clone: expand
+**Voice cloning**, click **Choose clip…** and pick a short recording of the voice
+you want. This model has no `instruct` field, so the description reaches it as a
+bracketed prefix on the words; see [FISH_AUDIO.md](FISH_AUDIO.md) for what
+belongs in those brackets.
 
 This only works because the app and the server run on the same Mac. The app
 sends the clip's *path*, not the audio, so the server can read it off your disk;
@@ -277,6 +279,12 @@ a hosted provider never sees your file. The optional **Reference transcript**
 box overrides the server's own transcription of the clip, and covering the
 whole clip including the last word makes for a steadier clone. See
 [USAGE.md](USAGE.md#voice-cloning).
+
+A clip you designed yourself works here too. **Design Voice…** in the editor
+toolbar writes a wav under the app's config directory and hands you the matching
+transcript, so pressing **Use** on a saved voice sets both boxes above for you —
+same path, same reason it works: it is a file on this Mac. See
+[Custom voices](CUSTOM_VOICES.md).
 
 ---
 

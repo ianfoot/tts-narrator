@@ -74,13 +74,11 @@ class ModelUiSpec {
     // `promptStyle` because the two never apply to the same model.
     if (model.sendsInstructField) {
       options.add(
-        const ModelUiControl(
+        ModelUiControl(
           key: 'instruct',
           label: 'Voice design',
           type: ModelUiOptionType.multiline,
-          hint:
-              'Describe the narrator in prose: persona and age, pitch and '
-              'timbre, pace, emotional tone, accent.',
+          hint: voiceDesignHint(model),
         ),
       );
     }
@@ -91,6 +89,21 @@ class ModelUiSpec {
   final List<ModelUiControl> options;
 
   bool get isEmpty => options.isEmpty;
+}
+
+/// What [model] wants the voice description to look like.
+///
+/// A model that reads the description as prose (Qwen) wants a sentence: persona
+/// and age, pitch, pace, tone, accent. A model that reads it as bracketed tags
+/// (Fish S2 Pro) wants short comma-separated keywords, because a tag shifts
+/// delivery, emotion and timbre and a sentence is read as text instead.
+String voiceDesignHint(TtsModelProfile model) {
+  if (!model.instructAsInputPrefix) {
+    return 'Describe the narrator in prose: persona and age, pitch and timbre, '
+        'pace, emotional tone, accent.';
+  }
+  return 'Comma-separated keywords, e.g. male, calm, low voice, steady tone. '
+      'They shape delivery, emotion and timbre, not accent or speaker.';
 }
 
 /// A single editable option offered for a model.

@@ -8,6 +8,7 @@ import 'package:tts_narrator_core/tts_narrator_core.dart';
 import '../theme/app_tokens.dart' show AppThemeMode;
 import 'api_key_store.dart';
 import 'config_loader.dart';
+import 'custom_voice_controller.dart';
 import 'document_controller.dart';
 import 'model_profile_voice_controller.dart';
 import 'platform_commands.dart';
@@ -27,10 +28,14 @@ export 'run_controller.dart' show NarrationSegment;
 /// the pipeline reads them.
 ///
 /// The sub-controllers ([DocumentController], [ThemeController],
-/// [ModelProfileVoiceController], [SettingsController], [RunController]) own the
-/// state; this one forwards their surfaces and re-broadcasts their notifications
-/// so callers keep a single change stream.
+/// [ModelProfileVoiceController], [SettingsController], [RunController],
+/// [CustomVoiceController]) own the state; this one forwards their surfaces and
+/// re-broadcasts their notifications so callers keep a single change stream.
 class AppController extends ChangeNotifier {
+  /// Marks a [voiceItems] id as naming a saved voice rather than one of the
+  /// model's own, so the two cannot collide in a provider's id space.
+  static const String _customVoiceIdPrefix = 'custom:';
+
   AppController({
     required UserVoiceConfigLoader loader,
     SharedPreferences? prefs,
@@ -54,10 +59,18 @@ class AppController extends ChangeNotifier {
       model: _model,
       client: client,
     );
+    // Shares the run's client, so a design and a narration cannot disagree about
+    // which provider they are talking to or how its failures are retried.
+    _customVoices = CustomVoiceController(
+      model: _model,
+      settings: _settings,
+      client: client ?? OpenAiSpeechClient().synthesize,
+    );
     _document.addListener(_onDocumentChanged);
     _theme.addListener(_onThemeChanged);
     _settings.addListener(_onSettingsChanged);
     _run.addListener(_onRunChanged);
+    _customVoices.addListener(_onCustomVoicesChanged);
     _apiKeyStore.addListener(_onSettingsChanged);
   }
 
@@ -87,6 +100,9 @@ class AppController extends ChangeNotifier {
 
   /// The narration-run lifecycle and per-run progress.
   late final RunController _run;
+
+  /// The saved custom voices and the one being auditioned.
+  late final CustomVoiceController _customVoices;
 
   /// The platform-dispatched command slots (menu bar, toolbar bindings).
   final PlatformCommands commands = PlatformCommands();
@@ -181,6 +197,9 @@ class AppController extends ChangeNotifier {
   /// voice dropdown is shown in "Model & voice").
   bool get takesVoice => _model.takesVoice;
 
+  /// The voices the user designed, and whichever one is being auditioned.
+  CustomVoiceController get customVoices => _customVoices;
+
   /// Whether the active model accepts a reference clip (drives whether the
   /// voice-cloning control is shown in "Model & voice").
   bool get takesReferenceAudio =>
@@ -190,8 +209,27 @@ class AppController extends ChangeNotifier {
   /// voice-picker gender control in "Model & voice").
   bool get hasGenderTags => _model.hasGenderTags;
 
-  /// See [ModelProfileVoiceController.voiceItems].
-  List<(String, String)> get voiceItems => _model.voiceItems;
+  /// See [ModelProfileVoiceController.voiceItems], plus one row per saved voice
+  /// when the model can take a clip.
+  ///
+  /// A saved voice is a wav file, so it rides the `ref_audio` field rather than
+  /// the `voice` field the rows above carry. One list rather than two, because
+  /// the choice between them is the same choice: which voice speaks this run.
+  List<(String, String)> get voiceItems {
+    if (!takesReferenceAudio) return _model.voiceItems;
+    final saved = _customVoices.library.voices;
+    if (saved.isEmpty) return _model.voiceItems;
+    return [
+      ..._model.voiceItems,
+      for (final voice in saved)
+        ('$_customVoiceIdPrefix${voice.id.value}', voice.name.value),
+    ];
+  }
+
+  /// Whether the voice dropdown has anything worth showing: the model's own
+  /// voices, or the saved voices it could clone from.
+  bool get showVoicePicker =>
+      takesVoice || (takesReferenceAudio && _customVoices.library.isNotEmpty);
 
   // --- Voice language ------------------------------------------------
 
@@ -344,6 +382,52 @@ class AppController extends ChangeNotifier {
     _settings.referenceAudioText = value;
   }
 
+  /// Narrows the active run to [voice].
+  ///
+  /// A saved custom voice is a reference clip plus the words it was read from,
+  /// which is exactly the pair `ref_audio` and `ref_text` want.
+  void useCustomVoice(CustomVoice voice) {
+    _settings.referenceAudioPath = _customVoices.clipPathFor(voice);
+    _settings.referenceAudioText = voice.transcript;
+  }
+
+  /// The id of the saved voice the run is cloning, in the form [voiceItems]
+  /// carries it; null when the active clip is not a saved voice.
+  String? get selectedCustomVoiceId {
+    final path = _settings.referenceAudioPath;
+    if (path == null || path.isEmpty) return null;
+    for (final voice in _customVoices.library.voices) {
+      if (_customVoices.clipPathFor(voice) == path) {
+        return '$_customVoiceIdPrefix${voice.id.value}';
+      }
+    }
+    return null;
+  }
+
+  /// Applies a row picked from [voiceItems], which may name either one of the
+  /// model's own voices or a saved one.
+  ///
+  /// Picking one of the model's own voices drops any clip: a clip takes the
+  /// voice field's place on the wire, so leaving it set would let the row say
+  /// one voice while another speaks.
+  void selectVoice(String id) {
+    final savedId = id.startsWith(_customVoiceIdPrefix)
+        ? id.substring(_customVoiceIdPrefix.length)
+        : null;
+    if (savedId != null) {
+      final voice = _customVoices.library.byId(savedId);
+      if (voice != null) {
+        useCustomVoice(voice);
+        notifyListeners();
+        return;
+      }
+    }
+    applyVoiceId(id);
+    _settings.referenceAudioPath = null;
+    _settings.referenceAudioText = '';
+    notifyListeners();
+  }
+
   /// Speech-rate multiplier (1.0 = normal, clamped 0.25-2.0 by
   /// [SettingsController.speed]).
   double get speed => _settings.speed;
@@ -477,6 +561,11 @@ class AppController extends ChangeNotifier {
 
   /// Forwards a [RunController] notification.
   void _onRunChanged() {
+    notifyListeners();
+  }
+
+  /// Forwards a [CustomVoiceController] notification.
+  void _onCustomVoicesChanged() {
     notifyListeners();
   }
 

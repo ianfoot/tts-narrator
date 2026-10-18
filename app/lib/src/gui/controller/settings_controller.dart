@@ -504,6 +504,24 @@ class SettingsController extends ChangeNotifier {
     return ApiKeySource.config;
   }
 
+  /// The credentials and provider settings a request to [p] would carry.
+  ///
+  /// Public because a request is no longer only a narration run: designing a
+  /// voice speaks to whichever design model the user picked, which need not be
+  /// the active one, and it has to resolve that model's provider block and key
+  /// by exactly the rules the run path uses. Sharing the two lines keeps the
+  /// keychain-over-config-over-environment precedence from having to be
+  /// restated — and eventually disagreed about — in a second place.
+  ({Map<String, String> settings, String? apiKey}) providerRequestFor(
+    TtsModelProfile p,
+  ) {
+    final providerBlock = _model.rawProviderSettings(p);
+    return (
+      settings: _resolveProviderSettings(providerBlock),
+      apiKey: _resolveApiKey(providerBlock, p),
+    );
+  }
+
   // --- Run config + live estimates ------------------------------------
 
   /// Assembles the run config for the current document + settings, narrating
@@ -548,7 +566,7 @@ class SettingsController extends ChangeNotifier {
             : (resolvedLabel != id ? resolvedLabel : null);
       }
     }
-    final providerBlock = _model.rawProviderSettings(p);
+    final request = providerRequestFor(p);
     return NarrationConfig(
       inputPath: _document.documentPath ?? untitledDocumentName,
       sourceText: _document.text,
@@ -570,8 +588,8 @@ class SettingsController extends ChangeNotifier {
       outDir: _trimmedOutDir,
       nestOutputInInputSubdir: _document.documentPath != null,
       resume: resume,
-      providerSettings: _resolveProviderSettings(providerBlock),
-      apiKey: _resolveApiKey(providerBlock, p),
+      providerSettings: request.settings,
+      apiKey: request.apiKey,
       pricing: _model.pricing,
     );
   }

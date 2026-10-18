@@ -190,6 +190,24 @@ abstract class AppLocalizations {
   /// **'Narrate'**
   String get gui_editor_toolbar_narrate;
 
+  /// No description provided for @gui_editor_toolbar_designVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Design Voice...'**
+  String get gui_editor_toolbar_designVoice;
+
+  /// No description provided for @gui_editor_toolbar_designVoiceTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Design a voice and keep it as a clip other models can speak with'**
+  String get gui_editor_toolbar_designVoiceTooltip;
+
+  /// No description provided for @gui_editor_toolbar_designVoiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No voice design model is configured, so there is nothing to design with.'**
+  String get gui_editor_toolbar_designVoiceUnavailable;
+
   /// No description provided for @gui_editor_toolbar_playFull.
   ///
   /// In en, this message translates to:
@@ -644,12 +662,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Text prepended to each paragraph'**
   String get gui_run_setup_prefixFieldTooltip;
-
-  /// No description provided for @gui_run_setup_instructFieldTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Describe the narrator in prose; the model designs the voice from it'**
-  String get gui_run_setup_instructFieldTooltip;
 
   /// No description provided for @gui_run_setup_sampleLenFieldTooltip.
   ///
@@ -1245,6 +1257,198 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancel'**
   String get gui_settings_voiceDialogCancel;
+
+  /// No description provided for @gui_voiceLibrary_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice Library'**
+  String get gui_voiceLibrary_title;
+
+  /// No description provided for @gui_voiceLibrary_close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get gui_voiceLibrary_close;
+
+  /// No description provided for @gui_voiceLibrary_designSection.
+  ///
+  /// In en, this message translates to:
+  /// **'DESIGN A VOICE'**
+  String get gui_voiceLibrary_designSection;
+
+  /// No description provided for @gui_voiceLibrary_modelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Design model'**
+  String get gui_voiceLibrary_modelLabel;
+
+  /// No description provided for @gui_voiceLibrary_languageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get gui_voiceLibrary_languageLabel;
+
+  /// No description provided for @gui_voiceLibrary_languageAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Model default'**
+  String get gui_voiceLibrary_languageAny;
+
+  /// No description provided for @gui_voiceLibrary_instructLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice design'**
+  String get gui_voiceLibrary_instructLabel;
+
+  /// No description provided for @gui_voiceLibrary_passageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard passage'**
+  String get gui_voiceLibrary_passageLabel;
+
+  /// No description provided for @gui_voiceLibrary_passageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Every designed voice is read from this same passage, so two designs differ only by the voice. It travels with the saved clip because cloning models need the words as well as the audio.'**
+  String get gui_voiceLibrary_passageHint;
+
+  /// No description provided for @gui_voiceLibrary_generate.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate'**
+  String get gui_voiceLibrary_generate;
+
+  /// No description provided for @gui_voiceLibrary_generating.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating...'**
+  String get gui_voiceLibrary_generating;
+
+  /// No description provided for @gui_voiceLibrary_noDesignModels.
+  ///
+  /// In en, this message translates to:
+  /// **'No voice design model is configured. Add one to the voice config to design voices here.'**
+  String get gui_voiceLibrary_noDesignModels;
+
+  /// No description provided for @gui_voiceLibrary_draftTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New voice'**
+  String get gui_voiceLibrary_draftTitle;
+
+  /// No description provided for @gui_voiceLibrary_draftAttempts.
+  ///
+  /// In en, this message translates to:
+  /// **'Attempt {count}'**
+  String gui_voiceLibrary_draftAttempts(Object count);
+
+  /// No description provided for @gui_voiceLibrary_draftFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Designed as: {instruct}'**
+  String gui_voiceLibrary_draftFrom(Object instruct);
+
+  /// No description provided for @gui_voiceLibrary_play.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get gui_voiceLibrary_play;
+
+  /// No description provided for @gui_voiceLibrary_stop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get gui_voiceLibrary_stop;
+
+  /// No description provided for @gui_voiceLibrary_cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get gui_voiceLibrary_cancel;
+
+  /// No description provided for @gui_voiceLibrary_save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get gui_voiceLibrary_save;
+
+  /// No description provided for @gui_voiceLibrary_savedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SAVED VOICES'**
+  String get gui_voiceLibrary_savedTitle;
+
+  /// No description provided for @gui_voiceLibrary_emptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No voices designed yet.'**
+  String get gui_voiceLibrary_emptyTitle;
+
+  /// No description provided for @gui_voiceLibrary_emptyCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe a narrator above and generate. Every generation sounds different, so keep the ones you like.'**
+  String get gui_voiceLibrary_emptyCaption;
+
+  /// No description provided for @gui_voiceLibrary_newVariation.
+  ///
+  /// In en, this message translates to:
+  /// **'New variation'**
+  String get gui_voiceLibrary_newVariation;
+
+  /// No description provided for @gui_voiceLibrary_rename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get gui_voiceLibrary_rename;
+
+  /// No description provided for @gui_voiceLibrary_delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get gui_voiceLibrary_delete;
+
+  /// No description provided for @gui_voiceLibrary_renameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename voice'**
+  String get gui_voiceLibrary_renameTitle;
+
+  /// No description provided for @gui_voiceLibrary_renameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get gui_voiceLibrary_renameLabel;
+
+  /// No description provided for @gui_voiceLibrary_saveNameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save voice'**
+  String get gui_voiceLibrary_saveNameTitle;
+
+  /// No description provided for @gui_voiceLibrary_saveNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get gui_voiceLibrary_saveNameLabel;
+
+  /// No description provided for @gui_voiceLibrary_deleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete voice'**
+  String get gui_voiceLibrary_deleteTitle;
+
+  /// No description provided for @gui_voiceLibrary_deleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" and its clip will be removed from the library.'**
+  String gui_voiceLibrary_deleteMessage(Object name);
+
+  /// No description provided for @gui_voiceLibrary_designedWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Designed with {model}'**
+  String gui_voiceLibrary_designedWith(Object model);
 }
 
 class _AppLocalizationsDelegate

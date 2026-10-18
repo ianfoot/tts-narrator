@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../config/provider_settings.dart';
+import '../diagnostics/http_debug.dart';
 import 'abort.dart';
 import 'audio_format.dart';
 import 'speech_client.dart';
@@ -94,15 +95,25 @@ class OpenAiSpeechClient {
       }
     }
 
+    // Logged before the retry loop so a four-attempt run does not repeat it.
+    final encoded = jsonEncode(body);
+    logHttpRequest(uri: uri, body: encoded, apiKey: apiKey);
+
     var attempt = 0;
     while (true) {
       abort?.throwIfCancelled();
       attempt++;
       final (statusCode, bytes, generationId, contentType) = await _runAttempt(
-        jsonEncode(body),
+        encoded,
         uri,
         apiKey,
         abort: abort,
+      );
+      logHttpResponse(
+        statusCode: statusCode,
+        byteCount: bytes.length,
+        contentType: contentType,
+        generationId: generationId,
       );
       abort?.throwIfCancelled();
       if (statusCode >= 200 && statusCode < 300) {

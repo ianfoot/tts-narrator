@@ -1,13 +1,12 @@
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 
 import '../config/provider_settings.dart';
 import 'abort.dart';
 import 'concat.dart';
 import 'config.dart';
-import 'audio_format.dart';
 import 'manifest.dart';
+import 'model_profiles.dart';
 import 'prompt.dart';
 import 'speech_client.dart';
 import 'wav.dart';
@@ -288,13 +287,19 @@ Future<void> narrate(
       wavResponseFormat: profile.wavResponseFormat,
       settings: config.providerSettings,
       apiKey: config.apiKey,
-      input: input,
+      input: inputForWire(
+        profile,
+        input,
+        config.instruct ?? profile.defaultInstruct,
+      ),
       speed: profile.supportsSpeed ? config.speed : null,
       language: profile.sendsLanguageField ? config.language : null,
       // Voice design: the model reads the prose instead of a voice id. Falls
       // back to the profile's default so a model that declares the capability
-      // never sends an undescribed request the vendor cannot fulfil.
-      instruct: profile.sendsInstructField
+      // never sends an undescribed request the vendor cannot fulfil. A model
+      // that takes the description on `input` instead is sent none at all --
+      // asking it for an `instruct` gets the prose read out loud.
+      instruct: profile.sendsInstructField && !profile.instructAsInputPrefix
           ? (config.instruct ?? profile.defaultInstruct)
           : null,
       refAudio: referenceAudio,
@@ -304,7 +309,12 @@ Future<void> narrate(
 
     // Every format arrives as a finished container except a wav run against a
     // model serving headerless samples, where the app writes the missing header.
-    final bytes = _asWav(config, audio);
+    final bytes = asWavBytes(
+      format: config.outputFormat,
+      wavResponseFormat: config.profile.wavResponseFormat,
+      modelId: config.profile.id,
+      audio: audio,
+    );
     File(audioFile).writeAsBytesSync(bytes, flush: true);
 
     records.add({
@@ -375,40 +385,6 @@ Map<String, Object?>? resumeMatch(
     }
   }
   return null;
-}
-
-/// [audio] as the bytes to write for this segment's output format.
-///
-/// A wav run against a model that serves headerless samples is the one case where
-/// the provider's bytes are not yet a file: they need a header saying what rate
-/// and channel layout they have, or nothing will play them. Everything else — mp3
-/// and natively-served wav — is already a finished container.
-///
-/// The rate comes from the response rather than from config. A response that
-/// omits it is a hard error naming the model, since a header with an invented rate
-/// plays at the wrong pitch, which is worse than no file.
-Uint8List _asWav(NarrationConfig config, GeneratedAudio audio) {
-  final pcmSourced =
-      config.outputFormat == TtsAudioFormat.wav &&
-      config.profile.wavResponseFormat == TtsWavResponseFormat.pcm;
-  if (!pcmSourced) return Uint8List.fromList(audio.bytes);
-
-  final rate = audio.sampleRate;
-  if (rate == null) {
-    throw StateError(
-      'Model "${config.profile.id}" returned raw samples without a sample '
-      'rate, so a WAV header cannot be written. Set "wav_response_format" to '
-      '"wav" if the provider serves WAV containers directly.',
-    );
-  }
-  return Uint8List.fromList([
-    ...wavHeader(
-      sampleRate: rate,
-      channels: audio.channels ?? 1,
-      dataBytes: audio.bytes.length,
-    ),
-    ...audio.bytes,
-  ]);
 }
 
 /// The trailing extension of a recorded segment filename, without the dot.

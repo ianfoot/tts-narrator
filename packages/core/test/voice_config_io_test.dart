@@ -299,6 +299,25 @@ void main() {
         '"sends_instruct" must be a bool',
       );
 
+      // Opt-in per model, like every other capability flag: absent means the
+      // model takes `instruct` as prose, which is what most of them do.
+      test('a model that says nothing about an input prefix takes prose', () {
+        expect(loadProfile(json).instructAsInputPrefix, isFalse);
+      });
+
+      test('reads the input-prefix opt-in when a model sets it', () {
+        final profile = loadProfile(
+          '{"id":"x/y","formats":["wav"],"instruct_as_input_prefix":true}',
+        );
+        expect(profile.instructAsInputPrefix, isTrue);
+      });
+
+      rejection(
+        'rejects a non-bool instruct_as_input_prefix',
+        '{"id":"x/y","formats":["wav"],"instruct_as_input_prefix":"yes"}',
+        '"instruct_as_input_prefix" must be a bool',
+      );
+
       rejection(
         'rejects a non-string default_instruct',
         '{"id":"x/y","formats":["wav"],"default_instruct":42}',

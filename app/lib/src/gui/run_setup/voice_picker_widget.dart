@@ -17,10 +17,11 @@ import 'run_setup_labels.dart';
 /// landing in the parent section re-renders this picker with the new list.
 ///
 /// The label, gender filter and voice dropdown disappear together for a model
-/// that sends no voice id and writes its narrator from prose instead — such a
-/// model has no rows to pick between, and an empty dropdown under a "Voice" label
-/// would be a lie. The language dropdown stays: it narrows the voice list, but it
-/// is also the `lang_code` a model synthesises in.
+/// that sends no voice id and writes its narrator from prose instead, unless it
+/// can clone from a clip — such a model has no rows to pick between otherwise,
+/// and an empty dropdown under a "Voice" label would be a lie. The language
+/// dropdown stays either way: it narrows the voice list, but it is also the
+/// `lang_code` a model synthesises in.
 class VoicePickerWidget extends StatelessWidget {
   const VoicePickerWidget({super.key, required this.controller});
 
@@ -30,14 +31,16 @@ class VoicePickerWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final tokens = AppTokens.of(context);
-    // A reference clip replaces the voice: the model clones the speaker it hears
-    // in the clip, so the voice id has nowhere to go. The language dropdown
-    // stays — it is `lang_code`, not a voice.
-    final takesVoice = controller.takesVoice && controller.referenceAudioPath == null;
+    // A reference clip takes the voice field's place on the wire, so the two
+    // are one choice rather than two: the dropdown lists the model's voices and,
+    // when it can take a clip, the saved voices, and picking either clears the
+    // other. The gender control narrows only the model's own voices.
+    final takesVoice = controller.takesVoice;
+    final showPicker = controller.showVoicePicker;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (takesVoice)
+        if (showPicker)
           runSetupFieldLabel(tokens, l10n.gui_run_setup_voiceAliasLabel),
         if (controller.hasLanguages) ...[
           const SizedBox(height: 12),
@@ -50,9 +53,9 @@ class VoicePickerWidget extends StatelessWidget {
             onChanged: (code) => controller.applyVoiceLanguage(code),
           ),
         ],
-        if (takesVoice) ...[
+        if (showPicker) ...[
           const SizedBox(height: 12),
-          if (controller.hasGenderTags) ...[
+          if (takesVoice && controller.hasGenderTags) ...[
             SegmentedControl<VoiceGender>(
               key: const Key('genderControl'),
               tooltip: l10n.gui_run_setup_genderControlTooltip,
@@ -72,21 +75,23 @@ class VoicePickerWidget extends StatelessWidget {
             value: _selectedVoiceId,
             items: controller.voiceItems,
             hint: l10n.gui_run_setup_selectVoiceHint,
-            onChanged: (id) => controller.applyVoiceId(id),
+            onChanged: (id) => controller.selectVoice(id),
           ),
         ],
       ],
     );
   }
 
-  /// The voice entry currently selected in the picker, as the id the dropdown
-  /// carries it under.
+  /// The dropdown row currently selected, or null when the run is speaking with
+  /// a clip the picker does not know.
   ///
   /// Matched on the id alone, because a label cannot: a model may carry two voices
   /// of one name (Kokoro has three Santas), and a label match would select the
   /// first however the reader clicked. It also leaves the picker able to show a
   /// selection when a voice id was typed in directly.
   String? get _selectedVoiceId {
+    final saved = controller.selectedCustomVoiceId;
+    if (saved != null) return saved;
     final voice = controller.voice;
     if (voice.isEmpty) return null;
     for (final entry in controller.voiceItems) {

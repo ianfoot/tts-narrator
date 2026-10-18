@@ -599,6 +599,12 @@ _parseModelFile(String path, String alias) {
   if (sendsReferenceAudio != null && sendsReferenceAudio is! bool) {
     throw VoiceConfigurationError('"sends_reference_audio" must be a bool');
   }
+  final instructAsInputPrefix = raw['instruct_as_input_prefix'];
+  if (instructAsInputPrefix != null && instructAsInputPrefix is! bool) {
+    throw VoiceConfigurationError(
+      '"instruct_as_input_prefix" must be a bool',
+    );
+  }
   final defaultInstructRaw = raw['default_instruct'];
   if (defaultInstructRaw != null && defaultInstructRaw is! String) {
     throw VoiceConfigurationError('"default_instruct" must be a string');
@@ -720,6 +726,7 @@ _parseModelFile(String path, String alias) {
       sendsLanguageField: sendsLanguage ?? false,
       sendsInstructField: sendsInstruct ?? false,
       sendsReferenceAudioField: sendsReferenceAudio ?? false,
+      instructAsInputPrefix: instructAsInputPrefix == true,
       provider: provider,
       displayName: displayName,
       defaultInstruct: defaultInstructRaw as String?,

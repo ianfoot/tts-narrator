@@ -14,6 +14,7 @@ import '../menu/quit_app.dart';
 import '../narration/narration_screen.dart';
 import '../../../l10n/app_localizations.dart';
 import '../theme/app_tokens.dart';
+import '../voices/voice_library_screen.dart';
 import 'platform_detection.dart';
 
 /// Cross-platform app root: a single [CupertinoApp] shell that mounts the
@@ -41,6 +42,10 @@ class _AppRootState extends State<AppRoot> {
   /// ⌘, cannot stack two copies. Cleared on the route's pop.
   bool _settingsOpen = false;
 
+  /// Set while the voice library is on the navigator stack, guarding it the
+  /// same way [_settingsOpen] does.
+  bool _voiceLibraryOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +58,7 @@ class _AppRootState extends State<AppRoot> {
         widget.controller.toggleRunSetupPanel;
     widget.controller.commands.onClearText = widget.controller.clearText;
     widget.controller.commands.onSettings = _openSettings;
+    widget.controller.commands.onDesignVoice = _openVoiceLibrary;
     widget.controller.saveLocationPicker = _pickSaveLocation;
     // Follow the system appearance live (CupertinoApp has no darkTheme/
     // themeMode, so the theme is rebuilt when the platform brightness flips).
@@ -71,6 +77,7 @@ class _AppRootState extends State<AppRoot> {
     widget.controller.commands.onToggleRunSetupPanel = null;
     widget.controller.commands.onClearText = null;
     widget.controller.commands.onSettings = null;
+    widget.controller.commands.onDesignVoice = null;
     widget.controller.saveLocationPicker = null;
     super.dispose();
   }
@@ -136,6 +143,27 @@ class _AppRootState extends State<AppRoot> {
         )
         .then((_) => _settingsOpen = false)
         .onError((_, _) => _settingsOpen = false);
+  }
+
+  /// Opens the voice library: design a voice, keep the ones worth keeping, and
+  /// hand one to the active run.
+  ///
+  /// Guarded exactly as [_openSettings] is, for the same reason -- the slot is
+  /// a plain callback, so a double-click before the first push settles would
+  /// stack two libraries, each with its own copy of the draft being auditioned.
+  void _openVoiceLibrary() {
+    if (_voiceLibraryOpen) return;
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null) return;
+    _voiceLibraryOpen = true;
+    navigator
+        .push(
+          _fadeSlideRoute(
+            (context) => VoiceLibraryScreen(controller: widget.controller),
+          ),
+        )
+        .then((_) => _voiceLibraryOpen = false)
+        .onError((_, _) => _voiceLibraryOpen = false);
   }
 
   /// The run view's 250ms cross-fade slide-up from a 20px offset (UI spec §4).
